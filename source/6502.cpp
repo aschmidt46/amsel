@@ -1,5 +1,9 @@
 #include "6502.h"
 #include <limits>
+#include <format>
+#include <iostream>
+#include <algorithm>
+#include <iomanip>
 
 void Cpu::setStatus(Statusbit s, bool v)
 {
@@ -13,7 +17,7 @@ void Cpu::setStatus(Statusbit s, bool v)
 
 bool Cpu::getStatus(Statusbit s)
 {
-    return (P & s) >> s;
+    return (P & (1u << s)) >> s;
 }
 
 bool willCrossPage(uintptr_t a, uintptr_t b){
@@ -26,6 +30,12 @@ bool willCrossPage(uintptr_t a, int8_t b){
     uint8_t lowerA = a & 0xff;
     int diff = lowerA + b;
     return (b > std::numeric_limits<uint8_t>::max() - lowerA) || (diff < 0);
+}
+
+std::string hex(uintptr_t input){
+    std::string str = std::format("{:x}", input);
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
 }
 
 uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
@@ -53,7 +63,7 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
         case ADDR_ABSOLUTE: // little endian
             {uint8_t lower = read((uint8_t*)PC + 1);
             uint8_t higher = read((uint8_t*)PC + 2);
-            uint16_t addr = ((uint16_t)higher << 0xff) & (uint16_t)lower;
+            uint16_t addr = (((uint16_t)higher) << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
             return (uint8_t*)addr;}
@@ -63,26 +73,29 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
             cycles += 2;
             // if(willCrossPage(reinterpret_cast<uintptr_t>(opcode_start), offset)) // NUR FALLS BRANCH GENOMMEN, also in Instruktion machen
             //     cycles += 1;
-            uint8_t* ret = (uint8_t*)(PC + offset);
             PC += 2;
+            uint8_t* ret = (uint8_t*)(offset);
             return ret;}   //PC muss gesetzt werden. von Instruktion?
         case ADDR_INDIRECT:
             {uint8_t olower = read((uint8_t*)PC + 1);
             uint8_t ohigher = read((uint8_t*)PC + 2);
-            uint16_t addr = ((uint16_t)ohigher << 0xff) & (uint16_t)olower;
+            uint16_t addr = ((uint16_t)ohigher << 8) | (uint16_t)olower;
             uint8_t lower = read((uint8_t*)addr);
             uint8_t higher;
             if(olower == 0xFF) // CPU-Bug bei JMP
-                higher = read((uint8_t*)(addr & 0x00));
+                higher = read((uint8_t*)(addr & 0xFF00));
             else higher = read((uint8_t*)addr + 1);
-            addr = ((uint16_t)higher << 0xff) & (uint16_t)lower;
+            
+            addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 5;
             PC += 3;
             return (uint8_t*)addr;}
         case ADDR_INDEXED_INDIRECT_Y:
-            {uint8_t lower = read((uint8_t*)read((uint8_t*)PC + 1));
-            uint8_t higher = read((uint8_t*)(read((uint8_t*)PC + 1) + 1));
-            uint16_t origAddr = (((uint16_t)higher << 0xff) & (uint16_t)lower);
+            {uint8_t zeroAddr = read((uint8_t*)PC + 1);
+            uint8_t lower = read((uint8_t*)zeroAddr);
+            uint8_t zeroAddrh = zeroAddr + 1;
+            uint8_t higher = read((uint8_t*)zeroAddrh);
+            uint16_t origAddr = (((uint16_t)higher << 8) | (uint16_t)lower);
             uint16_t addr = origAddr + ((uint16_t) Y);
             cycles += 5;
             PC += 2;
@@ -92,59 +105,76 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
         case ADDR_INDEXED_INDIRECT_X:
             {uint8_t sum = read((uint8_t*)PC + 1) + X;
             uint8_t lower = read((uint8_t*)sum);
-            uint8_t higher = read((uint8_t*)sum + 1);
-            uint16_t addr = ((uint16_t)higher << 0xff) & (uint16_t)lower;
+            uint8_t sumh = sum + 1;
+            uint8_t higher = read((uint8_t*)sumh);
+            uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 6;
             PC += 2;
             return (uint8_t*)addr;}
         case ADDR_ZERO_PAGE_INDEXED_X:
-            {uint8_t addr = read((uint8_t*)read((uint8_t*)PC + 1));
-            uint8_t new_addr = addr + X;
+            {uint8_t arg = read((uint8_t*)PC + 1);
+            uint8_t new_addr = arg + X;
             cycles += 4;
             PC += 2;
             return (uint8_t*)new_addr;}
         case ADDR_ZERO_PAGE_INDEXED_Y:
-            {uint8_t addr = read((uint8_t*)read((uint8_t*)PC + 1));
-            uint8_t new_addr = addr + Y;
+            {uint8_t arg = read((uint8_t*)PC + 1);
+            uint8_t new_addr = arg + Y;
             cycles += 4;
             PC += 2;
             return (uint8_t*)new_addr;}
         case ADDR_ABSOLUTE_INDEXED_X:
             {uint8_t lower = read((uint8_t*)PC + 1);
             uint8_t higher = read((uint8_t*)PC + 2);
-            uint16_t addr = ((uint16_t)higher << 0xff) & (uint16_t)lower;
+            uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
             if(willCrossPage((uintptr_t)addr, (uintptr_t)X))
                 cycles += 1;
-            return (uint8_t*)(addr + X);}
+            uint16_t sum = addr + X; // Summe wegen 16-bit Überlauf, landet dann in der zero-page
+            return (uint8_t*)(sum);}
         case ADDR_ABSOLUTE_INDEXED_Y:
             {uint8_t lower = read((uint8_t*)PC + 1);
             uint8_t higher = read((uint8_t*)PC + 2);
-            uint16_t addr = ((uint16_t)higher << 0xff) & (uint16_t)lower;
+            uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
             if(willCrossPage((uintptr_t)addr, (uintptr_t)Y))
                 cycles += 1;
-            return (uint8_t*)(addr + Y);}
+            uint16_t sum = addr + Y;
+            return (uint8_t*)(sum);}
     }
 }
 
 uint8_t Cpu::executeNextInstruction()
 {
+    uint8_t opcode = read((uint8_t*) PC);
+    opcode_info info = opcodes[opcode];
+    //nestest
+    log << std::setw(4) << std::setfill('0') << hex(PC)
+    << ", Opcode: " << std::setw(2) << std::setfill('0') << (hex(opcode))
+    << ", m: " << std::setw(2) << std::setfill('0') << info.mode 
+    << " A:" << std::setw(2) << std::setfill('0') << hex(A) 
+    << " X:" << std::setw(2) << std::setfill('0') << hex(X)
+    << " Y:" << std::setw(2) << std::setfill('0') << hex(Y)
+    << " P:" << std::setw(2) << std::setfill('0') << hex(P)
+    << " SP:" << std::setw(2) << std::setfill('0') << hex(SP)
+    << " CYC:" << totalCycles << std::endl;
+    
     if(setInterruptNextInstruction.first){
         setStatus(STATUS_INTERRUPT_DISABLE, setInterruptNextInstruction.second);
         setInterruptNextInstruction = {false, false};
     }
-    uint8_t opcode = read((uint8_t*) PC);
-    opcode_info info = opcodes[opcode];
+    
     uint8_t cycles = 0;
     uint8_t* addr = getMemoryAddress(info.mode, cycles);
     uint8_t modCycles = (this->*info.instruction)(addr);
     if(info.cycles > 0)
         cycles = info.cycles; // Overwrite für "spezielle" Instruktionen, wie ASL
     else cycles += modCycles; // Für relative Adressierung, die davon abhängt, ob ein Branch genommen wird
-    //waitFor(cycles + info.cycles);
+
+    totalCycles += cycles;
+
     return cycles;
 }
 
@@ -158,6 +188,18 @@ void Cpu::clockCPU()
 
 void Cpu::waitFor(uint8_t cycles)
 {
+}
+
+uint8_t Cpu::read(uint8_t *p)
+{ // Extrem gefährliche Lösung
+    if(p==&A) return A;
+    return memory[(uintptr_t)p];
+}
+
+void Cpu::write(uint8_t *p, uint8_t v)
+{ // Hier auch
+    if(p==&A) A = v;
+    else memory[(uintptr_t)p] = v;
 }
 
 void Cpu::pushStack(uint8_t value)
@@ -177,7 +219,7 @@ uint8_t Cpu::ADC(uint8_t *mem)
 {
     uint16_t result = A + read(mem) + (uint8_t)getStatus(STATUS_CARRY);
     setStatus(STATUS_CARRY, result > 0xFF);
-    setStatus(STATUS_ZERO, result == 0);
+    setStatus(STATUS_ZERO, (uint8_t)result == 0); // Nur bits in A testen! deshalb cast
     setStatus(STATUS_OVERFLOW, ((uint8_t)result ^ A) & ((uint8_t)result ^ read(mem)) & 0x80);
     setStatus(STATUS_NEGATIVE, (uint8_t)result & 0b10000000);
     A = (uint8_t)result;
@@ -187,6 +229,8 @@ uint8_t Cpu::ADC(uint8_t *mem)
 uint8_t Cpu::AND(uint8_t *mem)
 {
     A = A & read(mem);
+    setStatus(STATUS_ZERO, A == 0);
+    setStatus(STATUS_NEGATIVE, A & 0b10000000);
     return 0;
 }
 
@@ -196,7 +240,7 @@ uint8_t Cpu::ASL(uint8_t *mem)
     uint8_t result = (val << 1) & 0b11111110;
     write(mem, val);
     write(mem, result); // read-modify-write
-    setStatus(STATUS_CARRY, read(mem) & 0b10000000);
+    setStatus(STATUS_CARRY, val & 0b10000000);
     setStatus(STATUS_ZERO, result == 0);
     setStatus(STATUS_NEGATIVE, result & 0b10000000);
     return 0;
@@ -204,8 +248,7 @@ uint8_t Cpu::ASL(uint8_t *mem)
 
 uint8_t Cpu::BCC(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(!getStatus(STATUS_CARRY)){
         extraCycles++;
@@ -218,8 +261,7 @@ uint8_t Cpu::BCC(uint8_t *mem)
 
 uint8_t Cpu::BCS(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(getStatus(STATUS_CARRY)){
         extraCycles++;
@@ -232,8 +274,7 @@ uint8_t Cpu::BCS(uint8_t *mem)
 
 uint8_t Cpu::BEQ(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(getStatus(STATUS_ZERO)){
         extraCycles++;
@@ -255,8 +296,7 @@ uint8_t Cpu::BIT(uint8_t *mem)
 
 uint8_t Cpu::BMI(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(getStatus(STATUS_NEGATIVE)){
         extraCycles++;
@@ -269,8 +309,7 @@ uint8_t Cpu::BMI(uint8_t *mem)
 
 uint8_t Cpu::BNE(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(!getStatus(STATUS_ZERO)){
         extraCycles++;
@@ -283,8 +322,7 @@ uint8_t Cpu::BNE(uint8_t *mem)
 
 uint8_t Cpu::BPL(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(!getStatus(STATUS_NEGATIVE)){
         extraCycles++;
@@ -302,15 +340,15 @@ uint8_t Cpu::BRK(uint8_t *mem)
     pushStack(P | 0b00010000); // B gesetzt
     uint8_t lower = read((uint8_t*)0xFFFE);
     uint8_t higher = read((uint8_t*)0xFFFF);
-    uint16_t addr = ((uint16_t)higher << 0xff) & (uint16_t)lower;
+    uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
     PC = addr;
+    std::cout << "BRK wurde ausgelöst!" << std::endl;
     return 0;
 }
 
 uint8_t Cpu::BVC(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(!getStatus(STATUS_OVERFLOW)){
         extraCycles++;
@@ -323,8 +361,7 @@ uint8_t Cpu::BVC(uint8_t *mem)
 
 uint8_t Cpu::BVS(uint8_t *mem)
 {
-    uint8_t uoffset = read(mem);
-    int8_t offset = *(int8_t*)&uoffset;
+    int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(getStatus(STATUS_OVERFLOW)){
         extraCycles++;
@@ -450,7 +487,7 @@ uint8_t Cpu::INY(uint8_t *mem)
 
 uint8_t Cpu::JMP(uint8_t *mem)
 {
-    PC = (uint16_t)mem;
+    PC = (uintptr_t)(mem); // Falsch?
     return 0;
 }
 
@@ -458,7 +495,7 @@ uint8_t Cpu::JSR(uint8_t *mem)
 {
     pushStack((PC-1) >> 8);
     pushStack(PC-1);
-    PC = (uint16_t)mem;
+    PC = (uintptr_t)mem;
     return 0;
 }
 
@@ -598,8 +635,9 @@ uint8_t Cpu::RTS(uint8_t *mem)
 uint8_t Cpu::SBC(uint8_t *mem)
 {
     uint8_t val = read(mem);
-    uint8_t result = A - val - ~((uint8_t)getStatus(STATUS_CARRY));
-    setStatus(STATUS_CARRY, (uint16_t)A < (uint16_t)val + ~((uint16_t)getStatus(STATUS_CARRY))); // Ist das richtig???????????????????????
+    uint8_t result = A + ~val + ((uint8_t)getStatus(STATUS_CARRY));
+    int intres = A + ~val + ((uint8_t)getStatus(STATUS_CARRY));
+    setStatus(STATUS_CARRY, !(intres < 0)); // blöd, ja, aber einfach
     setStatus(STATUS_ZERO, result == 0);
     setStatus(STATUS_OVERFLOW, (result ^ A) & (result ^ ~val) & 0x80);
     setStatus(STATUS_NEGATIVE, result & 0b10000000);
@@ -686,5 +724,126 @@ uint8_t Cpu::TYA(uint8_t *mem)
     A = Y;
     setStatus(STATUS_ZERO, A == 0);
     setStatus(STATUS_NEGATIVE, A & 0b10000000);
+    return 0;
+}
+
+uint8_t Cpu::STP(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::SLO(uint8_t *mem)
+{
+    ASL(mem);
+    ORA(mem);
+    return 0;
+}
+
+uint8_t Cpu::ANC(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::RLA(uint8_t *mem)
+{
+    ROL(mem);
+    AND(mem);
+    return 0;
+}
+
+uint8_t Cpu::SRE(uint8_t *mem)
+{
+    LSR(mem);
+    EOR(mem);
+    return 0;
+}
+
+uint8_t Cpu::ALR(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::RRA(uint8_t *mem)
+{
+    ROR(mem);
+    ADC(mem);
+    return 0;
+}
+
+uint8_t Cpu::ARR(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::SAX(uint8_t *mem)
+{
+    write(mem, A & X);
+    return 0;
+}
+
+uint8_t Cpu::XAA(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::AHX(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::TAS(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::SHY(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::SHX(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::LAX(uint8_t *mem)
+{
+    LDA(mem);
+    LDX(mem);
+    return 0;
+}
+
+uint8_t Cpu::LAS(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::DCP(uint8_t *mem)
+{
+    DEC(mem);
+    CMP(mem);
+    return 0;
+}
+
+uint8_t Cpu::AXS(uint8_t *mem)
+{
+    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    return 0;
+}
+
+uint8_t Cpu::ISC(uint8_t *mem)
+{
+    INC(mem);
+    SBC(mem);
     return 0;
 }

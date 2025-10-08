@@ -1,12 +1,12 @@
 #include <iostream>
 #include <string>
+#include <fstream>
 
 #include "lib.hpp"
+#include "cputest.h"
 
 auto main() -> int
 {
-  auto const lib = library {};
-  auto const message = "Hello from " + lib.name + "!";
-  std::cout << message << '\n';
+  CPUTest test;
   return 0;
 }
