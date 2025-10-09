@@ -52,105 +52,107 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
             return &A;}
         case ADDR_IMMEDIATE:
             {cycles += 2;
-            uint8_t* ret = (uint8_t*)PC + 1;
+            uint8_t* ret = (uint8_t*)(uintptr_t)PC + 1;
             PC += 2;
             return ret;}
         case ADDR_ZERO_PAGE:
             {cycles += 3;
-            uint8_t* ret = (uint8_t*)read((uint8_t*)PC + 1);
+            uint8_t* ret = (uint8_t*)(uintptr_t)read((uint8_t*)(uintptr_t)PC + 1);
             PC += 2;
             return ret;}
         case ADDR_ABSOLUTE: // little endian
-            {uint8_t lower = read((uint8_t*)PC + 1);
-            uint8_t higher = read((uint8_t*)PC + 2);
+            {uint8_t lower = read((uint8_t*)(uintptr_t)PC + 1);
+            uint8_t higher = read((uint8_t*)(uintptr_t)PC + 2);
             uint16_t addr = (((uint16_t)higher) << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
-            return (uint8_t*)addr;}
+            return (uint8_t*)(uintptr_t)addr;}
         case ADDR_RELATIVE:
-            {uint8_t arg = read((uint8_t*)PC + 1);
+            {uint8_t arg = read((uint8_t*)(uintptr_t)PC + 1);
             int8_t offset =*((int8_t*)&arg); //ist das korrekt??
             cycles += 2;
             // if(willCrossPage(reinterpret_cast<uintptr_t>(opcode_start), offset)) // NUR FALLS BRANCH GENOMMEN, also in Instruktion machen
             //     cycles += 1;
             PC += 2;
-            uint8_t* ret = (uint8_t*)(offset);
+            uint8_t* ret = (uint8_t*)((uintptr_t)offset);
             return ret;}   //PC muss gesetzt werden. von Instruktion?
         case ADDR_INDIRECT:
-            {uint8_t olower = read((uint8_t*)PC + 1);
-            uint8_t ohigher = read((uint8_t*)PC + 2);
+            {uint8_t olower = read((uint8_t*)(uintptr_t)PC + 1);
+            uint8_t ohigher = read((uint8_t*)(uintptr_t)PC + 2);
             uint16_t addr = ((uint16_t)ohigher << 8) | (uint16_t)olower;
-            uint8_t lower = read((uint8_t*)addr);
+            uint8_t lower = read((uint8_t*)(uintptr_t)addr);
             uint8_t higher;
             if(olower == 0xFF) // CPU-Bug bei JMP
-                higher = read((uint8_t*)(addr & 0xFF00));
-            else higher = read((uint8_t*)addr + 1);
+                higher = read((uint8_t*)(uintptr_t)(addr & 0xFF00));
+            else higher = read((uint8_t*)(uintptr_t)addr + 1);
             
             addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 5;
             PC += 3;
-            return (uint8_t*)addr;}
+            return (uint8_t*)(uintptr_t)addr;}
         case ADDR_INDEXED_INDIRECT_Y:
-            {uint8_t zeroAddr = read((uint8_t*)PC + 1);
-            uint8_t lower = read((uint8_t*)zeroAddr);
+            {uint8_t zeroAddr = read((uint8_t*)(uintptr_t)PC + 1);
+            uint8_t lower = read((uint8_t*)(uintptr_t)zeroAddr);
             uint8_t zeroAddrh = zeroAddr + 1;
-            uint8_t higher = read((uint8_t*)zeroAddrh);
+            uint8_t higher = read((uint8_t*)(uintptr_t)zeroAddrh);
             uint16_t origAddr = (((uint16_t)higher << 8) | (uint16_t)lower);
             uint16_t addr = origAddr + ((uint16_t) Y);
             cycles += 5;
             PC += 2;
             if(willCrossPage((uintptr_t)origAddr, (uintptr_t)Y))
                 cycles += 1;
-            return (uint8_t*)addr;}
+            return (uint8_t*)(uintptr_t)addr;}
         case ADDR_INDEXED_INDIRECT_X:
-            {uint8_t sum = read((uint8_t*)PC + 1) + X;
-            uint8_t lower = read((uint8_t*)sum);
+            {uint8_t sum = read((uint8_t*)(uintptr_t)PC + 1) + X;
+            uint8_t lower = read((uint8_t*)(uintptr_t)sum);
             uint8_t sumh = sum + 1;
-            uint8_t higher = read((uint8_t*)sumh);
+            uint8_t higher = read((uint8_t*)(uintptr_t)sumh);
             uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 6;
             PC += 2;
-            return (uint8_t*)addr;}
+            return (uint8_t*)(uintptr_t)addr;}
         case ADDR_ZERO_PAGE_INDEXED_X:
-            {uint8_t arg = read((uint8_t*)PC + 1);
+            {uint8_t arg = read((uint8_t*)(uintptr_t)PC + 1);
             uint8_t new_addr = arg + X;
             cycles += 4;
             PC += 2;
-            return (uint8_t*)new_addr;}
+            return (uint8_t*)(uintptr_t)new_addr;}
         case ADDR_ZERO_PAGE_INDEXED_Y:
-            {uint8_t arg = read((uint8_t*)PC + 1);
+            {uint8_t arg = read((uint8_t*)(uintptr_t)PC + 1);
             uint8_t new_addr = arg + Y;
             cycles += 4;
             PC += 2;
-            return (uint8_t*)new_addr;}
+            return (uint8_t*)(uintptr_t)new_addr;}
         case ADDR_ABSOLUTE_INDEXED_X:
-            {uint8_t lower = read((uint8_t*)PC + 1);
-            uint8_t higher = read((uint8_t*)PC + 2);
+            {uint8_t lower = read((uint8_t*)(uintptr_t)PC + 1);
+            uint8_t higher = read((uint8_t*)(uintptr_t)PC + 2);
             uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
             if(willCrossPage((uintptr_t)addr, (uintptr_t)X))
                 cycles += 1;
             uint16_t sum = addr + X; // Summe wegen 16-bit Überlauf, landet dann in der zero-page
-            return (uint8_t*)(sum);}
+            return (uint8_t*)((intptr_t)sum);}
         case ADDR_ABSOLUTE_INDEXED_Y:
-            {uint8_t lower = read((uint8_t*)PC + 1);
-            uint8_t higher = read((uint8_t*)PC + 2);
+            {uint8_t lower = read((uint8_t*)(intptr_t)PC + 1);
+            uint8_t higher = read((uint8_t*)(intptr_t)PC + 2);
             uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
             if(willCrossPage((uintptr_t)addr, (uintptr_t)Y))
                 cycles += 1;
             uint16_t sum = addr + Y;
-            return (uint8_t*)(sum);}
+            return (uint8_t*)((intptr_t)sum);}
     }
+    return nullptr;
 }
 
 uint8_t Cpu::executeNextInstruction()
 {
-    uint8_t opcode = read((uint8_t*) PC);
+    uint8_t opcode = read((uint8_t*) (intptr_t) PC);
     opcode_info info = opcodes[opcode];
     //nestest
+    assert(log.good());
     log << std::setw(4) << std::setfill('0') << hex(PC)
     << ", Opcode: " << std::setw(2) << std::setfill('0') << (hex(opcode))
     << ", m: " << std::setw(2) << std::setfill('0') << info.mode 
