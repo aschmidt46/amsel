@@ -193,13 +193,15 @@ void Cpu::waitFor(uint8_t cycles)
 uint8_t Cpu::read(uint8_t *p)
 { // Extrem gefährliche Lösung
     if(p==&A) return A;
-    return memory[(uintptr_t)p];
+    // return memory[(uintptr_t)p];
+    return mapper->read(p);
 }
 
 void Cpu::write(uint8_t *p, uint8_t v)
 { // Hier auch
     if(p==&A) A = v;
-    else memory[(uintptr_t)p] = v;
+    // else memory[(uintptr_t)p] = v;
+    else mapper->write(p, v);
 }
 
 void Cpu::pushStack(uint8_t value)

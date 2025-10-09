@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include "mapper.h"
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
@@ -16,21 +17,21 @@ using std::chrono::seconds;
 //You can make an iNES parser once you start trying to actually run Concentration Room or Donkey Kong.
 
 CPUTest::CPUTest(){
-    std::ifstream stream("nestest.nes", std::ios::in | std::ios::binary);
-    std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    
-
-    uint8_t* memory = new uint8_t[std::numeric_limits<uint16_t>::max()];
-
-    for(unsigned int i = 0; i < 0x4000; i++){
-        memory[i + 0x8000] = contents[i + 0x0010];
-        memory[i + 0xC000] = contents[i + 0x0010];
-    }
-    cpu.init(0xC000, memory);
+    NESFile* cart = new NESFile("nestest.nes");
+    Ppu* ppu = new Ppu();
+    cpu = new Cpu();
+    Mapper* m = new Mapper(cart, cpu, ppu);
+    auto finalize = [&](){
+        delete cart;
+        delete ppu;
+        delete cpu;
+        delete m;
+    };
+    cpu->init(0xC000, m);
     auto t0 = high_resolution_clock::now();
     while(true){
         auto t1 = high_resolution_clock::now();
-        cpu.clockCPU();
+        cpu->clockCPU();
         if(duration_cast<milliseconds>(t1-t0).count()>50)
             break;
     }
@@ -65,6 +66,7 @@ CPUTest::CPUTest(){
                     std::cout << "SP ungleich!" << std::endl;
                 if(nesLL.CYC != myLL.CYC)
                     std::cout << "CYC ungleich!" << std::endl;
+                finalize();
                 throw;
             }
             if(line>8991){
@@ -82,4 +84,6 @@ CPUTest::CPUTest(){
     else {
         std::cout << "Fehler beim öffnen!" << std::endl;
     }
+    finalize();
+
 };

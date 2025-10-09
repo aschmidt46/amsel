@@ -55,6 +55,6 @@ struct LogLine{
 
 class CPUTest{
     public:
-    Cpu cpu;
+    Cpu* cpu;
     CPUTest();
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <cstdint>
 
 enum NAMETABLE_ARRANGEMENT{
     VERTICAL = 0,
@@ -13,7 +14,7 @@ enum TVSystem{
 };
 
 struct Flags6{
-    unsigned char data;
+    uint8_t data;
 
     NAMETABLE_ARRANGEMENT getNametableArrangement();
     bool containsBatteryPackedPRG();
@@ -22,7 +23,7 @@ struct Flags6{
 };
 
 struct Flags7{
-    unsigned char data;
+    uint8_t data;
 
     bool VSUnisystem();
     bool PlayChoice10();
@@ -30,7 +31,7 @@ struct Flags7{
 };
 
 struct Flags10{
-    unsigned char data;
+    uint8_t data;
 
     TVSystem getTVSystem();
     bool isPresentPRGRAM();
@@ -38,26 +39,32 @@ struct Flags10{
 };
 
 struct NESHeader{
-    char head[4];
-    unsigned char PRGROMSize; //16KiB units
-    unsigned char CHRROMSize; // 8KiB units
+    uint8_t head[4];
+    uint8_t PRGROMSize; //16KiB units
+    uint8_t CHRROMSize; // 8KiB units
     Flags6 flags6;
     Flags7 flags7;
-    unsigned char flags8; //prg ram size, bei 0 sind es 8kib
-    unsigned char flags9; //reserved 0
+    uint8_t flags8; //prg ram size, bei 0 sind es 8kib
+    uint8_t flags9; //reserved 0
     Flags10 flags10;
-    char unused[5];
+    uint8_t unused[5];
 
-    unsigned char getMapper();
-    unsigned char getPRGRamSize();
+    uint8_t getMapper();
+    uint8_t getPRGRamSize();
+    static NESHeader createHeader(uint8_t* data);
 };
 
 struct NESFile{
     NESHeader header;
-    std::vector<unsigned char> trainer; // 0 oder 512
-    std::vector<unsigned char> prgRom; // 16384 * x
-    std::vector<unsigned char> chrRom; // 8192 * y
-    std::vector<unsigned char> playchoiceInstRom; // 0 oder 8192
-    std::vector<unsigned char> playchoicePRom; // 0 oder 32
-    std::vector<unsigned char> footer;
+    uint8_t* trainer; // 0 oder 512
+    uint8_t* prgRom; // 16384 * x
+    uint8_t* chrRom; // 8192 * y
+    uint8_t* playchoiceInstRom; // 0 oder 8192
+    uint8_t* playchoicePRom; // 0 oder 32
+    uint8_t* footer;
+
+    uint8_t* rawData;
+
+    NESFile(const char* path);
+    ~NESFile(){delete[] rawData;};
 };

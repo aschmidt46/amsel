@@ -3,6 +3,8 @@
 #include <utility>
 #include <limits>
 #include <fstream>
+#include "mapper.h"
+#include <assert.h>
 
 
 enum Statusbit{
@@ -31,7 +33,7 @@ enum AddressMode{
     ADDR_INDEXED_INDIRECT_Y //bzw. indirect indexed
 };
 
-
+class Mapper;
 class Cpu{
 
     struct opcode_info{
@@ -42,7 +44,7 @@ class Cpu{
 
     public:
 
-    uint8_t* memory;
+    uint8_t* internalMemory; // 2048 B
 
     uint16_t PC; //Program Counter
     uint8_t A; //Accumulator
@@ -58,17 +60,28 @@ class Cpu{
 
     size_t totalCycles = 7; //testweise
 
+    Mapper* mapper;
+
     // (Setzen, Wert)
     std::pair<bool, bool> setInterruptNextInstruction = {false, false};
 
     std::ofstream log;
 
-    void init(int pc, uint8_t* mem){
+    Cpu(){
+        internalMemory = new uint8_t[0x0800];
+    };
+    ~Cpu(){
+        delete[] internalMemory;
+        log.close();
+    };
+
+    void init(int pc, Mapper* m){
         PC = pc;
-        memory = mem;
+        mapper = m;
         SP = 0xFD;
         P = 0b00100100; // Interrupt und Anderes Bit
         log = std::ofstream("cout.txt", std::ios::out);
+        assert(log.is_open());
         A = 0;
         X = 0;
         Y = 0;
