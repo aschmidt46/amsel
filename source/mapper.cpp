@@ -1,12 +1,11 @@
 #include "mapper.h"
-#include <limits>
 #include <assert.h>
 #include <iostream>
 
 Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
 {
-    memoryMap = new uint8_t*[std::numeric_limits<uint16_t>::max()];
-    for(unsigned int i = 0; i < std::numeric_limits<uint16_t>::max(); i++){
+    memoryMap = new uint8_t*[ADDRSPACE];
+    for(unsigned int i = 0; i < ADDRSPACE; i++){
         memoryMap[i] = nullptr;
     }
 

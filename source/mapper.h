@@ -3,6 +3,9 @@
 #include "nes_file.h"
 #include "6502.h"
 #include "ppu.h"
+#include <limits>
+
+constexpr const size_t ADDRSPACE = 1 + (size_t) std::numeric_limits<uint16_t>::max();
 
 class Cpu;
 class Ppu;
