@@ -151,17 +151,17 @@ uint8_t Cpu::executeNextInstruction()
 {
     uint8_t opcode = read((uint8_t*) (intptr_t) PC);
     opcode_info info = opcodes[opcode];
-    //nestest
-    assert(log.good());
-    log << std::setw(4) << std::setfill('0') << hex(PC)
-    << ", Opcode: " << std::setw(2) << std::setfill('0') << (hex(opcode))
-    << ", m: " << std::setw(2) << std::setfill('0') << info.mode 
-    << " A:" << std::setw(2) << std::setfill('0') << hex(A) 
-    << " X:" << std::setw(2) << std::setfill('0') << hex(X)
-    << " Y:" << std::setw(2) << std::setfill('0') << hex(Y)
-    << " P:" << std::setw(2) << std::setfill('0') << hex(P)
-    << " SP:" << std::setw(2) << std::setfill('0') << hex(SP)
-    << " CYC:" << totalCycles << std::endl;
+    //nestest debugging
+    // assert(log.good());
+    // log << std::setw(4) << std::setfill('0') << hex(PC)
+    // << ", Opcode: " << std::setw(2) << std::setfill('0') << (hex(opcode))
+    // << ", m: " << std::setw(2) << std::setfill('0') << info.mode 
+    // << " A:" << std::setw(2) << std::setfill('0') << hex(A) 
+    // << " X:" << std::setw(2) << std::setfill('0') << hex(X)
+    // << " Y:" << std::setw(2) << std::setfill('0') << hex(Y)
+    // << " P:" << std::setw(2) << std::setfill('0') << hex(P)
+    // << " SP:" << std::setw(2) << std::setfill('0') << hex(SP)
+    // << " CYC:" << totalCycles << std::endl;
     
     if(setInterruptNextInstruction.first){
         setStatus(STATUS_INTERRUPT_DISABLE, setInterruptNextInstruction.second);

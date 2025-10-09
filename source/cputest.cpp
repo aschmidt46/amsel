@@ -28,12 +28,12 @@ CPUTest::CPUTest(){
         delete m;
     };
     cpu->init(0xC000, m);
-    auto t0 = high_resolution_clock::now();
-    while(true){
-        auto t1 = high_resolution_clock::now();
+    //auto t0 = high_resolution_clock::now();
+    while(cpu->totalCycles < 30000){
+        //auto t1 = high_resolution_clock::now();
         cpu->clockCPU();
-        if(duration_cast<milliseconds>(t1-t0).count()>50)
-            break;
+        // if(duration_cast<milliseconds>(t1-t0).count()>50)
+        //     break;
     }
 
     std::string myline;
