@@ -32,15 +32,17 @@ include_directories(PUBLIC .)
 
 
 add_library(cpu source/6502.cpp source/6502.h)
+add_library(ppu source/ppu.cpp source/ppu.h)
 add_library(cputest source/cputest.cpp source/cputest.h)
 add_library(nesfile source/nes_file.cpp source/nes_file.h)
 add_library(mapper source/mapper.cpp source/mapper.h)
 add_library(screen source/screen.cpp source/screen.h)
+add_library(nes source/nes.cpp source/nes.h)
 
 
 
 add_executable(nes-emu source/main.cpp)
-target_link_libraries(nes-emu cputest nesfile cpu mapper screen)
+target_link_libraries(nes-emu cputest nes nesfile cpu ppu mapper screen)
 target_link_libraries(nes-emu OpenGL::GL)
 target_link_libraries(nes-emu glfw)
 target_link_libraries(nes-emu GLEW::GLEW)

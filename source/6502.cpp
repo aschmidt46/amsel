@@ -151,6 +151,11 @@ uint8_t Cpu::executeNextInstruction()
 {
     uint8_t opcode = read((uint8_t*) (intptr_t) PC);
     opcode_info info = opcodes[opcode];
+    // std::cout << "FFFA (NMI): " << hex(read((uint8_t*)(uintptr_t)0xFFFA)) << std::endl;
+    // std::cout << "FFFB (?): " << hex(read((uint8_t*)(uintptr_t)0xFFFB)) << std::endl;
+    // std::cout << "FFFC (RESET): " << hex(read((uint8_t*)(uintptr_t)0xFFFC)) << std::endl;
+    // std::cout << "FFFD (?): " << hex(read((uint8_t*)(uintptr_t)0xFFFD)) << std::endl;
+    // std::cout << "FFFE (IRQ / BRK): " << hex(read((uint8_t*)(uintptr_t)0xFFFE)) << std::endl;
     //nestest debugging
     // assert(log.good());
     // log << std::setw(4) << std::setfill('0') << hex(PC)
@@ -183,9 +188,31 @@ uint8_t Cpu::executeNextInstruction()
 void Cpu::clockCPU()
 {
     if(remainingCycles<=0){
+        remainingCycles += pollInterrupts();
         remainingCycles += executeNextInstruction();
     }
     remainingCycles--;
+}
+
+// Logik prüfen
+uint8_t Cpu::pollInterrupts()
+{
+    if(IRQgenerated || NMIgenerated){
+        if(NMIgenerated){
+            NMI();
+            NMIWasHigh = true;
+            NMIgenerated = false;
+            return 7;
+        }
+        if(IRQgenerated){
+            if(!getStatus(STATUS_INTERRUPT_DISABLE)){
+                IRQ();
+                IRQgenerated = false;
+                return 7;
+            }
+        }
+    }
+    return 0;
 }
 
 void Cpu::waitFor(uint8_t cycles)
@@ -339,13 +366,15 @@ uint8_t Cpu::BPL(uint8_t *mem)
 
 uint8_t Cpu::BRK(uint8_t *mem)
 {
-    pushStack(PC >> 8);
+    uint16_t PCH = (PC >> 8) & 0b0000000011111111;
+    pushStack(PCH);
     pushStack(PC);
     pushStack(P | 0b00010000); // B gesetzt
     uint8_t lower = read((uint8_t*)0xFFFE);
     uint8_t higher = read((uint8_t*)0xFFFF);
     uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
     PC = addr;
+    setStatus(STATUS_INTERRUPT_DISABLE, true);
     std::cout << "BRK wurde ausgelöst!" << std::endl;
     return 0;
 }

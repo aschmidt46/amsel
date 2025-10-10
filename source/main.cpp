@@ -7,6 +7,7 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include "nes.h"
 
 int width = 256, height = 240;
 
@@ -78,6 +79,8 @@ auto main() -> int
   //CPUTest test;
   GLFWwindow* window = initGL();
   Screen screen;
+  NES console(&screen);
+  console.load("donkey-kong(world).nes");
 
   glfwSetWindowUserPointer(window, &screen);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -87,12 +90,13 @@ auto main() -> int
   while(!glfwWindowShouldClose(window)){
     int err = glGetError();
     while(err!=GL_NO_ERROR){
-        std::cout << "OPENGL ERROR " << err << std::endl;
-        err = glGetError();
+      std::cout << "OPENGL ERROR " << err << std::endl;
+      err = glGetError();
     }
     glClear(GL_COLOR_BUFFER_BIT);
     screen.present();
     glfwSwapBuffers(window);
+    console.nextFrame();
     glfwPollEvents();
   }
 

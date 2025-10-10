@@ -98,6 +98,7 @@ Screen::Screen()
 
 void Screen::present()
 {
+    glClear(GL_COLOR_BUFFER_BIT);
     glBindVertexArray(vao);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, screenTexture);

@@ -5,6 +5,7 @@
 #include <fstream>
 #include "mapper.h"
 #include <assert.h>
+#include <iostream>
 
 
 enum Statusbit{
@@ -85,6 +86,52 @@ class Cpu{
         A = 0;
         X = 0;
         Y = 0;
+        RESET();
+    };
+
+    void RESET(){
+        uint8_t low = read((uint8_t*)(uintptr_t)0xFFFC);
+        uint8_t high = read((uint8_t*)(uintptr_t)0xFFFD);
+        uint16_t addr = (high << 8) | low;
+        PC = addr;
+    };
+
+    void IRQ(){
+        uint16_t PCH = (PC >> 8) & 0b0000000011111111;
+        pushStack(PCH);
+        pushStack(PC);
+        pushStack(P | 0b00010000); // B gesetzt
+        uint8_t lower = read((uint8_t*)0xFFFE);
+        uint8_t higher = read((uint8_t*)0xFFFF);
+        uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
+        PC = addr;
+        setStatus(STATUS_INTERRUPT_DISABLE, true);
+    };
+
+    void NMI(){
+        uint16_t PCH = (PC >> 8) & 0b0000000011111111;
+        pushStack(PCH);
+        pushStack(PC);
+        pushStack(P | 0b00010000); // B gesetzt
+        uint8_t lower = read((uint8_t*)0xFFFA);
+        uint8_t higher = read((uint8_t*)0xFFFB);
+        uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
+        PC = addr;
+        setStatus(STATUS_INTERRUPT_DISABLE, true);
+    };
+
+    bool IRQgenerated = false;
+    bool NMIgenerated = false;
+    bool NMIWasHigh = true;
+
+    void pullNMI(){
+        if(NMIWasHigh){
+            NMIgenerated = true;
+            NMIWasHigh = false;
+        }
+    };
+    void pullIRQ(){
+        IRQgenerated = true;;
     };
 
     void setStatus(Statusbit s, bool v);
@@ -92,6 +139,7 @@ class Cpu{
     uint8_t* getMemoryAddress(AddressMode mode, uint8_t &cycles);
     uint8_t executeNextInstruction(); //Gibt verstrichene Zyklen zurück
     void clockCPU();
+    uint8_t pollInterrupts();
     void waitFor(uint8_t cycles);
 
     uint8_t read(uint8_t* p);
