@@ -46,6 +46,7 @@ FrameRoutine Ppu::frame()
                 uint16_t attribute_address = nametable_start + 0x3C0 + (8 * (i / 32)) + (j / 32);
                 uint8_t at_entry = mapper->readVRAM((uint8_t*)(uintptr_t)attribute_address);
                 uint8_t att_bits;
+                //std::cout << "slow" << std::endl;
                 bool bottom = false, left = false;
                 if(i%32 <16) bottom = true;
                 if(j%32 <16) left = true;
@@ -54,9 +55,9 @@ FrameRoutine Ppu::frame()
                 if(bottom && left) att_bits = (at_entry & 0b00110000) >> 2; // bottom left
                 if(bottom && !left) att_bits = (at_entry & 0b11000000) >> 4; // bottom right
                 // Niedriges Pattern Table Tile
-                uint8_t pt_entry_plane_1 = mapper->readVRAM((uint8_t*)nt_entry);
+                uint8_t pt_entry_plane_1 = mapper->readVRAM((uint8_t*)backgroundTable + nt_entry);
                 // Hohes Pattern Table Tile (+8 bytes vom ersten)
-                uint8_t pt_entry_plane_2 = mapper->readVRAM((uint8_t*)(nt_entry+8));
+                uint8_t pt_entry_plane_2 = mapper->readVRAM((uint8_t*)(backgroundTable + nt_entry+8));
                 for(int g = 0; g < 8; g++){
                     bool p1 = pt_entry_plane_1 & (128u >> g);
                     bool p2 = pt_entry_plane_2 & (128u >> g);
@@ -258,6 +259,11 @@ void Ppu::wroteRegister(uint8_t *reg)
         t = t & 0b1111001111111111;
         t = t | ((PPUCTRL << 10) & 0b0000110000000000);
 
+        // Pattern table select Hintergrund
+        bool second = PPUCTRL & 0b00010000;
+        if(second) backgroundTable = 0x1000;
+        else backgroundTable = 0;
+
     }
     else if(reg==&PPUMASK){
 
@@ -291,12 +297,12 @@ void Ppu::wroteRegister(uint8_t *reg)
     }
     else if(reg==&PPUADDR){
         if(!w){
-            t = (((uint16_t)PPUADDR) << 8) & 0b0011111100000000;
+            t = (((uint16_t)PPUADDR) << 8);// & 0b0011111100000000;
             //v = t | (v & 0b0000000011111111);
             w = true;
         }
         else{
-            t = t | (uint16_t)PPUADDR;
+            t = t | ((uint16_t)PPUADDR);
             v = t;
             w = false;
         }
