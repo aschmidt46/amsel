@@ -4,6 +4,13 @@
 #include <algorithm>
 #include <format>
 
+std::string mhex(uintptr_t input){
+    std::string str = std::format("{:x}", input);
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
+}
+
+
 Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
 {
     memoryMap = new uint8_t*[ADDRSPACE];
@@ -133,7 +140,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
 uint8_t Mapper::read(uint8_t *address)
 {
     [[unlikely]] if(memoryMap[(uintptr_t)address]==nullptr){
-        std::cout << "Ungemapter Speicherzugriff, gebe 0 zurück" << std::endl;
+        std::cout << "Ungemapter Speicherzugriff bei " << mhex((uintptr_t)address) << ", gebe 0 zurück" << std::endl;
         return 0;
     }
     auto val = *memoryMap[(uintptr_t)address];
@@ -147,7 +154,7 @@ uint8_t Mapper::read(uint8_t *address)
 void Mapper::write(uint8_t *address, uint8_t value)
 {
     [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
-        std::cout << "Ungemapter Speicher-Schreib-Zugriff, tue nichts" << std::endl;
+        std::cout << "Ungemapter Speicher-Schreib-Zugriff bei " << mhex((uintptr_t)address) << ", tue nichts" << std::endl;
         return;
     }
     *memoryMap[(uintptr_t)address] = value;
@@ -174,12 +181,6 @@ uint8_t Mapper::readVRAM(uint8_t *address)
         return 0;
     }
     return *ppuMap[(uintptr_t)address];
-}
-
-std::string mhex(uintptr_t input){
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
 }
 
 void Mapper::writeVRAM(uint8_t *address, uint8_t value)

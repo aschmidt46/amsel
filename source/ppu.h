@@ -3,6 +3,7 @@
 #include "screen.h"
 #include <coroutine>
 #include "mapper.h"
+#include "palette.h"
 
  // Die Coroutinen-Klasse
 struct FrameRoutine
@@ -88,7 +89,9 @@ class Ppu{
     // Output, nicht Teil der PPU
     float* pixelBuffer;
 
-    Ppu() : state(frame()) {
+    Palette pal;
+
+    Ppu() : state(frame()), pal("palette.pal") {
         pixelBuffer = new float[256*240*3];
         for(int i = 0; i < 256*240*3; i++){
             pixelBuffer[i] = 0;

@@ -16,10 +16,13 @@ void NES::load(const char *path)
 
 void NES::eject()
 {
+    delete Slot;
+    delete mapper;
 }
 
 void NES::reset()
 {
+    cpu->RESET();
 }
 
 void NES::nextFrame()
@@ -31,4 +34,5 @@ void NES::nextFrame()
         cpu->clockCPU();
     }
     ppu->frameReady = false;
+    tv->present();
 }

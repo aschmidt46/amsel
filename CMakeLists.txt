@@ -38,11 +38,12 @@ add_library(nesfile source/nes_file.cpp source/nes_file.h)
 add_library(mapper source/mapper.cpp source/mapper.h)
 add_library(screen source/screen.cpp source/screen.h)
 add_library(nes source/nes.cpp source/nes.h)
+add_library(palette source/palette.cpp source/palette.h)
 
 
 
 add_executable(nes-emu source/main.cpp)
-target_link_libraries(nes-emu cputest nes nesfile cpu ppu mapper screen)
+target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper screen)
 target_link_libraries(nes-emu OpenGL::GL)
 target_link_libraries(nes-emu glfw)
 target_link_libraries(nes-emu GLEW::GLEW)

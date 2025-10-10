@@ -18,6 +18,7 @@ class NES{
     Mapper* mapper;
     NESFile* Slot;
     Screen* tv;
+    // Controller* controller;
     
     public:
     NES(Screen* screen);

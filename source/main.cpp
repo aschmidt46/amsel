@@ -88,16 +88,14 @@ auto main() -> int
   glfwSetKeyCallback(window, key_callback);
 
   while(!glfwWindowShouldClose(window)){
+    glfwPollEvents();
+    glfwSwapBuffers(window);
     int err = glGetError();
     while(err!=GL_NO_ERROR){
       std::cout << "OPENGL ERROR " << err << std::endl;
       err = glGetError();
     }
-    glClear(GL_COLOR_BUFFER_BIT);
-    screen.present();
-    glfwSwapBuffers(window);
     console.nextFrame();
-    glfwPollEvents();
   }
 
   cleanUp(window);

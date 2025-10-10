@@ -98,6 +98,8 @@ NESFile::NESFile(const char *path)
     for(int i = 0; i < contents.size(); i++){
         rawData[i] = contents[i];
     }
+    stream.close();
+    
     header = NESHeader::createHeader(rawData);
     unsigned int index = 16;
 
