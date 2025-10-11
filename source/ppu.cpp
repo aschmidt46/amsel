@@ -45,7 +45,7 @@ FrameRoutine Ppu::frame()
 
         // Zyklen 1-256
         for(int j = 1; j <= 256; j++){
-            if(j % 8 == 0 && isRenderingEnabled()){
+            if((j-1) % 8 == 0 && isRenderingEnabled()){
                 // Background Evalutation
                 uint16_t nametable_start = 0x2000;
                 // Nametable Byte
@@ -81,7 +81,7 @@ FrameRoutine Ppu::frame()
                     //auto color = getColor(color_index); // In echt dann aus attribute index
                     color_index = color_index | att_bits | 0b00010000; // Hintergrund
                     uint8_t pallete_value = mapper->readVRAM((uint8_t*)(uintptr_t)0x3F00 + color_index);
-                    setPixel(j + g, i, pal.getColor(pallete_value));
+                    setPixel((j-1) + g, i, pal.getColor(pallete_value));
                 }
                 // Das braucht 8 dots und generiert 8 Pixel
                 if(j!=256) incrementX();

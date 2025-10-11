@@ -15,11 +15,14 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 include_directories(PUBLIC include)
 
-find_package(GLFW3 REQUIRED)
+find_package(glfw3 REQUIRED)
 
 find_package(OpenGL REQUIRED)
 
@@ -50,3 +53,4 @@ target_link_libraries(nes-emu GLEW::GLEW)
 
 
 file(COPY "lib/glew32.dll" DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY "resources/palette.pal" DESTINATION ${CMAKE_BINARY_DIR})

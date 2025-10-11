@@ -85,15 +85,7 @@ Screen::Screen()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uvssbo);
 
     // Testbild
-    const char* pt = "testimage.png";
-    int width, height, nrChannels;
-        unsigned char *tex = stbi_load(pt, &width, &height, &nrChannels, 0);
-        if(!tex){
-            std::cout << stbi_failure_reason() << std::endl;
-            std::cout << "texture load fail: " << pt << std::endl;
-        }
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, tex);
-        stbi_image_free(tex);
+    
 }
 
 void Screen::present()
