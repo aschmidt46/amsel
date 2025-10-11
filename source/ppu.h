@@ -4,6 +4,13 @@
 #include <coroutine>
 #include "mapper.h"
 #include "palette.h"
+#include <queue>
+
+struct BackgroundSliver{
+    uint8_t AT_BYTE;
+    uint8_t CHR_LOW;
+    uint8_t CHR_HIGH;
+};
 
  // Die Coroutinen-Klasse
 struct FrameRoutine
@@ -92,8 +99,11 @@ class Ppu{
     Palette pal;
 
     uintptr_t backgroundTable = 0;
-    uint16_t reg_1, reg_2;
-    uint8_t shift_1, shift_2;
+    uintptr_t spriteTable = 0;
+
+
+    std::queue<BackgroundSliver> nextTiles;
+
 
     Ppu() : state(frame()), pal("palette.pal") {
         pixelBuffer = new float[256*240*3];
@@ -103,6 +113,8 @@ class Ppu{
         internalMemory = new uint8_t[0x0800];
         palletteIndexes = new uint8_t[0x0020];
         OAM = new uint8_t[256];
+        nextTiles.push({});
+        nextTiles.push({});
     };
     ~Ppu(){
         delete[] pixelBuffer;
@@ -121,9 +133,11 @@ class Ppu{
     bool frameReady = false;
 
     FrameRoutine frame();
+    FrameRoutine fakeFrame();
     FrameRoutine state;
     bool unevenFrame = true;
     void clock();
+    void fakeClock();
     void setPixel(int x, int y, glm::vec3 c);
 
     // Callbacks

@@ -6,30 +6,78 @@
 // Gesamten Frame in diese Funktion?
 FrameRoutine Ppu::frame()
 {
+    // Generelles
+
+    auto Fetches = [&](){
+        BackgroundSliver s;
+        // Background Evalutation
+        uint16_t nametable_start = 0x2000;
+        // Nametable Byte
+        uint16_t tile_address = nametable_start | (v & 0x0FFF);
+        uint8_t nt_index = mapper->readVRAM((uint8_t*)(uintptr_t)tile_address);
+        uint8_t fineY = (v & 0b0111000000000000u) >> 12;
+        uintptr_t nt_entry = ((((uintptr_t)(nt_index)) * 16) | fineY);
+        // Attribute Table Byte
+        uint16_t attribute_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+        uint8_t at_entry = mapper->readVRAM((uint8_t*)(uintptr_t)attribute_address);
+        s.AT_BYTE = at_entry;
+
+        // Niedriges Pattern Table Tile
+        uint8_t pt_entry_plane_1 = mapper->readVRAM((uint8_t*)backgroundTable + nt_entry);
+        // Hohes Pattern Table Tile (+8 bytes vom ersten)
+        uint8_t pt_entry_plane_2 = mapper->readVRAM((uint8_t*)(backgroundTable + nt_entry+8));
+        s.CHR_LOW = pt_entry_plane_1;
+        s.CHR_HIGH = pt_entry_plane_2;
+        return s;
+    };
+
+    auto loadNextTile = [&](){
+        auto t = nextTiles.front();
+        nextTiles.pop();
+        nextTiles.push(Fetches());
+        incrementX();
+        return t;
+    };
+
+    auto resetHorizontal = [&](){
+        // Horizontale Position aus t nach v kopieren;
+        v = v &      0b0111101111100000u;
+        v = v | (t & 0b0000010000011111u);
+    };
+
+    auto resetVertical = [&](){
+        // Vertikale Bits aus t nach v kopieren
+        v = v &      0b0000010000011111u;
+        v = v | (t & 0b0111101111100000u);
+    };
+
+    BackgroundSliver s;
+
+
     // Pre-render scanline
 
     // 341 dots pro scanline, außer in der Pre-Render scanline bei ungerader Frameanzahl
     int dotsPerLine = 341;
     for(int i = 0; i < dotsPerLine; i++){
-        if((i)%8 == 0){
-            incrementX();
-        }
-        if(i==256) incrementY();
-        if(i==257){
-            // Horizontale Position aus t nach v kopieren;
-            v = v & 0b0111101111100000;
-            v = v | (t & 0b0000010000011111);
-        }
         if(i==1){ setVBlank(false); blanking = false; setSpriteZero(false); setOverflow(false);}
+        if((i)%8 == 0 && i < 256 && isRenderingEnabled()){
+            s = loadNextTile();
+        }
+        if(i==256 && isRenderingEnabled()){
+            s = loadNextTile();
+            incrementY();
+        } 
+            
+        if(i==257){
+            resetHorizontal();
+        }
         if(i>= 256) OAMADDR = 0;
         if(i>=280 && i <=304){
-            // Vertikale Bits aus t nach v kopieren
-            // Unten andersherum!
-            v = v & 0b0000010000011111;
-            v = v | (t & 0b0111101111100000);
+            resetVertical();
         }
-        if(i==328) incrementX();
-        if(i==336) incrementX();
+        if((i==328 || i==336) && isRenderingEnabled()){
+            s = loadNextTile();
+        }
         co_await std::suspend_always{};
     }
 
@@ -45,52 +93,35 @@ FrameRoutine Ppu::frame()
 
         // Zyklen 1-256
         for(int j = 1; j <= 256; j++){
-            if((j-1) % 8 == 0 && isRenderingEnabled()){
-                // Background Evalutation
-                uint16_t nametable_start = 0x2000;
-                // Nametable Byte
-                uint16_t tile_address = 0x2000 | (v & 0x0FFF);
-                // uint16_t tile_address = nametable_start + (32 * (i / 8)) + (j / 8);
-                uint8_t nt_index = mapper->readVRAM((uint8_t*)(uintptr_t)tile_address);
-                uintptr_t nt_entry = (((uintptr_t)(nt_index)) * 16) + (i%8);
-                // Attribute Table Byte
-                uint16_t attribute_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
-                // uint16_t attribute_address = nametable_start + 0x3C0 + (8 * (i / 32)) + (j / 32);
-                uint8_t at_entry = mapper->readVRAM((uint8_t*)(uintptr_t)attribute_address);
-                uint8_t att_bits;
-                //std::cout << "slow" << std::endl;
-                bool bottom = false, left = false;
-                if(i%32 <16) bottom = true;
+            if(isRenderingEnabled()){
+                bool top = false, left = false;
+                if(i%32 <16) top = true;
                 if(j%32 <16) left = true;
-                if(!bottom && left) att_bits = (at_entry & 0b00000011) << 2; // top left
-                if(!bottom && !left) att_bits = (at_entry & 0b00001100); // top right
-                if(bottom && left) att_bits = (at_entry & 0b00110000) >> 2; // bottom left
-                if(bottom && !left) att_bits = (at_entry & 0b11000000) >> 4; // bottom right
-                // Niedriges Pattern Table Tile
-                uint8_t pt_entry_plane_1 = mapper->readVRAM((uint8_t*)backgroundTable + nt_entry);
-                // Hohes Pattern Table Tile (+8 bytes vom ersten)
-                uint8_t pt_entry_plane_2 = mapper->readVRAM((uint8_t*)(backgroundTable + nt_entry+8));
-                for(int g = 0; g < 8; g++){
-                    bool p1 = pt_entry_plane_1 & (128u >> g);
-                    bool p2 = pt_entry_plane_2 & (128u >> g);
-                    uint8_t color_index;
-                    if(p1 && p2) color_index = 3;
-                    else if(p2) color_index = 2;
-                    else if(p1) color_index = 1;
-                    else color_index = 0;
-                    //auto color = getColor(color_index); // In echt dann aus attribute index
-                    color_index = color_index | att_bits | 0b00010000; // Hintergrund
-                    uint8_t pallete_value = mapper->readVRAM((uint8_t*)(uintptr_t)0x3F00 + color_index);
-                    setPixel((j-1) + g, i, pal.getColor(pallete_value));
-                }
+                uint8_t att_bits;
+                if(top && left) att_bits = (s.AT_BYTE & 0b00000011u) << 2; // top left
+                if(top && !left) att_bits = (s.AT_BYTE & 0b00001100u); // top right
+                if(!top && left) att_bits = (s.AT_BYTE & 0b00110000u) >> 2; // bottom left
+                if(!top && !left) att_bits = (s.AT_BYTE & 0b11000000u) >> 4; // bottom right
+                bool p1 = s.CHR_LOW & (0b10000000u >> x);
+                bool p2 = s.CHR_HIGH & (0b10000000u >> x);
+                uint8_t color_index;
+                if(p1 && p2) color_index = 3;
+                else if(p2) color_index = 2;
+                else if(p1) color_index = 1;
+                else color_index = 0;
+                color_index = color_index | att_bits | 0b00000000u; // Hintergrund
+                uint8_t pallete_value = mapper->readVRAM((uint8_t*)(uintptr_t)0x3F00 + color_index);
+                setPixel(j-1, i, pal.getColor(pallete_value));
                 // Das braucht 8 dots und generiert 8 Pixel
-                if(j!=256) incrementX();
+                incrementFineX();
+            }
+            if((j)%8 == 0 && isRenderingEnabled()){
+                s = loadNextTile();
             }
             if(j==256){
                 // WRAPPING AROUND an dieser Stelle
                 if(isRenderingEnabled()) {
                     incrementY();
-                    incrementX();
                 }
             }
             co_await std::suspend_always{};
@@ -99,9 +130,7 @@ FrameRoutine Ppu::frame()
         // Zyklen 257-320 (Tile-Daten für nächste Zeile fetchen)
         for(int j = 257; j <= 320; j++){
             if(j==257){
-                // Horizontale Position aus t nach v kopieren;
-                v = v & 0b0111101111100000;
-                v = v | (t & 0b0000010000011111);
+                resetHorizontal();
             }
             OAMADDR = 0;
             co_await std::suspend_always{};
@@ -110,7 +139,113 @@ FrameRoutine Ppu::frame()
         // Zyklen 321-336
         for(int j = 321; j <= 336; j++){
             // beginnt bereits bei dot 328
-            if((j == 328 || j == 236) && isRenderingEnabled()) incrementX();
+            if((j == 328 || j == 236) && isRenderingEnabled()){
+                s = loadNextTile();
+            }
+            co_await std::suspend_always{};
+        }
+
+        // Zyklen 337-340
+        for(int j = 337; j <= 340; j++){
+            co_await std::suspend_always{};
+        }
+    }
+
+    // Post-Render Scanline (Idle)
+    for(int i = 0; i < dotsPerLine; i++){
+        co_await std::suspend_always{};
+    }
+
+    // Vertical Blanking (241-260)
+    for(int i = 241; i <= 259; i++){
+        setVBlank(true);
+        blanking = true;
+        if(getVBlank() && getNMIOutput()) mapper->pullNMI();
+        for(int i = 0; i < dotsPerLine; i++){
+            co_await std::suspend_always{};
+        }   
+    }
+    // Für die letzte Zeile von VBlank -1, damit im letzten dot die Coroutine beendet wird
+    for(int i = 0; i < dotsPerLine-1; i++){
+        co_await std::suspend_always{};
+    }   
+
+    co_return;
+}
+
+FrameRoutine Ppu::fakeFrame()
+{
+
+    BackgroundSliver s;
+
+
+    // Pre-render scanline
+
+    // 341 dots pro scanline, außer in der Pre-Render scanline bei ungerader Frameanzahl
+    int dotsPerLine = 341;
+    for(int i = 0; i < dotsPerLine; i++){
+        co_await std::suspend_always{};
+    }
+
+    // Sichtbare Scanlines
+    for(int i = 0; i <= 239; i++){
+
+        // Idle-Zyklus
+        if(i!=0 || unevenFrame)
+            co_await std::suspend_always{};
+
+        // Zyklen 1-256
+        for(int j = 0; j <= 255; j++){
+            int x,y;
+            y = i;
+            x = j;
+            // Background Evalutation
+            uint16_t nametable_start = 0x2000;
+            // Nametable Byte
+            uint16_t tile_address = nametable_start + (32 * (y / 8)) + (x / 8);
+            uint8_t nt_index = mapper->readVRAM((uint8_t*)(uintptr_t)tile_address);
+            uintptr_t nt_entry = (((uintptr_t)(nt_index)) * 16 + (y%8));
+            // Attribute Table Byte
+            uint16_t attribute_address = nametable_start + 0x3C0 + (8 * (y / 32)) + (x / 32);
+            uint8_t at_entry = mapper->readVRAM((uint8_t*)(uintptr_t)attribute_address);
+
+            // Niedriges Pattern Table Tile
+            uint8_t pt_entry_plane_1 = mapper->readVRAM((uint8_t*)backgroundTable + nt_entry);
+            // Hohes Pattern Table Tile (+8 bytes vom ersten)
+            uint8_t pt_entry_plane_2 = mapper->readVRAM((uint8_t*)(backgroundTable + nt_entry+8));
+
+            bool top = false, left = false;
+            if(y%32 <16) top = true;
+            if(x%32 <16) left = true;
+            uint8_t att_bits;
+            if(top && left) att_bits = (at_entry & 0b00000011) << 2; // top left
+            if(top && !left) att_bits = (at_entry & 0b00001100); // top right
+            if(!top && left) att_bits = (at_entry & 0b00110000) >> 2; // bottom left
+            if(!top && !left) att_bits = (at_entry & 0b11000000) >> 4; // bottom right
+            bool p1 = pt_entry_plane_1 & (128u >> (x%8));
+            bool p2 = pt_entry_plane_2 & (128u >> (x%8));
+            uint8_t color_index;
+            if(p1 && p2) color_index = 3;
+            else if(p2) color_index = 2;
+            else if(p1) color_index = 1;
+            else color_index = 0;
+            color_index = color_index | att_bits | 0b00000000; // Hintergrund
+            uint8_t pallete_value = mapper->readVRAM((uint8_t*)(uintptr_t)0x3F00 + color_index);
+            setPixel(x, y, pal.getColor(pallete_value));
+
+
+
+            co_await std::suspend_always{};
+        }
+
+        // Zyklen 257-320 (Tile-Daten für nächste Zeile fetchen)
+        for(int j = 257; j <= 320; j++){
+            OAMADDR = 0;
+            co_await std::suspend_always{};
+        }
+
+        // Zyklen 321-336
+        for(int j = 321; j <= 336; j++){
             co_await std::suspend_always{};
         }
 
@@ -147,6 +282,17 @@ void Ppu::clock()
     [[unlikely]] if(!state.resume()) {
         // Frame fertig-gerendert
         state = frame();
+        frameReady = true;
+        unevenFrame = !unevenFrame;
+        screen->copyBufferToScreen(pixelBuffer);
+    }
+}
+
+void Ppu::fakeClock()
+{
+    [[unlikely]] if(!state.resume()) {
+        // Frame fertig-gerendert
+        state = fakeFrame();
         frameReady = true;
         unevenFrame = !unevenFrame;
         screen->copyBufferToScreen(pixelBuffer);
@@ -271,13 +417,19 @@ glm::vec3 Ppu::getColor(int index)
 void Ppu::wroteRegister(uint8_t *reg)
 {
     if(reg==&PPUCTRL){
-        t = t & 0b1111001111111111;
-        t = t | ((PPUCTRL << 10) & 0b0000110000000000);
+        // Nametable select
+        t = t & 0b1111001111111111u;
+        t = t | (((uint16_t)PPUCTRL << 10) & 0b0000110000000000u);
 
         // Pattern table select Hintergrund
-        bool second = PPUCTRL & 0b00010000;
-        if(second) backgroundTable = 0x1000;
+        bool second = PPUCTRL & 0b00010000u;
+        if(second) backgroundTable = 0x1000u;
         else backgroundTable = 0;
+
+        // Pattern table select Sprite
+        second = PPUCTRL & 0b00001000u;
+        if(second) spriteTable = 0x1000u;
+        else spriteTable = 0;
 
     }
     else if(reg==&PPUMASK){
@@ -297,23 +449,24 @@ void Ppu::wroteRegister(uint8_t *reg)
     }
     else if(reg==&PPUSCROLL){
         if(!w){
-            t = (t & 0b1111111111100000) | ((PPUSCROLL >> 3) & 0b00011111);
-            x = PPUSCROLL & 0b00000111;
+            t = (t & 0b0111111111100000u) | ((PPUSCROLL >> 3) & 0b00011111u);
+            x = PPUSCROLL & 0b00000111u;
             w = true;
         }
         else{
             // WTF man
-            uint16_t FGH = ((uint16_t)PPUSCROLL & 0b0000000000000111) << 12; // bit 0-2 von PPUSCROLL auf bit 14-12
-            uint16_t ABCDE = ((uint16_t)PPUSCROLL & 0b0000000011111000) << 2; // bit 3-7 auf bit 5-9
-            t = t & 0b0000110000011111;
+            uint16_t FGH = ((uint16_t)PPUSCROLL & 0b0000000000000111u) << 12; // bit 0-2 von PPUSCROLL auf bit 14-12
+            uint16_t ABCDE = ((uint16_t)PPUSCROLL & 0b0000000011111000u) << 2; // bit 3-7 auf bit 5-9
+            t = t & 0b0000110000011111u;
             t = t | FGH | ABCDE;
             w = false;
         }
     }
     else if(reg==&PPUADDR){
         if(!w){
-            t = (((uint16_t)PPUADDR) << 8);// & 0b0011111100000000;
-            //v = t | (v & 0b0000000011111111);
+     //         |ob der Teil so richtig?|
+            t =  ((((uint16_t)PPUADDR) << 8) & 0b0011111100000000u);
+            t = t &  0b0011111111111111u;
             w = true;
         }
         else{
@@ -357,5 +510,9 @@ void Ppu::readRegister(uint8_t *reg)
     }
     else if(reg==&PPUDATA){
         PPUDATA = mapper->readVRAM((uint8_t*)(uintptr_t)v);
+        if(getVRAMAddressIncrement()){
+            v += 32;
+        }
+        else v += 1;
     }
 }

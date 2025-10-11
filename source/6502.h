@@ -81,8 +81,8 @@ class Cpu{
         mapper = m;
         SP = 0xFD;
         P = 0b00100100; // Interrupt und Anderes Bit
-        //log = std::ofstream("cout.txt");
-        //assert(log.is_open());
+        log = std::ofstream("cout.txt");
+        assert(log.is_open());
         A = 0;
         X = 0;
         Y = 0;
