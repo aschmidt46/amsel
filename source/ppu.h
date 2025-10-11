@@ -65,20 +65,70 @@ struct [[gnu::packed]] OAMSprite{
 
 static_assert(sizeof(OAMSprite) == 4, "OAMSprite hat falsche Größe!");
 
+union loopy_register {
+    uint16_t value = 0x0000;
+    struct{
+        // Coarse X (tile column) (Bits 0-4)
+        uint16_t coarse_x : 5;
+
+        // Coarse Y (tile row) (Bits 5-9)
+        uint16_t coarse_y : 5;
+
+        // Nametable select (Bits 10-11)
+        uint16_t name_table_x : 1;
+        uint16_t name_table_y : 1;
+
+        // Fine Y offset (Vertical offset within a tile) (Bits 12-14)
+        uint16_t fine_y : 3;
+        uint16_t unused : 1;
+    };
+};
+
+union ctrlreg {
+    uint8_t value;
+    struct{
+        uint8_t nametable_x : 1;
+        uint8_t nametable_y : 1;
+        uint8_t increment_mode : 1;
+        uint8_t pattern_sprite : 1;
+        uint8_t pattern_background : 1;
+        uint8_t sprite_size : 1;
+        uint8_t unused : 1;
+        uint8_t enable_nmi : 1;
+    };
+};
+
+union maskreg
+	{
+        uint8_t reg;
+		struct
+		{
+			uint8_t grayscale : 1;
+			uint8_t render_background_left : 1;
+			uint8_t render_sprites_left : 1;
+			uint8_t render_background : 1;
+			uint8_t render_sprites : 1;
+			uint8_t enhance_red : 1;
+			uint8_t enhance_green : 1;
+			uint8_t enhance_blue : 1;
+		};
+
+	};
+
 class Screen;
 class Mapper;
 class Ppu{
     private:
-    uint16_t v = 0;
-    uint16_t t = 0;
-    uint8_t x = 0;
+    loopy_register vram_addr;
+    loopy_register tram_addr;
+    uint8_t fine_x = 0;
     bool w = false;
     
     public:
 
     // Extern
-    uint8_t PPUCTRL = 0;
-    uint8_t PPUMASK = 0;
+    ctrlreg PPUCTRL;
+    maskreg mask;
     uint8_t PPUSTATUS = 0x3D;
     uint8_t OAMADDR = 0;
     uint8_t OAMDATA = 0;
@@ -98,14 +148,24 @@ class Ppu{
 
     Palette pal;
 
-    uintptr_t backgroundTable = 0;
     uintptr_t spriteTable = 0;
+    uint8_t vram_buffer;
+
+    uint8_t bg_next_tile_id = 0x00;
+    uint8_t bg_next_tile_attrib = 0x00;
+    uint8_t bg_next_tile_lsb = 0x00;
+    uint8_t bg_next_tile_msb = 0x00;
+
+    uint16_t bg_shifter_pattern_lo = 0x0000;
+	uint16_t bg_shifter_pattern_hi = 0x0000;
+	uint16_t bg_shifter_attrib_lo  = 0x0000;
+	uint16_t bg_shifter_attrib_hi  = 0x0000;
 
 
     std::queue<BackgroundSliver> nextTiles;
 
 
-    Ppu() : state(frame()), pal("palette.pal") {
+    Ppu() : state(fakeFrame()), pal("palette.pal") {
         pixelBuffer = new float[256*240*3];
         for(int i = 0; i < 256*240*3; i++){
             pixelBuffer[i] = 0;
@@ -132,7 +192,10 @@ class Ppu{
     bool blanking = true;
     bool frameReady = false;
 
-    FrameRoutine frame();
+    // Pixel "dot" position information
+	int16_t scanline = 0;
+	int16_t cycle = 0;
+
     FrameRoutine fakeFrame();
     FrameRoutine state;
     bool unevenFrame = true;
@@ -141,8 +204,8 @@ class Ppu{
     void setPixel(int x, int y, glm::vec3 c);
 
     // Callbacks
-    void wroteRegister(uint8_t* reg);
-    void readRegister(uint8_t* reg);
+    void writeRegister(uint8_t* reg, uint8_t val);
+    uint8_t readRegister(uint8_t* reg);
 
     //Registergetter / setter
     void setVBlank(bool val);
@@ -155,7 +218,6 @@ class Ppu{
     void incrementFineX();
     void incrementY();
     bool isRenderingEnabled();
-    glm::vec3 getColor(int index);
 };
 
 

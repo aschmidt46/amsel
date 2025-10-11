@@ -51,5 +51,6 @@ void NES::nextFrame()
         t1 = high_resolution_clock::now();
     }
     ppu->frameReady = false;
+    tv->copyBufferToScreen(ppu->pixelBuffer);
     tv->present();
 }

@@ -38,23 +38,15 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
     assert(index == 0x2000);
     // PPU Register
     for(int i = index; i < 0x4000; i+=0x8){
-        memoryMap[i]   = &ppu->PPUCTRL;
-        memoryMap[i+1] = &ppu->PPUMASK;
-        memoryMap[i+2] = &ppu->PPUSTATUS;
-        memoryMap[i+3] = &ppu->OAMADDR;
-        memoryMap[i+4] = &ppu->OAMDATA;
-        memoryMap[i+5] = &ppu->PPUSCROLL;
-        memoryMap[i+6] = &ppu->PPUADDR;
-        memoryMap[i+7] = &ppu->PPUDATA;
+        memoryMap[i]   = (uint8_t*)&ppu->PPUCTRL;
+        memoryMap[i+1] = (uint8_t*)&ppu->mask;
+        memoryMap[i+2] = (uint8_t*)&ppu->PPUSTATUS;
+        memoryMap[i+3] = (uint8_t*)&ppu->OAMADDR;
+        memoryMap[i+4] = (uint8_t*)&ppu->OAMDATA;
+        memoryMap[i+5] = (uint8_t*)&ppu->PPUSCROLL;
+        memoryMap[i+6] = (uint8_t*)&ppu->PPUADDR;
+        memoryMap[i+7] = (uint8_t*)&ppu->PPUDATA;
     }
-    PPUCTRL = &ppu->PPUCTRL;
-    PPUMASK = &ppu->PPUMASK;
-    PPUSTATUS = &ppu->PPUSTATUS;
-    OAMADDR = &ppu->OAMADDR;
-    OAMDATA = &ppu->OAMDATA;
-    PPUSCROLL = &ppu->PPUSCROLL;
-    PPUADDR = &ppu->PPUADDR;
-    PPUDATA = &ppu->PPUDATA;
     index = 0x4000;
     
     // IO Register (nicht implementiert)
@@ -145,8 +137,8 @@ uint8_t Mapper::read(uint8_t *address)
     }
     auto val = *memoryMap[(uintptr_t)address];
     // PPU-Callback
-    if((uintptr_t)address >= 0x2000 && (uintptr_t)address < 0x4000){
-        ppu->readRegister(memoryMap[(uintptr_t)address]);
+    if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
+        return ppu->readRegister(memoryMap[(uintptr_t)address]);
     }
     return val;
 }
@@ -157,20 +149,22 @@ void Mapper::write(uint8_t *address, uint8_t value)
         std::cout << "Ungemapter Speicher-Schreib-Zugriff bei " << mhex((uintptr_t)address) << ", tue nichts" << std::endl;
         return;
     }
-    *memoryMap[(uintptr_t)address] = value;
     // PPU-Callback
-    if((uintptr_t)address >= 0x2000 && (uintptr_t)address < 0x4000){
-        ppu->wroteRegister(memoryMap[(uintptr_t)address]);
+    if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
+        ppu->writeRegister(memoryMap[(uintptr_t)address], value);
     }
-    // OAMDMA write
-    else [[unlikely]] if((uintptr_t)address == 0x4014){
-        uint8_t cpuPage = read(address);
-        uint16_t cpuAddress = ((uint16_t) cpuPage) << 8;
-        for(int i=0; i < 256; i++){
-            uint8_t val = read((uint8_t*)(uintptr_t)cpuAddress + i);
-            ppu->OAM[i] = val;
+    else {
+        *memoryMap[(uintptr_t)address] = value;
+        // OAMDMA write
+        [[unlikely]] if((uintptr_t)address == 0x4014){
+            uint8_t cpuPage = read(address);
+            uint16_t cpuAddress = ((uint16_t) cpuPage) << 8;
+            for(int i=0; i < 256; i++){
+                uint8_t val = read((uint8_t*)(uintptr_t)cpuAddress + i);
+                ppu->OAM[i] = val;
+            }
+            cpu->remainingCycles += 513; // Oder 514???
         }
-        cpu->remainingCycles += 513; // Oder 514???
     }
 }
 
