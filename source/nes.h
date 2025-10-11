@@ -4,6 +4,7 @@
 #include "screen.h"
 #include "mapper.h"
 #include "nes_file.h"
+#include <chrono>
 
 
 class Cpu;
@@ -19,6 +20,8 @@ class NES{
     NESFile* Slot;
     Screen* tv;
     // Controller* controller;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> t1 = std::chrono::high_resolution_clock::now();
     
     public:
     NES(Screen* screen);

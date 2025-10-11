@@ -11,14 +11,25 @@ FrameRoutine Ppu::frame()
     // 341 dots pro scanline, außer in der Pre-Render scanline bei ungerader Frameanzahl
     int dotsPerLine = 341;
     for(int i = 0; i < dotsPerLine; i++){
+        if((i)%8 == 0){
+            incrementX();
+        }
+        if(i==256) incrementY();
+        if(i==257){
+            // Horizontale Position aus t nach v kopieren;
+            v = v & 0b0111101111100000;
+            v = v | (t & 0b0000010000011111);
+        }
         if(i==1){ setVBlank(false); blanking = false; setSpriteZero(false); setOverflow(false);}
         if(i>= 256) OAMADDR = 0;
-        if(i>=279 && i <=303){
+        if(i>=280 && i <=304){
             // Vertikale Bits aus t nach v kopieren
             // Unten andersherum!
             v = v & 0b0000010000011111;
             v = v | (t & 0b0111101111100000);
         }
+        if(i==328) incrementX();
+        if(i==336) incrementX();
         co_await std::suspend_always{};
     }
 
@@ -33,17 +44,18 @@ FrameRoutine Ppu::frame()
         }
 
         // Zyklen 1-256
-        for(int j = 0; j <= 255; j++){
+        for(int j = 1; j <= 256; j++){
             if(j % 8 == 0 && isRenderingEnabled()){
+                // Background Evalutation
                 uint16_t nametable_start = 0x2000;
                 // Nametable Byte
-                // uint16_t tile_address = 0x2000 | (v & 0x0FFF);
-                uint16_t tile_address = nametable_start + (32 * (i / 8)) + (j / 8);
+                uint16_t tile_address = 0x2000 | (v & 0x0FFF);
+                // uint16_t tile_address = nametable_start + (32 * (i / 8)) + (j / 8);
                 uint8_t nt_index = mapper->readVRAM((uint8_t*)(uintptr_t)tile_address);
                 uintptr_t nt_entry = (((uintptr_t)(nt_index)) * 16) + (i%8);
                 // Attribute Table Byte
-                // uint16_t attribute_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
-                uint16_t attribute_address = nametable_start + 0x3C0 + (8 * (i / 32)) + (j / 32);
+                uint16_t attribute_address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+                // uint16_t attribute_address = nametable_start + 0x3C0 + (8 * (i / 32)) + (j / 32);
                 uint8_t at_entry = mapper->readVRAM((uint8_t*)(uintptr_t)attribute_address);
                 uint8_t att_bits;
                 //std::cout << "slow" << std::endl;
@@ -72,11 +84,14 @@ FrameRoutine Ppu::frame()
                     setPixel(j + g, i, pal.getColor(pallete_value));
                 }
                 // Das braucht 8 dots und generiert 8 Pixel
-                incrementX();
+                if(j!=256) incrementX();
             }
             if(j==256){
                 // WRAPPING AROUND an dieser Stelle
-                if(isRenderingEnabled()) incrementY();
+                if(isRenderingEnabled()) {
+                    incrementY();
+                    incrementX();
+                }
             }
             co_await std::suspend_always{};
         }

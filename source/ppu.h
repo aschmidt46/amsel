@@ -92,6 +92,8 @@ class Ppu{
     Palette pal;
 
     uintptr_t backgroundTable = 0;
+    uint16_t reg_1, reg_2;
+    uint8_t shift_1, shift_2;
 
     Ppu() : state(frame()), pal("palette.pal") {
         pixelBuffer = new float[256*240*3];
