@@ -6,6 +6,7 @@
 #include "palette.h"
 #include <queue>
 #include <memory>
+#include <vector>
 
 
 union loopy_register {
@@ -106,7 +107,12 @@ class Ppu{
     uint8_t* palletteIndexes; // 0x0020 Bytes
     //uint8_t* OAM; // 256 Bytes (64 * 4)
     OAMSprite OAM[64];
-    uint8_t secondaryOAM[32];
+    OAMSprite secondaryOAM[8];
+    uint8_t sprite_count;
+    uint8_t spriteShifterCHRLow[8];
+    uint8_t spriteShifterCHRHigh[8];
+
+
     uint8_t oamBuffer;
 
     uint8_t* pOAM = (uint8_t*)OAM;

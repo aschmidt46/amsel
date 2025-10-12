@@ -1,5 +1,6 @@
 #include "ppu.h"
 #include <iostream>
+#include <cstring>
 
 
 void Ppu::clock()
@@ -71,26 +72,22 @@ void Ppu::clock()
 			shifterATLow <<= 1;
 			shifterATHigh <<= 1;
 		}
+
+		if(PPUMASK.render_sprites && cycle >= 1 && cycle < 258){
+			for(int i = 0; i < sprite_count; i++){
+				if(secondaryOAM[i].xPos > 0){
+					secondaryOAM[i].xPos--;
+				}
+				else{
+					spriteShifterCHRLow[i] <<= 1;
+					spriteShifterCHRHigh[i] <<= 1;
+				}
+			}
+		}
 	};
 
 	if (scanline >= -1 && scanline < 240)
 	{
-
-		// OAM leeren, indem OAMDATA ausgelesen wird
-		if(cycle >= 0 && cycle < 64){
-			if(cycle<32)
-				secondaryOAM[cycle] = mapper->read((uint8_t*)(uintptr_t)0x2004);
-		}
-		// Sprite Evaluation
-		else if(cycle >= 64 && cycle <= 255){
-			// "Ungerader" Zyklus (nesdev wiki), weil Zyklen hier bei 0 beginnen
-			if(cycle%2==0){
-
-			}
-			else{
-
-			}
-		}
 
 		if (scanline == 0 && cycle == 0){
 			// "Odd Frame" cycle skip
@@ -99,6 +96,15 @@ void Ppu::clock()
 
 		if (scanline == -1 && cycle == 1){
 			PPUSTATUS.vertical_blank = 0;
+
+			PPUSTATUS.sprite_overflow = 0;
+
+			PPUSTATUS.sprite_zero_hit = 0;
+
+			for(int i = 0; i < 8; i++){
+				spriteShifterCHRLow[i] = 0;
+				spriteShifterCHRHigh[i] = 0;
+			}
 		}
 
 
@@ -157,9 +163,118 @@ void Ppu::clock()
 			nextTileATByte = mapper->readVRAM((uint8_t*)(uintptr_t)(0x2000 | (vram_addr.value & 0x0FFF)));
 		}
 
+		// Sprite Evaluation
+		if(cycle==257 && scanline >=0){
+			std::memset(secondaryOAM, 0xFF, 8 * sizeof(OAMSprite));
+			sprite_count = 0;
+
+			for (uint8_t i = 0; i < 8; i++)
+			{
+				spriteShifterCHRLow[i] = 0;
+				spriteShifterCHRHigh[i] = 0;
+			}
+
+			uint8_t iOAM = 0;
+			while(iOAM < 64 && sprite_count < 9){
+				int16_t diff = ((int16_t)scanline - (int16_t)OAM[iOAM].yPos);
+
+				if(diff >= 0 && diff < (PPUCTRL.sprite_size ? 16 : 8)){
+					if(sprite_count < 8){
+						memcpy(&secondaryOAM[sprite_count], &OAM[iOAM], sizeof(OAMSprite));
+						sprite_count++;
+					}
+				}
+				iOAM++;
+			}
+			PPUSTATUS.sprite_overflow = (sprite_count > 8);
+		}
+
 		if (scanline == -1 && cycle >= 280 && cycle < 305){
 			// End of vertical blank period so reset the Y address ready for rendering
 			TransferAddressY();
+		}
+	}
+
+	if(cycle==340){
+		for(uint8_t i = 0; i < sprite_count; i++){
+			uint8_t spriteCHRLow, spriteCHRHigh;
+			uint16_t spriteAddrLow, spriteAddrHigh;
+
+			if(!PPUCTRL.sprite_size){
+				// 8x8 Modus
+				if(!(secondaryOAM[i].attributes & 0x80)){
+					// Normale vertikale Ausrichtung
+					spriteAddrLow = (PPUCTRL.pattern_sprite << 12) 		// welche Pattern Tabelle
+								  | (secondaryOAM[i].tileIndex << 4) 	// welches Tile
+								  | (scanline - secondaryOAM[i].yPos);	// wo im Tile
+				}
+				else{
+					// Vertikal umgedreht
+					spriteAddrLow = (PPUCTRL.pattern_sprite << 12) 			// welche Pattern Tabelle
+								  | (secondaryOAM[i].tileIndex << 4) 		// welches Tile
+								  | 7 - (scanline - secondaryOAM[i].yPos);	// wo im Tile
+				}
+			}
+			else{
+				// 8x16
+				if(!(secondaryOAM[i].attributes & 0x80)){
+					// Normale vertikale Ausrichtung
+					if(scanline - secondaryOAM[i].yPos < 8){
+						// Obere Hälfte
+						spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
+									  | ((secondaryOAM[i].tileIndex & 0xFE) << 4)
+									  | ((scanline - secondaryOAM[i].yPos) & 0x07);
+					}
+					else{
+						// Untere Hälfte
+						spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
+									  | (((secondaryOAM[i].tileIndex & 0xFE) + 1) << 4)
+									  | ((scanline - secondaryOAM[i].yPos) & 0x07);
+					}
+				}
+				else{
+					// Vertikal umgedreht
+					if(scanline - secondaryOAM[i].yPos < 8){
+						// Obere Hälfte
+						spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
+									  | ((secondaryOAM[i].tileIndex & 0xFE) << 4)
+									  | (7 - (scanline - secondaryOAM[i].yPos) & 0x07);
+					}
+					else{
+						// Untere Hälfte
+						spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
+									  | (((secondaryOAM[i].tileIndex & 0xFE) + 1) << 4)
+									  | (7 - (scanline - secondaryOAM[i].yPos) & 0x07);
+					}
+				}
+			}
+
+			spriteAddrHigh = spriteAddrLow + 8;
+
+			spriteCHRLow = mapper->readVRAM((uint8_t*)(uintptr_t)spriteAddrLow);
+			spriteCHRHigh = mapper->readVRAM((uint8_t*)(uintptr_t)spriteAddrHigh);
+
+
+			// Flip horizontal
+			if(secondaryOAM[i].attributes & 0x40){
+				// This little lambda function "flips" a byte
+				// so 0b11100000 becomes 0b00000111. It's very
+				// clever, and stolen completely from here:
+				// https://stackoverflow.com/a/2602885
+				auto flipbyte = [](uint8_t b)
+				{
+					b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+					b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+					b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+					return b;
+				};
+
+				spriteCHRLow = flipbyte(spriteCHRLow);
+				spriteCHRHigh = flipbyte(spriteCHRHigh);
+			}
+
+			spriteShifterCHRLow[i] = spriteCHRLow;
+			spriteShifterCHRHigh[i] = spriteCHRHigh;
 		}
 	}
 
@@ -197,12 +312,59 @@ void Ppu::clock()
 		bg_palette = (bg_pal1 << 1) | bg_pal0;
 	}
 
-	if (PPUMASK.render_sprites){
+	uint8_t fg_pixel = 0x00;
+	uint8_t fg_palette = 0x00;
+	uint8_t fg_priority = 0x00;
 
+	if (PPUMASK.render_sprites){
+		for(uint8_t i = 0; i < sprite_count; i++){
+			if(secondaryOAM[i].xPos == 0){
+				uint8_t fg_pixel_lo = (spriteShifterCHRLow[i] & 0x80) > 0;
+				uint8_t fg_pixel_hi = (spriteShifterCHRHigh[i] & 0x80) > 0;
+				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+
+				fg_palette = (secondaryOAM[i].attributes & 0x03) + 0x04;
+				fg_priority = (secondaryOAM[i].attributes & 0x20) == 0;
+
+				if(fg_pixel != 0){
+					// Erster nicht-transparenter Sprite gefunden
+					break;
+				}
+			}
+		}
+	}
+
+	uint8_t pixel = 0x00;
+	uint8_t palette = 0x00;
+
+	if(bg_pixel == 0 && fg_pixel == 0){
+		// beide transparent
+		pixel = 0x00;
+		palette = 0x00;
+	}
+	else if(bg_pixel == 0 && fg_pixel > 0){
+		// hintergrund transparent
+		pixel = fg_pixel;
+		palette = fg_palette;
+	}
+	else if(bg_pixel > 0 && fg_pixel == 0){
+		// vordergrund transparent
+		pixel = bg_pixel;
+		palette = bg_palette;
+	}
+	else if(bg_pixel > 0 && fg_pixel > 0){
+		if(fg_priority){
+			pixel = fg_pixel;
+			palette = fg_palette;
+		}
+		else{
+			pixel = bg_pixel;
+			palette = bg_palette;
+		}
 	}
 
 	// Zeichnen
-	uint8_t color_index = ((bg_palette << 2) + bg_pixel );
+	uint8_t color_index = ((palette << 2) + pixel );
 	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)(0x3F00) + color_index);
 	setPixel(cycle-1, scanline, pal.getColor(palette_val ));
 

@@ -195,13 +195,13 @@ void Mapper::write(uint8_t *address, uint8_t value)
 
     // OAMDMA write
     [[unlikely]] if((uintptr_t)address == 0x4014){
-        uint8_t cpuPage = read(address);
-        uint16_t cpuAddress = ((uint16_t) cpuPage) << 8;
+        //uint8_t cpuPage = read(address);
+        uint16_t cpuAddress = ((uint16_t) value) << 8;
         for(int i=0; i < 256; i++){
             uint8_t val = read((uint8_t*)(uintptr_t)cpuAddress + i);
             ppu->pOAM[i] = val;
         }
-        cpu->remainingCycles += 513; // Oder 514???
+        cpu->remainingCycles += 512; // Oder 514???
     }
 }
 
