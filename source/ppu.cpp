@@ -391,11 +391,6 @@ void Ppu::clock()
 	// Zeichnen
 	uint8_t color_index = ((palette << 2) + pixel );
 	auto addr = (0x3F00) + color_index;
-
-	if (addr == 0x3F10) addr = 0x3F00;
-	if (addr == 0x3F14) addr = 0x3F04;
-	if (addr == 0x3F18) addr = 0x3F08;
-	if (addr == 0x3F1C) addr = 0x3F0C;
 	
 	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)addr) & 0x3F;
 	setPixel(cycle-1, scanline, pal.getColor(palette_val & (PPUMASK.grayscale ? 0x30 : 0x3F)));
@@ -477,13 +472,8 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
         }
     }
     else if(reg==&PPUDATA){
-		auto addr = vram_addr.value;
-		if (addr == 0x3F10) addr = 0x3F00;
-		if (addr == 0x3F14) addr = 0x3F04;
-		if (addr == 0x3F18) addr = 0x3F08;
-		if (addr == 0x3F1C) addr = 0x3F0C;
 
-        mapper->writeVRAM((uint8_t*)(uintptr_t)addr, val);
+        mapper->writeVRAM((uint8_t*)(uintptr_t)vram_addr.value, val);
         vram_addr.value += PPUCTRL.increment_mode ? 32 : 1;
     }
 }
