@@ -44,13 +44,12 @@ void NES::nextFrame()
         while(duration_cast<nanoseconds>(t2-t1).count() < nsPerClock) {
             t2 = high_resolution_clock::now();
         }
+        ppu->clock();
+        ppu->clock();
+        ppu->clock();
         cpu->clockCPU();
-        ppu->clock();
-        ppu->clock();
-        ppu->clock();
         t1 = high_resolution_clock::now();
     }
     ppu->frameReady = false;
-    tv->copyBufferToScreen(ppu->pixelBuffer);
     tv->present();
 }

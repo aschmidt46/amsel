@@ -89,8 +89,9 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
             memoryMap[index + i] = cartridge->prgRom + i;
         }
     }
-
+    
     // PPU
+    mirror = cart->header.flags6.getNametableArrangement() ? MIRROR_VERTICAL : MIRROR_HORIZONTAL;
     // Größe in x*8KiB, 0 bedeutet CHR Ram
     assert(cartridge->header.CHRROMSize == 0 || cartridge->header.CHRROMSize == 1);
 
@@ -98,14 +99,37 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
         ppuMap[i] = cartridge->chrRom + i;
     }
     //Interner Ram
-    index = 0x2000;
-    for(int i = 0; i < 0x0800; i++){
-        ppuMap[index + i] = ppu->internalMemory + i;
+    if(mirror = MIRROR_VERTICAL){
+        std::cout << "Horizontale Ausrichtung" << std::endl;
+        index = 0x2000;
+        for(int i = 0; i < 0x0800; i++){
+            ppuMap[index + i] = ppu->internalMemory + i;
+        }
+        index = 0x2800;
+        //Mirror
+        for(int i = 0; i < 0x0800; i++){
+            ppuMap[index + i] = ppu->internalMemory + i;
+        }
     }
-    index = 0x2800;
-    //Mirror
-    for(int i = 0; i < 0x0800; i++){
-        ppuMap[index + i] = ppu->internalMemory + i;
+    else{
+        std::cout << "Vertikale Ausrichtung" << std::endl;
+        index = 0x2000;
+        for(int i = 0; i < 0x0400; i++){
+            ppuMap[index + i] = ppu->internalMemory + i;
+        }
+        index = 0x2400;
+        for(int i = 0; i < 0x0400; i++){
+            ppuMap[index + i] = ppu->internalMemory + i;
+        }
+
+        index = 0x2800;
+        for(int i = 0; i < 0x0400; i++){
+            ppuMap[index + i] = ppu->internalMemory + i + 0x400;
+        }
+        index = 0x2C00;
+        for(int i = 0; i < 0x0400; i++){
+            ppuMap[index + i] = ppu->internalMemory + i + 0x400;
+        }
     }
 
     // Intern Mirror
@@ -125,6 +149,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
             ppuMap[index + i] = ppu->palletteIndexes + i;
         }
     }
+
 
     std::cout << "Mapper geladen." << std::endl;
 }

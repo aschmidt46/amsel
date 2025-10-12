@@ -1,11 +1,9 @@
 #include "ppu.h"
 #include <iostream>
 
-
 FrameRoutine Ppu::fakeFrame()
 {
 
-    BackgroundSliver s;
 
 
     // Pre-render scanline
@@ -26,23 +24,23 @@ FrameRoutine Ppu::fakeFrame()
         // Zyklen 1-256
         for(int j = 0; j <= 255; j++){
             int x,y;
-            y = i;
-            x = j;
+            y = i + vram_addr.fine_y;
+            x = j + fine_x;
             // Background Evalutation
             uint16_t nametable_start = 0x2000;
             // Nametable Byte
             uint16_t tile_address = nametable_start + (32 * (y / 8)) + (x / 8);
             uint8_t nt_index = mapper->readVRAM((uint8_t*)(uintptr_t)tile_address);
             uintptr_t nt_entry = (((uintptr_t)(nt_index)) * 16 + (y%8));
+			
+            // Niedriges Pattern Table Tile
+            uint8_t pt_entry_plane_1 = mapper->readVRAM((uint8_t*)backgroundTable + nt_entry);
+            // Hohes Pattern Table Tile (+8 bytes vom ersten)
+            uint8_t pt_entry_plane_2 = mapper->readVRAM((uint8_t*)(backgroundTable + nt_entry+8));
+			
             // Attribute Table Byte
             uint16_t attribute_address = nametable_start + 0x3C0 + (8 * (y / 32)) + (x / 32);
             uint8_t at_entry = mapper->readVRAM((uint8_t*)(uintptr_t)attribute_address);
-
-            // Niedriges Pattern Table Tile
-            uint8_t pt_entry_plane_1 = mapper->readVRAM((uint8_t*)((uintptr_t)PPUCTRL.pattern_background * 0x1000) + nt_entry);
-            // Hohes Pattern Table Tile (+8 bytes vom ersten)
-            uint8_t pt_entry_plane_2 = mapper->readVRAM((uint8_t*)(((uintptr_t)PPUCTRL.pattern_background * 0x1000) + nt_entry+8));
-
             bool top = false, left = false;
             if(y%32 <16) top = true;
             if(x%32 <16) left = true;
@@ -60,7 +58,7 @@ FrameRoutine Ppu::fakeFrame()
             else color_index = 0;
             color_index = color_index | att_bits | 0b00000000; // Hintergrund
             uint8_t pallete_value = mapper->readVRAM((uint8_t*)(uintptr_t)0x3F00 + color_index);
-            setPixel(j, i, pal.getColor(pallete_value));
+            setPixel(x, y, pal.getColor(pallete_value));
 
 
 
@@ -91,9 +89,9 @@ FrameRoutine Ppu::fakeFrame()
 
     // Vertical Blanking (241-260)
     for(int i = 241; i <= 259; i++){
-        setVBlank(true);
+        PPUSTATUS.vertical_blank = 1;
         blanking = true;
-        if(getVBlank() && getNMIOutput()) mapper->pullNMI();
+        if(PPUSTATUS.vertical_blank && PPUCTRL.enable_nmi) mapper->pullNMI();
         for(int i = 0; i < dotsPerLine; i++){
             co_await std::suspend_always{};
         }   
@@ -106,6 +104,16 @@ FrameRoutine Ppu::fakeFrame()
     co_return;
 }
 
+void Ppu::fakeClock()
+{
+    [[unlikely]] if(!state.resume()) {
+        // Frame fertig-gerendert
+        state = fakeFrame();
+        frameReady = true;
+        unevenFrame = !unevenFrame;
+        screen->copyBufferToScreen(pixelBuffer);
+    }
+}
 
 void Ppu::clock()
 {
@@ -295,7 +303,7 @@ void Ppu::clock()
 		if (scanline == -1 && cycle == 1)
 		{
 			// Effectively start of new frame, so clear vertical blank flag
-			setVBlank(false);
+			PPUSTATUS.vertical_blank = 0;
 		}
 
 
@@ -501,7 +509,7 @@ void Ppu::clock()
 		if (scanline == 241 && cycle == 1)
 		{
 			// Effectively end of frame, so set vertical blank flag
-			setVBlank(true);
+			PPUSTATUS.vertical_blank = 1;
 
 			// If the control register tells us to emit a NMI when
 			// entering vertical blanking period, do it! The CPU
@@ -509,26 +517,6 @@ void Ppu::clock()
 			// perform operations with the PPU knowing it wont
 			// produce visible artefacts
 			if (PPUCTRL.enable_nmi) 
-
-
-
-
-
-
-
-                /*
-                
-                
-                
-                
-                
-                
-                
-                NICHT ORIGINAL
-                
-                
-                
-                */
 				mapper->pullNMI();
 		}
 	}
@@ -571,11 +559,9 @@ void Ppu::clock()
 	// Now we have a final pixel colour, and a palette for this cycle
 	// of the current scanline. Let's at long last, draw that ^&%*er :P
 
-	uint8_t palette_val = mapper->read((uint8_t*)(uintptr_t)(0x3F00 + (bg_palette << 2) + bg_pixel & 0x3F));
-	setPixel(cycle - 1, scanline, pal.getColor(palette_val));
-
-	// Fake some noise for now
-	//sprScreen.SetPixel(cycle - 1, scanline, palScreen[(rand() % 2) ? 0x3F : 0x30]);
+	uint8_t color_index = ((bg_palette << 2) + bg_pixel );
+	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)(0x3F00) + color_index);
+	setPixel(cycle-1, scanline, pal.getColor(palette_val ));
 
 	// Advance renderer - it never stops, it's relentless
 	cycle++;
@@ -587,25 +573,15 @@ void Ppu::clock()
 		{
 			scanline = -1;
 			frameReady = true;
+			screen->copyBufferToScreen(pixelBuffer);
 		}
 	}
-}
-
-void Ppu::fakeClock()
-{
-    if(!state.resume()) {
-        // Frame fertig-gerendert
-        state = fakeFrame();
-        frameReady = true;
-        unevenFrame = !unevenFrame;
-        screen->copyBufferToScreen(pixelBuffer);
-    }
 }
 
 void Ppu::setPixel(int x, int y, glm::vec3 c)
 {
     int index = (3*x) + (3*256*y);
-	if(x > 255 || y > 240 || x < 0 || y < 0){
+	if(x > 255 || y > 239 || x < 0 || y < 0){
 		//std::cout << "Pixel out of bounds: " << "x: " << x << ", y: " << y << std::endl;
 		return;
 	}
@@ -614,109 +590,6 @@ void Ppu::setPixel(int x, int y, glm::vec3 c)
     pixelBuffer[index + 2] = c.b;
 }
 
-void Ppu::setVBlank(bool val)
-{
-    if(val){
-        PPUSTATUS = PPUSTATUS | ((uint8_t)1u << 7);
-    }
-    else{
-        PPUSTATUS = PPUSTATUS & ~((uint8_t)1u << 7);
-    }
-}
-
-void Ppu::setSpriteZero(bool val)
-{
-    if(val){
-        PPUSTATUS = PPUSTATUS | ((uint8_t)1u << 6);
-    }
-    else{
-        PPUSTATUS = PPUSTATUS & ~((uint8_t)1u << 6);
-    }
-}
-
-void Ppu::setOverflow(bool val)
-{
-    if(val){
-        PPUSTATUS = PPUSTATUS | ((uint8_t)1u << 5);
-    }
-    else{
-        PPUSTATUS = PPUSTATUS & ~((uint8_t)1u << 5);
-    }
-}
-
-bool Ppu::getVBlank()
-{
-    return PPUSTATUS & 0b10000000;
-}
-
-bool Ppu::getNMIOutput()
-{
-    return PPUCTRL.enable_nmi;
-}
-
-bool Ppu::getVRAMAddressIncrement()
-{
-    return PPUCTRL.increment_mode;
-}
-
-void Ppu::incrementFineX()
-{
-    fine_x++;
-    fine_x &= 7;
-}
-
-// Horizontal scrolling
-void Ppu::incrementX()
-{
-    if (vram_addr.coarse_x == 31)
-    {
-        //printf("PPU v addr before: 0x%04X\n", ppu->v.raw);
-        vram_addr.coarse_x = 0;
-        //printf("PPU v addr after coarse_x reset : 0x%04X\n", ppu->v.raw);
-        // Switch horizontal nametable
-        vram_addr.name_table_x ^= 0x1;
-        //printf("PPU v addr after nt switch: 0x%04X\n", ppu->v.raw);
-    }
-    else
-    {
-        ++vram_addr.coarse_x;
-    }
-}
-
-// Vertical Scroll
-void Ppu::incrementY()
-{
-    if (vram_addr.fine_y < 7)
-        vram_addr.fine_y++;
-    else
-    {
-        vram_addr.fine_y = 0;
-        if (vram_addr.coarse_y == 29)
-        {
-            vram_addr.coarse_y = 0;
-            // Flip vertical nametable bit
-            vram_addr.name_table_y ^= 0x1;
-        }
-        else if (vram_addr.coarse_y == 31)
-        {
-            //printf("PPU v addr before: 0x%04X\n", ppu_ptr->v.raw);
-            // coarse Y = 0, nametable not switched
-            vram_addr.coarse_y = 0;
-            //printf("PPU v addr after: 0x%04X\n", ppu_ptr->v.raw);
-        }
-        else
-        {
-            // increment coarse Y
-            ++vram_addr.coarse_y;
-        }
-    }
-}
-
-bool Ppu::isRenderingEnabled()
-{
-    // Hintergrund- oder Spriterendering aktiv
-    return ((mask.reg & 0b00010000) || (mask.reg & 0b00001000));
-}
 
 void Ppu::writeRegister(uint8_t *reg, uint8_t val)
 {
@@ -724,8 +597,8 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
         // Wert schreiben
         PPUCTRL.value = val;
         // Nametable select
-        tram_addr.name_table_x = val & 1;
-        tram_addr.name_table_y = val & 2;
+        tram_addr.name_table_x = PPUCTRL.nametable_x;
+        tram_addr.name_table_y = PPUCTRL.nametable_y;
 
     }
     else if(reg==(uint8_t*)&mask){
@@ -772,14 +645,14 @@ uint8_t Ppu::readRegister(uint8_t *reg)
 {
     uint8_t b;
 
-	if(reg == &PPUSTATUS){
+	if(reg == (uint8_t*)&PPUSTATUS){
 		/* w: = 0 */
 		w = false;
 
 		/* Read register */
-        uint8_t value = PPUSTATUS;
+        uint8_t value = PPUSTATUS.reg;
         // Clear Vblank
-        PPUSTATUS = PPUSTATUS & 0b01111111;
+        PPUSTATUS.vertical_blank = 0;
 		return value;
     }
 	if(reg == &OAMDATA){

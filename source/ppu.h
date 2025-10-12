@@ -5,14 +5,9 @@
 #include "mapper.h"
 #include "palette.h"
 #include <queue>
+#include <memory>
 
-struct BackgroundSliver{
-    uint8_t AT_BYTE;
-    uint8_t CHR_LOW;
-    uint8_t CHR_HIGH;
-};
-
- // Die Coroutinen-Klasse
+// Die Coroutinen-Klasse
 struct FrameRoutine
 {
    struct promise_type; // Vorwaertsdeklaration
@@ -56,14 +51,6 @@ struct FrameRoutine
    FrameRoutine(handle h) : coro(h) {}
 };
 
-struct [[gnu::packed]] OAMSprite{
-    uint8_t yPos;   // Top of sprite + 1
-    uint8_t tileIndex;
-    uint8_t attributes;
-    uint8_t xPos;
-};
-
-static_assert(sizeof(OAMSprite) == 4, "OAMSprite hat falsche Größe!");
 
 union loopy_register {
     uint16_t value = 0x0000;
@@ -115,6 +102,19 @@ union maskreg
 
 	};
 
+    union statusreg
+	{
+		struct
+		{
+			uint8_t unused : 5;
+			uint8_t sprite_overflow : 1;
+			uint8_t sprite_zero_hit : 1;
+			uint8_t vertical_blank : 1;
+		};
+
+		uint8_t reg;
+	};
+
 class Screen;
 class Mapper;
 class Ppu{
@@ -129,7 +129,7 @@ class Ppu{
     // Extern
     ctrlreg PPUCTRL;
     maskreg mask;
-    uint8_t PPUSTATUS = 0x3D;
+    statusreg PPUSTATUS;
     uint8_t OAMADDR = 0;
     uint8_t OAMDATA = 0;
     uint8_t PPUSCROLL = 0;
@@ -140,6 +140,8 @@ class Ppu{
     uint8_t* palletteIndexes; // 0x0020 Bytes
     uint8_t* OAM; // 256 Bytes (64 * 4)
 
+    
+
     Screen* screen;
     Mapper* mapper;
 
@@ -148,7 +150,6 @@ class Ppu{
 
     Palette pal;
 
-    uintptr_t spriteTable = 0;
     uint8_t vram_buffer;
 
     uint8_t bg_next_tile_id = 0x00;
@@ -162,10 +163,7 @@ class Ppu{
 	uint16_t bg_shifter_attrib_hi  = 0x0000;
 
 
-    std::queue<BackgroundSliver> nextTiles;
-
-
-    Ppu() : state(fakeFrame()), pal("palette.pal") {
+    Ppu() : pal("palette.pal"), state(fakeFrame()) {
         pixelBuffer = new float[256*240*3];
         for(int i = 0; i < 256*240*3; i++){
             pixelBuffer[i] = 0;
@@ -173,8 +171,6 @@ class Ppu{
         internalMemory = new uint8_t[0x0800];
         palletteIndexes = new uint8_t[0x0020];
         OAM = new uint8_t[256];
-        nextTiles.push({});
-        nextTiles.push({});
     };
     ~Ppu(){
         delete[] pixelBuffer;
@@ -187,8 +183,6 @@ class Ppu{
         screen = s;
     };
 
-    int currentScanline = 261; //262 insg
-    int currentDot; //242
     bool blanking = true;
     bool frameReady = false;
 
@@ -196,10 +190,13 @@ class Ppu{
 	int16_t scanline = 0;
 	int16_t cycle = 0;
 
-    FrameRoutine fakeFrame();
     FrameRoutine state;
+
+    uintptr_t backgroundTable = 0x1000;
+
     bool unevenFrame = true;
     void clock();
+    FrameRoutine fakeFrame();
     void fakeClock();
     void setPixel(int x, int y, glm::vec3 c);
 
@@ -207,17 +204,6 @@ class Ppu{
     void writeRegister(uint8_t* reg, uint8_t val);
     uint8_t readRegister(uint8_t* reg);
 
-    //Registergetter / setter
-    void setVBlank(bool val);
-    void setSpriteZero(bool val);
-    void setOverflow(bool val);
-    bool getVBlank();
-    bool getNMIOutput();
-    bool getVRAMAddressIncrement(); //1 oder 32
-    void incrementX();
-    void incrementFineX();
-    void incrementY();
-    bool isRenderingEnabled();
 };
 
 

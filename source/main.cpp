@@ -68,6 +68,7 @@ static void framebuffer_size_callback(GLFWwindow* window, int w, int h){
   };
 
 // TODO
+
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     //unsigned int vkeycode = MapVirtualKeyA(scancode, MAPVK_VSC_TO_VK);
@@ -80,7 +81,7 @@ auto main() -> int
   GLFWwindow* window = initGL();
   Screen screen;
   NES console(&screen);
-  console.load("donkey-kong(world).nes");
+  console.load("ic.nes");
 
   glfwSetWindowUserPointer(window, &screen);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
