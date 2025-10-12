@@ -112,6 +112,9 @@ class Ppu{
     uint8_t spriteShifterCHRLow[8];
     uint8_t spriteShifterCHRHigh[8];
 
+    bool spriteZeroHitPossible = false;
+    bool spriteZeroBeingRendered = false;
+
 
     uint8_t oamBuffer;
 

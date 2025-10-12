@@ -175,11 +175,15 @@ void Ppu::clock()
 			}
 
 			uint8_t iOAM = 0;
+			spriteZeroHitPossible = false;
 			while(iOAM < 64 && sprite_count < 9){
 				int16_t diff = ((int16_t)scanline - (int16_t)OAM[iOAM].yPos);
 
 				if(diff >= 0 && diff < (PPUCTRL.sprite_size ? 16 : 8)){
 					if(sprite_count < 8){
+						if(iOAM == 0){
+							spriteZeroHitPossible = true;
+						}
 						memcpy(&secondaryOAM[sprite_count], &OAM[iOAM], sizeof(OAMSprite));
 						sprite_count++;
 					}
@@ -317,6 +321,7 @@ void Ppu::clock()
 	uint8_t fg_priority = 0x00;
 
 	if (PPUMASK.render_sprites){
+		spriteZeroBeingRendered = false;
 		for(uint8_t i = 0; i < sprite_count; i++){
 			if(secondaryOAM[i].xPos == 0){
 				uint8_t fg_pixel_lo = (spriteShifterCHRLow[i] & 0x80) > 0;
@@ -328,6 +333,9 @@ void Ppu::clock()
 
 				if(fg_pixel != 0){
 					// Erster nicht-transparenter Sprite gefunden
+					if(i==0){
+						spriteZeroBeingRendered = true;
+					}
 					break;
 				}
 			}
@@ -361,12 +369,28 @@ void Ppu::clock()
 			pixel = bg_pixel;
 			palette = bg_palette;
 		}
+
+		if(spriteZeroHitPossible && spriteZeroBeingRendered){
+			if(PPUMASK.render_sprites && PPUMASK.render_background){
+				if(~(PPUMASK.render_background_left | PPUMASK.render_sprites_left)){
+					if(cycle >= 9 && cycle < 258){
+						PPUSTATUS.sprite_zero_hit = 1;
+					}
+				}
+				else{
+					if(cycle >= 1 && cycle < 258){
+						PPUSTATUS.sprite_zero_hit = 1;
+					}
+				}
+			}
+		}
 	}
 
 	// Zeichnen
 	uint8_t color_index = ((palette << 2) + pixel );
-	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)(0x3F00) + color_index);
-	setPixel(cycle-1, scanline, pal.getColor(palette_val ));
+	
+	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)(0x3F00) + color_index) & 0x3F;
+	setPixel(cycle-1, scanline, pal.getColor(palette_val & (PPUMASK.grayscale ? 0x30 : 0x3F)));
 
 	// Renderer fortschalten
 	cycle++;
@@ -406,7 +430,7 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
 
     }
     else if(reg==(uint8_t*)&PPUMASK){
-        PPUMASK.reg = val;
+		PPUMASK.reg = val;
     }
     else if(reg==&OAMADDR){
         OAMADDR = val;
@@ -440,6 +464,10 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
         }
     }
     else if(reg==&PPUDATA){
+		if(vram_addr.value == 0x3F00){
+			std::cout << "Schreibe Backdrop Farbe: " << (int)val << std::endl;
+
+		}
         mapper->writeVRAM((uint8_t*)(uintptr_t)vram_addr.value, val);
         vram_addr.value += PPUCTRL.increment_mode ? 32 : 1;
     }

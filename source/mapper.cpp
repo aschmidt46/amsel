@@ -102,7 +102,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Controller* c)
         ppuMap[i] = cartridge->chrRom + i;
     }
     //Interner Ram
-    if(mirror = MIRROR_VERTICAL){
+    if(mirror == MIRROR_VERTICAL){
         std::cout << "Horizontale Ausrichtung" << std::endl;
         index = 0x2000;
         for(int i = 0; i < 0x0800; i++){

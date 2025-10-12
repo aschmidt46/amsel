@@ -80,7 +80,7 @@ auto main() -> int
   screen = new Screen();
   controller1 = new Controller();
   NES console(screen, controller1);
-  console.load("donkey-kong(world).nes");
+  console.load("smb.nes");
 
   glfwSetWindowUserPointer(window, &screen);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
