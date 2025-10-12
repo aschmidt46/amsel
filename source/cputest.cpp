@@ -20,7 +20,7 @@ CPUTest::CPUTest(){
     NESFile* cart = new NESFile("nestest.nes");
     Ppu* ppu = new Ppu();
     cpu = new Cpu();
-    Mapper* m = new Mapper(cart, cpu, ppu);
+    Mapper* m = new Mapper(cart, cpu, ppu, nullptr);
     auto finalize = [&](){
         delete cart;
         delete ppu;

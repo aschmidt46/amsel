@@ -7,50 +7,6 @@
 #include <queue>
 #include <memory>
 
-// Die Coroutinen-Klasse
-struct FrameRoutine
-{
-   struct promise_type; // Vorwaertsdeklaration
-   using handle = std::coroutine_handle<promise_type>;
-   // promise_type Klasse
-   struct promise_type
-   {
-      // Aufruf unmittelbar nach Start der Coroutine
-      // Soll die Coroutine zu Beginn nicht unterbrochen werden,
-      // ist anstelle eines suspend_always-Objekts ein Objekt vom Typ suspend_never zurückzugeben.
-      auto initial_suspend()
-      { return std::suspend_always{}; }
-
-      // Aufruf nach Beenden der Coroutine
-      auto final_suspend() noexcept
-      { return std::suspend_always{}; }
-
-      // Aufruf beim Ausloesen einer nicht behandelten
-      // Ausnahme
-      void unhandled_exception()
-     { std::terminate(); }
-
-      // Liefert das Coroutinen-Objekt zurueck
-      auto get_return_object()
-     { return FrameRoutine{handle::from_promise(*this)}; }
-
-      // Wird durch co_return aufgerufen
-     void return_void()
-     { }
-   };
-
-   // Setzt Coroutine fort (coro.resume()),
-   // wenn das Coroutinen-Handle gueltig ist (ungleich 0)
-   bool resume()
-   { return coro ? (coro.resume(), !coro.done()) : false; };
-
- private:
-   // Coroutinen-Handle
-   handle coro;
-   // ctor, speichert das uebergebene Coroutinen-Handle ab
-   FrameRoutine(handle h) : coro(h) {}
-};
-
 
 union loopy_register {
     uint16_t value = 0x0000;
@@ -115,6 +71,15 @@ union maskreg
 		uint8_t reg;
 	};
 
+struct [[gnu::packed]] OAMSprite{
+    uint8_t yPos;   // Top of sprite + 1
+    uint8_t tileIndex;
+    uint8_t attributes;
+    uint8_t xPos;
+};
+
+static_assert(sizeof(OAMSprite)==4);
+
 class Screen;
 class Mapper;
 class Ppu{
@@ -127,56 +92,61 @@ class Ppu{
     public:
 
     // Extern
-    ctrlreg PPUCTRL;
-    maskreg mask;
-    statusreg PPUSTATUS;
-    uint8_t OAMADDR = 0;
-    uint8_t OAMDATA = 0;
-    uint8_t PPUSCROLL = 0;
-    uint8_t PPUADDR = 0;
-    uint8_t PPUDATA = 0;
+    ctrlreg PPUCTRL;        //$2000
+    maskreg PPUMASK;        //$2001
+    statusreg PPUSTATUS;    //$2002
+    uint8_t OAMADDR = 0;    //$2003
+    uint8_t OAMDATA = 0;    //$2004
+    uint8_t PPUSCROLL = 0;  //$2005
+    uint8_t PPUADDR = 0;    //$2006
+    uint8_t PPUDATA = 0;    //$2007
 
+    // Intern
     uint8_t* internalMemory; // 2KB
     uint8_t* palletteIndexes; // 0x0020 Bytes
-    uint8_t* OAM; // 256 Bytes (64 * 4)
+    //uint8_t* OAM; // 256 Bytes (64 * 4)
+    OAMSprite OAM[64];
+    uint8_t secondaryOAM[32];
+    uint8_t oamBuffer;
+
+    uint8_t* pOAM = (uint8_t*)OAM;
 
     
 
+    // Schnittstelle
     Screen* screen;
     Mapper* mapper;
 
     // Output, nicht Teil der PPU
     float* pixelBuffer;
-
     Palette pal;
 
-    uint8_t vram_buffer;
 
-    uint8_t bg_next_tile_id = 0x00;
-    uint8_t bg_next_tile_attrib = 0x00;
-    uint8_t bg_next_tile_lsb = 0x00;
-    uint8_t bg_next_tile_msb = 0x00;
+    uint8_t vramReadBuffer;
 
-    uint16_t bg_shifter_pattern_lo = 0x0000;
-	uint16_t bg_shifter_pattern_hi = 0x0000;
-	uint16_t bg_shifter_attrib_lo  = 0x0000;
-	uint16_t bg_shifter_attrib_hi  = 0x0000;
+    uint8_t nextTileNTByte = 0x00;
+    uint8_t nextTileATByte = 0x00;
+    uint8_t nextTileCHRLow = 0x00;
+    uint8_t nextTileCHRHigh = 0x00;
+
+    uint16_t shifterCHRLow = 0x0000;
+	uint16_t shifterCHRHigh = 0x0000;
+	uint16_t shifterATLow  = 0x0000;
+	uint16_t shifterATHigh  = 0x0000;
 
 
-    Ppu() : pal("palette.pal"), state(fakeFrame()) {
+    Ppu() : pal("palette.pal") {
         pixelBuffer = new float[256*240*3];
         for(int i = 0; i < 256*240*3; i++){
             pixelBuffer[i] = 0;
         }
         internalMemory = new uint8_t[0x0800];
         palletteIndexes = new uint8_t[0x0020];
-        OAM = new uint8_t[256];
     };
     ~Ppu(){
         delete[] pixelBuffer;
         delete[] internalMemory;
         delete[] palletteIndexes;
-        delete[] OAM;
     };
     void init(Mapper* m, Screen* s){
         mapper = m;
@@ -186,18 +156,12 @@ class Ppu{
     bool blanking = true;
     bool frameReady = false;
 
-    // Pixel "dot" position information
+    // Pixelposition
 	int16_t scanline = 0;
 	int16_t cycle = 0;
 
-    FrameRoutine state;
-
-    uintptr_t backgroundTable = 0x1000;
-
     bool unevenFrame = true;
     void clock();
-    FrameRoutine fakeFrame();
-    void fakeClock();
     void setPixel(int x, int y, glm::vec3 c);
 
     // Callbacks

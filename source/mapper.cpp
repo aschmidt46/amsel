@@ -11,12 +11,15 @@ std::string mhex(uintptr_t input){
 }
 
 
-Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
+Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Controller* c)
 {
     memoryMap = new uint8_t*[ADDRSPACE];
     this->ppu = ppu;
     this->cpu = cpu;
     this->cart = cartridge;
+    this->controller1 = c;
+
+    controller1->init(this);
 
     assert(cart->header.getMapper()==0);
 
@@ -39,7 +42,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
     // PPU Register
     for(int i = index; i < 0x4000; i+=0x8){
         memoryMap[i]   = (uint8_t*)&ppu->PPUCTRL;
-        memoryMap[i+1] = (uint8_t*)&ppu->mask;
+        memoryMap[i+1] = (uint8_t*)&ppu->PPUMASK;
         memoryMap[i+2] = (uint8_t*)&ppu->PPUSTATUS;
         memoryMap[i+3] = (uint8_t*)&ppu->OAMADDR;
         memoryMap[i+4] = (uint8_t*)&ppu->OAMDATA;
@@ -52,7 +55,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
     // IO Register (nicht implementiert)
     io = new uint8_t[0x18];
     for(int i = 0; i < 0x18; i++){
-        memoryMap[i + index] = io + i;
+         memoryMap[i + index] = io + i;
     }
     index += 0x18;
 
@@ -157,7 +160,6 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu)
 uint8_t Mapper::read(uint8_t *address)
 {
     [[unlikely]] if(memoryMap[(uintptr_t)address]==nullptr){
-        std::cout << "Ungemapter Speicherzugriff bei " << mhex((uintptr_t)address) << ", gebe 0 zurück" << std::endl;
         return 0;
     }
     auto val = *memoryMap[(uintptr_t)address];
@@ -165,38 +167,47 @@ uint8_t Mapper::read(uint8_t *address)
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
         return ppu->readRegister(memoryMap[(uintptr_t)address]);
     }
+    if((uintptr_t)address >= 0x4016 && (uintptr_t)address <= 0x4017){
+        val = (controller_state[(uintptr_t)address & 0x0001] & 0x80) > 0;
+        controller_state[(uintptr_t)address & 0x0001] <<= 1;
+    }
     return val;
 }
 
 void Mapper::write(uint8_t *address, uint8_t value)
 {
     [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
-        std::cout << "Ungemapter Speicher-Schreib-Zugriff bei " << mhex((uintptr_t)address) << ", tue nichts" << std::endl;
         return;
     }
+
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
         ppu->writeRegister(memoryMap[(uintptr_t)address], value);
+        return;
     }
-    else {
-        *memoryMap[(uintptr_t)address] = value;
-        // OAMDMA write
-        [[unlikely]] if((uintptr_t)address == 0x4014){
-            uint8_t cpuPage = read(address);
-            uint16_t cpuAddress = ((uint16_t) cpuPage) << 8;
-            for(int i=0; i < 256; i++){
-                uint8_t val = read((uint8_t*)(uintptr_t)cpuAddress + i);
-                ppu->OAM[i] = val;
-            }
-            cpu->remainingCycles += 513; // Oder 514???
+
+    if((uintptr_t)address >= 0x4016 && (uintptr_t)address <= 0x4017){
+        controller_state[(uintptr_t)address & 0x0001] = controller[(uintptr_t) address & 0x0001];
+        return;
+    }
+
+    *memoryMap[(uintptr_t)address] = value;
+
+    // OAMDMA write
+    [[unlikely]] if((uintptr_t)address == 0x4014){
+        uint8_t cpuPage = read(address);
+        uint16_t cpuAddress = ((uint16_t) cpuPage) << 8;
+        for(int i=0; i < 256; i++){
+            uint8_t val = read((uint8_t*)(uintptr_t)cpuAddress + i);
+            ppu->pOAM[i] = val;
         }
+        cpu->remainingCycles += 513; // Oder 514???
     }
 }
 
 uint8_t Mapper::readVRAM(uint8_t *address)
 {
     [[unlikely]] if(ppuMap[(uintptr_t)address]==nullptr){
-        std::cout << "Ungemapter VRAM-Zugriff, gebe 0 zurück" << std::endl;
         return 0;
     }
     return *ppuMap[(uintptr_t)address];
@@ -205,8 +216,6 @@ uint8_t Mapper::readVRAM(uint8_t *address)
 void Mapper::writeVRAM(uint8_t *address, uint8_t value)
 {
     [[unlikely]] if(ppuMap[(uintptr_t)address] == nullptr){
-        std::cout << "Ungemapter VRAM-Schreib-Zugriff bei " << mhex((uintptr_t)address) << ", tue nichts" << std::endl;
-        throw;
         return;
     }
     *ppuMap[(uintptr_t)address] = value;

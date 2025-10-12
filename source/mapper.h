@@ -4,6 +4,7 @@
 #include "6502.h"
 #include "ppu.h"
 #include <limits>
+#include "controller.h"
 
 constexpr const size_t ADDRSPACE = 1 + (size_t) std::numeric_limits<uint16_t>::max();
 
@@ -14,6 +15,7 @@ enum Mirror{
 
 class Cpu;
 class Ppu;
+class Controller;
 class Mapper{
     uint8_t** memoryMap;    // CPU-Adressraum
     uint8_t** ppuMap;       // PPU-Adressraum
@@ -21,10 +23,12 @@ class Mapper{
     
     Cpu* cpu;
     Ppu* ppu;
+    Controller* controller1;
     NESFile* cart;
     uint8_t* prgRam;
     //muss noch implementiert werden
     uint8_t* io;
+
     
     // Adressen der öffentlichen PPU-Register
     uint8_t* PPUCTRL;
@@ -37,7 +41,9 @@ class Mapper{
     uint8_t* PPUDATA;
     
     public:
-    Mapper(NESFile* cartridge, Cpu* cpu, Ppu* ppu);
+    uint8_t controller[2];
+    uint8_t controller_state[2];
+    Mapper(NESFile* cartridge, Cpu* cpu, Ppu* ppu, Controller* c);
     ~Mapper(){
         delete[] memoryMap;
         delete[] ppuMap;

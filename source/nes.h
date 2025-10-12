@@ -5,13 +5,14 @@
 #include "mapper.h"
 #include "nes_file.h"
 #include <chrono>
-
+#include "controller.h"
 
 class Cpu;
 class Ppu;
 class Mapper;
 struct NESFile;
 class Screen;
+class Controller;
 
 class NES{
     Cpu* cpu;
@@ -19,12 +20,12 @@ class NES{
     Mapper* mapper;
     NESFile* Slot;
     Screen* tv;
-    // Controller* controller;
+    Controller* controller;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> t1 = std::chrono::high_resolution_clock::now();
     
     public:
-    NES(Screen* screen);
+    NES(Screen* screen, Controller* c);
     void load(const char* path);
     void eject();
     void reset();

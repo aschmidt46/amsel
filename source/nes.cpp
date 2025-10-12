@@ -8,16 +8,17 @@ using std::chrono::microseconds;
 using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
-NES::NES(Screen* screen){
+NES::NES(Screen* screen, Controller* c){
     cpu = new Cpu();
     ppu = new Ppu();
     tv = screen;
+    controller = c;
 }
 
 void NES::load(const char *path)
 {
     Slot = new NESFile(path);
-    mapper = new Mapper(Slot, cpu, ppu);
+    mapper = new Mapper(Slot, cpu, ppu, controller);
     cpu->init(0xC000, mapper);
     ppu->init(mapper, tv);
 }
@@ -44,10 +45,13 @@ void NES::nextFrame()
         while(duration_cast<nanoseconds>(t2-t1).count() < nsPerClock) {
             t2 = high_resolution_clock::now();
         }
+        
         ppu->clock();
         ppu->clock();
         ppu->clock();
         cpu->clockCPU();
+        controller->clock();
+
         t1 = high_resolution_clock::now();
     }
     ppu->frameReady = false;

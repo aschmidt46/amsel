@@ -8,8 +8,12 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "nes.h"
+#include "controller.h"
 
 int width = 256, height = 240;
+
+Screen* screen;
+Controller* controller1;
 
  void APIENTRY glDebugProc(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
     const GLchar* message, const void* userParam){
@@ -54,34 +58,29 @@ void cleanUp(GLFWwindow* window){
   glfwDestroyWindow(window);
 }
 
-static void FramebufferSize_callback(GLFWwindow* window, int w, int h) {
-
-    glViewport(0, 0, w, h);
-    width = w;
-    height = h;
-}
-
 static void framebuffer_size_callback(GLFWwindow* window, int w, int h){
     width = w;
     height = h;
-    static_cast<Screen*>(glfwGetWindowUserPointer(window))->updateFramebufferSize(w, h);
+    screen->updateFramebufferSize(w, h);
   };
-
-// TODO
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    //unsigned int vkeycode = MapVirtualKeyA(scancode, MAPVK_VSC_TO_VK);
-
+  unsigned int v = 0;
+  if(action == GLFW_PRESS) v = 1;
+  if(action == GLFW_RELEASE) v = 0;
+  if(action != GLFW_PRESS && action != GLFW_RELEASE) return;
+  controller1->setKey(key, v);
 }
 
 auto main() -> int
 {
   //CPUTest test;
   GLFWwindow* window = initGL();
-  Screen screen;
-  NES console(&screen);
-  console.load("ic.nes");
+  screen = new Screen();
+  controller1 = new Controller();
+  NES console(screen, controller1);
+  console.load("nestest.nes");
 
   glfwSetWindowUserPointer(window, &screen);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
