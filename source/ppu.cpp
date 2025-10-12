@@ -1,6 +1,8 @@
 #include "ppu.h"
 #include <iostream>
 #include <cstring>
+#include <format>
+#include <algorithm>
 
 
 void Ppu::clock()
@@ -388,8 +390,14 @@ void Ppu::clock()
 
 	// Zeichnen
 	uint8_t color_index = ((palette << 2) + pixel );
+	auto addr = (0x3F00) + color_index;
+
+	if (addr == 0x3F10) addr = 0x3F00;
+	if (addr == 0x3F14) addr = 0x3F04;
+	if (addr == 0x3F18) addr = 0x3F08;
+	if (addr == 0x3F1C) addr = 0x3F0C;
 	
-	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)(0x3F00) + color_index) & 0x3F;
+	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)addr) & 0x3F;
 	setPixel(cycle-1, scanline, pal.getColor(palette_val & (PPUMASK.grayscale ? 0x30 : 0x3F)));
 
 	// Renderer fortschalten
@@ -418,6 +426,11 @@ void Ppu::setPixel(int x, int y, glm::vec3 c)
     pixelBuffer[index + 2] = c.b;
 }
 
+std::string phex(uintptr_t input){
+    std::string str = std::format("{:x}", input);
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
+}
 
 void Ppu::writeRegister(uint8_t *reg, uint8_t val)
 {
@@ -464,11 +477,13 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
         }
     }
     else if(reg==&PPUDATA){
-		if(vram_addr.value == 0x3F00){
-			std::cout << "Schreibe Backdrop Farbe: " << (int)val << std::endl;
+		auto addr = vram_addr.value;
+		if (addr == 0x3F10) addr = 0x3F00;
+		if (addr == 0x3F14) addr = 0x3F04;
+		if (addr == 0x3F18) addr = 0x3F08;
+		if (addr == 0x3F1C) addr = 0x3F0C;
 
-		}
-        mapper->writeVRAM((uint8_t*)(uintptr_t)vram_addr.value, val);
+        mapper->writeVRAM((uint8_t*)(uintptr_t)addr, val);
         vram_addr.value += PPUCTRL.increment_mode ? 32 : 1;
     }
 }

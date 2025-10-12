@@ -149,7 +149,8 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Controller* c)
     // Palletten
     for(index = 0x3F00; index < 0x4000; index += 0x0020){
         for(int i = 0; i < 0x20; i++){
-            ppuMap[index + i] = ppu->palletteIndexes + i;
+            auto pIndex = ppu->palletteIndexes + i;
+            ppuMap[index + i] = pIndex;
         }
     }
 
