@@ -83,6 +83,7 @@ void Ppu::clock()
 
 		if(PPUMASK.render_sprites && cycle >= 1 && cycle < 258){
 			for(int i = 0; i < sprite_count; i++){
+				if(sprite_count > 8) break;
 				if(secondaryOAM[i].xPos > 0){
 					secondaryOAM[i].xPos--;
 				}

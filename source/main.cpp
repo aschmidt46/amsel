@@ -71,7 +71,7 @@ auto main() -> int
   screen = new Screen();
   controller1 = new Controller();
   console = new NES(screen, controller1);
-  console->load("kungfu.nes");
+  console->load("smb.nes");
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   // input implementieren
