@@ -146,15 +146,17 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Controller* c)
         ppuMap[index + i] = ppu->internalMemory + i;
     }
 
-    // Palletten
+    // Palletten gemirrord bis 0x4000
     for(index = 0x3F00; index < 0x4000; index += 0x0020){
         for(int i = 0; i < 0x20; i++){
             auto pIndex = ppu->palletteIndexes;
             int j = i;
+            // Innerhalb zeigen alle diese Register auf das gleiche innere Register (Backdrop Farbe)
             if (i == 0x0010) j = 0x0000;
 	        if (i == 0x0014) j = 0x0004;
 	        if (i == 0x0018) j = 0x0008;
 	        if (i == 0x001C) j = 0x000C;
+            
             ppuMap[index + i] = pIndex + j;
         }
     }

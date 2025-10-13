@@ -4,6 +4,12 @@
 #include <format>
 #include <algorithm>
 
+std::string phex(uintptr_t input){
+    std::string str = std::format("{:x}", input);
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
+}
+
 
 void Ppu::clock()
 {
@@ -419,12 +425,6 @@ void Ppu::setPixel(int x, int y, glm::vec3 c)
     pixelBuffer[index] = c.r;
     pixelBuffer[index + 1] = c.g;
     pixelBuffer[index + 2] = c.b;
-}
-
-std::string phex(uintptr_t input){
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
 }
 
 void Ppu::writeRegister(uint8_t *reg, uint8_t val)

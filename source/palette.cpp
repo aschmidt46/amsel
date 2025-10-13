@@ -3,11 +3,13 @@
 #include <vector>
 #include <iostream>
 
-Palette::Palette(const char *path)
+Palette::Palette(const char *path) : Palette()
 {
     std::ifstream stream(path, std::ios::in | std::ios::binary);
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     
+    if(contents.size()==0) return;
+    else delete[] colors;
 
     colors = new uint8_t[contents.size()];
     pSize = contents.size();
@@ -15,6 +17,15 @@ Palette::Palette(const char *path)
         colors[i] = contents[i];
     }
     stream.close();
+}
+
+Palette::Palette()
+{
+    pSize = 192;
+    colors = new uint8_t[pSize];
+    for(int i = 0; i < pSize; i++){
+        colors[i] = defPalette[i];
+    }
 }
 
 glm::vec3 Palette::getColor(uint8_t index)
