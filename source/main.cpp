@@ -2,7 +2,6 @@
 #include <string>
 #include <fstream>
 
-#include "lib.hpp"
 #include "cputest.h"
 
 #include <GL/glew.h>
@@ -10,7 +9,15 @@
 #include "nes.h"
 #include "controller.h"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "gui.h"
+
 int width = 256, height = 240;
+
+bool showGui;
+bool fullScreen;
 
 Screen* screen;
 Controller* controller1;
@@ -22,7 +29,7 @@ GLFWwindow* initGL(){
   glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
   glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 6 );
   glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
-  GLFWwindow* window = glfwCreateWindow(width, height, "Anton's NES-Emulator", NULL, NULL);
+  GLFWwindow* window = glfwCreateWindow(2*width, 2*height, "Anton's NES-Emulator", NULL, NULL);
   glfwMakeContextCurrent(window);
   glfwGetFramebufferSize(window, &width, &height);
   glViewport(0, 0, width, height);
@@ -36,10 +43,25 @@ GLFWwindow* initGL(){
   glDisable(GL_MULTISAMPLE);
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
+
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO& io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+  //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+
+  // Setup Platform/Renderer backends
+  ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+  ImGui_ImplOpenGL3_Init();
+
   return window;
 }
 
 void cleanUp(GLFWwindow* window){
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
   glfwDestroyWindow(window);
   delete screen;
   delete controller1;
@@ -61,6 +83,20 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
   if(v==1 && key == GLFW_KEY_ESCAPE){
     console->reset();
   }
+  if(v==1 && key == GLFW_KEY_F11){
+    if(fullScreen){
+      GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+      glfwSetWindowMonitor(window, NULL, 200, 200, width, height, 0);
+      fullScreen = false;
+    }
+    else{
+      GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+      const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+ 
+      glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+      fullScreen = true;
+    }
+  }
   controller1->setKey(key, v);
 }
 
@@ -71,6 +107,7 @@ auto main() -> int
   screen = new Screen();
   controller1 = new Controller();
   console = new NES(screen, controller1);
+  Gui gui(console);
   console->load("smb.nes");
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -78,6 +115,7 @@ auto main() -> int
   glfwSetKeyCallback(window, key_callback);
 int i = 0;
   while(!glfwWindowShouldClose(window)){
+    gui.render();
     glfwPollEvents();
     glfwSwapBuffers(window);
     console->nextFrame();

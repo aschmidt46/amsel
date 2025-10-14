@@ -29,8 +29,9 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
 
-
 include_directories(PUBLIC .)
+include_directories(PUBLIC imgui)
+include_directories(PUBLIC imgui/backends)
 
 
 
@@ -43,12 +44,24 @@ add_library(screen source/screen.cpp source/screen.h)
 add_library(controller source/controller.cpp source/controller.h)
 add_library(nes source/nes.cpp source/nes.h)
 add_library(palette source/palette.cpp source/palette.h)
+add_library(gui source/gui.cpp source/gui.h)
 
+add_library(imgui STATIC
+  imgui/imgui.cpp
+  imgui/imgui_demo.cpp
+  imgui/imgui_draw.cpp
+  imgui/imgui_widgets.cpp
+  imgui/imgui_tables.cpp
+  imgui/backends/imgui_impl_glfw.cpp
+  imgui/backends/imgui_impl_opengl3.cpp
+  imgui/misc/cpp/imgui_stdlib.cpp
+)
 
 
 add_executable(nes-emu source/main.cpp)
-target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen)
+target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui)
 target_link_libraries(nes-emu OpenGL::GL)
+target_link_libraries(nes-emu imgui)
 target_link_libraries(nes-emu glfw)
 target_link_libraries(nes-emu GLEW::GLEW)
 

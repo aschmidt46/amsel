@@ -108,12 +108,8 @@ void Screen::copyBufferToScreen(float *buffer)
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, screenWidth, screenHeight, GL_RGB, GL_FLOAT, buffer);
 }
 
-// Konstantes Seitenverhältnis
-void Screen::updateFramebufferSize(int w, int h)
-{
-    width = w;
-    height = h;
-    float aspect = (float)h/(float)w;
+glm::vec4 computeRect(int x, int y){
+    float aspect = (float)y/(float)x;
     float x0=0, x1=1, y0=0, y1=1;
     if(aspect < 1){
         float aw = (1 - aspect) / 2;
@@ -121,12 +117,23 @@ void Screen::updateFramebufferSize(int w, int h)
         x1 = aw + aspect;
     }
     else{
-        aspect = (float)w/(float)h;
+        aspect = (float)x/(float)y;
         float ah = (1 - aspect) / 2;
         y0 = ah;
         y1 = ah + aspect;
     }
-    setQSize(x0,x1,y0,y1);
+    return glm::vec4(x0,x1,y0,y1);
+}
+
+
+// Konstantes Seitenverhältnis
+void Screen::updateFramebufferSize(int w, int h)
+{
+    width = w;
+    height = h;
+    glm::vec4 xxyy = computeRect(w,h);
+    
+    setQSize(xxyy.x, xxyy.y, xxyy.z, xxyy.w);
     glNamedBufferData(ssbo, qSize.size()*sizeof(float), qSize.data(), GL_STATIC_DRAW);
     glViewport(0, 0, w, h);
 }
