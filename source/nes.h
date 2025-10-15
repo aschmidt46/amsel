@@ -6,9 +6,11 @@
 #include "nes_file.h"
 #include <chrono>
 #include "controller.h"
+#include "apu.h"
 
 class Cpu;
 class Ppu;
+class Apu;
 class Mapper;
 struct NESFile;
 class Screen;
@@ -16,18 +18,28 @@ class Controller;
 
 class NES{
     Cpu* cpu;
-    Ppu* ppu;
+    Apu* apu;
     Mapper* mapper;
     NESFile* Slot;
     Screen* tv;
     Controller* controller;
-
+    
     std::chrono::time_point<std::chrono::high_resolution_clock> t1 = std::chrono::high_resolution_clock::now();
     
+    const double sampleRate = 20000;
+    const double audioTimePerSystemSample = 1.0 / sampleRate;
+    const double audioTimePerNESClock = 1.0 / 5369318.0; // ppu clock
+    double audioTime = 0.0;
+    
     public:
+    double audioSample;
+    Ppu* ppu;
+    bool frameReady = false;
     NES(Screen* screen, Controller* c);
     void load(const char* path);
     void eject();
     void reset();
     void nextFrame();
+    bool clock();
+    int numClocks = 0;
 };

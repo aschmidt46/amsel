@@ -11,11 +11,12 @@ std::string mhex(uintptr_t input){
 }
 
 
-Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Controller* c)
+Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
 {
     memoryMap = new uint8_t*[ADDRSPACE];
     this->ppu = ppu;
     this->cpu = cpu;
+    this->apu = apu;
     this->cart = cartridge;
     this->controller1 = c;
 
@@ -194,15 +195,22 @@ void Mapper::write(uint8_t *address, uint8_t value)
         return;
     }
 
-    if((uintptr_t)address >= 0x4016 && (uintptr_t)address <= 0x4017){
+    // Controller
+    if((uintptr_t)address == 0x4016){
         controller_state[(uintptr_t)address & 0x0001] = controller[(uintptr_t) address & 0x0001];
+        return;
+    }
+
+    // APU
+    if(((uintptr_t)address >= 0x4000 && (uintptr_t)address <= 0x4013) || ((uintptr_t)address == 0x4015) || ((uintptr_t)address == 0x4017)){
+        apu->write((uintptr_t)address, value);
         return;
     }
 
     *memoryMap[(uintptr_t)address] = value;
 
     // OAMDMA write
-    [[unlikely]] if((uintptr_t)address == 0x4014){
+    if((uintptr_t)address == 0x4014){
         //uint8_t cpuPage = read(address);
         uint16_t cpuAddress = ((uint16_t) value) << 8;
         for(int i=0; i < 256; i++){

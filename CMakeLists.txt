@@ -28,23 +28,26 @@ find_package(OpenGL REQUIRED)
 
 find_package(GLEW REQUIRED)
 
+add_subdirectory(rtaudio rtaudio/build)
 
 include_directories(PUBLIC .)
 include_directories(PUBLIC imgui)
 include_directories(PUBLIC imgui/backends)
+include_directories(PUBLIC rtaudio)
 
 
 
-add_library(cpu source/6502.cpp source/6502.h)
-add_library(ppu source/ppu.cpp source/ppu.h)
-add_library(cputest source/cputest.cpp source/cputest.h)
-add_library(nesfile source/nes_file.cpp source/nes_file.h)
-add_library(mapper source/mapper.cpp source/mapper.h)
-add_library(screen source/screen.cpp source/screen.h)
-add_library(controller source/controller.cpp source/controller.h)
-add_library(nes source/nes.cpp source/nes.h)
-add_library(palette source/palette.cpp source/palette.h)
-add_library(gui source/gui.cpp source/gui.h)
+# add_library(cpu source/6502.cpp source/6502.h)
+# add_library(ppu source/ppu.cpp source/ppu.h)
+# add_library(cputest source/cputest.cpp source/cputest.h)
+# add_library(nesfile source/nes_file.cpp source/nes_file.h)
+# add_library(mapper source/mapper.cpp source/mapper.h)
+# add_library(screen source/screen.cpp source/screen.h)
+# add_library(controller source/controller.cpp source/controller.h)
+# add_library(nes source/nes.cpp source/nes.h)
+# add_library(palette source/palette.cpp source/palette.h)
+# add_library(gui source/gui.cpp source/gui.h)
+# add_library(apu source/apu.cpp source/apu.h)
 
 add_library(imgui STATIC
   imgui/imgui.cpp
@@ -58,8 +61,22 @@ add_library(imgui STATIC
 )
 
 
-add_executable(nes-emu source/main.cpp)
-target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui)
+add_executable(nes-emu source/main.cpp
+source/6502.cpp source/6502.h
+source/ppu.cpp source/ppu.h
+source/cputest.cpp source/cputest.h
+source/nes_file.cpp source/nes_file.h
+source/mapper.cpp source/mapper.h
+source/screen.cpp source/screen.h
+source/controller.cpp source/controller.h
+source/nes.cpp source/nes.h
+source/palette.cpp source/palette.h
+source/gui.cpp source/gui.h
+source/apu.cpp source/apu.h
+source/audiosystem.cpp source/audiosystem.h
+)
+#target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui apu)
+target_link_libraries(nes-emu rtaudio)
 target_link_libraries(nes-emu OpenGL::GL)
 target_link_libraries(nes-emu imgui)
 target_link_libraries(nes-emu glfw)

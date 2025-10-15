@@ -14,6 +14,15 @@
 #include "imgui_impl_opengl3.h"
 #include "gui.h"
 
+
+#include <chrono>
+#include <thread>
+
+#include <thread>
+
+#include "audiosystem.h"
+
+
 int width = 256, height = 240;
 
 bool showGui;
@@ -107,20 +116,28 @@ auto main() -> int
   screen = new Screen();
   controller1 = new Controller();
   console = new NES(screen, controller1);
+  AudioSystem audiosystem(console);
   Gui gui(console);
   console->load("smb.nes");
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   // input implementieren
   glfwSetKeyCallback(window, key_callback);
-int i = 0;
+
+  std::thread t(&AudioSystem::start, &audiosystem);
+
   while(!glfwWindowShouldClose(window)){
     gui.render();
     glfwPollEvents();
+    while(!console->frameReady) {}
+    console->frameReady = false;
+    screen->copyBufferToScreen(console->ppu->pixelBuffer);
+    screen->present();
     glfwSwapBuffers(window);
-    console->nextFrame();
   }
 
   cleanUp(window);
+  audiosystem.close = true;
+  t.join();
   return 0;
 }

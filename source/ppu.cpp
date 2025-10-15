@@ -411,7 +411,6 @@ void Ppu::clock()
 			scanline = -1;
 			frameReady = true;
 			unevenFrame = !unevenFrame;
-			screen->copyBufferToScreen(pixelBuffer);
 		}
 	}
 }

@@ -11,6 +11,7 @@ using std::chrono::seconds;
 NES::NES(Screen* screen, Controller* c){
     cpu = new Cpu();
     ppu = new Ppu();
+    apu = new Apu();
     tv = screen;
     controller = c;
 }
@@ -18,7 +19,7 @@ NES::NES(Screen* screen, Controller* c){
 void NES::load(const char *path)
 {
     Slot = new NESFile(path);
-    mapper = new Mapper(Slot, cpu, ppu, controller);
+    mapper = new Mapper(Slot, cpu, ppu, apu, controller);
     cpu->init(0xC000, mapper);
     ppu->init(mapper, tv);
 }
@@ -56,4 +57,29 @@ void NES::nextFrame()
     }
     ppu->frameReady = false;
     tv->present();
+}
+
+bool NES::clock()
+{
+    ppu->clock();
+    apu->clock();
+    numClocks++;
+    if(numClocks%3==0){
+        cpu->clockCPU();
+        controller->clock();
+        numClocks = 0;
+    }
+    if(ppu->frameReady){
+        frameReady = true;
+        ppu->frameReady = false;
+    }
+    bool audioSampleReady = false;
+    audioTime += audioTimePerNESClock;
+    if(audioTime >= audioTimePerSystemSample){
+        audioTime -= audioTimePerSystemSample;
+        audioSample = apu->getSample();
+        audioSampleReady = true;
+    }
+
+    return audioSampleReady;
 }
