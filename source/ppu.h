@@ -128,6 +128,7 @@ class Ppu{
 
     // Output, nicht Teil der PPU
     float* pixelBuffer;
+    float* backBuffer;
     Palette pal;
 
 
@@ -145,15 +146,18 @@ class Ppu{
 
 
     Ppu() : pal("palette.pal") {
+        backBuffer = new float[256*240*3];
         pixelBuffer = new float[256*240*3];
         for(int i = 0; i < 256*240*3; i++){
             pixelBuffer[i] = 0;
+            backBuffer[i] = 0;
         }
         internalMemory = new uint8_t[0x0800];
         palletteIndexes = new uint8_t[0x0020];
     };
     ~Ppu(){
         delete[] pixelBuffer;
+        delete[] backBuffer;
         delete[] internalMemory;
         delete[] palletteIndexes;
     };
@@ -172,6 +176,7 @@ class Ppu{
     bool unevenFrame = true;
     void clock();
     void setPixel(int x, int y, glm::vec3 c);
+    void swapBuffers();
 
     // Callbacks
     void writeRegister(uint8_t* reg, uint8_t val);

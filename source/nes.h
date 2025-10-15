@@ -30,6 +30,7 @@ class NES{
     const double audioTimePerSystemSample = 1.0 / sampleRate;
     const double audioTimePerNESClock = 1.0 / 5369318.0; // ppu clock
     double audioTime = 0.0;
+    bool loaded = false;
     
     public:
     double audioSample;

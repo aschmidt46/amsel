@@ -25,6 +25,12 @@
 
 int width = 256, height = 240;
 
+int oldwidth = width;
+int oldheight = height;
+int windowX, windowY;
+int oldX = windowX;
+int oldY = windowY;
+
 bool showGui;
 bool fullScreen;
 
@@ -41,8 +47,9 @@ GLFWwindow* initGL(){
   GLFWwindow* window = glfwCreateWindow(2*width, 2*height, "Anton's NES-Emulator", NULL, NULL);
   glfwMakeContextCurrent(window);
   glfwGetFramebufferSize(window, &width, &height);
+  glfwGetWindowPos(window, &windowX, &windowY);
   glViewport(0, 0, width, height);
-  glfwSwapInterval(0);
+  glfwSwapInterval(1);
   
   GLenum res = glewInit();
   if (res != GLEW_OK) {
@@ -95,18 +102,27 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
   if(v==1 && key == GLFW_KEY_F11){
     if(fullScreen){
       GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-      glfwSetWindowMonitor(window, NULL, 200, 200, width, height, 0);
+      glfwSetWindowMonitor(window, NULL, oldX, oldY, oldwidth, oldheight, 0);
       fullScreen = false;
     }
     else{
       GLFWmonitor* monitor = glfwGetPrimaryMonitor();
       const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+      oldwidth = width;
+      oldheight = height;
+      oldX = windowX;
+      oldY = windowY;
  
       glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
       fullScreen = true;
     }
   }
   controller1->setKey(key, v);
+}
+
+static void position_callback(GLFWwindow* window, int posx, int posy){
+  windowX = posx;
+  windowY = posy;
 }
 
 auto main() -> int
@@ -118,21 +134,21 @@ auto main() -> int
   console = new NES(screen, controller1);
   AudioSystem audiosystem(console);
   Gui gui(console);
-  console->load("smb.nes");
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   // input implementieren
   glfwSetKeyCallback(window, key_callback);
+  glfwSetWindowPosCallback(window, position_callback);
 
   std::thread t(&AudioSystem::start, &audiosystem);
 
   while(!glfwWindowShouldClose(window)){
-    gui.render();
     glfwPollEvents();
     while(!console->frameReady) {}
     console->frameReady = false;
-    screen->copyBufferToScreen(console->ppu->pixelBuffer);
+    screen->copyBufferToScreen(console->ppu->backBuffer);
     screen->present();
+    gui.render();
     glfwSwapBuffers(window);
   }
 

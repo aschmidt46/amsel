@@ -18,20 +18,26 @@ NES::NES(Screen* screen, Controller* c){
 
 void NES::load(const char *path)
 {
+    if(loaded)
+        eject();
     Slot = new NESFile(path);
     mapper = new Mapper(Slot, cpu, ppu, apu, controller);
     cpu->init(0xC000, mapper);
     ppu->init(mapper, tv);
+    loaded = true;
 }
 
 void NES::eject()
 {
+    if(!loaded) return;
     delete Slot;
     delete mapper;
+    loaded = false;
 }
 
 void NES::reset()
 {
+    if(loaded)
     cpu->RESET();
 }
 
@@ -61,6 +67,7 @@ void NES::nextFrame()
 
 bool NES::clock()
 {
+    if(!loaded) return false;
     ppu->clock();
     apu->clock();
     numClocks++;

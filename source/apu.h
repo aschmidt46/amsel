@@ -6,27 +6,97 @@ constexpr const unsigned int sampleRate = 20000;
 
 class Apu{
     private:
-    struct sequencer{
-        uint32_t sequence = 0x00000000;
-        uint16_t timer = 0x0000;
-        uint16_t reload = 0x0000;
-        uint8_t output = 0x00;
+    struct sequencer
+	{
+		uint32_t sequence = 0x00000000;
+		uint32_t new_sequence = 0x00000000;
+		uint16_t timer = 0x0000;
+		uint16_t reload = 0x0000;
+		uint8_t output = 0x00;
 
-        uint8_t clock(bool enable, std::function<void(uint32_t &s)> funcManip){
-            if(enable){
-                timer--;
-                if(timer == 0xFFFF){
-                    timer = reload + 1;
-                    funcManip(sequence);
-                    output = sequence & 0x00000001;
-                }
-            }
+		// Pass in a lambda function to manipulate the sequence as required
+		// by the owner of this sequencer module
+		uint8_t clock(bool bEnable, std::function<void(uint32_t &s)> funcManip)
+		{
+			if (bEnable)
+			{
+				timer--;
+				if (timer == 0xFFFF)
+				{
+					timer = reload;
+					funcManip(sequence);
+					output = sequence & 0x00000001;
+				}
+			}
+			return output;
+		}
+	};
 
-            return output;
-        };
-    };
+	struct lengthcounter
+	{
+		uint8_t counter = 0x00;
+		uint8_t clock(bool bEnable, bool bHalt)
+		{
+			if (!bEnable)
+				counter = 0;
+			else
+				if (counter > 0 && !bHalt)
+					counter--;
+			return counter;
+		}
+	};
 
-    struct oscpulse
+	struct envelope
+	{
+		void clock(bool bLoop)
+		{
+			if (!start)
+			{
+				if (divider_count == 0)
+				{
+					divider_count = volume;
+
+					if (decay_count == 0)
+					{
+						if (bLoop)
+						{
+							decay_count = 15;
+						}
+
+					}
+					else
+						decay_count--;
+				}
+				else
+					divider_count--;
+			}
+			else
+			{
+				start = false;
+				decay_count = 15;
+				divider_count = volume;
+			}
+
+			if (disable)
+			{
+				output = volume;
+			}
+			else
+			{
+				output = decay_count;
+			}
+		}
+
+		bool start = false;
+		bool disable = false;
+		uint16_t divider_count = 0;
+		uint16_t volume = 0;
+		uint16_t output = 0;
+		uint16_t decay_count = 0;
+	};
+
+
+	struct oscpulse
 	{
 		double frequency = 0;
 		double dutycycle = 0;
@@ -64,6 +134,7 @@ class Apu{
     unsigned int clockCounter = 0;
     unsigned int frameClockCounter = 0;
 
+
     public:
     void write(uint16_t reg, uint8_t val);
     void clock();
@@ -72,8 +143,15 @@ class Apu{
     double currentSample = 0.0;
     double globalTime = 0.0;
 
-    sequencer pulse1seq;
-    oscpulse pulse1osc;
     bool enablePulse1 = false;
-    double pulse1Sample = 0.0;
+	double pulse1Sample = 0.0;
+
+	sequencer pulse1seq;
+	oscpulse pulse1osc;
+
+    bool enablePulse2 = false;
+	double pulse2Sample = 0.0;
+
+	sequencer pulse2seq;
+	oscpulse pulse2osc;
 };

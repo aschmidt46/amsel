@@ -2,11 +2,13 @@
 #include <thread>
 
 static NES* n;
+static AudioSystem* t;
 
 AudioSystem::AudioSystem(NES *console)
 {
     nes = console;
     n = console;
+    t = this;
 }
 
 AudioSystem::~AudioSystem()
@@ -25,13 +27,9 @@ int waveFun( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   std::cout << "Stream underflow detected!" << std::endl;
   
   for(int i = 0; i < nBufferFrames; i++){
-      while(!n->clock()) {}
+      while(!n->clock() && !t->close) {}
         buffer[2*i + 0] = n->audioSample;
         buffer[2*i + 1] = n->audioSample;
-        // double wave = sin(440.0 * lastValues[0] * 2 * 3.1415296 / 22000);
-        // buffer[2*i + 0] = wave;
-        // buffer[2*i + 1] = wave;
-        // lastValues[0]+= 1;
       }
   return 0;
 }
@@ -60,4 +58,5 @@ auto err = dac.startStream();
 while(!close){
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
+dac.stopStream();
 }

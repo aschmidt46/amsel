@@ -410,6 +410,7 @@ void Ppu::clock()
 		if (scanline >= 261){
 			scanline = -1;
 			frameReady = true;
+			swapBuffers();
 			unevenFrame = !unevenFrame;
 		}
 	}
@@ -425,6 +426,11 @@ void Ppu::setPixel(int x, int y, glm::vec3 c)
     pixelBuffer[index] = c.r;
     pixelBuffer[index + 1] = c.g;
     pixelBuffer[index + 2] = c.b;
+}
+
+void Ppu::swapBuffers()
+{
+	std::swap(pixelBuffer, backBuffer);
 }
 
 void Ppu::writeRegister(uint8_t *reg, uint8_t val)
