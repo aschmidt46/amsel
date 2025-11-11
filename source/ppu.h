@@ -79,16 +79,28 @@ struct [[gnu::packed]] OAMSprite{
     uint8_t xPos;
 };
 
+struct renderState{
+    int scanline;
+    int cycle;
+};
+
 static_assert(sizeof(OAMSprite)==4);
+
 
 class Screen;
 class Mapper;
 class Ppu{
     private:
-    loopy_register vram_addr;
-    loopy_register tram_addr;
+    typedef void (Ppu::*ppuCmd) ();
+    loopy_register v;
+    loopy_register t;
     uint8_t fine_x = 0;
     bool w = false;
+
+    const int numDots = 341 * 262;
+    int ppuTiming = 0;
+
+    std::vector<std::pair<std::vector<ppuCmd>, renderState>> timings;
     
     public:
 
@@ -154,6 +166,7 @@ class Ppu{
         }
         internalMemory = new uint8_t[0x0800];
         palletteIndexes = new uint8_t[0x0020];
+        fillTimings();
     };
     ~Ppu(){
         delete[] pixelBuffer;
@@ -181,6 +194,23 @@ class Ppu{
     // Callbacks
     void writeRegister(uint8_t* reg, uint8_t val);
     uint8_t readRegister(uint8_t* reg);
+
+    void fillTimings();
+    void incrementX();
+    void incrementY();
+    void resetX();
+    void resetY();
+    void loadBackgroundShifters();
+    void updateShifters();
+    void clearFlags();
+    void readNTByte();
+    void readATByte();
+    void readCHRByteLow();
+    void readCHRByteHigh();
+    void evaluateSprites();
+    void setSpriteShifters();
+    void pullNMI();
+    void renderPixel();
 
 };
 

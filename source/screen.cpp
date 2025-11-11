@@ -83,8 +83,6 @@ Screen::Screen()
     glNamedBufferData(uvssbo, quad.size()*sizeof(float), quad.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, uvssbo);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uvssbo);
-
-    // Testbild
     
 }
 
