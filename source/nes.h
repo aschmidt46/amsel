@@ -6,7 +6,8 @@
 #include "nes_file.h"
 #include <chrono>
 #include "controller.h"
-#include "apu.h"
+#include "apu/apu.h"
+#include <string>
 
 class Cpu;
 class Ppu;
@@ -31,11 +32,15 @@ class NES{
     const double audioTimePerNESClock = 1.0 / 5369318.0; // ppu clock
     double audioTime = 0.0;
     bool loaded = false;
+
     
     public:
+    bool ejectNextClock = false, loadNextClock = false, resetNextClock = false;
+    std::string fileName;
     double audioSample;
     Ppu* ppu;
     bool frameReady = false;
+    bool sound = true;
     NES(Screen* screen, Controller* c);
     void load(const char* path);
     void eject();

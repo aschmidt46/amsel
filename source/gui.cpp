@@ -28,20 +28,28 @@ void Gui::render()
             if(ImGui::MenuItem("Laden")){
               auto result = openFile();
               if(result.has_value()){
-                console->load(result.value().c_str());
+                console->fileName = result.value();
+                console->loadNextClock = true;
               }
             }
             if(ImGui::MenuItem("Auswerfen")){
-              console->eject();
+              console->ejectNextClock = true;
             }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("System"))
         {
             if (ImGui::MenuItem("RESET", "Esc")) {
-              console->reset();
+              console->resetNextClock = true;
             }
             ImGui::EndMenu();
+        }
+        if(ImGui::BeginMenu("Einstellungen")){
+          bool ton = console->sound;
+          if(ImGui::Checkbox("Ton", &ton)){
+            console->sound = !console->sound;
+          }
+          ImGui::EndMenu();
         }
 
       ImGui::EndMainMenuBar();

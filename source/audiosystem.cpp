@@ -46,7 +46,7 @@ void AudioSystem::start()
   parameters.deviceId = dac.getDefaultOutputDevice();
   parameters.nChannels = 2;
   parameters.firstChannel = 0;
-  unsigned int bufferFrames = 256; // 256 sample frames
+  unsigned int bufferFrames = 64; // 256 sample frames
   unsigned int data[2] = {0, 0};
  
   if ( dac.openStream( &parameters, NULL, RTAUDIO_FLOAT64, sampleRate,

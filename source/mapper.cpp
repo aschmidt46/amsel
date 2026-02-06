@@ -22,7 +22,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
 
     controller1->init(this);
 
-    assert(cart->header.getMapper()==0);
+    int mappernum = cart->header.getMapper();
 
     // zu groß, aber egal?
     ppuMap = new uint8_t*[ADDRSPACE];
@@ -66,7 +66,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
     //Cartridge
     //Mapper0
     //CPU
-    assert(cartridge->header.PRGROMSize == 1 || cartridge->header.PRGROMSize == 2);
+    //assert(cartridge->header.PRGROMSize == 1 || cartridge->header.PRGROMSize == 2);
 
     //PRG-RAM 8KB
     index = 0x6000;
@@ -147,7 +147,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
         ppuMap[index + i] = ppu->internalMemory + i;
     }
 
-    // Palletten gemirrord bis 0x4000
+    // Palletten gespiegelt bis 0x4000
     for(index = 0x3F00; index < 0x4000; index += 0x0020){
         for(int i = 0; i < 0x20; i++){
             auto pIndex = ppu->palletteIndexes;
@@ -162,8 +162,19 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
         }
     }
 
+    switch(mappernum){
+        case 0:
+            mImpl = (AbstractMapper*) new Mapper0(this);
+            break;
+        case 2:
+            mImpl = (AbstractMapper*) new Mapper2(this);
+            break;
+        default:
+            mImpl = (AbstractMapper*) new Mapper0(this);
+            break;
+    }
 
-    std::cout << "Mapper geladen." << std::endl;
+    std::cout << "Mapper " << mappernum << " geladen." << std::endl;
 }
 
 uint8_t Mapper::read(uint8_t *address)
@@ -175,6 +186,9 @@ uint8_t Mapper::read(uint8_t *address)
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
         return ppu->readRegister(memoryMap[(uintptr_t)address]);
+    }
+    if((uintptr_t)address == 0x4015){
+        return apu->read((uintptr_t)address);
     }
     if((uintptr_t)address >= 0x4016 && (uintptr_t)address <= 0x4017){
         val = (controller_state[(uintptr_t)address & 0x0001] & 0x80) > 0;
@@ -219,10 +233,14 @@ void Mapper::write(uint8_t *address, uint8_t value)
         }
         cpu->remainingCycles += 512; // Oder 514???
     }
+
+
+    mImpl->writeRam(address, value);
 }
 
 uint8_t Mapper::readVRAM(uint8_t *address)
 {
+    if(ppuMap==nullptr) throw;
     [[unlikely]] if(ppuMap[(uintptr_t)address]==nullptr){
         return 0;
     }

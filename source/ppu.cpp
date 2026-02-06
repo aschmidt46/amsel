@@ -142,24 +142,27 @@ void Ppu::fillTimings()
 
 			if(scanline <= 239){
 				if(cycle > 0 && (cycle <= 260 || cycle >= 321)){
-					timings[i].first.push_back(&Ppu::updateShifters);
-					switch(cycle % 8){
-						case 0:
-							timings[i].first.push_back(&Ppu::incrementX);
-							break;
-						case 1:
-							timings[i].first.push_back(&Ppu::loadBackgroundShifters);
-							timings[i].first.push_back(&Ppu::readNTByte);
-							break;
-						case 3:
-							timings[i].first.push_back(&Ppu::readATByte);
-							break;
-						case 5:
-							timings[i].first.push_back(&Ppu::readCHRByteLow);
-							break;
-						case 7:
-							timings[i].first.push_back(&Ppu::readCHRByteHigh);
-							break;
+					if ((cycle >= 2 && cycle < 258) || (cycle >= 321 && cycle < 338)){
+						timings[i].first.push_back(&Ppu::updateShifters);
+
+						switch(cycle % 8){
+							case 0:
+								timings[i].first.push_back(&Ppu::incrementX);
+								break;
+							case 1:
+								timings[i].first.push_back(&Ppu::loadBackgroundShifters);
+								timings[i].first.push_back(&Ppu::readNTByte);
+								break;
+							case 3:
+								timings[i].first.push_back(&Ppu::readATByte);
+								break;
+							case 5:
+								timings[i].first.push_back(&Ppu::readCHRByteLow);
+								break;
+							case 7:
+								timings[i].first.push_back(&Ppu::readCHRByteHigh);
+								break;
+						}
 					}
 				}
 

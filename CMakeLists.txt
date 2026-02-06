@@ -28,7 +28,7 @@ find_package(OpenGL REQUIRED)
 
 find_package(GLEW REQUIRED)
 
-add_subdirectory(rtaudio rtaudio/build)
+add_subdirectory(rtaudio)
 
 include_directories(PUBLIC .)
 include_directories(PUBLIC imgui)
@@ -72,8 +72,16 @@ source/controller.cpp source/controller.h
 source/nes.cpp source/nes.h
 source/palette.cpp source/palette.h
 source/gui.cpp source/gui.h
-source/apu.cpp source/apu.h
+source/apu/apu.cpp source/apu/apu.h
+source/apu/apu_divider.cpp source/apu/apu_divider.h
+source/apu/apu_envelope.cpp source/apu/apu_envelope.h
+source/apu/apu_frame_sequencer.cpp source/apu/apu_frame_sequencer.h
+source/apu/apu_length_counter.cpp source/apu/apu_length_counter.h
+source/apu/apu_sequencer.cpp source/apu/apu_sequencer.h
+source/apu/apu_square_channel.cpp source/apu/apu_square_channel.h
+source/apu/apu_sweep.cpp source/apu/apu_sweep.h
 source/audiosystem.cpp source/audiosystem.h
+source/mappers/mapper2.cpp source/mappers/mapper2.h
 )
 #target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui apu)
 target_link_libraries(nes-emu rtaudio)

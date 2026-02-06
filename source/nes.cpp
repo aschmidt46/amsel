@@ -11,7 +11,7 @@ using std::chrono::seconds;
 NES::NES(Screen* screen, Controller* c){
     cpu = new Cpu();
     ppu = new Ppu();
-    apu = new Apu();
+    apu = new Apu(cpu);
     tv = screen;
     controller = c;
 }
@@ -25,6 +25,7 @@ void NES::load(const char *path)
     cpu->init(0xC000, mapper);
     ppu->init(mapper, tv);
     loaded = true;
+    loadNextClock = false;
 }
 
 void NES::eject()
@@ -33,17 +34,20 @@ void NES::eject()
     delete Slot;
     delete mapper;
     loaded = false;
+    ejectNextClock = false;
 }
 
 void NES::reset()
 {
     if(loaded)
     cpu->RESET();
+    resetNextClock = false;
 }
 
 // NTSC
 constexpr const double nsPerClock = 558.73007359033799258341700316185;
 
+// Veraltet
 void NES::nextFrame()
 {
     t1 = high_resolution_clock::now();
@@ -67,12 +71,15 @@ void NES::nextFrame()
 
 bool NES::clock()
 {
+    if(loadNextClock) load(fileName.c_str());
+    if(ejectNextClock) eject();
+    if(resetNextClock) reset();
     if(!loaded) return false;
     ppu->clock();
-    apu->clock();
     numClocks++;
     if(numClocks%3==0){
         cpu->clockCPU();
+        apu->clock();
         controller->clock();
         numClocks = 0;
     }
@@ -84,7 +91,7 @@ bool NES::clock()
     audioTime += audioTimePerNESClock;
     if(audioTime >= audioTimePerSystemSample){
         audioTime -= audioTimePerSystemSample;
-        audioSample = apu->getSample();
+        audioSample = apu->getSample(sound);
         audioSampleReady = true;
     }
 

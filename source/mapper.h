@@ -5,7 +5,10 @@
 #include "ppu.h"
 #include <limits>
 #include "controller.h"
-#include "apu.h"
+#include "apu/apu.h"
+#include "abstract_mapper.h"
+#include "mappers/mapper0.h"
+#include "mappers/mapper2.h"
 
 constexpr const size_t ADDRSPACE = 1 + (size_t) std::numeric_limits<uint16_t>::max();
 
@@ -18,7 +21,9 @@ class Cpu;
 class Ppu;
 class Apu;
 class Controller;
+class AbstractMapper;
 class Mapper{
+    public:
     uint8_t** memoryMap;    // CPU-Adressraum
     uint8_t** ppuMap;       // PPU-Adressraum
 
@@ -43,7 +48,6 @@ class Mapper{
     uint8_t* PPUADDR;
     uint8_t* PPUDATA;
     
-    public:
     uint8_t controller[2];
     uint8_t controller_state[2];
     Mapper(NESFile* cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c);
@@ -55,6 +59,9 @@ class Mapper{
     };
     
     Mirror mirror;
+
+    AbstractMapper* mImpl;
+
     uint8_t read(uint8_t* address);
     void write(uint8_t* address, uint8_t value);
     uint8_t readVRAM(uint8_t* address);
