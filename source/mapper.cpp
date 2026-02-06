@@ -182,6 +182,9 @@ uint8_t Mapper::read(uint8_t *address)
     [[unlikely]] if(memoryMap[(uintptr_t)address]==nullptr){
         return 0;
     }
+    //wrap round?
+    if((uintptr_t)address==0x10000) return *memoryMap[0];
+
     auto val = *memoryMap[(uintptr_t)address];
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
@@ -202,6 +205,9 @@ void Mapper::write(uint8_t *address, uint8_t value)
     [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
         return;
     }
+
+    // PRG-ROM!
+    if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
 
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){

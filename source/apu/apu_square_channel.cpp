@@ -9,20 +9,7 @@ SquareChannel::SquareChannel(bool isSquare2)
 
 void SquareChannel::setDutyCycle(int c)
 {
-    switch(c){
-        case 0:
-            sequencer.setSequenceWithoutReset(sequence0);
-            break;
-        case 1:
-            sequencer.setSequenceWithoutReset(sequence1);
-            break;
-        case 2:
-            sequencer.setSequenceWithoutReset(sequence2);
-            break;
-        default:
-            sequencer.setSequenceWithoutReset(sequence3);
-            break;
-    }
+    sequencer.setSequenceWithoutReset(sequences[c]);
 }
 
 int SquareChannel::getPeriod()
@@ -46,7 +33,7 @@ int SquareChannel::getDAC()
 {
     // if(timer.period >= 8 && length.isPlaying() && envelope.getVolume() > 0)
     //     std::cout << "Volume da" << std::endl;
-    return envelope.getVolume() * sweep.isNotMute(this) * (lastSequencerValue > 0) * length.isPlaying() * (timer.period >= 8);
+    return envelope.getVolume() * sweep.isNotMute(this) * ((bool)(lastSequencerValue > 0)) * length.isPlaying() * ((bool)(timer.period >= 8));
 }
 
 void SquareChannel::writeRegister1(uint8_t val)
@@ -65,6 +52,7 @@ void SquareChannel::writeRegister3(uint8_t val)
 {
     reg3 = val;
     timer.changePeriod(getPeriod());
+    //timer.changePeriod(sweep.getTargetPeriod(this));
 }
 
 void SquareChannel::writeRegister4(uint8_t val)
@@ -73,6 +61,7 @@ void SquareChannel::writeRegister4(uint8_t val)
     //length.reloadCounter((val & 0b11111000) >> 3);
     length.writeTo(val);
     timer.changePeriod(getPeriod());
+    //timer.changePeriod(sweep.getTargetPeriod(this));
     sequencer.restart();
     envelope.wasWrite = true;
 }
@@ -94,7 +83,6 @@ void SquareChannel::clockSweep()
 
 void SquareChannel::onCPUClock()
 {
-    bool c = timer.clock();
-    if(c)
+    if(timer.clock())
         lastSequencerValue = sequencer.clock();
 }

@@ -38,7 +38,7 @@ int Sweep::getTargetPeriod(SquareChannel *ch) //"clock"?
 bool Sweep::isNotMute(SquareChannel *ch)
 {
     int p = getTargetPeriod(ch); 
-    return ch->timer.period >= 8 && p <= 0x7FF;
+    return p <= 0x7FF;
 }
 
 void Sweep::onWrite(uint8_t val, SquareChannel* ch)
@@ -54,7 +54,7 @@ void Sweep::clock(SquareChannel *ch)
     if(divider.counter <= 0 && isEnabled() && getShift() != 0){
         if(isNotMute(ch)){
             ch->timer.changePeriod(getTargetPeriod(ch));
-            divider.reset(); // Das steht so nicht explizit da, macht aber ansonsten keinen Sinn, oder doch?
+            //divider.reset(); // Das steht so nicht explizit da, macht aber ansonsten keinen Sinn, oder doch?
         }
         else if (!isNotMute(ch)){
             divider.reset();

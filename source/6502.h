@@ -89,12 +89,7 @@ class Cpu{
         RESET();
     };
 
-    void RESET(){
-        uint8_t low = read((uint8_t*)(uintptr_t)0xFFFC);
-        uint8_t high = read((uint8_t*)(uintptr_t)0xFFFD);
-        uint16_t addr = (high << 8) | low;
-        PC = addr;
-    };
+    void RESET();
 
     void IRQ(){
         uint16_t PCH = (PC >> 8) & 0b0000000011111111;

@@ -5,6 +5,15 @@
 #include <algorithm>
 #include <iomanip>
 
+void Cpu::RESET()
+{
+    uint8_t low = read((uint8_t*)(uintptr_t)0xFFFC);
+    uint8_t high = read((uint8_t*)(uintptr_t)0xFFFD);
+    uint16_t addr = (high << 8) | low;
+    PC = addr;
+    mapper->write((uint8_t*)0x4015, 0x00);
+}
+
 void Cpu::setStatus(Statusbit s, bool v)
 {
     if(v){

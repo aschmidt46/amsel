@@ -5,13 +5,16 @@
 #include "apu_square_channel.h"
 
 
+
 class Apu{
-    private:
+	private:
+	float* square_table;
 	Cpu* cpu;
 	uint8_t status; // 0x4015
 
     public:
 	Apu(Cpu* cpu);
+	~Apu();
     void write(uint16_t reg, uint8_t val);
 	uint8_t read(uint16_t reg); // Nur status
     void clock();
@@ -21,6 +24,8 @@ class Apu{
 	double pulse1Sample = 0.0;
 
 	double pulse2Sample = 0.0;
+
+	double square_sample = 0.0;
 
 	FrameSequencer fseq = FrameSequencer(this);
 

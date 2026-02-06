@@ -4,6 +4,15 @@
 Apu::Apu(Cpu *cpu)
 {
     this->cpu = cpu;
+    square_table = new float[31];
+    for(int i = 0; i < 31; i++){
+        square_table[i] = 95.52 / (8128.0 / i + 100);
+    }
+}
+
+Apu::~Apu()
+{
+    delete[] square_table;
 }
 
 void Apu::write(uint16_t reg, uint8_t val)
@@ -63,6 +72,7 @@ void Apu::write(uint16_t reg, uint8_t val)
 		    pulse2.length.setEnableFlag(val & 0x02);
 		break;
 	    case 0x4017:
+            fseq.onWrite(val);
 	    	break;
         default:
         break;
@@ -75,7 +85,7 @@ uint8_t Apu::read(uint16_t reg)
     if(reg==0x4015){
         fseq.interruptFlag = false;
     }
-    return (fseqi << 6) & ((pulse2.length.counter > 0) << 1) & ((pulse1.length.counter > 0));
+    return (fseqi << 6) & ((pulse2.length.isPlaying()) << 1) & ((pulse1.length.isPlaying()));
 }
 
 void Apu::clock()
@@ -84,13 +94,14 @@ void Apu::clock()
     pulse1.onCPUClock();
     pulse2.onCPUClock();
 
-    pulse1Sample = (double)pulse1.getDAC() / 15.0; // Envelope zwischen 0 und 15
-    pulse2Sample = (double)pulse2.getDAC() / 15.0;
+    int p1Sample = pulse1.getDAC();
+    int p2Sample = pulse2.getDAC();
+    square_sample = square_table[p1Sample + p2Sample];
     // if(pulse1Sample > 0) std::cout << "Pulse1: " << pulse1Sample << std::endl;
     // if(pulse2Sample > 0) std::cout << "Pulse2: " << pulse2Sample << std::endl;
 }
 
 double Apu::getSample(bool s)
 {
-    return s * (pulse1Sample * 0.2 + pulse2Sample * 0.5);
+    return s * (square_sample);
 }

@@ -26,24 +26,16 @@ void LengthCounter::setEnableFlag(bool e)
     else clear();
 }
 
-void LengthCounter::reloadCounter(uint8_t val)
-{
-    if(!haltFlag){
-        counter = val;
-    }
-}
-
 bool LengthCounter::isPlaying()
 {
-    if(counter==0)
-        counter = 0;
     return counter > 0;
 }
 
+// reload
 void LengthCounter::writeTo(uint8_t val)
 {
     if(!haltFlag){
-        uint8_t bits = (val & 0b11111000) >> 3;
+        int bits = (val & 0b11111000) >> 3;
         counter = lengthTable[bits];
     }
 }

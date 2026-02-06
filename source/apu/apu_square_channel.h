@@ -11,6 +11,8 @@ const std::vector<uint8_t> sequence1{0,1,1,0,0,0,0,0};
 const std::vector<uint8_t> sequence2{0,1,1,1,1,0,0,0};
 const std::vector<uint8_t> sequence3{1,0,0,1,1,1,1,1};
 
+const std::vector<std::vector<uint8_t>> sequences{sequence0, sequence1, sequence2, sequence3};
+
 struct SquareChannel{
     bool channel2;
     Envelope envelope;
@@ -22,7 +24,7 @@ struct SquareChannel{
     uint8_t lastSequencerValue = 0;
 
 
-    //$4000/4 ddle nnnn   duty, loop env/disable length, env disable, vol/env (Envelope intern? Nein, nicht nur)
+    //$4000/4 ddle nnnn   duty, loop env/disable length, env disable, vol/env
     // period
     // $4001/5 eppp nsss   enable sweep, period, negative, shift (Sweep intern?)
     // $4002/6 pppp pppp   period low

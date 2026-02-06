@@ -10,6 +10,9 @@ FrameSequencer::FrameSequencer(Apu *apu)
 
 void FrameSequencer::onWrite(uint8_t val)
 {
+    divider.reset();
+    sequencer0.restart();
+    sequencer1.restart();
     mode = val & 0b10000000;
     bool r = val & 0b01000000;
     if(r)
