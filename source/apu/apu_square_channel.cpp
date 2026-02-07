@@ -12,11 +12,18 @@ void SquareChannel::setDutyCycle(int c)
     sequencer.setSequenceWithoutReset(sequences[c]);
 }
 
-int SquareChannel::getPeriod()
+int SquareChannel::calculatePeriodfromRegisters()
 {
     // if(((int)reg3 || ((int)(reg4 & 0b00000111) << 8u) > 0))
     // std::cout << (int)(reg3) << ", " << ((int)(reg4 & 0b00000111) << 8u) << std::endl;
-    return (int)(reg3) + ((int)(reg4 & 0b00000111) << 8u);
+    return (int)(reg3) | ((int)(reg4 & 0b00000111) << 8u);
+}
+
+void SquareChannel::updatePeriod(uint16_t p)
+{
+    timer.changePeriod(p);
+    reg3 = (uint8_t)p & 0b11111111;
+    reg4 = (reg4 & 0b11111000) | ((p & 0b11100000000) >> 8u);
 }
 
 int SquareChannel::getLengthIndex()
@@ -24,16 +31,9 @@ int SquareChannel::getLengthIndex()
     return (reg4 & 0b11111000) >> 3;
 }
 
-int SquareChannel::shiftRawTimerPeriod(int shift)
-{
-    return getPeriod() >> shift;
-}
-
 int SquareChannel::getDAC()
 {
-    // if(timer.period >= 8 && length.isPlaying() && envelope.getVolume() > 0)
-    //     std::cout << "Volume da" << std::endl;
-    return envelope.getVolume() * sweep.isNotMute(this) * ((bool)(lastSequencerValue > 0)) * length.isPlaying() * ((bool)(timer.period >= 8));
+    return envelope.getVolume() * sweep.isNotMute(this) * ((bool)(lastSequencerValue > 0)) * length.isPlaying();
 }
 
 void SquareChannel::writeRegister1(uint8_t val)
@@ -51,17 +51,16 @@ void SquareChannel::writeRegister2(uint8_t val)
 void SquareChannel::writeRegister3(uint8_t val)
 {
     reg3 = val;
-    timer.changePeriod(getPeriod());
-    //timer.changePeriod(sweep.getTargetPeriod(this));
+    updatePeriod(calculatePeriodfromRegisters());
+    // updatePeriod(sweep.getTargetPeriod(this));
 }
 
 void SquareChannel::writeRegister4(uint8_t val)
 {
     reg4 = val;
-    //length.reloadCounter((val & 0b11111000) >> 3);
     length.writeTo(val);
-    timer.changePeriod(getPeriod());
-    //timer.changePeriod(sweep.getTargetPeriod(this));
+    updatePeriod(calculatePeriodfromRegisters());
+    // updatePeriod(sweep.getTargetPeriod(this));
     sequencer.restart();
     envelope.wasWrite = true;
 }

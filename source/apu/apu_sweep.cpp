@@ -8,7 +8,7 @@ Sweep::Sweep(bool isSquare2)
 
 bool Sweep::isEnabled()
 {
-    return raw & 0b10000000;
+    return (raw & 0b10000000) && getShift() > 0;
 }
 
 bool Sweep::getNegate()
@@ -18,7 +18,7 @@ bool Sweep::getNegate()
 
 uint8_t Sweep::getP()
 {
-    return (raw & 0b01110000 >> 4) + 1;
+    return ((raw & 0b01110000) >> 4) + 1;
 }
 
 uint8_t Sweep::getShift()
@@ -28,17 +28,21 @@ uint8_t Sweep::getShift()
 
 int Sweep::getTargetPeriod(SquareChannel *ch) //"clock"?
 {
-    int changeAmount = ch->shiftRawTimerPeriod(getShift());
+    int changeAmount = ch->timer.period >> (unsigned int)getShift();
+
     int c = square2 ? 0 : 1;
-    if (getNegate())
-        changeAmount = -changeAmount - c;
+
+    if (getNegate()){
+        changeAmount = 0 - changeAmount - c;
+    }
+
     return std::max((int)ch->timer.period + changeAmount, 0);
 }
 
 bool Sweep::isNotMute(SquareChannel *ch)
 {
     int p = getTargetPeriod(ch); 
-    return p <= 0x7FF;
+    return p <= 0x7FF && ch->timer.period >= 8;
 }
 
 void Sweep::onWrite(uint8_t val, SquareChannel* ch)
@@ -46,23 +50,19 @@ void Sweep::onWrite(uint8_t val, SquareChannel* ch)
     raw = val;
     divider.changePeriod(getP());
     wasWrite = true;
-    // ch->timer.changePeriod(getTargetPeriod(ch));
+    //ch->updatePeriod(getTargetPeriod(ch));
 }
 
 void Sweep::clock(SquareChannel *ch)
 {
-    if(divider.counter <= 0 && isEnabled() && getShift() != 0){
-        if(isNotMute(ch)){
-            ch->timer.changePeriod(getTargetPeriod(ch));
-            divider.reset(); // Das steht so nicht explizit da, macht aber ansonsten keinen Sinn, oder doch?
-        }
-        else if (!isNotMute(ch)){
-            divider.reset();
+    if(divider.clock()){
+        if(isEnabled() && isNotMute(ch)){
+            ch->updatePeriod(getTargetPeriod(ch));
         }
     }
-    if(divider.counter <= 0 || wasWrite){
-        divider.reset();
+
+    if(wasWrite){
         wasWrite = false;
+        divider.reset();
     }
-    else divider.counter--;
 }

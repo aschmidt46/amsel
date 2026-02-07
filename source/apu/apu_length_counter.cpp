@@ -9,8 +9,7 @@ void LengthCounter::clear()
 void LengthCounter::clock()
 {
     if(haltFlag) return;
-    
-    if(counter > 0)
+    else if(counter > 0)
         counter--;
 }
 
@@ -22,8 +21,11 @@ void LengthCounter::setHaltFlag(bool h)
 // Quasi enable = !halt ? 
 void LengthCounter::setEnableFlag(bool e)
 {
-    if(e) return;
-    else clear();
+    if(e) forceHalt = false;
+    else {
+        counter = 0;
+        forceHalt = true;
+    }
 }
 
 bool LengthCounter::isPlaying()
@@ -34,7 +36,7 @@ bool LengthCounter::isPlaying()
 // reload
 void LengthCounter::writeTo(uint8_t val)
 {
-    if(!haltFlag){
+    if(!forceHalt){
         int bits = (val & 0b11111000) >> 3;
         counter = lengthTable[bits];
     }

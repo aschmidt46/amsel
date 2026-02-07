@@ -37,11 +37,11 @@ struct SquareChannel{
 
     void setDutyCycle(int c);
     
-    int getPeriod();
+    int calculatePeriodfromRegisters();
+    void updatePeriod(uint16_t p);
 
     int getLengthIndex();
 
-    int shiftRawTimerPeriod(int shift);
     int getDAC();
     void writeRegister1(uint8_t val); // 0x4000, 0x4004
     void writeRegister2(uint8_t val); // 0x4001, 0x4006

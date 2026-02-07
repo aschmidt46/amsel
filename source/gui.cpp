@@ -8,7 +8,7 @@
 #include <vector>
 
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string(), {"iNES Rom-Dateien (.nes)", "*.nes"}, pfd::opt::none);
+  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string() + "\\..\\roms", {"iNES Rom-Dateien (.nes)", "*.nes"}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};

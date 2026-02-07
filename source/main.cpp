@@ -152,8 +152,7 @@ auto main() -> int
 
   std::thread t(&AudioSystem::start, &audiosystem);
 
-  console->fileName = "../resources/smb.nes";
-  console->loadNextClock = true;
+
   while(!glfwWindowShouldClose(window)){
     glfwPollEvents();
     while(!console->frameReady) {}
