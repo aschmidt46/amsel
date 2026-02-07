@@ -49,14 +49,14 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
 {
     if(reg==(uint8_t*)&PPUCTRL){
         // Wert schreiben
-        PPUCTRL.value = val;
+        PPUCTRL.raw = val;
         // Nametable select
-        t.name_table_x = PPUCTRL.nametable_x;
-        t.name_table_y = PPUCTRL.nametable_y;
+        t.setNametableX(PPUCTRL.getNametableX());
+        t.setNametableY(PPUCTRL.getNametableY());
 
     }
     else if(reg==(uint8_t*)&PPUMASK){
-		PPUMASK.reg = val;
+		PPUMASK.raw = val;
     }
     else if(reg==&OAMADDR){
         OAMADDR = val;
@@ -69,30 +69,30 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
     else if(reg==&PPUSCROLL){
         if(!w){
             fine_x = val & 0x07;
-            t.coarse_x = val >> 3;
+            t.setCoarseX(val >> 3);
             w = true;
         }
         else{
-            t.fine_y = val & 0x07;
-            t.coarse_y = val >> 3;
+            t.setFineY(val & 0x07);
+            t.setCoarseY(val >> 3);
             w = false;
         }
     }
     else if(reg==&PPUADDR){
         if(!w){
-            t.value = (uint16_t)((val & 0x3F) << 8) | (t.value & 0x00FF);
+            t.raw = (uint16_t)((val & 0x3F) << 8) | (t.raw & 0x00FF);
             w = true;
         }
         else{
-            t.value = (t.value & 0xFF00) | val;
+            t.raw = (t.raw & 0xFF00) | val;
             v = t;
             w = false;
         }
     }
     else if(reg==&PPUDATA){
 
-        mapper->writeVRAM((uint8_t*)(uintptr_t)v.value, val);
-        v.value += PPUCTRL.increment_mode ? 32 : 1;
+        mapper->writeVRAM((uint8_t*)(uintptr_t)v.raw, val);
+        v.raw += PPUCTRL.getIncrementMode() ? 32 : 1;
     }
 }
 
@@ -103,9 +103,9 @@ uint8_t Ppu::readRegister(uint8_t *reg)
 	if(reg == (uint8_t*)&PPUSTATUS){
 		w = false;
 
-        uint8_t value = PPUSTATUS.reg;
+        uint8_t value = PPUSTATUS.raw;
         // Clear Vblank
-        PPUSTATUS.vertical_blank = 0;
+        PPUSTATUS.setVerticalBlank(false);
 		return value;
     }
 	if(reg == &OAMDATA){
@@ -118,10 +118,10 @@ uint8_t Ppu::readRegister(uint8_t *reg)
 	if(reg == &PPUDATA){
 		// Verzögertes Lesen von VRAM
 		tmp = vramReadBuffer;
-		vramReadBuffer = mapper->readVRAM((uint8_t*)(uintptr_t)v.value);
-		v.value += PPUCTRL.increment_mode ? 32 : 1;
+		vramReadBuffer = mapper->readVRAM((uint8_t*)(uintptr_t)v.raw);
+		v.raw += PPUCTRL.getIncrementMode() ? 32 : 1;
         // 0x3F00 = BG_PALETTE_START
-		if (v.value >= 0x3F00)
+		if (v.raw >= 0x3F00)
 			tmp = vramReadBuffer;
 		return tmp;
     }
@@ -204,34 +204,34 @@ void Ppu::fillTimings()
 
 void Ppu::incrementX()
 {
-	if (PPUMASK.render_background || PPUMASK.render_sprites){
-		if (v.coarse_x == 31){
-			v.coarse_x = 0;
-			v.name_table_x = ~v.name_table_x;
+	if (PPUMASK.getRenderBackground() || PPUMASK.getRenderSprites()){
+		if (v.getCoarseX() == 31){
+			v.setCoarseX(0);
+			v.setNametableX(!v.getNametableX());
 		}
 		else{
-			v.coarse_x++;
+			v.setCoarseX(v.getCoarseX()+1);
 		}
 	}
 }
 
 void Ppu::incrementY()
 {
-	if (PPUMASK.render_background || PPUMASK.render_sprites){
-		if (v.fine_y < 7){
-			v.fine_y++;
+	if (PPUMASK.getRenderBackground() || PPUMASK.getRenderSprites()){
+		if (v.getFineY() < 7){
+			v.setFineY(v.getFineY()+1);
 		}
 		else{
-			v.fine_y = 0;
-			if (v.coarse_y == 29){
-				v.coarse_y = 0;
-				v.name_table_y = ~v.name_table_y;
+			v.setFineY(0);
+			if (v.getCoarseY() == 29){
+				v.setCoarseY(0);
+				v.setNametableY(!v.getNametableY());
 			}
-			else if (v.coarse_y == 31){
-				v.coarse_y = 0;
+			else if (v.getCoarseY() == 31){
+				v.setCoarseY(0);
 			}
 			else{
-				v.coarse_y++;
+				v.setCoarseY(v.getCoarseY()+1);
 			}
 		}
 	}
@@ -239,18 +239,18 @@ void Ppu::incrementY()
 
 void Ppu::resetX()
 {
-	if (PPUMASK.render_background || PPUMASK.render_sprites){
-		v.name_table_x = t.name_table_x;
-		v.coarse_x     = t.coarse_x;
+	if (PPUMASK.getRenderBackground() || PPUMASK.getRenderSprites()){
+		v.setNametableX(t.getNametableX());
+		v.setCoarseX(t.getCoarseX());
 	}
 }
 
 void Ppu::resetY()
 {
-	if (PPUMASK.render_background || PPUMASK.render_sprites){
-		v.fine_y       = t.fine_y;
-		v.name_table_y = t.name_table_y;
-		v.coarse_y     = t.coarse_y;
+	if (PPUMASK.getRenderBackground() || PPUMASK.getRenderSprites()){
+		v.setFineY(t.getFineY());
+		v.setNametableY(t.getNametableY());
+		v.setCoarseY(t.getCoarseY());
 	}
 }
 
@@ -264,13 +264,13 @@ void Ppu::loadBackgroundShifters()
 
 void Ppu::updateShifters()
 {
-	if (PPUMASK.render_background){
+	if (PPUMASK.getRenderBackground()){
 		shifterCHRLow <<= 1;
 		shifterCHRHigh <<= 1;
 		shifterATLow <<= 1;
 		shifterATHigh <<= 1;
 	}
-	if(PPUMASK.render_sprites && cycle >= 1 && cycle < 258){
+	if(PPUMASK.getRenderSprites() && cycle >= 1 && cycle < 258){
 		for(int i = 0; i < sprite_count; i++){
 			if(sprite_count > 8) break;
 			if(secondaryOAM[i].xPos > 0){
@@ -286,9 +286,9 @@ void Ppu::updateShifters()
 
 void Ppu::clearFlags()
 {
-	PPUSTATUS.vertical_blank = 0;
-	PPUSTATUS.sprite_overflow = 0;
-	PPUSTATUS.sprite_zero_hit = 0;
+	PPUSTATUS.setVerticalBlank(false);
+	PPUSTATUS.setSpriteOverflow(false);
+	PPUSTATUS.setSpriteZeroHit(false);
 
 	for(int i = 0; i < 8; i++){
 		spriteShifterCHRLow[i] = 0;
@@ -298,35 +298,35 @@ void Ppu::clearFlags()
 
 void Ppu::readNTByte()
 {
-	nextTileNTByte = mapper->readVRAM((uint8_t*)(uintptr_t)(0x2000 | (v.value & 0x0FFF)));
+	nextTileNTByte = mapper->readVRAM((uint8_t*)(uintptr_t)(0x2000 | (v.raw & 0x0FFF)));
 }
 
 void Ppu::readATByte()
 {
 	nextTileATByte = mapper->readVRAM((uint8_t*)(uintptr_t)(
-                                              0x23C0 | (v.name_table_y << 11) 
-					                                 | (v.name_table_x << 10) 
-					                                 | ((v.coarse_y >> 2) << 3) 
-					                                 | (v.coarse_x >> 2)));			
-	if (v.coarse_y & 0x02) nextTileATByte >>= 4;
-	if (v.coarse_x & 0x02) nextTileATByte >>= 2;
+                                              0x23C0 | (v.getNametableY() << 11) 
+					                                 | (v.getNametableX() << 10) 
+					                                 | ((v.getCoarseY() >> 2) << 3) 
+					                                 | (v.getCoarseX() >> 2)));			
+	if (v.getCoarseY() & 0x02) nextTileATByte >>= 4;
+	if (v.getCoarseX() & 0x02) nextTileATByte >>= 2;
 	nextTileATByte &= 0x03;
 }
 
 void Ppu::readCHRByteLow()
 {
 	nextTileCHRLow = mapper->readVRAM((uint8_t*)(uintptr_t)(
-                                             (PPUCTRL.pattern_background << 12) 
+                                             (PPUCTRL.getPatternBackground() << 12) 
 					                       + ((uint16_t)nextTileNTByte << 4) 
-					                       + (v.fine_y) + 0));
+					                       + (v.getFineY()) + 0));
 }
 
 void Ppu::readCHRByteHigh()
 {
 	nextTileCHRHigh = mapper->readVRAM((uint8_t*)(uintptr_t)(
-                                             (PPUCTRL.pattern_background << 12)
+                                             (PPUCTRL.getPatternBackground() << 12)
 					                       + ((uint16_t)nextTileNTByte << 4)
-					                       + (v.fine_y) + 8));
+					                       + (v.getFineY()) + 8));
 }
 
 void Ppu::evaluateSprites()
@@ -342,7 +342,7 @@ void Ppu::evaluateSprites()
 	spriteZeroHitPossible = false;
 	while(iOAM < 64 && sprite_count < 9){
 		int16_t diff = ((int16_t)scanline - (int16_t)OAM[iOAM].yPos);
-		if(diff >= 0 && diff < (PPUCTRL.sprite_size ? 16 : 8)){
+		if(diff >= 0 && diff < (PPUCTRL.getSpriteSize() ? 16 : 8)){
 			if(sprite_count < 8){
 				if(iOAM == 0){
 					spriteZeroHitPossible = true;
@@ -353,7 +353,7 @@ void Ppu::evaluateSprites()
 		}
 		iOAM++;
 	}
-	PPUSTATUS.sprite_overflow = (sprite_count > 8);
+	PPUSTATUS.setSpriteOverflow(sprite_count > 8);
 }
 
 void Ppu::setSpriteShifters()
@@ -361,17 +361,17 @@ void Ppu::setSpriteShifters()
 	for(uint8_t i = 0; i < sprite_count; i++){
 		uint8_t spriteCHRLow, spriteCHRHigh;
 		uint16_t spriteAddrLow, spriteAddrHigh;
-		if(!PPUCTRL.sprite_size){
+		if(!PPUCTRL.getSpriteSize()){
 			// 8x8 Modus
 			if(!(secondaryOAM[i].attributes & 0x80)){
 				// Normale vertikale Ausrichtung
-				spriteAddrLow = (PPUCTRL.pattern_sprite << 12) 		// welche Pattern Tabelle
+				spriteAddrLow = (PPUCTRL.getPatternSprite() << 12) 		// welche Pattern Tabelle
 							  | (secondaryOAM[i].tileIndex << 4) 	// welches Tile
 							  | (scanline - secondaryOAM[i].yPos);	// wo im Tile
 			}
 			else{
 				// Vertikal umgedreht
-				spriteAddrLow = (PPUCTRL.pattern_sprite << 12) 			// welche Pattern Tabelle
+				spriteAddrLow = (PPUCTRL.getPatternSprite() << 12) 			// welche Pattern Tabelle
 							  | (secondaryOAM[i].tileIndex << 4) 		// welches Tile
 							  | 7 - (scanline - secondaryOAM[i].yPos);	// wo im Tile
 			}
@@ -435,8 +435,8 @@ void Ppu::setSpriteShifters()
 
 void Ppu::pullNMI()
 {
-	PPUSTATUS.vertical_blank = 1;
-	if (PPUCTRL.enable_nmi) 
+	PPUSTATUS.setVerticalBlank(true);
+	if (PPUCTRL.getEnableNMI())
 		mapper->pullNMI();
 }
 
@@ -447,7 +447,7 @@ void Ppu::renderPixel()
 
 
 	// Hintergrund-Evaluierung
-	if (PPUMASK.render_background){
+	if (PPUMASK.getRenderBackground()){
 		uint16_t bit_mux = 0x8000 >> fine_x;
 
 		// Select Plane pixels by extracting from the shifter 
@@ -468,7 +468,7 @@ void Ppu::renderPixel()
 	uint8_t fg_palette = 0x00;
 	uint8_t fg_priority = 0x00;
 
-	if (PPUMASK.render_sprites){
+	if (PPUMASK.getRenderSprites()){
 		spriteZeroBeingRendered = false;
 		for(uint8_t i = 0; i < sprite_count; i++){
 			if(secondaryOAM[i].xPos == 0){
@@ -518,16 +518,17 @@ void Ppu::renderPixel()
 			palette = bg_palette;
 		}
 
+		// Sprite Zero Hit
 		if(spriteZeroHitPossible && spriteZeroBeingRendered){
-			if(PPUMASK.render_sprites && PPUMASK.render_background){
-				if(~(PPUMASK.render_background_left | PPUMASK.render_sprites_left)){
+			if(PPUMASK.getRenderSprites() && PPUMASK.getRenderBackground()){
+				if(!(PPUMASK.getRenderBackgroundLeft() || PPUMASK.getRenderSpritesLeft())){
 					if(cycle >= 9 && cycle < 258){
-						PPUSTATUS.sprite_zero_hit = 1;
+						PPUSTATUS.setSpriteZeroHit(true);
 					}
 				}
 				else{
 					if(cycle >= 1 && cycle < 258){
-						PPUSTATUS.sprite_zero_hit = 1;
+						PPUSTATUS.setSpriteZeroHit(true);
 					}
 				}
 			}
@@ -539,5 +540,5 @@ void Ppu::renderPixel()
 	auto addr = (0x3F00) + color_index;
 	
 	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)addr) & 0x3F;
-	setPixel(cycle-1, scanline, pal.getColor(palette_val & (PPUMASK.grayscale ? 0x30 : 0x3F)));
+	setPixel(cycle-1, scanline, pal.getColor(palette_val & (PPUMASK.getGrayScale() ? 0x30 : 0x3F)));
 }

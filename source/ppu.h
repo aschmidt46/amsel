@@ -7,70 +7,8 @@
 #include <queue>
 #include <memory>
 #include <vector>
+#include "ppu_types.h"
 
-
-union loopy_register {
-    uint16_t value = 0x0000;
-    struct{
-        // Coarse X (tile column) (Bits 0-4)
-        uint16_t coarse_x : 5;
-
-        // Coarse Y (tile row) (Bits 5-9)
-        uint16_t coarse_y : 5;
-
-        // Nametable select (Bits 10-11)
-        uint16_t name_table_x : 1;
-        uint16_t name_table_y : 1;
-
-        // Fine Y offset (Vertical offset within a tile) (Bits 12-14)
-        uint16_t fine_y : 3;
-        uint16_t unused : 1;
-    };
-};
-
-union ctrlreg {
-    uint8_t value = 0;
-    struct{
-        uint8_t nametable_x : 1;
-        uint8_t nametable_y : 1;
-        uint8_t increment_mode : 1;
-        uint8_t pattern_sprite : 1;
-        uint8_t pattern_background : 1;
-        uint8_t sprite_size : 1;
-        uint8_t unused : 1;
-        uint8_t enable_nmi : 1;
-    };
-};
-
-union maskreg
-	{
-        uint8_t reg = 0;
-		struct
-		{
-			uint8_t grayscale : 1;
-			uint8_t render_background_left : 1;
-			uint8_t render_sprites_left : 1;
-			uint8_t render_background : 1;
-			uint8_t render_sprites : 1;
-			uint8_t enhance_red : 1;
-			uint8_t enhance_green : 1;
-			uint8_t enhance_blue : 1;
-		};
-
-	};
-
-    union statusreg
-	{
-		struct
-		{
-			uint8_t unused : 5;
-			uint8_t sprite_overflow : 1;
-			uint8_t sprite_zero_hit : 1;
-			uint8_t vertical_blank : 1;
-		};
-
-		uint8_t reg = 0;
-	};
 
 struct [[gnu::packed]] OAMSprite{
     uint8_t yPos = 0;   // Top of sprite + 1
@@ -92,8 +30,8 @@ class Mapper;
 class Ppu{
     private:
     typedef void (Ppu::*ppuCmd) ();
-    loopy_register v;
-    loopy_register t;
+    loopyReg v;
+    loopyReg t;
     uint8_t fine_x = 0;
     bool w = false;
 
@@ -105,9 +43,9 @@ class Ppu{
     public:
 
     // Extern
-    ctrlreg PPUCTRL;        //$2000
-    maskreg PPUMASK;        //$2001
-    statusreg PPUSTATUS;    //$2002
+    ctrlReg PPUCTRL;        //$2000
+    maskReg PPUMASK;        //$2001
+    statusReg PPUSTATUS;    //$2002
     uint8_t OAMADDR = 0;    //$2003
     uint8_t OAMDATA = 0;    //$2004
     uint8_t PPUSCROLL = 0;  //$2005
