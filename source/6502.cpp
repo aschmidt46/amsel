@@ -11,6 +11,9 @@ void Cpu::RESET()
     uint8_t high = read((uint8_t*)(uintptr_t)0xFFFD);
     uint16_t addr = (high << 8) | low;
     PC = addr;
+    SP -= 3;
+    P = 0b00100000;
+    setStatus(STATUS_INTERRUPT_DISABLE, true);
     mapper->write((uint8_t*)0x4015, 0x00);
 }
 

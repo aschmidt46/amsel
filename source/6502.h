@@ -83,7 +83,7 @@ class Cpu{
     void init(int pc, std::shared_ptr<Mapper> m){
         PC = pc;
         mapper = m;
-        SP = 0xFD;
+        SP = 0x00;
         P = 0b00100100; // Interrupt und Anderes Bit
         log = std::ofstream("cout.txt");
         assert(log.is_open());
