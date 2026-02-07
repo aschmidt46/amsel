@@ -7,8 +7,8 @@ class SquareChannel;
 
 struct Sweep{
     Divider divider;
-    bool square2;
-    uint8_t raw;
+    bool square2 = false;
+    uint8_t raw = 0;
     bool wasWrite = false;
 
     Sweep(bool isSquare2);

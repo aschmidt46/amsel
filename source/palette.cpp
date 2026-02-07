@@ -21,7 +21,6 @@ Palette::Palette(const char *path) : Palette()
 
 Palette::Palette()
 {
-    pSize = 192;
     colors = new uint8_t[pSize];
     for(int i = 0; i < pSize; i++){
         colors[i] = defPalette[i];
@@ -34,7 +33,7 @@ glm::vec3 Palette::getColor(uint8_t index)
         std::cout << "Palette-Index außer Reichweite!" << std::endl;
         throw;
     }
-    int r,g,b;
+    float r,g,b;
     r = colors[3*index];
     g = colors[3*index+1];
     b = colors[3*index+2];

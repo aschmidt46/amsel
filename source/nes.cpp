@@ -22,9 +22,12 @@ void NES::load(const char *path)
     if(loaded)
         eject();
     Slot = new NESFile(path);
-    if(mapper==nullptr)
-        mapper = new Mapper(Slot, cpu, ppu, apu, controller); 
-    else mapper->changeCart(Slot);
+    if(mapper==nullptr){
+        mapper = std::shared_ptr<Mapper>(std::make_shared<Mapper>(cpu, ppu, apu));
+    }
+    assert(mapper.use_count() > 0);
+    mapper->changeCart(Slot);
+    mapper->connectController(controller); 
     apu->reset(mapper);
     ppu->init(mapper);
     cpu->init(0xC000, mapper);

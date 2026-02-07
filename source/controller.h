@@ -19,13 +19,13 @@ union ControllerState{
 class Mapper;
 class Controller{
 
-    Mapper* mapper;
+    std::shared_ptr<Mapper> mapper = nullptr;
 
     public:
 
     ControllerState state;
 
-    void init(Mapper* m){
+    void init(std::shared_ptr<Mapper> m){
         mapper = m;
     };
 

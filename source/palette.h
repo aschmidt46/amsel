@@ -22,7 +22,7 @@ constexpr const uint8_t defPalette[192] = {
 
 struct Palette{
     uint8_t* colors;
-    size_t pSize;
+    size_t pSize = 192;
     Palette(const char* path);
     Palette();
     ~Palette(){ delete[] colors; };

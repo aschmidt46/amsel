@@ -7,6 +7,6 @@ class Mapper2 : AbstractMapper {
     public:
     void writeRam(uint8_t* addr, uint8_t value) override;
 
-    Mapper2(Mapper* m);
+    Mapper2(std::shared_ptr<Mapper> m);
 
 };

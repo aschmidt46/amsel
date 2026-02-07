@@ -14,7 +14,7 @@ const std::vector<uint8_t> sequence3{1,0,0,1,1,1,1,1};
 const std::vector<std::vector<uint8_t>> sequences{sequence0, sequence1, sequence2, sequence3};
 
 struct SquareChannel{
-    bool channel2;
+    bool channel2 = false;
     Envelope envelope;
     Sweep sweep = Sweep(false);
     Divider timer = Divider(0,2);

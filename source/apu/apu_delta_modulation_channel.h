@@ -4,14 +4,14 @@
 #include <vector>
 
 struct DMAReader{
-    uint16_t addressCounter;
-    uint16_t bytesRemain;
+    uint16_t addressCounter = 0;
+    uint16_t bytesRemain = 0;
 };
 
 struct OutputUnit{
     uint8_t shiftReg = 0;
     uint16_t counter = 0;
-    bool silenceFlag;
+    bool silenceFlag = false;
 };
 
 class Apu;
@@ -37,18 +37,16 @@ struct DeltaModulationChannel{
         0x036
     };
 
-    uint8_t r4012;
-    uint8_t r4013;
-
-    uint8_t dac;
+    uint8_t r4012 = 0;
+    uint8_t r4013 = 0;
 
     DMAReader dmaReader;
     // 1 Byte
     uint8_t sampleBuffer = 0;
     OutputUnit output;
-    bool interruptFlag;
-    bool interruptEnabledFlag;
-    bool loopFlag;
+    bool interruptFlag = false;
+    bool interruptEnabledFlag = false;
+    bool loopFlag = false;
     Divider timer;
     // 7 bit
     uint8_t counter = 0;

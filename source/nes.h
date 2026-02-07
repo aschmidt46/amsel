@@ -21,7 +21,7 @@ class Controller;
 class NES{
     Cpu* cpu;
     Apu* apu;
-    Mapper* mapper = nullptr;
+    std::shared_ptr<Mapper> mapper = nullptr;
     NESFile* Slot;
     Screen* tv;
     Controller* controller;

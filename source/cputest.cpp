@@ -3,6 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include "mapper.h"
+#include <memory>
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
@@ -20,12 +21,12 @@ CPUTest::CPUTest(){
     NESFile* cart = new NESFile("nestest.nes");
     Ppu* ppu = new Ppu();
     cpu = new Cpu();
-    Mapper* m = new Mapper(cart, cpu, ppu, nullptr, nullptr);
+    std::shared_ptr<Mapper> m(std::make_shared<Mapper>(cpu, ppu, nullptr));
+    m->changeCart(cart);
     auto finalize = [&](){
         delete cart;
         delete ppu;
         delete cpu;
-        delete m;
     };
     cpu->init(0xC000, m);
     //auto t0 = high_resolution_clock::now();

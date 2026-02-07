@@ -11,15 +11,17 @@ std::string mhex(uintptr_t input){
 }
 
 
-Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
+Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
 {
     memoryMap = new uint8_t*[ADDRSPACE];
     this->ppu = ppu;
     this->cpu = cpu;
     this->apu = apu;
-    this->controller1 = c;
 
-    controller1->init(this);
+    controller[0] = 0;
+    controller[1] = 0;
+    controller_state[0] = 0;
+    controller_state[1] = 0;
 
     // zu groß, aber egal?
     ppuMap = new uint8_t*[ADDRSPACE];
@@ -53,6 +55,9 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
     // IO Register (nicht implementiert)
     io = new uint8_t[0x18];
     for(int i = 0; i < 0x18; i++){
+        io[i] = 0;
+    }
+    for(int i = 0; i < 0x18; i++){
          memoryMap[i + index] = io + i;
     }
     index += 0x18;
@@ -68,6 +73,9 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
     //PRG-RAM 8KB
     index = 0x6000;
     prgRam = new uint8_t[0x2000];
+    for(int i = 0; i < 0x2000; i++){
+        prgRam[i] = 0;
+    }
     for(int i = 0; i < 0x2000; i++){
         memoryMap[index + i] = prgRam + i;
     }
@@ -97,8 +105,6 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
             ppuMap[index + i] = pIndex + j;
         }
     }
-
-    changeCart(cartridge);
 }
 
 void Mapper::changeCart(NESFile *cartridge)
@@ -167,22 +173,31 @@ void Mapper::changeCart(NESFile *cartridge)
         }
     }
 
-    if(mImpl!=nullptr) delete mImpl;
+    if(mImpl!=nullptr){
+        delete mImpl;
+        mImpl = nullptr;
+    }
 
     switch(mappernum){
         case 0:
-            mImpl = (AbstractMapper*) new Mapper0(this);
+            mImpl = (AbstractMapper*) new Mapper0(shared_from_this());
             break;
         case 2:
-            mImpl = (AbstractMapper*) new Mapper2(this);
+            mImpl = (AbstractMapper*) new Mapper2(shared_from_this());
             break;
         default:
-            mImpl = (AbstractMapper*) new Mapper0(this);
+            mImpl = (AbstractMapper*) new Mapper0(shared_from_this());
             break;
     }
 
     std::cout << "Mapper " << mappernum << " geladen." << std::endl;
 
+}
+
+void Mapper::connectController(Controller *controller)
+{
+    this->controller1 = controller;
+    controller1->init(shared_from_this());
 }
 
 uint8_t Mapper::read(uint8_t *address)
@@ -256,7 +271,14 @@ void Mapper::write(uint8_t *address, uint8_t value)
 
 uint8_t Mapper::readVRAM(uint8_t *address)
 {
-    if(ppuMap==nullptr) throw;
+    if(this==nullptr){
+        std::cout << "Unmöglich" << std::endl;
+        return 0;
+    }
+    if(ppuMap==nullptr){
+        std::cout << "PpuMap existiert nicht zum aktuellen Zeitpunkt!" << std::endl;
+        return 0;
+    }
     [[unlikely]] if(ppuMap[(uintptr_t)address]==nullptr){
         return 0;
     }

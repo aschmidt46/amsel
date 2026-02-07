@@ -2,8 +2,6 @@
 #include <string>
 #include <fstream>
 
-#include "cputest.h"
-
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "nes.h"
@@ -129,7 +127,6 @@ static void position_callback(GLFWwindow* window, int posx, int posy){
 
 auto main() -> int
 {
-  //CPUTest test;
   GLFWwindow* window = initGL();
   screen = new Screen();
   controller1 = new Controller();
@@ -155,6 +152,8 @@ auto main() -> int
 
   std::thread t(&AudioSystem::start, &audiosystem);
 
+  console->fileName = "../resources/smb.nes";
+  console->loadNextClock = true;
   while(!glfwWindowShouldClose(window)){
     glfwPollEvents();
     while(!console->frameReady) {}

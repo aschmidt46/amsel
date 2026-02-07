@@ -6,6 +6,7 @@
 #include "mapper.h"
 #include <assert.h>
 #include <iostream>
+#include <memory>
 
 
 enum Statusbit{
@@ -47,21 +48,21 @@ class Cpu{
 
     uint8_t* internalMemory; // 2048 B
 
-    uint16_t PC; //Program Counter
-    uint8_t A; //Accumulator
+    uint16_t PC = 0; //Program Counter
+    uint8_t A = 0; //Accumulator
 
-    uint8_t X; //Indexes
-    uint8_t Y;
+    uint8_t X = 0; //Indexes
+    uint8_t Y = 0;
 
-    uint8_t SP; //Stack pointer
+    uint8_t SP = 0; //Stack pointer
 
-    uint8_t P; //Status register, 1 bit unbenutzt
+    uint8_t P = 0; //Status register, 1 bit unbenutzt
 
-    int remainingCycles;
+    int remainingCycles = 0;
 
     size_t totalCycles = 7; //testweise
 
-    Mapper* mapper;
+    std::shared_ptr<Mapper> mapper;
 
     // (Setzen, Wert)
     std::pair<bool, bool> setInterruptNextInstruction = {false, false};
@@ -70,13 +71,16 @@ class Cpu{
 
     Cpu(){
         internalMemory = new uint8_t[0x0800];
+        for(int i = 0; i < 0x0800; i++){
+            internalMemory[i] = 0;
+        }
     };
     ~Cpu(){
         delete[] internalMemory;
         log.close();
     };
 
-    void init(int pc, Mapper* m){
+    void init(int pc, std::shared_ptr<Mapper> m){
         PC = pc;
         mapper = m;
         SP = 0xFD;

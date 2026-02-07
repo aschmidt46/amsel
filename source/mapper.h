@@ -22,35 +22,35 @@ class Ppu;
 class Apu;
 class Controller;
 class AbstractMapper;
-class Mapper{
+class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     public:
-    uint8_t** memoryMap;    // CPU-Adressraum
-    uint8_t** ppuMap;       // PPU-Adressraum
+    uint8_t** memoryMap = nullptr;    // CPU-Adressraum
+    uint8_t** ppuMap = nullptr;       // PPU-Adressraum
 
     
-    Cpu* cpu;
-    Ppu* ppu;
-    Apu* apu;
-    Controller* controller1;
-    NESFile* cart;
-    uint8_t* prgRam;
+    Cpu* cpu = nullptr;
+    Ppu* ppu = nullptr;
+    Apu* apu = nullptr;
+    Controller* controller1 = nullptr;
+    NESFile* cart = nullptr;
+    uint8_t* prgRam = nullptr;
     //muss noch implementiert werden
-    uint8_t* io;
+    uint8_t* io = nullptr;
 
     
     // Adressen der öffentlichen PPU-Register
-    uint8_t* PPUCTRL;
-    uint8_t* PPUMASK;
-    uint8_t* PPUSTATUS;
-    uint8_t* OAMADDR;
-    uint8_t* OAMDATA;
-    uint8_t* PPUSCROLL;
-    uint8_t* PPUADDR;
-    uint8_t* PPUDATA;
+    uint8_t* PPUCTRL = nullptr;
+    uint8_t* PPUMASK = nullptr;
+    uint8_t* PPUSTATUS = nullptr;
+    uint8_t* OAMADDR = nullptr;
+    uint8_t* OAMDATA = nullptr;
+    uint8_t* PPUSCROLL = nullptr;
+    uint8_t* PPUADDR = nullptr;
+    uint8_t* PPUDATA = nullptr;
     
     uint8_t controller[2];
     uint8_t controller_state[2];
-    Mapper(NESFile* cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c);
+    Mapper(Cpu* cpu, Ppu* ppu, Apu* apu);
     ~Mapper(){
         delete[] memoryMap;
         delete[] ppuMap;
@@ -59,8 +59,9 @@ class Mapper{
     };
 
     void changeCart(NESFile* cartridge);
+    void connectController(Controller* controller);
     
-    Mirror mirror;
+    Mirror mirror = MIRROR_HORIZONTAL; //Muss noch separat initialisiert werden
 
     AbstractMapper* mImpl = nullptr;
 

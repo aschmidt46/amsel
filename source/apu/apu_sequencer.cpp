@@ -1,15 +1,22 @@
 #include "apu_sequencer.h"
+#include <iostream>
 
 Sequencer::Sequencer(const std::vector<uint8_t> &v)
 {
     sequence = v;
-    if(sequence.size()==0) throw;
+    if(sequence.size()==0){
+        std::cout << "Ungültige Sequenz (leer)" << std::endl;
+        throw;
+    }
 }
 
 void Sequencer::setSequenceWithoutReset(const std::vector<uint8_t> &v)
 {
     sequence = v;
-    if(sequence.size()==0) throw;
+    if(sequence.size()==0){
+        std::cout << "Ungültige Sequenz (leer)" << std::endl;
+        throw;
+    }
 }
 
 void Sequencer::restart()

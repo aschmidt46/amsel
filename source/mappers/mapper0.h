@@ -8,7 +8,7 @@ class Mapper0 : AbstractMapper {
         return;
     }
 
-    Mapper0(Mapper* m){
+    Mapper0(std::shared_ptr<Mapper> m){
         this->mapper = m;
     }
 

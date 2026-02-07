@@ -6,6 +6,7 @@
 #include "apu_triangle_channel.h"
 #include "apu_noise_channel.h"
 #include "apu_delta_modulation_channel.h"
+#include <memory>
 
 class Mapper;
 
@@ -16,13 +17,13 @@ class Apu{
 	uint8_t status; // 0x4015
 	
     public:
-	Mapper* mapper;
+	std::shared_ptr<Mapper> mapper;
 	Apu();
 	~Apu();
     void write(uint16_t reg, uint8_t val);
 	uint8_t read(uint16_t reg); // Nur status
     void clock();
-	void reset(Mapper* m);
+	void reset(std::shared_ptr<Mapper> m);
 
     double getSample(bool s);
 

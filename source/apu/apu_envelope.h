@@ -3,9 +3,9 @@
 #include <cstdint>
 
 struct Envelope{
-    bool loopFlag;
+    bool loopFlag = false;
     unsigned int decayLevelCounter = 0;
-    bool disable;
+    bool disable = false;
     bool wasWrite = false;
 
     Divider divider;

@@ -21,8 +21,8 @@ constexpr const uint8_t lengthTable[32] = {
 };
 
 struct LengthCounter{
-    bool haltFlag;
-    unsigned int counter;
+    bool haltFlag = false;
+    unsigned int counter = 0;
     void clear();
     void clock();
     void setHaltFlag(bool h);

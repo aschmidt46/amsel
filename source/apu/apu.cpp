@@ -136,7 +136,7 @@ void Apu::clock()
     tnd_sample = tnd_table[3 * tSample + 2 * nSample + dmcS];
 }
 
-void Apu::reset(Mapper* m)
+void Apu::reset(std::shared_ptr<Mapper> m)
 {
     this->mapper = m;
     fseq = FrameSequencer(this);

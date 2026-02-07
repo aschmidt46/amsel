@@ -9,7 +9,7 @@ void Mapper2::writeRam(uint8_t *addr, uint8_t value){
     }
 }
 
-Mapper2::Mapper2(Mapper *m)
+Mapper2::Mapper2(std::shared_ptr<Mapper> m)
 {
     this->mapper = m;
 

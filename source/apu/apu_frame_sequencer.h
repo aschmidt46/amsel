@@ -16,8 +16,8 @@ struct FrameSequencer{
 
     bool mode = false; // false 0, true 1
 
-    bool interruptFlag; // BRAUCHT IMPLEMENTIERUNG IN APU
-    bool inhibitFlag;
+    bool interruptFlag = false; // BRAUCHT IMPLEMENTIERUNG IN APU
+    bool inhibitFlag = false;
 
     void onWrite(uint8_t val);  //0x4017
 

@@ -29,7 +29,7 @@ union loopy_register {
 };
 
 union ctrlreg {
-    uint8_t value;
+    uint8_t value = 0;
     struct{
         uint8_t nametable_x : 1;
         uint8_t nametable_y : 1;
@@ -44,7 +44,7 @@ union ctrlreg {
 
 union maskreg
 	{
-        uint8_t reg;
+        uint8_t reg = 0;
 		struct
 		{
 			uint8_t grayscale : 1;
@@ -69,19 +69,19 @@ union maskreg
 			uint8_t vertical_blank : 1;
 		};
 
-		uint8_t reg;
+		uint8_t reg = 0;
 	};
 
 struct [[gnu::packed]] OAMSprite{
-    uint8_t yPos;   // Top of sprite + 1
-    uint8_t tileIndex;
-    uint8_t attributes;
-    uint8_t xPos;
+    uint8_t yPos = 0;   // Top of sprite + 1
+    uint8_t tileIndex = 0;
+    uint8_t attributes = 0;
+    uint8_t xPos = 0;
 };
 
 struct renderState{
-    int scanline;
-    int cycle;
+    int scanline = 0;
+    int cycle = 0;
 };
 
 static_assert(sizeof(OAMSprite)==4);
@@ -120,7 +120,7 @@ class Ppu{
     //uint8_t* OAM; // 256 Bytes (64 * 4)
     OAMSprite OAM[64];
     OAMSprite secondaryOAM[8];
-    uint8_t sprite_count;
+    uint8_t sprite_count = 0;
     uint8_t spriteShifterCHRLow[8];
     uint8_t spriteShifterCHRHigh[8];
 
@@ -128,14 +128,14 @@ class Ppu{
     bool spriteZeroBeingRendered = false;
 
 
-    uint8_t oamBuffer;
+    uint8_t oamBuffer = 0;
 
     uint8_t* pOAM = (uint8_t*)OAM;
 
     
 
     // Schnittstelle
-    Mapper* mapper;
+    std::shared_ptr<Mapper> mapper = nullptr;
 
     // Output, nicht Teil der PPU
     float* pixelBuffer;
@@ -143,7 +143,7 @@ class Ppu{
     Palette pal;
 
 
-    uint8_t vramReadBuffer;
+    uint8_t vramReadBuffer = 0;
 
     uint8_t nextTileNTByte = 0x00;
     uint8_t nextTileATByte = 0x00;
@@ -157,6 +157,14 @@ class Ppu{
 
 
     Ppu() : pal("palette.pal") {
+        for(int i = 0; i < 64; i++){
+            OAM[i] = OAMSprite();
+        }
+        for(int i = 0; i < 8; i++){
+            secondaryOAM[i] = OAMSprite();
+            spriteShifterCHRLow[i] = 0;
+            spriteShifterCHRHigh[i] = 0;
+        }
         backBuffer = new float[256*240*3];
         pixelBuffer = new float[256*240*3];
         for(int i = 0; i < 256*240*3; i++){
@@ -164,7 +172,13 @@ class Ppu{
             backBuffer[i] = 0;
         }
         internalMemory = new uint8_t[0x0800];
+        for(int i = 0; i < 0x0800; i++){
+            internalMemory[i] = 0;
+        }
         palletteIndexes = new uint8_t[0x0020];
+        for(int i = 0; i < 0x0020; i++){
+            palletteIndexes[i] = 0;
+        }
         fillTimings();
     };
     ~Ppu(){
@@ -173,8 +187,8 @@ class Ppu{
         delete[] internalMemory;
         delete[] palletteIndexes;
     };
-    void init(Mapper* m){
-        mapper = m;
+    void init(std::shared_ptr<Mapper> m){
+        this->mapper = m;
     };
 
     bool blanking = true;
