@@ -226,6 +226,7 @@ uint8_t Cpu::pollInterrupts()
 
 void Cpu::waitFor(uint8_t cycles)
 {
+    remainingCycles += cycles;
 }
 
 uint8_t Cpu::read(uint8_t *p)

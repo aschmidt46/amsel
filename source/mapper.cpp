@@ -207,7 +207,9 @@ void Mapper::write(uint8_t *address, uint8_t value)
     }
 
     // PRG-ROM!
-    if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
+    // Das gibt aus irgendeinem Grund Probleme mit Mapper2 Spielen, muss ich mir ansehen. (Ah nee macht Sinn, weil du ja hier schreiben müssen musst um Pages zu wechseln)
+    // Warum Kung Fu nicht mehr geht ist mir noch nicht klar
+    // if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
 
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){

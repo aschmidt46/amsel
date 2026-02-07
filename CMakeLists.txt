@@ -80,6 +80,10 @@ source/apu/apu_length_counter.cpp source/apu/apu_length_counter.h
 source/apu/apu_sequencer.cpp source/apu/apu_sequencer.h
 source/apu/apu_square_channel.cpp source/apu/apu_square_channel.h
 source/apu/apu_sweep.cpp source/apu/apu_sweep.h
+source/apu/apu_triangle_channel.cpp source/apu/apu_triangle_channel.h
+source/apu/apu_noise_channel.cpp source/apu/apu_noise_channel.h
+source/apu/apu_delta_modulation_channel.cpp source/apu/apu_delta_modulation_channel.h
+source/apu/apu_linear_counter.cpp source/apu/apu_linear_counter.h
 source/audiosystem.cpp source/audiosystem.h
 source/mappers/mapper2.cpp source/mappers/mapper2.h
 )

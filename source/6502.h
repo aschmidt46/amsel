@@ -135,6 +135,8 @@ class Cpu{
     uint8_t executeNextInstruction(); //Gibt verstrichene Zyklen zurück
     void clockCPU();
     uint8_t pollInterrupts();
+    
+    // suspend
     void waitFor(uint8_t cycles);
 
     uint8_t read(uint8_t* p);

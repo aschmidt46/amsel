@@ -54,7 +54,7 @@ void Sweep::clock(SquareChannel *ch)
     if(divider.counter <= 0 && isEnabled() && getShift() != 0){
         if(isNotMute(ch)){
             ch->timer.changePeriod(getTargetPeriod(ch));
-            //divider.reset(); // Das steht so nicht explizit da, macht aber ansonsten keinen Sinn, oder doch?
+            divider.reset(); // Das steht so nicht explizit da, macht aber ansonsten keinen Sinn, oder doch?
         }
         else if (!isNotMute(ch)){
             divider.reset();

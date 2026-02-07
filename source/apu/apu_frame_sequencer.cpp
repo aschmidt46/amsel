@@ -27,12 +27,20 @@ void FrameSequencer::clockLengthCountersAndSweepUnits()
 
     apu->pulse2.clockLengthCounter();
     apu->pulse2.clockSweep();
+
+    apu->triangle.length.clock();
+
+    apu->noise.length.clock();
 }
 
 void FrameSequencer::clockEnvelopesAndTrianglesLinearCounter()
 {
     apu->pulse1.clockEnvelope();
     apu->pulse2.clockEnvelope();
+
+    apu->triangle.linearCtr.clock();
+
+    apu->noise.envelope.clock();
 }
 
 void FrameSequencer::clock(Cpu* cpu)
