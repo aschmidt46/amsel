@@ -43,7 +43,7 @@ void FrameSequencer::clockEnvelopesAndTrianglesLinearCounter()
     apu->noise.envelope.clock();
 }
 
-void FrameSequencer::clock(Cpu* cpu)
+void FrameSequencer::clock()
 {
     if(divider.clock()){
         if(mode) {
@@ -83,7 +83,7 @@ void FrameSequencer::clock(Cpu* cpu)
                     clockEnvelopesAndTrianglesLinearCounter();
                     if(!inhibitFlag){
                         interruptFlag = true;
-                        cpu->pullIRQ();
+                        apu->mapper->pullIRQ();
                     }
                     break;
             }

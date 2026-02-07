@@ -57,14 +57,17 @@ class Mapper{
         delete[] io;
         delete[] prgRam;
     };
+
+    void changeCart(NESFile* cartridge);
     
     Mirror mirror;
 
-    AbstractMapper* mImpl;
+    AbstractMapper* mImpl = nullptr;
 
     uint8_t read(uint8_t* address);
     void write(uint8_t* address, uint8_t value);
     uint8_t readVRAM(uint8_t* address);
     void writeVRAM(uint8_t* address, uint8_t value);
     void pullNMI();
+    void pullIRQ();
 };

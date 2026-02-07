@@ -11,21 +11,23 @@ using std::chrono::seconds;
 NES::NES(Screen* screen, Controller* c){
     cpu = new Cpu();
     ppu = new Ppu();
-    apu = new Apu(cpu, mapper);
+    apu = new Apu();
     tv = screen;
     controller = c;
 }
 
 void NES::load(const char *path)
 {
+    std::lock_guard<std::mutex> lock(cvm);
     if(loaded)
         eject();
     Slot = new NESFile(path);
-    mapper = new Mapper(Slot, cpu, ppu, apu, controller);
-    apu->mapper = mapper;
-    apu->reset();
+    if(mapper==nullptr)
+        mapper = new Mapper(Slot, cpu, ppu, apu, controller); 
+    else mapper->changeCart(Slot);
+    apu->reset(mapper);
+    ppu->init(mapper);
     cpu->init(0xC000, mapper);
-    ppu->init(mapper, tv);
     loaded = true;
     loadNextClock = false;
 }
@@ -34,7 +36,6 @@ void NES::eject()
 {
     if(!loaded) return;
     delete Slot;
-    delete mapper;
     loaded = false;
     ejectNextClock = false;
 }
@@ -93,7 +94,7 @@ bool NES::clock()
     audioTime += audioTimePerNESClock;
     if(audioTime >= audioTimePerSystemSample){
         audioTime -= audioTimePerSystemSample;
-        audioSample = apu->getSample(sound);
+        audioSample = apu->getSample(sound) * volume;
         audioSampleReady = true;
     }
 

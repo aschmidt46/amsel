@@ -5,9 +5,10 @@
 #include <string>
 #include "portable-file-dialogs.h"
 #include <filesystem>
+#include <vector>
 
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string(), { "*.nes" }, pfd::opt::none);
+  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string(), {"iNES Rom-Dateien (.nes)", "*.nes"}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};
@@ -48,6 +49,10 @@ void Gui::render()
           bool ton = console->sound;
           if(ImGui::Checkbox("Ton", &ton)){
             console->sound = !console->sound;
+          }
+          float volume = console->volume;
+          if(ImGui::SliderFloat("Lautstärke", &volume, 0, 1)){
+            console->volume = volume;
           }
           ImGui::EndMenu();
         }

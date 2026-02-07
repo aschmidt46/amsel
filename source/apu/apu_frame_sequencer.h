@@ -2,7 +2,6 @@
 #include "apu_divider.h"
 #include "apu_sequencer.h"
 
-class Cpu;
 class Apu;
 
 
@@ -25,5 +24,5 @@ struct FrameSequencer{
     void clockLengthCountersAndSweepUnits();
     void clockEnvelopesAndTrianglesLinearCounter();
 
-    void clock(Cpu* cpu);
+    void clock();
 };

@@ -8,6 +8,7 @@
 #include "controller.h"
 #include "apu/apu.h"
 #include <string>
+#include "global.h"
 
 class Cpu;
 class Ppu;
@@ -20,7 +21,7 @@ class Controller;
 class NES{
     Cpu* cpu;
     Apu* apu;
-    Mapper* mapper;
+    Mapper* mapper = nullptr;
     NESFile* Slot;
     Screen* tv;
     Controller* controller;
@@ -32,12 +33,13 @@ class NES{
     const double audioTimePerNESClock = 1.0 / 5369318.0; // ppu clock
     double audioTime = 0.0;
     bool loaded = false;
-
+    
     
     public:
     bool ejectNextClock = false, loadNextClock = false, resetNextClock = false;
     std::string fileName;
     double audioSample;
+    float volume = 1.0f;
     Ppu* ppu;
     bool frameReady = false;
     bool sound = true;

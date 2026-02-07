@@ -9,11 +9,11 @@ void DeltaModulationChannel::restart()
 
 void DeltaModulationChannel::clock(Apu* apu)
 {
-    if(interruptFlag) apu->cpu->pullIRQ();
+    if(interruptFlag) apu->mapper->pullIRQ();
 
     if(!sampleBuffer && dmaReader.bytesRemain > 0){
         sampleBuffer = apu->mapper->read((uint8_t*)(uintptr_t)dmaReader.addressCounter);
-        apu->cpu->waitFor(4);
+        apu->mapper->cpu->waitFor(4);
         if(dmaReader.addressCounter==0xFFFF)
             dmaReader.addressCounter = 0x8000;
         else dmaReader.addressCounter++;
@@ -24,7 +24,7 @@ void DeltaModulationChannel::clock(Apu* apu)
             restart();
         else if(dmaReader.bytesRemain==0 && interruptEnabledFlag){
             interruptFlag = true;
-            apu->cpu->pullIRQ();
+            apu->mapper->pullIRQ();
         }
     }
 

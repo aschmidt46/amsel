@@ -17,12 +17,9 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
     this->ppu = ppu;
     this->cpu = cpu;
     this->apu = apu;
-    this->cart = cartridge;
     this->controller1 = c;
 
     controller1->init(this);
-
-    int mappernum = cart->header.getMapper();
 
     // zu groß, aber egal?
     ppuMap = new uint8_t*[ADDRSPACE];
@@ -74,9 +71,43 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
     for(int i = 0; i < 0x2000; i++){
         memoryMap[index + i] = prgRam + i;
     }
-    
+
+    // Intern Mirror
+    index = 0x3000;
+    for(int i = 0; i < 0x0800; i++){
+        ppuMap[index + i] = ppu->internalMemory + i;
+    }
+    index = 0x3800;
+    //Mirror
+    for(int i = 0; i < 0x0800 - 0x20; i++){
+        ppuMap[index + i] = ppu->internalMemory + i;
+    }
+
+    // Palletten gespiegelt bis 0x4000
+    for(index = 0x3F00; index < 0x4000; index += 0x0020){
+        for(int i = 0; i < 0x20; i++){
+            auto pIndex = ppu->palletteIndexes;
+            int j = i;
+            // Innerhalb zeigen alle diese Register auf das gleiche innere Register (Backdrop Farbe)
+            if (i == 0x0010) j = 0x0000;
+	        if (i == 0x0014) j = 0x0004;
+	        if (i == 0x0018) j = 0x0008;
+	        if (i == 0x001C) j = 0x000C;
+            
+            ppuMap[index + i] = pIndex + j;
+        }
+    }
+
+    changeCart(cartridge);
+}
+
+void Mapper::changeCart(NESFile *cartridge)
+{
+    this->cart = cartridge;
+    int mappernum = cart->header.getMapper();
+
     // 16-32KB ROM
-    index = 0x8000;
+    int index = 0x8000;
     if(cartridge->header.PRGROMSize == 1){
         for(int i = 0; i < 0x4000; i++){
             memoryMap[index + i] = cartridge->prgRom + i;
@@ -136,31 +167,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
         }
     }
 
-    // Intern Mirror
-    index = 0x3000;
-    for(int i = 0; i < 0x0800; i++){
-        ppuMap[index + i] = ppu->internalMemory + i;
-    }
-    index = 0x3800;
-    //Mirror
-    for(int i = 0; i < 0x0800 - 0x20; i++){
-        ppuMap[index + i] = ppu->internalMemory + i;
-    }
-
-    // Palletten gespiegelt bis 0x4000
-    for(index = 0x3F00; index < 0x4000; index += 0x0020){
-        for(int i = 0; i < 0x20; i++){
-            auto pIndex = ppu->palletteIndexes;
-            int j = i;
-            // Innerhalb zeigen alle diese Register auf das gleiche innere Register (Backdrop Farbe)
-            if (i == 0x0010) j = 0x0000;
-	        if (i == 0x0014) j = 0x0004;
-	        if (i == 0x0018) j = 0x0008;
-	        if (i == 0x001C) j = 0x000C;
-            
-            ppuMap[index + i] = pIndex + j;
-        }
-    }
+    if(mImpl!=nullptr) delete mImpl;
 
     switch(mappernum){
         case 0:
@@ -175,6 +182,7 @@ Mapper::Mapper(NESFile *cartridge, Cpu* cpu, Ppu* ppu, Apu* apu, Controller* c)
     }
 
     std::cout << "Mapper " << mappernum << " geladen." << std::endl;
+
 }
 
 uint8_t Mapper::read(uint8_t *address)
@@ -266,4 +274,9 @@ void Mapper::writeVRAM(uint8_t *address, uint8_t value)
 void Mapper::pullNMI()
 {
     cpu->pullNMI();
+}
+
+void Mapper::pullIRQ()
+{
+    cpu->pullIRQ();
 }

@@ -135,7 +135,6 @@ class Ppu{
     
 
     // Schnittstelle
-    Screen* screen;
     Mapper* mapper;
 
     // Output, nicht Teil der PPU
@@ -174,9 +173,8 @@ class Ppu{
         delete[] internalMemory;
         delete[] palletteIndexes;
     };
-    void init(Mapper* m, Screen* s){
+    void init(Mapper* m){
         mapper = m;
-        screen = s;
     };
 
     bool blanking = true;

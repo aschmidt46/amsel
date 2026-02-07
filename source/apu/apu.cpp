@@ -1,10 +1,8 @@
 #include "apu.h"
 #include <iostream>
 
-Apu::Apu(Cpu *cpu, Mapper* m)
+Apu::Apu()
 {
-    this->cpu = cpu;
-    this->mapper = m;
     square_table = new double[31];
     tnd_table = new double[203];
     for(int i = 0; i < 31; i++){
@@ -121,7 +119,7 @@ uint8_t Apu::read(uint16_t reg)
 
 void Apu::clock()
 {
-    fseq.clock(cpu);
+    fseq.clock();
     pulse1.onCPUClock();
     pulse2.onCPUClock();
     triangle.clock();
@@ -138,8 +136,9 @@ void Apu::clock()
     tnd_sample = tnd_table[3 * tSample + 2 * nSample + dmcS];
 }
 
-void Apu::reset()
+void Apu::reset(Mapper* m)
 {
+    this->mapper = m;
     fseq = FrameSequencer(this);
 
 	pulse1 = SquareChannel(false);

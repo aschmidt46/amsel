@@ -16,14 +16,13 @@ class Apu{
 	uint8_t status; // 0x4015
 	
     public:
-	Cpu* cpu;
 	Mapper* mapper;
-	Apu(Cpu* cpu, Mapper* m);
+	Apu();
 	~Apu();
     void write(uint16_t reg, uint8_t val);
 	uint8_t read(uint16_t reg); // Nur status
     void clock();
-	void reset();
+	void reset(Mapper* m);
 
     double getSample(bool s);
 

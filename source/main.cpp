@@ -34,6 +34,8 @@ int oldY = windowY;
 bool showGui;
 bool fullScreen;
 
+std::mutex cvm;
+
 Screen* screen;
 Controller* controller1;
 NES* console;
@@ -140,16 +142,32 @@ auto main() -> int
   glfwSetKeyCallback(window, key_callback);
   glfwSetWindowPosCallback(window, position_callback);
 
+  float xscale, yscale;
+  glfwGetWindowContentScale(window, &xscale, &yscale);
+  float mScale = (xscale + yscale) / 2.0;
+
+  // Skalierung nach Auflösung
+  ImGuiStyle& style = ImGui::GetStyle();
+  style.FontScaleDpi = mScale;
+  style.ScaleAllSizes(mScale);
+
+
+
   std::thread t(&AudioSystem::start, &audiosystem);
 
   while(!glfwWindowShouldClose(window)){
     glfwPollEvents();
     while(!console->frameReady) {}
-    console->frameReady = false;
-    screen->copyBufferToScreen(console->ppu->backBuffer);
-    screen->present();
-    gui.render();
-    glfwSwapBuffers(window);
+
+    {
+      std::lock_guard<std::mutex> lock(cvm);
+      console->frameReady = false;
+      screen->copyBufferToScreen(console->ppu->backBuffer);
+      screen->present();
+      gui.render();
+      glfwSwapBuffers(window);
+    }
+
   }
 
   cleanUp(window);
