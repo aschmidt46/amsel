@@ -39,6 +39,7 @@ class NES{
     
     public:
     bool ejectNextClock = false, loadNextClock = false, resetNextClock = false;
+    bool changeTitle = false;
     std::string fileName;
     double audioSample;
     float volume = 1.0f;

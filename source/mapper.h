@@ -9,6 +9,7 @@
 #include "abstract_mapper.h"
 #include "mappers/mapper0.h"
 #include "mappers/mapper2.h"
+#include "mappers/mapper3.h"
 
 constexpr const size_t ADDRSPACE = 1 + (size_t) std::numeric_limits<uint16_t>::max();
 
@@ -50,6 +51,11 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     
     uint8_t controller[2];
     uint8_t controller_state[2];
+
+
+
+    bool chrRAM = false;
+
     Mapper(Cpu* cpu, Ppu* ppu, Apu* apu);
     ~Mapper(){
         delete[] memoryMap;

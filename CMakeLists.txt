@@ -36,19 +36,6 @@ include_directories(PUBLIC imgui/backends)
 include_directories(PUBLIC rtaudio)
 
 
-
-# add_library(cpu source/6502.cpp source/6502.h)
-# add_library(ppu source/ppu.cpp source/ppu.h)
-# add_library(cputest source/cputest.cpp source/cputest.h)
-# add_library(nesfile source/nes_file.cpp source/nes_file.h)
-# add_library(mapper source/mapper.cpp source/mapper.h)
-# add_library(screen source/screen.cpp source/screen.h)
-# add_library(controller source/controller.cpp source/controller.h)
-# add_library(nes source/nes.cpp source/nes.h)
-# add_library(palette source/palette.cpp source/palette.h)
-# add_library(gui source/gui.cpp source/gui.h)
-# add_library(apu source/apu.cpp source/apu.h)
-
 add_library(imgui STATIC
   imgui/imgui.cpp
   imgui/imgui_demo.cpp
@@ -85,7 +72,9 @@ source/apu/apu_noise_channel.cpp source/apu/apu_noise_channel.h
 source/apu/apu_delta_modulation_channel.cpp source/apu/apu_delta_modulation_channel.h
 source/apu/apu_linear_counter.cpp source/apu/apu_linear_counter.h
 source/audiosystem.cpp source/audiosystem.h
+source/mappers/mapper0.cpp source/mappers/mapper0.h
 source/mappers/mapper2.cpp source/mappers/mapper2.h
+source/mappers/mapper3.cpp source/mappers/mapper3.h
 )
 #target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui apu)
 target_link_libraries(nes-emu rtaudio)

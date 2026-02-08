@@ -19,6 +19,7 @@
 #include <thread>
 
 #include "audiosystem.h"
+#include <filesystem>
 
 
 int width = 256, height = 240;
@@ -38,13 +39,15 @@ Screen* screen;
 Controller* controller1;
 NES* console;
 
+std::string title = "Anton's NES-Emulator";
+
 GLFWwindow* initGL(){
   int result = glfwInit();
   if (!result) { printf("glfw init failed!"); return nullptr; }
   glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
   glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 6 );
   glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
-  GLFWwindow* window = glfwCreateWindow(2*width, 2*height, "Anton's NES-Emulator", NULL, NULL);
+  GLFWwindow* window = glfwCreateWindow(2*width, 2*height, title.c_str(), NULL, NULL);
   glfwMakeContextCurrent(window);
   glfwGetFramebufferSize(window, &width, &height);
   glfwGetWindowPos(window, &windowX, &windowY);
@@ -126,6 +129,15 @@ static void position_callback(GLFWwindow* window, int posx, int posy){
   windowY = posy;
 }
 
+void updateTitle(GLFWwindow* window){
+  std::filesystem::path p(console->fileName);
+    auto fn = title + " - " + p.filename().string();
+    if(p.filename().string().size()==0){
+      fn = title;
+    }
+    glfwSetWindowTitle(window, fn.c_str());
+}
+
 auto main() -> int
 {
   GLFWwindow* window = initGL();
@@ -171,13 +183,18 @@ auto main() -> int
           // TODO for OpenGL: restore current GL context.
           glfwMakeContextCurrent(window);
       }
+
+      if(console->changeTitle){
+        updateTitle(window);
+        console->changeTitle = false;
+      }
+
     } while (!console->frameReady && !glfwWindowShouldClose(window));
     {
       std::lock_guard<std::mutex> lock(cvm);
       console->frameReady = false;
       screen->copyBufferToScreen(console->ppu->backBuffer);
     }
-
   }
 
   cleanUp(window);

@@ -134,8 +134,11 @@ void Mapper::changeCart(NESFile *cartridge)
     // PPU
     mirror = cart->header.flags6.getNametableArrangement() ? MIRROR_VERTICAL : MIRROR_HORIZONTAL;
     // Größe in x*8KiB, 0 bedeutet CHR Ram
-    assert(cartridge->header.CHRROMSize == 0 || cartridge->header.CHRROMSize == 1);
+    // assert(cartridge->header.CHRROMSize == 0 || cartridge->header.CHRROMSize == 1);
+    if(cartridge->header.CHRROMSize == 0)
+        chrRAM = true;
 
+    // Character Data
     for(int i = 0; i < 0x2000; i++){
         ppuMap[i] = cartridge->chrRom + i;
     }
@@ -185,6 +188,9 @@ void Mapper::changeCart(NESFile *cartridge)
         case 2:
             mImpl = (AbstractMapper*) new Mapper2(shared_from_this());
             break;
+        case 3:
+            mImpl = (AbstractMapper*) new Mapper3(shared_from_this());
+            break;
         default:
             mImpl = (AbstractMapper*) new Mapper0(shared_from_this());
             break;
@@ -208,6 +214,9 @@ uint8_t Mapper::read(uint8_t *address)
     //wrap round?
     if((uintptr_t)address==0x10000) return *memoryMap[0];
 
+    if((uintptr_t)address>= 0x8000)
+        return mImpl->readRam(address);
+
     auto val = *memoryMap[(uintptr_t)address];
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
@@ -228,11 +237,13 @@ void Mapper::write(uint8_t *address, uint8_t value)
     [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
         return;
     }
+    if((uintptr_t)address >= 0x8000){
+        mImpl->writeRam(address, value);
+        return;
+    }
 
-    // PRG-ROM!
-    // Das gibt aus irgendeinem Grund Probleme mit Mapper2 Spielen, muss ich mir ansehen. (Ah nee macht Sinn, weil du ja hier schreiben müssen musst um Pages zu wechseln)
-    // Warum Kung Fu nicht mehr geht ist mir noch nicht klar
-    // if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
+    // PRG-"ROM"!
+    if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
 
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
@@ -264,9 +275,6 @@ void Mapper::write(uint8_t *address, uint8_t value)
         }
         cpu->remainingCycles += 512; // Oder 514???
     }
-
-
-    mImpl->writeRam(address, value);
 }
 
 uint8_t Mapper::readVRAM(uint8_t *address)
@@ -290,6 +298,11 @@ void Mapper::writeVRAM(uint8_t *address, uint8_t value)
     [[unlikely]] if(ppuMap[(uintptr_t)address] == nullptr){
         return;
     }
+
+    // Falls kein character RAM, darf hier nicht geschrieben werden!
+    if((uintptr_t)address <= 0x2000 && !chrRAM)
+        return;
+
     *ppuMap[(uintptr_t)address] = value;
 }
 

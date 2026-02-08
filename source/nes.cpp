@@ -33,14 +33,17 @@ void NES::load(const char *path)
     cpu->init(0xC000, mapper);
     loaded = true;
     loadNextClock = false;
+    changeTitle = true;
 }
 
 void NES::eject()
 {
     if(!loaded) return;
     delete Slot;
+    fileName = "";
     loaded = false;
     ejectNextClock = false;
+    changeTitle = true;
 }
 
 void NES::reset()
