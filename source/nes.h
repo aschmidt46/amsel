@@ -19,7 +19,9 @@ class Screen;
 class Controller;
 
 class NES{
+    public:
     Cpu* cpu;
+    private:
     Apu* apu;
     std::shared_ptr<Mapper> mapper = nullptr;
     NESFile* Slot;

@@ -6,6 +6,25 @@
 #include "portable-file-dialogs.h"
 #include <filesystem>
 #include <vector>
+#include <bitset>
+
+std::string ghex(uintptr_t input){
+    std::string str = std::format("{:x}", input);
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
+}
+
+std::string ghexNorm(std::string s, int n){
+    while(s.size() < n)
+        s = "0"+s;
+    return s;
+}
+
+void removeCharsFromString( std::string &str, const char* charsToRemove ) {
+   for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
+      str.erase( remove(str.begin(), str.end(), charsToRemove[i]), str.end() );
+   }
+}
 
 std::optional<std::string> openFile(){
   auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string() + "\\..\\roms", {"iNES Rom-Dateien (.nes)", "*.nes"}, pfd::opt::none);
@@ -74,15 +93,30 @@ bool isContained(const std::vector<std::pair<std::string, ASMtype>> &v1, const s
 }
 
 std::vector<std::pair<std::string, ASMtype>> getPreceding(const std::vector<std::pair<std::string, ASMtype>> &nASM, const std::vector<std::pair<std::string, ASMtype>> &oASM){
+
   if(nASM.size()==0) return std::vector<std::pair<std::string, ASMtype>>();
-  int index = -1;
+
+  //Annahme: Sprung seit letztem Frame
   ASMtype lastLineType = ASM_JUMP;
+  int index = -1;
   for(int i = 0; i < oASM.size(); i++){
     index++;
     if(fastCompare(oASM[i].first, nASM[0].first)){
+      // Startzeile in altem ASM an Index gefunden (kein Sprung?)
       index--;
+      // Letzte Zeile ist die vor Index
       lastLineType = ASM_REGULAR;
       break;
+    }
+  }
+
+  // Korrektur für Sprungzeile
+  if(lastLineType == ASM_JUMP){
+    for(int i = 0; i < oASM.size(); i++){
+      if(oASM[i].second == ASM_CURRENT){
+        index = i;
+        break;
+      }
     }
   }
 
@@ -92,7 +126,12 @@ std::vector<std::pair<std::string, ASMtype>> getPreceding(const std::vector<std:
     if(i < 0)
       continue;
     if(i==index) resLines.push_back({oASM[i].first, lastLineType});
-    else resLines.push_back({oASM[i].first, ASM_REGULAR});
+    else{
+      if(oASM[i].second == ASM_CURRENT)
+        resLines.push_back({oASM[i].first, ASM_REGULAR});
+      else
+        resLines.push_back({oASM[i]});
+    }
   }
 
   for(const auto &e : nASM){
@@ -107,6 +146,7 @@ void printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
     switch(e.second){
       case ASM_JUMP:
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), e.first.c_str());
+        ImGui::SeparatorText("Sprung");
         break;
       case ASM_CURRENT:
         ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), e.first.c_str());
@@ -132,6 +172,77 @@ void Gui::assemblyRender()
   }
 }
 
+void Gui::drawRegisters()
+{
+  ImGui::BeginTable("Register", 2);
+  ImGui::TableNextColumn();
+    ImGui::Text(("P: "+std::bitset<8>(console->cpu->P).to_string()).c_str());
+    ImGui::Text(("PC: $"+ghexNorm(ghex(console->cpu->PC), 4)).c_str());
+    ImGui::Text(("SP: $"+ghexNorm(ghex(console->cpu->SP), 2)).c_str());
+  ImGui::TableNextColumn();
+    ImGui::Text(("A: $"+ghexNorm(ghex(console->cpu->A), 2)).c_str());
+    ImGui::Text(("X: $"+ghexNorm(ghex(console->cpu->X), 2)).c_str());
+    ImGui::Text(("Y: $"+ghexNorm(ghex(console->cpu->Y), 2)).c_str());
+  ImGui::EndTable();
+}
+
+void Gui::drawMemoryReader()
+{
+  ImGui::Text("Adresse:");
+  ImGui::SameLine();
+  ImGui::InputText("", memInputBuf, 255);
+  if(ImGui::Button("Lies 1 Byte")){
+    std::string s(memInputBuf);
+    removeCharsFromString(s, "x$");
+    lastReadLow = 0;
+    lastReadHigh = 0;
+    if(s.size()>0){
+      uint16_t addr = std::stoi(s, 0, 16);
+      lastReadLow = console->cpu->read((uint8_t*)(uintptr_t)addr);
+    }
+  }
+  ImGui::SameLine();
+  if(ImGui::Button("Lies 2 Byte")){
+    std::string s(memInputBuf);
+    removeCharsFromString(s, "x$");
+    lastReadLow = 0;
+    lastReadHigh = 0;
+    if(s.size()>0){
+      uint16_t addr = std::stoi(s, 0, 16);
+      lastReadLow = console->cpu->read((uint8_t*)(uintptr_t)addr);
+      lastReadHigh = console->cpu->read((uint8_t*)(uintptr_t)addr+1);
+    }
+  }
+
+  ImGui::Text(("Hex: "+ghexNorm(ghex(getLastRead()),4)).c_str());
+  ImGui::Text(("Bin: "+std::bitset<16>(getLastRead()).to_string()).c_str());
+}
+
+void Gui::drawDebugger()
+{
+  ImGui::Begin("Disassembly");
+    ImGui::BeginTable("Debugger", 2, ImGuiTableFlags_BordersInnerV);
+      ImGui::TableNextColumn();
+        assemblyRender();
+      ImGui::TableNextColumn();
+        bool h = state->halt;
+        if(ImGui::Checkbox("Break", &h)){
+          toggleHalt();
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Step")){
+          if(state->halt){
+            console->allowedClocks = 1;
+          }
+        }
+        ImGui::SeparatorText("Register");
+        drawRegisters();
+        ImGui::SeparatorText("Speicher");
+        drawMemoryReader();
+    ImGui::EndTable();
+  ImGui::End();
+}
+
 void Gui::render()
 {
     if(state->show){
@@ -140,23 +251,7 @@ void Gui::render()
       ImGui::NewFrame();
 
       if(state->showDebugger){
-        ImGui::Begin("Disassembly");
-          ImGui::BeginTable("Debugger", 2, ImGuiTableFlags_BordersInnerH);
-            ImGui::TableNextColumn();
-              assemblyRender();
-            ImGui::TableNextColumn();
-              bool h = state->halt;
-              if(ImGui::Checkbox("Break", &h)){
-                toggleHalt();
-              }
-              ImGui::SameLine();
-              if(ImGui::Button("Step")){
-                if(state->halt){
-                  console->allowedClocks = 1;
-                }
-              }
-          ImGui::EndTable();
-        ImGui::End();
+        drawDebugger();
       }
 
       ImGui::BeginMainMenuBar();

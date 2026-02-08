@@ -98,7 +98,7 @@ std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, uint8_t op1, u
         case ADDR_RELATIVE:{
             int8_t rel;
             std::memcpy(&rel, &op1, sizeof(rel));
-            uint16_t loc = pc + rel;
+            uint16_t loc = pc + 2 + rel;
             return {"$"+hex(loc),2};
             break;}
         case ADDR_INDIRECT:{
