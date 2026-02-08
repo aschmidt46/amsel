@@ -140,6 +140,7 @@ void Ppu::fillTimings()
 				timings[i].first.push_back(&Ppu::clearFlags);
 			}
 
+			// sichtbare
 			if(scanline <= 239){
 				if(cycle > 0 && (cycle <= 260 || cycle >= 321)){
 					if ((cycle >= 2 && cycle < 258) || (cycle >= 321 && cycle < 338)){
@@ -192,6 +193,7 @@ void Ppu::fillTimings()
 				timings[i].first.push_back(&Ppu::setSpriteShifters);
 			}
 
+			// v blank
 			if(scanline == 241 && cycle == 1){
 				timings[i].first.push_back(&Ppu::pullNMI);
 			}
@@ -302,12 +304,8 @@ void Ppu::readNTByte()
 }
 
 void Ppu::readATByte()
-{
-	nextTileATByte = mapper->readVRAM((uint8_t*)(uintptr_t)(
-                                              0x23C0 | (v.getNametableY() << 11) 
-					                                 | (v.getNametableX() << 10) 
-					                                 | ((v.getCoarseY() >> 2) << 3) 
-					                                 | (v.getCoarseX() >> 2)));			
+{                                                                    // nametable xy      coarse y                coarse x
+	nextTileATByte = mapper->readVRAM((uint8_t*)(uintptr_t)(0x23C0 | (v.raw & 0x0C00) | ((v.raw >> 4) & 0x38) | ((v.raw >> 2) & 0x07)));			
 	if (v.getCoarseY() & 0x02) nextTileATByte >>= 4;
 	if (v.getCoarseX() & 0x02) nextTileATByte >>= 2;
 	nextTileATByte &= 0x03;
@@ -328,6 +326,10 @@ void Ppu::readCHRByteHigh()
 					                       + ((uint16_t)nextTileNTByte << 4)
 					                       + (v.getFineY()) + 8));
 }
+
+// void Ppu::clearSecondaryOAM(){
+// 	std::memset(secondaryOAM, 0xFF, 8 * sizeof(OAMSprite));
+// }
 
 void Ppu::evaluateSprites()
 {

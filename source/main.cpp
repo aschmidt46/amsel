@@ -65,6 +65,7 @@ GLFWwindow* initGL(){
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Multi Viewport für Debugger (braucht docking branch)
   //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
 
   // Setup Platform/Renderer backends
@@ -154,16 +155,16 @@ auto main() -> int
 
 
   while(!glfwWindowShouldClose(window)){
-    glfwPollEvents();
-    while(!console->frameReady) {}
-
+    do {
+      glfwPollEvents();
+      screen->present();
+      gui.render();
+      glfwSwapBuffers(window);
+    } while (!console->frameReady);
     {
       std::lock_guard<std::mutex> lock(cvm);
       console->frameReady = false;
       screen->copyBufferToScreen(console->ppu->backBuffer);
-      screen->present();
-      gui.render();
-      glfwSwapBuffers(window);
     }
 
   }

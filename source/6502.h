@@ -39,6 +39,7 @@ class Mapper;
 class Cpu{
 
     struct opcode_info{
+        std::string name;
         uint8_t (Cpu::*instruction) (uint8_t* mem);
         AddressMode mode;
         uint8_t cycles;
@@ -149,6 +150,11 @@ class Cpu{
     void pushStack(uint8_t value);
     uint8_t pullStack();
 
+    // Disassembly
+    std::string getPrevNInstructions(int n);
+    std::string getNextNInstructions(int n);
+    std::pair<std::string, int> formatInstruction(AddressMode m, const std::vector<uint8_t> &operands, uint16_t pc);
+
     // Instruktionen
     uint8_t ADC(uint8_t* mem);
     uint8_t AND(uint8_t* mem);
@@ -232,262 +238,262 @@ class Cpu{
     const opcode_info opcodes[256] = {
         // Zyklen sind nur für Operationen, die eine nicht-normale Anzahl Zyklen benötigen
         // bzw. Implicit, aber überspringt folgendes Byte
-        {&Cpu::BRK, ADDR_IMMEDIATE, 7},				// $00
-        {&Cpu::ORA, ADDR_INDEXED_INDIRECT_X, 0},		// $01
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $02
-        {&Cpu::SLO, ADDR_INDEXED_INDIRECT_X, 8},		// $03
-        {&Cpu::NOP, ADDR_ZERO_PAGE, 0},				// $04
-        {&Cpu::ORA, ADDR_ZERO_PAGE, 0},				// $05
-        {&Cpu::ASL, ADDR_ZERO_PAGE, 5},				// $06
-        {&Cpu::SLO, ADDR_ZERO_PAGE, 5},				// $07
-        {&Cpu::PHP, ADDR_IMPLICIT, 3},				// $08
-        {&Cpu::ORA, ADDR_IMMEDIATE, 0},				// $09
-        {&Cpu::ASL, ADDR_IMPLICIT, 2},				// $0A
-        {&Cpu::ANC, ADDR_IMMEDIATE, 0},				// $0B
-        {&Cpu::NOP, ADDR_ABSOLUTE, 0},				// $0C
-        {&Cpu::ORA, ADDR_ABSOLUTE, 0},				// $0D
-        {&Cpu::ASL, ADDR_ABSOLUTE, 6},				// $0E
-        {&Cpu::SLO, ADDR_ABSOLUTE, 6},				// $0F
-        {&Cpu::BPL, ADDR_RELATIVE, 0},				// $10
-        {&Cpu::ORA, ADDR_INDEXED_INDIRECT_Y, 0},		// $11
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $12
-        {&Cpu::SLO, ADDR_INDEXED_INDIRECT_Y, 8},		// $13
-        {&Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $14
-        {&Cpu::ORA, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $15
-        {&Cpu::ASL, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $16
-        {&Cpu::SLO, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $17
-        {&Cpu::CLC, ADDR_IMPLICIT, 0},				// $18
-        {&Cpu::ORA, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $19
-        {&Cpu::NOP, ADDR_IMPLICIT, 0},				// $1A
-        {&Cpu::SLO, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $1B
-        {&Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $1C
-        {&Cpu::ORA, ADDR_ABSOLUTE_INDEXED_X, 0},		// $1D
-        {&Cpu::ASL, ADDR_ABSOLUTE_INDEXED_X, 7},		// $1E
-        {&Cpu::SLO, ADDR_ABSOLUTE_INDEXED_X, 7},		// $1F
-        {&Cpu::JSR, ADDR_ABSOLUTE, 6},				// $20
-        {&Cpu::AND, ADDR_INDEXED_INDIRECT_X, 0},		// $21
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $22
-        {&Cpu::RLA, ADDR_INDEXED_INDIRECT_X, 8},		// $23
-        {&Cpu::BIT, ADDR_ZERO_PAGE, 0},				// $24
-        {&Cpu::AND, ADDR_ZERO_PAGE, 0},				// $25
-        {&Cpu::ROL, ADDR_ZERO_PAGE, 5},				// $26
-        {&Cpu::RLA, ADDR_ZERO_PAGE, 5},				// $27
-        {&Cpu::PLP, ADDR_IMPLICIT, 4},				// $28
-        {&Cpu::AND, ADDR_IMMEDIATE, 0},				// $29
-        {&Cpu::ROL, ADDR_IMPLICIT, 2},				// $2A
-        {&Cpu::ANC, ADDR_IMMEDIATE, 0},				// $2B
-        {&Cpu::BIT, ADDR_ABSOLUTE, 0},				// $2C
-        {&Cpu::AND, ADDR_ABSOLUTE, 0},				// $2D
-        {&Cpu::ROL, ADDR_ABSOLUTE, 6},				// $2E
-        {&Cpu::RLA, ADDR_ABSOLUTE, 6},				// $2F
-        {&Cpu::BMI, ADDR_RELATIVE, 0},				// $30
-        {&Cpu::AND, ADDR_INDEXED_INDIRECT_Y, 0},		// $31
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $32
-        {&Cpu::RLA, ADDR_INDEXED_INDIRECT_Y, 8},		// $33
-        {&Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $34
-        {&Cpu::AND, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $35
-        {&Cpu::ROL, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $36
-        {&Cpu::RLA, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $37
-        {&Cpu::SEC, ADDR_IMPLICIT, 0},				// $38
-        {&Cpu::AND, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $39
-        {&Cpu::NOP, ADDR_IMPLICIT, 0},				// $3A
-        {&Cpu::RLA, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $3B
-        {&Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $3C
-        {&Cpu::AND, ADDR_ABSOLUTE_INDEXED_X, 0},		// $3D
-        {&Cpu::ROL, ADDR_ABSOLUTE_INDEXED_X, 7},		// $3E
-        {&Cpu::RLA, ADDR_ABSOLUTE_INDEXED_X, 7},		// $3F
-        {&Cpu::RTI, ADDR_IMPLICIT, 6},				// $40
-        {&Cpu::EOR, ADDR_INDEXED_INDIRECT_X, 0},		// $41
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $42
-        {&Cpu::SRE, ADDR_INDEXED_INDIRECT_X, 8},		// $43
-        {&Cpu::NOP, ADDR_ZERO_PAGE, 0},				// $44
-        {&Cpu::EOR, ADDR_ZERO_PAGE, 0},				// $45
-        {&Cpu::LSR, ADDR_ZERO_PAGE, 5},				// $46
-        {&Cpu::SRE, ADDR_ZERO_PAGE, 5},				// $47
-        {&Cpu::PHA, ADDR_IMPLICIT, 3},				// $48
-        {&Cpu::EOR, ADDR_IMMEDIATE, 0},				// $49
-        {&Cpu::LSR, ADDR_IMPLICIT, 2},				// $4A
-        {&Cpu::ALR, ADDR_IMMEDIATE, 0},				// $4B
-        {&Cpu::JMP, ADDR_ABSOLUTE, 3},				// $4C
-        {&Cpu::EOR, ADDR_ABSOLUTE, 0},				// $4D
-        {&Cpu::LSR, ADDR_ABSOLUTE, 6},				// $4E
-        {&Cpu::SRE, ADDR_ABSOLUTE, 6},				// $4F
-        {&Cpu::BVC, ADDR_RELATIVE, 0},				// $50
-        {&Cpu::EOR, ADDR_INDEXED_INDIRECT_Y, 0},		// $51
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $52
-        {&Cpu::SRE, ADDR_INDEXED_INDIRECT_Y, 8},		// $53
-        {&Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $54
-        {&Cpu::EOR, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $55
-        {&Cpu::LSR, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $56
-        {&Cpu::SRE, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $57
-        {&Cpu::CLI, ADDR_IMPLICIT, 0},				// $58
-        {&Cpu::EOR, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $59
-        {&Cpu::NOP, ADDR_IMPLICIT, 0},				// $5A
-        {&Cpu::SRE, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $5B
-        {&Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $5C
-        {&Cpu::EOR, ADDR_ABSOLUTE_INDEXED_X, 0},		// $5D
-        {&Cpu::LSR, ADDR_ABSOLUTE_INDEXED_X, 7},		// $5E
-        {&Cpu::SRE, ADDR_ABSOLUTE_INDEXED_X, 7},		// $5F
-        {&Cpu::RTS, ADDR_IMPLICIT, 6},				// $60
-        {&Cpu::ADC, ADDR_INDEXED_INDIRECT_X, 0},		// $61
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $62
-        {&Cpu::RRA, ADDR_INDEXED_INDIRECT_X, 8},		// $63
-        {&Cpu::NOP, ADDR_ZERO_PAGE, 0},				// $64
-        {&Cpu::ADC, ADDR_ZERO_PAGE, 0},				// $65
-        {&Cpu::ROR, ADDR_ZERO_PAGE, 5},				// $66
-        {&Cpu::RRA, ADDR_ZERO_PAGE, 5},				// $67
-        {&Cpu::PLA, ADDR_IMPLICIT, 4},				// $68
-        {&Cpu::ADC, ADDR_IMMEDIATE, 0},				// $69
-        {&Cpu::ROR, ADDR_IMPLICIT, 2},				// $6A
-        {&Cpu::ARR, ADDR_IMMEDIATE, 0},				// $6B
-        {&Cpu::JMP, ADDR_INDIRECT, 5},				// $6C
-        {&Cpu::ADC, ADDR_ABSOLUTE, 0},				// $6D
-        {&Cpu::ROR, ADDR_ABSOLUTE, 6},				// $6E
-        {&Cpu::RRA, ADDR_ABSOLUTE, 6},				// $6F
-        {&Cpu::BVS, ADDR_RELATIVE, 0},				// $70
-        {&Cpu::ADC, ADDR_INDEXED_INDIRECT_Y, 0},		// $71
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $72
-        {&Cpu::RRA, ADDR_INDEXED_INDIRECT_Y, 8},		// $73
-        {&Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $74
-        {&Cpu::ADC, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $75
-        {&Cpu::ROR, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $76
-        {&Cpu::RRA, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $77
-        {&Cpu::SEI, ADDR_IMPLICIT, 0},				// $78
-        {&Cpu::ADC, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $79
-        {&Cpu::NOP, ADDR_IMPLICIT, 0},				// $7A
-        {&Cpu::RRA, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $7B
-        {&Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $7C
-        {&Cpu::ADC, ADDR_ABSOLUTE_INDEXED_X, 0},		// $7D
-        {&Cpu::ROR, ADDR_ABSOLUTE_INDEXED_X, 7},		// $7E
-        {&Cpu::RRA, ADDR_ABSOLUTE_INDEXED_X, 7},		// $7F
-        {&Cpu::NOP, ADDR_IMMEDIATE, 0},				// $80
-        {&Cpu::STA, ADDR_INDEXED_INDIRECT_X, 6},		// $81
-        {&Cpu::NOP, ADDR_IMMEDIATE, 0},				// $82
-        {&Cpu::SAX, ADDR_INDEXED_INDIRECT_X, 0},		// $83
-        {&Cpu::STY, ADDR_ZERO_PAGE, 0},				// $84
-        {&Cpu::STA, ADDR_ZERO_PAGE, 0},				// $85
-        {&Cpu::STX, ADDR_ZERO_PAGE, 0},				// $86
-        {&Cpu::SAX, ADDR_ZERO_PAGE, 0},				// $87
-        {&Cpu::DEY, ADDR_IMPLICIT, 0},				// $88
-        {&Cpu::NOP, ADDR_IMMEDIATE, 0},				// $89
-        {&Cpu::TXA, ADDR_IMPLICIT, 0},				// $8A
-        {&Cpu::XAA, ADDR_IMMEDIATE, 0},				// $8B
-        {&Cpu::STY, ADDR_ABSOLUTE, 0},				// $8C
-        {&Cpu::STA, ADDR_ABSOLUTE, 0},				// $8D
-        {&Cpu::STX, ADDR_ABSOLUTE, 0},				// $8E
-        {&Cpu::SAX, ADDR_ABSOLUTE, 0},				// $8F
-        {&Cpu::BCC, ADDR_RELATIVE, 0},				// $90
-        {&Cpu::STA, ADDR_INDEXED_INDIRECT_Y, 6},		// $91
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $92
-        {&Cpu::AHX, ADDR_INDEXED_INDIRECT_Y, 0},		// $93
-        {&Cpu::STY, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $94
-        {&Cpu::STA, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $95
-        {&Cpu::STX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $96
-        {&Cpu::SAX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $97
-        {&Cpu::TYA, ADDR_IMPLICIT, 0},				// $98
-        {&Cpu::STA, ADDR_ABSOLUTE_INDEXED_Y, 5},		// $99
-        {&Cpu::TXS, ADDR_IMPLICIT, 0},				// $9A
-        {&Cpu::TAS, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9B
-        {&Cpu::SHY, ADDR_ABSOLUTE_INDEXED_X, 0},		// $9C
-        {&Cpu::STA, ADDR_ABSOLUTE_INDEXED_X, 5},		// $9D
-        {&Cpu::SHX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9E
-        {&Cpu::AHX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9F
-        {&Cpu::LDY, ADDR_IMMEDIATE, 0},				// $A0
-        {&Cpu::LDA, ADDR_INDEXED_INDIRECT_X, 0},		// $A1
-        {&Cpu::LDX, ADDR_IMMEDIATE, 0},				// $A2
-        {&Cpu::LAX, ADDR_INDEXED_INDIRECT_X, 0},		// $A3
-        {&Cpu::LDY, ADDR_ZERO_PAGE, 0},				// $A4
-        {&Cpu::LDA, ADDR_ZERO_PAGE, 0},				// $A5
-        {&Cpu::LDX, ADDR_ZERO_PAGE, 0},				// $A6
-        {&Cpu::LAX, ADDR_ZERO_PAGE, 0},				// $A7
-        {&Cpu::TAY, ADDR_IMPLICIT, 0},				// $A8
-        {&Cpu::LDA, ADDR_IMMEDIATE, 0},				// $A9
-        {&Cpu::TAX, ADDR_IMPLICIT, 0},				// $AA
-        {&Cpu::LAX, ADDR_IMMEDIATE, 0},				// $AB
-        {&Cpu::LDY, ADDR_ABSOLUTE, 0},				// $AC
-        {&Cpu::LDA, ADDR_ABSOLUTE, 0},				// $AD
-        {&Cpu::LDX, ADDR_ABSOLUTE, 0},				// $AE
-        {&Cpu::LAX, ADDR_ABSOLUTE, 0},				// $AF
-        {&Cpu::BCS, ADDR_RELATIVE, 0},				// $B0
-        {&Cpu::LDA, ADDR_INDEXED_INDIRECT_Y, 0},		// $B1
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $B2
-        {&Cpu::LAX, ADDR_INDEXED_INDIRECT_Y, 0},		// $B3
-        {&Cpu::LDY, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $B4
-        {&Cpu::LDA, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $B5
-        {&Cpu::LDX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $B6
-        {&Cpu::LAX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $B7
-        {&Cpu::CLV, ADDR_IMPLICIT, 0},				// $B8
-        {&Cpu::LDA, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $B9
-        {&Cpu::TSX, ADDR_IMPLICIT, 0},				// $BA
-        {&Cpu::LAS, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $BB
-        {&Cpu::LDY, ADDR_ABSOLUTE_INDEXED_X, 0},		// $BC
-        {&Cpu::LDA, ADDR_ABSOLUTE_INDEXED_X, 0},		// $BD
-        {&Cpu::LDX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $BE
-        {&Cpu::LAX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $BF
-        {&Cpu::CPY, ADDR_IMMEDIATE, 0},				// $C0
-        {&Cpu::CMP, ADDR_INDEXED_INDIRECT_X, 0},		// $C1
-        {&Cpu::NOP, ADDR_IMMEDIATE, 0},				// $C2
-        {&Cpu::DCP, ADDR_INDEXED_INDIRECT_X, 8},		// $C3
-        {&Cpu::CPY, ADDR_ZERO_PAGE, 0},				// $C4
-        {&Cpu::CMP, ADDR_ZERO_PAGE, 0},				// $C5
-        {&Cpu::DEC, ADDR_ZERO_PAGE, 5},				// $C6
-        {&Cpu::DCP, ADDR_ZERO_PAGE, 5},				// $C7
-        {&Cpu::INY, ADDR_IMPLICIT, 0},				// $C8
-        {&Cpu::CMP, ADDR_IMMEDIATE, 0},				// $C9
-        {&Cpu::DEX, ADDR_IMPLICIT, 0},				// $CA
-        {&Cpu::AXS, ADDR_IMMEDIATE, 0},				// $CB
-        {&Cpu::CPY, ADDR_ABSOLUTE, 0},				// $CC
-        {&Cpu::CMP, ADDR_ABSOLUTE, 0},				// $CD
-        {&Cpu::DEC, ADDR_ABSOLUTE, 6},				// $CE
-        {&Cpu::DCP, ADDR_ABSOLUTE, 6},				// $CF
-        {&Cpu::BNE, ADDR_RELATIVE, 0},				// $D0
-        {&Cpu::CMP, ADDR_INDEXED_INDIRECT_Y, 0},		// $D1
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $D2
-        {&Cpu::DCP, ADDR_INDEXED_INDIRECT_Y, 8},		// $D3
-        {&Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $D4
-        {&Cpu::CMP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $D5
-        {&Cpu::DEC, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $D6
-        {&Cpu::DCP, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $D7
-        {&Cpu::CLD, ADDR_IMPLICIT, 0},				// $D8
-        {&Cpu::CMP, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $D9
-        {&Cpu::NOP, ADDR_IMPLICIT, 0},				// $DA
-        {&Cpu::DCP, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $DB
-        {&Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $DC
-        {&Cpu::CMP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $DD
-        {&Cpu::DEC, ADDR_ABSOLUTE_INDEXED_X, 7},		// $DE
-        {&Cpu::DCP, ADDR_ABSOLUTE_INDEXED_X, 7},		// $DF
-        {&Cpu::CPX, ADDR_IMMEDIATE, 0},				// $E0
-        {&Cpu::SBC, ADDR_INDEXED_INDIRECT_X, 0},		// $E1
-        {&Cpu::NOP, ADDR_IMMEDIATE, 0},				// $E2
-        {&Cpu::ISC, ADDR_INDEXED_INDIRECT_X, 8},		// $E3
-        {&Cpu::CPX, ADDR_ZERO_PAGE, 0},				// $E4
-        {&Cpu::SBC, ADDR_ZERO_PAGE, 0},				// $E5
-        {&Cpu::INC, ADDR_ZERO_PAGE, 5},				// $E6
-        {&Cpu::ISC, ADDR_ZERO_PAGE, 5},				// $E7
-        {&Cpu::INX, ADDR_IMPLICIT, 0},				// $E8
-        {&Cpu::SBC, ADDR_IMMEDIATE, 0},				// $E9
-        {&Cpu::NOP, ADDR_IMPLICIT, 0},				// $EA
-        {&Cpu::SBC, ADDR_IMMEDIATE, 0},				// $EB
-        {&Cpu::CPX, ADDR_ABSOLUTE, 0},				// $EC
-        {&Cpu::SBC, ADDR_ABSOLUTE, 0},				// $ED
-        {&Cpu::INC, ADDR_ABSOLUTE, 6},				// $EE
-        {&Cpu::ISC, ADDR_ABSOLUTE, 6},				// $EF
-        {&Cpu::BEQ, ADDR_RELATIVE, 0},				// $F0
-        {&Cpu::SBC, ADDR_INDEXED_INDIRECT_Y, 0},		// $F1
-        {&Cpu::STP, ADDR_IMPLICIT, 0},				// $F2
-        {&Cpu::ISC, ADDR_INDEXED_INDIRECT_Y, 8},		// $F3
-        {&Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $F4
-        {&Cpu::SBC, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $F5
-        {&Cpu::INC, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $F6
-        {&Cpu::ISC, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $F7
-        {&Cpu::SED, ADDR_IMPLICIT, 0},				// $F8
-        {&Cpu::SBC, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $F9
-        {&Cpu::NOP, ADDR_IMPLICIT, 0},				// $FA
-        {&Cpu::ISC, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $FB
-        {&Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $FC
-        {&Cpu::SBC, ADDR_ABSOLUTE_INDEXED_X, 0},		// $FD
-        {&Cpu::INC, ADDR_ABSOLUTE_INDEXED_X, 7},		// $FE
-        {&Cpu::ISC, ADDR_ABSOLUTE_INDEXED_X, 7}		// $FF
+        {"BRK", &Cpu::BRK, ADDR_IMMEDIATE, 7},				// $00
+        {"ORA", &Cpu::ORA, ADDR_INDEXED_INDIRECT_X, 0},		// $01
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $02
+        {"SLO", &Cpu::SLO, ADDR_INDEXED_INDIRECT_X, 8},		// $03
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE, 0},				// $04
+        {"ORA", &Cpu::ORA, ADDR_ZERO_PAGE, 0},				// $05
+        {"ASL", &Cpu::ASL, ADDR_ZERO_PAGE, 5},				// $06
+        {"SLO", &Cpu::SLO, ADDR_ZERO_PAGE, 5},				// $07
+        {"PHP", &Cpu::PHP, ADDR_IMPLICIT, 3},				// $08
+        {"ORA", &Cpu::ORA, ADDR_IMMEDIATE, 0},				// $09
+        {"ASL", &Cpu::ASL, ADDR_IMPLICIT, 2},				// $0A
+        {"ANC", &Cpu::ANC, ADDR_IMMEDIATE, 0},				// $0B
+        {"NOP", &Cpu::NOP, ADDR_ABSOLUTE, 0},				// $0C
+        {"ORA", &Cpu::ORA, ADDR_ABSOLUTE, 0},				// $0D
+        {"ASL", &Cpu::ASL, ADDR_ABSOLUTE, 6},				// $0E
+        {"SLO", &Cpu::SLO, ADDR_ABSOLUTE, 6},				// $0F
+        {"BPL", &Cpu::BPL, ADDR_RELATIVE, 0},				// $10
+        {"ORA", &Cpu::ORA, ADDR_INDEXED_INDIRECT_Y, 0},		// $11
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $12
+        {"SLO", &Cpu::SLO, ADDR_INDEXED_INDIRECT_Y, 8},		// $13
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $14
+        {"ORA", &Cpu::ORA, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $15
+        {"ASL", &Cpu::ASL, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $16
+        {"SLO", &Cpu::SLO, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $17
+        {"CLC", &Cpu::CLC, ADDR_IMPLICIT, 0},				// $18
+        {"ORA", &Cpu::ORA, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $19
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $1A
+        {"SLO", &Cpu::SLO, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $1B
+        {"NOP", &Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $1C
+        {"ORA", &Cpu::ORA, ADDR_ABSOLUTE_INDEXED_X, 0},		// $1D
+        {"ASL", &Cpu::ASL, ADDR_ABSOLUTE_INDEXED_X, 7},		// $1E
+        {"SLO", &Cpu::SLO, ADDR_ABSOLUTE_INDEXED_X, 7},		// $1F
+        {"JSR", &Cpu::JSR, ADDR_ABSOLUTE, 6},				// $20
+        {"AND", &Cpu::AND, ADDR_INDEXED_INDIRECT_X, 0},		// $21
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $22
+        {"RLA", &Cpu::RLA, ADDR_INDEXED_INDIRECT_X, 8},		// $23
+        {"BIT", &Cpu::BIT, ADDR_ZERO_PAGE, 0},				// $24
+        {"AND", &Cpu::AND, ADDR_ZERO_PAGE, 0},				// $25
+        {"ROL", &Cpu::ROL, ADDR_ZERO_PAGE, 5},				// $26
+        {"RLA", &Cpu::RLA, ADDR_ZERO_PAGE, 5},				// $27
+        {"PLP", &Cpu::PLP, ADDR_IMPLICIT, 4},				// $28
+        {"AND", &Cpu::AND, ADDR_IMMEDIATE, 0},				// $29
+        {"ROL", &Cpu::ROL, ADDR_IMPLICIT, 2},				// $2A
+        {"ANC", &Cpu::ANC, ADDR_IMMEDIATE, 0},				// $2B
+        {"BIT", &Cpu::BIT, ADDR_ABSOLUTE, 0},				// $2C
+        {"AND", &Cpu::AND, ADDR_ABSOLUTE, 0},				// $2D
+        {"ROL", &Cpu::ROL, ADDR_ABSOLUTE, 6},				// $2E
+        {"RLA", &Cpu::RLA, ADDR_ABSOLUTE, 6},				// $2F
+        {"BMI", &Cpu::BMI, ADDR_RELATIVE, 0},				// $30
+        {"AND", &Cpu::AND, ADDR_INDEXED_INDIRECT_Y, 0},		// $31
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $32
+        {"RLA", &Cpu::RLA, ADDR_INDEXED_INDIRECT_Y, 8},		// $33
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $34
+        {"AND", &Cpu::AND, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $35
+        {"ROL", &Cpu::ROL, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $36
+        {"RLA", &Cpu::RLA, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $37
+        {"SEC", &Cpu::SEC, ADDR_IMPLICIT, 0},				// $38
+        {"AND", &Cpu::AND, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $39
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $3A
+        {"RLA", &Cpu::RLA, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $3B
+        {"NOP", &Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $3C
+        {"AND", &Cpu::AND, ADDR_ABSOLUTE_INDEXED_X, 0},		// $3D
+        {"ROL", &Cpu::ROL, ADDR_ABSOLUTE_INDEXED_X, 7},		// $3E
+        {"RLA", &Cpu::RLA, ADDR_ABSOLUTE_INDEXED_X, 7},		// $3F
+        {"RTI", &Cpu::RTI, ADDR_IMPLICIT, 6},				// $40
+        {"EOR", &Cpu::EOR, ADDR_INDEXED_INDIRECT_X, 0},		// $41
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $42
+        {"SRE", &Cpu::SRE, ADDR_INDEXED_INDIRECT_X, 8},		// $43
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE, 0},				// $44
+        {"EOR", &Cpu::EOR, ADDR_ZERO_PAGE, 0},				// $45
+        {"LSR", &Cpu::LSR, ADDR_ZERO_PAGE, 5},				// $46
+        {"SRE", &Cpu::SRE, ADDR_ZERO_PAGE, 5},				// $47
+        {"PHA", &Cpu::PHA, ADDR_IMPLICIT, 3},				// $48
+        {"EOR", &Cpu::EOR, ADDR_IMMEDIATE, 0},				// $49
+        {"LSR", &Cpu::LSR, ADDR_IMPLICIT, 2},				// $4A
+        {"ALR", &Cpu::ALR, ADDR_IMMEDIATE, 0},				// $4B
+        {"JMP", &Cpu::JMP, ADDR_ABSOLUTE, 3},				// $4C
+        {"EOR", &Cpu::EOR, ADDR_ABSOLUTE, 0},				// $4D
+        {"LSR", &Cpu::LSR, ADDR_ABSOLUTE, 6},				// $4E
+        {"SRE", &Cpu::SRE, ADDR_ABSOLUTE, 6},				// $4F
+        {"BVC", &Cpu::BVC, ADDR_RELATIVE, 0},				// $50
+        {"EOR", &Cpu::EOR, ADDR_INDEXED_INDIRECT_Y, 0},		// $51
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $52
+        {"SRE", &Cpu::SRE, ADDR_INDEXED_INDIRECT_Y, 8},		// $53
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $54
+        {"EOR", &Cpu::EOR, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $55
+        {"LSR", &Cpu::LSR, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $56
+        {"SRE", &Cpu::SRE, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $57
+        {"CLI", &Cpu::CLI, ADDR_IMPLICIT, 0},				// $58
+        {"EOR", &Cpu::EOR, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $59
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $5A
+        {"SRE", &Cpu::SRE, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $5B
+        {"NOP", &Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $5C
+        {"EOR", &Cpu::EOR, ADDR_ABSOLUTE_INDEXED_X, 0},		// $5D
+        {"LSR", &Cpu::LSR, ADDR_ABSOLUTE_INDEXED_X, 7},		// $5E
+        {"SRE", &Cpu::SRE, ADDR_ABSOLUTE_INDEXED_X, 7},		// $5F
+        {"RTS", &Cpu::RTS, ADDR_IMPLICIT, 6},				// $60
+        {"ADC", &Cpu::ADC, ADDR_INDEXED_INDIRECT_X, 0},		// $61
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $62
+        {"RRA", &Cpu::RRA, ADDR_INDEXED_INDIRECT_X, 8},		// $63
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE, 0},				// $64
+        {"ADC", &Cpu::ADC, ADDR_ZERO_PAGE, 0},				// $65
+        {"ROR", &Cpu::ROR, ADDR_ZERO_PAGE, 5},				// $66
+        {"RRA", &Cpu::RRA, ADDR_ZERO_PAGE, 5},				// $67
+        {"PLA", &Cpu::PLA, ADDR_IMPLICIT, 4},				// $68
+        {"ADC", &Cpu::ADC, ADDR_IMMEDIATE, 0},				// $69
+        {"ROR", &Cpu::ROR, ADDR_IMPLICIT, 2},				// $6A
+        {"ARR", &Cpu::ARR, ADDR_IMMEDIATE, 0},				// $6B
+        {"JMP", &Cpu::JMP, ADDR_INDIRECT, 5},				// $6C
+        {"ADC", &Cpu::ADC, ADDR_ABSOLUTE, 0},				// $6D
+        {"ROR", &Cpu::ROR, ADDR_ABSOLUTE, 6},				// $6E
+        {"RRA", &Cpu::RRA, ADDR_ABSOLUTE, 6},				// $6F
+        {"BVS", &Cpu::BVS, ADDR_RELATIVE, 0},				// $70
+        {"ADC", &Cpu::ADC, ADDR_INDEXED_INDIRECT_Y, 0},		// $71
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $72
+        {"RRA", &Cpu::RRA, ADDR_INDEXED_INDIRECT_Y, 8},		// $73
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $74
+        {"ADC", &Cpu::ADC, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $75
+        {"ROR", &Cpu::ROR, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $76
+        {"RRA", &Cpu::RRA, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $77
+        {"SEI", &Cpu::SEI, ADDR_IMPLICIT, 0},				// $78
+        {"ADC", &Cpu::ADC, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $79
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $7A
+        {"RRA", &Cpu::RRA, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $7B
+        {"NOP", &Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $7C
+        {"ADC", &Cpu::ADC, ADDR_ABSOLUTE_INDEXED_X, 0},		// $7D
+        {"ROR", &Cpu::ROR, ADDR_ABSOLUTE_INDEXED_X, 7},		// $7E
+        {"RRA", &Cpu::RRA, ADDR_ABSOLUTE_INDEXED_X, 7},		// $7F
+        {"NOP", &Cpu::NOP, ADDR_IMMEDIATE, 0},				// $80
+        {"STA", &Cpu::STA, ADDR_INDEXED_INDIRECT_X, 6},		// $81
+        {"NOP", &Cpu::NOP, ADDR_IMMEDIATE, 0},				// $82
+        {"SAX", &Cpu::SAX, ADDR_INDEXED_INDIRECT_X, 0},		// $83
+        {"STY", &Cpu::STY, ADDR_ZERO_PAGE, 0},				// $84
+        {"STA", &Cpu::STA, ADDR_ZERO_PAGE, 0},				// $85
+        {"STX", &Cpu::STX, ADDR_ZERO_PAGE, 0},				// $86
+        {"SAX", &Cpu::SAX, ADDR_ZERO_PAGE, 0},				// $87
+        {"DEY", &Cpu::DEY, ADDR_IMPLICIT, 0},				// $88
+        {"NOP", &Cpu::NOP, ADDR_IMMEDIATE, 0},				// $89
+        {"TXA", &Cpu::TXA, ADDR_IMPLICIT, 0},				// $8A
+        {"XAA", &Cpu::XAA, ADDR_IMMEDIATE, 0},				// $8B
+        {"STY", &Cpu::STY, ADDR_ABSOLUTE, 0},				// $8C
+        {"STA", &Cpu::STA, ADDR_ABSOLUTE, 0},				// $8D
+        {"STX", &Cpu::STX, ADDR_ABSOLUTE, 0},				// $8E
+        {"SAX", &Cpu::SAX, ADDR_ABSOLUTE, 0},				// $8F
+        {"BCC", &Cpu::BCC, ADDR_RELATIVE, 0},				// $90
+        {"STA", &Cpu::STA, ADDR_INDEXED_INDIRECT_Y, 6},		// $91
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $92
+        {"AHX", &Cpu::AHX, ADDR_INDEXED_INDIRECT_Y, 0},		// $93
+        {"STY", &Cpu::STY, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $94
+        {"STA", &Cpu::STA, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $95
+        {"STX", &Cpu::STX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $96
+        {"SAX", &Cpu::SAX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $97
+        {"TYA", &Cpu::TYA, ADDR_IMPLICIT, 0},				// $98
+        {"STA", &Cpu::STA, ADDR_ABSOLUTE_INDEXED_Y, 5},		// $99
+        {"TXS", &Cpu::TXS, ADDR_IMPLICIT, 0},				// $9A
+        {"TAS", &Cpu::TAS, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9B
+        {"SHY", &Cpu::SHY, ADDR_ABSOLUTE_INDEXED_X, 0},		// $9C
+        {"STA", &Cpu::STA, ADDR_ABSOLUTE_INDEXED_X, 5},		// $9D
+        {"SHX", &Cpu::SHX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9E
+        {"AHX", &Cpu::AHX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9F
+        {"LDY", &Cpu::LDY, ADDR_IMMEDIATE, 0},				// $A0
+        {"LDA", &Cpu::LDA, ADDR_INDEXED_INDIRECT_X, 0},		// $A1
+        {"LDX", &Cpu::LDX, ADDR_IMMEDIATE, 0},				// $A2
+        {"LAX", &Cpu::LAX, ADDR_INDEXED_INDIRECT_X, 0},		// $A3
+        {"LDY", &Cpu::LDY, ADDR_ZERO_PAGE, 0},				// $A4
+        {"LDA", &Cpu::LDA, ADDR_ZERO_PAGE, 0},				// $A5
+        {"LDX", &Cpu::LDX, ADDR_ZERO_PAGE, 0},				// $A6
+        {"LAX", &Cpu::LAX, ADDR_ZERO_PAGE, 0},				// $A7
+        {"TAY", &Cpu::TAY, ADDR_IMPLICIT, 0},				// $A8
+        {"LDA", &Cpu::LDA, ADDR_IMMEDIATE, 0},				// $A9
+        {"TAX", &Cpu::TAX, ADDR_IMPLICIT, 0},				// $AA
+        {"LAX", &Cpu::LAX, ADDR_IMMEDIATE, 0},				// $AB
+        {"LDY", &Cpu::LDY, ADDR_ABSOLUTE, 0},				// $AC
+        {"LDA", &Cpu::LDA, ADDR_ABSOLUTE, 0},				// $AD
+        {"LDX", &Cpu::LDX, ADDR_ABSOLUTE, 0},				// $AE
+        {"LAX", &Cpu::LAX, ADDR_ABSOLUTE, 0},				// $AF
+        {"BCS", &Cpu::BCS, ADDR_RELATIVE, 0},				// $B0
+        {"LDA", &Cpu::LDA, ADDR_INDEXED_INDIRECT_Y, 0},		// $B1
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $B2
+        {"LAX", &Cpu::LAX, ADDR_INDEXED_INDIRECT_Y, 0},		// $B3
+        {"LDY", &Cpu::LDY, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $B4
+        {"LDA", &Cpu::LDA, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $B5
+        {"LDX", &Cpu::LDX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $B6
+        {"LAX", &Cpu::LAX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $B7
+        {"CLV", &Cpu::CLV, ADDR_IMPLICIT, 0},				// $B8
+        {"LDA", &Cpu::LDA, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $B9
+        {"TSX", &Cpu::TSX, ADDR_IMPLICIT, 0},				// $BA
+        {"LAS", &Cpu::LAS, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $BB
+        {"LDY", &Cpu::LDY, ADDR_ABSOLUTE_INDEXED_X, 0},		// $BC
+        {"LDA", &Cpu::LDA, ADDR_ABSOLUTE_INDEXED_X, 0},		// $BD
+        {"LDX", &Cpu::LDX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $BE
+        {"LAX", &Cpu::LAX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $BF
+        {"CPY", &Cpu::CPY, ADDR_IMMEDIATE, 0},				// $C0
+        {"CMP", &Cpu::CMP, ADDR_INDEXED_INDIRECT_X, 0},		// $C1
+        {"NOP", &Cpu::NOP, ADDR_IMMEDIATE, 0},				// $C2
+        {"DCP", &Cpu::DCP, ADDR_INDEXED_INDIRECT_X, 8},		// $C3
+        {"CPY", &Cpu::CPY, ADDR_ZERO_PAGE, 0},				// $C4
+        {"CMP", &Cpu::CMP, ADDR_ZERO_PAGE, 0},				// $C5
+        {"DEC", &Cpu::DEC, ADDR_ZERO_PAGE, 5},				// $C6
+        {"DCP", &Cpu::DCP, ADDR_ZERO_PAGE, 5},				// $C7
+        {"INY", &Cpu::INY, ADDR_IMPLICIT, 0},				// $C8
+        {"CMP", &Cpu::CMP, ADDR_IMMEDIATE, 0},				// $C9
+        {"DEX", &Cpu::DEX, ADDR_IMPLICIT, 0},				// $CA
+        {"AXS", &Cpu::AXS, ADDR_IMMEDIATE, 0},				// $CB
+        {"CPY", &Cpu::CPY, ADDR_ABSOLUTE, 0},				// $CC
+        {"CMP", &Cpu::CMP, ADDR_ABSOLUTE, 0},				// $CD
+        {"DEC", &Cpu::DEC, ADDR_ABSOLUTE, 6},				// $CE
+        {"DCP", &Cpu::DCP, ADDR_ABSOLUTE, 6},				// $CF
+        {"BNE", &Cpu::BNE, ADDR_RELATIVE, 0},				// $D0
+        {"CMP", &Cpu::CMP, ADDR_INDEXED_INDIRECT_Y, 0},		// $D1
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $D2
+        {"DCP", &Cpu::DCP, ADDR_INDEXED_INDIRECT_Y, 8},		// $D3
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $D4
+        {"CMP", &Cpu::CMP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $D5
+        {"DEC", &Cpu::DEC, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $D6
+        {"DCP", &Cpu::DCP, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $D7
+        {"CLD", &Cpu::CLD, ADDR_IMPLICIT, 0},				// $D8
+        {"CMP", &Cpu::CMP, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $D9
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $DA
+        {"DCP", &Cpu::DCP, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $DB
+        {"NOP", &Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $DC
+        {"CMP", &Cpu::CMP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $DD
+        {"DEC", &Cpu::DEC, ADDR_ABSOLUTE_INDEXED_X, 7},		// $DE
+        {"DCP", &Cpu::DCP, ADDR_ABSOLUTE_INDEXED_X, 7},		// $DF
+        {"CPX", &Cpu::CPX, ADDR_IMMEDIATE, 0},				// $E0
+        {"SBC", &Cpu::SBC, ADDR_INDEXED_INDIRECT_X, 0},		// $E1
+        {"NOP", &Cpu::NOP, ADDR_IMMEDIATE, 0},				// $E2
+        {"ISC", &Cpu::ISC, ADDR_INDEXED_INDIRECT_X, 8},		// $E3
+        {"CPX", &Cpu::CPX, ADDR_ZERO_PAGE, 0},				// $E4
+        {"SBC", &Cpu::SBC, ADDR_ZERO_PAGE, 0},				// $E5
+        {"INC", &Cpu::INC, ADDR_ZERO_PAGE, 5},				// $E6
+        {"ISC", &Cpu::ISC, ADDR_ZERO_PAGE, 5},				// $E7
+        {"INX", &Cpu::INX, ADDR_IMPLICIT, 0},				// $E8
+        {"SBC", &Cpu::SBC, ADDR_IMMEDIATE, 0},				// $E9
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $EA
+        {"SBC", &Cpu::SBC, ADDR_IMMEDIATE, 0},				// $EB
+        {"CPX", &Cpu::CPX, ADDR_ABSOLUTE, 0},				// $EC
+        {"SBC", &Cpu::SBC, ADDR_ABSOLUTE, 0},				// $ED
+        {"INC", &Cpu::INC, ADDR_ABSOLUTE, 6},				// $EE
+        {"ISC", &Cpu::ISC, ADDR_ABSOLUTE, 6},				// $EF
+        {"BEQ", &Cpu::BEQ, ADDR_RELATIVE, 0},				// $F0
+        {"SBC", &Cpu::SBC, ADDR_INDEXED_INDIRECT_Y, 0},		// $F1
+        {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $F2
+        {"ISC", &Cpu::ISC, ADDR_INDEXED_INDIRECT_Y, 8},		// $F3
+        {"NOP", &Cpu::NOP, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $F4
+        {"SBC", &Cpu::SBC, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $F5
+        {"INC", &Cpu::INC, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $F6
+        {"ISC", &Cpu::ISC, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $F7
+        {"SED", &Cpu::SED, ADDR_IMPLICIT, 0},				// $F8
+        {"SBC", &Cpu::SBC, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $F9
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $FA
+        {"ISC", &Cpu::ISC, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $FB
+        {"NOP", &Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $FC
+        {"SBC", &Cpu::SBC, ADDR_ABSOLUTE_INDEXED_X, 0},		// $FD
+        {"INC", &Cpu::INC, ADDR_ABSOLUTE_INDEXED_X, 7},		// $FE
+        {"ISC", &Cpu::ISC, ADDR_ABSOLUTE_INDEXED_X, 7}		// $FF
     };
 };
 
