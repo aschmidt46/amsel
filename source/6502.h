@@ -153,7 +153,7 @@ class Cpu{
     // Disassembly
     std::string getPrevNInstructions(int n);
     std::string getNextNInstructions(int n);
-    std::pair<std::string, int> formatInstruction(AddressMode m, const std::vector<uint8_t> &operands, uint16_t pc);
+    std::pair<std::string, int> formatInstruction(AddressMode m, uint8_t op1, uint8_t op2, uint16_t pc);
 
     // Instruktionen
     uint8_t ADC(uint8_t* mem);

@@ -52,6 +52,12 @@ std::string hex(uintptr_t input){
     return str;
 }
 
+std::string hexNorm(std::string s){
+    while(s.size() < 4)
+        s = "0"+s;
+    return s;
+}
+
 std::string Cpu::getNextNInstructions(int n)
 {
     uint16_t pc = PC;
@@ -63,16 +69,14 @@ std::string Cpu::getNextNInstructions(int n)
         uint8_t op2 = read((uint8_t*)(uintptr_t)pc+2);
         const opcode_info &info = opcodes[opcode];
 
-        auto address = formatInstruction(info.mode, {op1,op2}, pc);
-        std::string line = "$"+hex(pc)+":\t"+info.name+"\t" + address.first;
+        const std::pair<std::string, int> &address = formatInstruction(info.mode, op1, op2, pc);
+        res+="$"+hexNorm(hex(pc))+":\t"+info.name+"\t" + address.first+"\n";
         pc += address.second;
-
-        res+=line+"\n";
     }
     return res;
 }
 
-std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, const std::vector<uint8_t> &operands, uint16_t pc)
+std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, uint8_t op1, uint8_t op2, uint16_t pc)
 {
     switch(m){
         case ADDR_IMPLICIT:{
@@ -82,44 +86,44 @@ std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, const std::vec
             return {"A",1};
             break;}
         case ADDR_IMMEDIATE:{
-            return {"#$"+hex(operands[0]),2};
+            return {"#$"+hex(op1),2};
             break;}
         case ADDR_ZERO_PAGE:{
-            return {"$"+hex(operands[0]),2};
+            return {"$"+hex(op1),2};
             break;}
         case ADDR_ABSOLUTE:{
-            uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
+            uint16_t addr = (uint16_t)op1 | ((uint16_t)op2 << 8);
             return {"$"+hex(addr),3};
             break;}
         case ADDR_RELATIVE:{
             int8_t rel;
-            std::memcpy(&rel, &operands[0], sizeof(rel));
+            std::memcpy(&rel, &op1, sizeof(rel));
             uint16_t loc = pc + rel;
             return {"$"+hex(loc),2};
             break;}
         case ADDR_INDIRECT:{
-            uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
+            uint16_t addr = (uint16_t)op1 | ((uint16_t)op2 << 8);
             return {"($"+hex(addr)+")",3};
             break;}
         case ADDR_ZERO_PAGE_INDEXED_X:{
-            return {"$"+hex(operands[0])+",X",2};
+            return {"$"+hex(op1)+",X",2};
             break;}
         case ADDR_ZERO_PAGE_INDEXED_Y:{
-            return {"$"+hex(operands[0])+",Y",2};
+            return {"$"+hex(op1)+",Y",2};
             break;}
         case ADDR_ABSOLUTE_INDEXED_X:{
-            uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
+            uint16_t addr = (uint16_t)op1| ((uint16_t)op2 << 8);
             return {"$"+hex(addr)+",X",3};
             break;}
         case ADDR_ABSOLUTE_INDEXED_Y:{
-            uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
+            uint16_t addr = (uint16_t)op1 | ((uint16_t)op2 << 8);
             return {"$"+hex(addr)+",Y",3};
             break;}
         case ADDR_INDEXED_INDIRECT_X:{
-            return {"($"+hex(operands[0])+",X)",2};
+            return {"($"+hex(op1)+",X)",2};
             break;}
         case ADDR_INDEXED_INDIRECT_Y:{
-            return {"($"+hex(operands[0])+"),Y",2};
+            return {"($"+hex(op2)+"),Y",2};
             break;}
         default:{
             return {"",1};}
@@ -238,7 +242,7 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
 uint8_t Cpu::executeNextInstruction()
 {
     uint8_t opcode = read((uint8_t*) (intptr_t) PC);
-    opcode_info info = opcodes[opcode];
+    const opcode_info &info = opcodes[opcode];
     // std::cout << "FFFA (NMI): " << hex(read((uint8_t*)(uintptr_t)0xFFFA)) << std::endl;
     // std::cout << "FFFB (?): " << hex(read((uint8_t*)(uintptr_t)0xFFFB)) << std::endl;
     // std::cout << "FFFC (RESET): " << hex(read((uint8_t*)(uintptr_t)0xFFFC)) << std::endl;
@@ -275,13 +279,14 @@ uint8_t Cpu::executeNextInstruction()
 
 bool Cpu::clockCPU()
 {
+    bool res = false;
     if(remainingCycles<=0){
         remainingCycles += pollInterrupts();
         remainingCycles += executeNextInstruction();
-        return true;
+        res = true;
     }
     remainingCycles--;
-    return false;
+    return res;
 }
 
 // Logik prüfen

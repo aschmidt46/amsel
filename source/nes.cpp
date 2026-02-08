@@ -81,6 +81,10 @@ bool NES::clock()
     if(ejectNextClock) eject();
     if(resetNextClock) reset();
     if(!loaded) return false;
+    
+    //Debug
+    if(halt && allowedClocks==0) return false;
+
     ppu->clock();
     numClocks++;
     if(numClocks%3==0){
@@ -91,8 +95,10 @@ bool NES::clock()
 
         // Debug
         if(cpuAdvanced && produceDisassembly){
+            if(halt && allowedClocks > 0)
+                allowedClocks--;
             std::lock_guard<std::mutex> lock(debugM);
-            ASM = cpu->getNextNInstructions(10);
+            ASM = cpu->getNextNInstructions(assemblyLines);
         }
     }
     if(ppu->frameReady){

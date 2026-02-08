@@ -54,6 +54,9 @@ class NES{
 
     // Debugging
     bool produceDisassembly = false;
+    int assemblyLines = 10;
+    bool halt = false;
+    int allowedClocks = 0;
     std::string getCurrentDisassembly();
 
     private:
