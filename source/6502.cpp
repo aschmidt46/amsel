@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <string>
+#include <cstring>
 
 void Cpu::RESET()
 {
@@ -74,54 +75,54 @@ std::string Cpu::getNextNInstructions(int n)
 std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, const std::vector<uint8_t> &operands, uint16_t pc)
 {
     switch(m){
-        case ADDR_IMPLICIT:
+        case ADDR_IMPLICIT:{
             return {"",1};
-            break;
-        case ADDR_ACCUMULATOR:
+            break;}
+        case ADDR_ACCUMULATOR:{
             return {"A",1};
-            break;
-        case ADDR_IMMEDIATE:
+            break;}
+        case ADDR_IMMEDIATE:{
             return {"#$"+hex(operands[0]),2};
-            break;
-        case ADDR_ZERO_PAGE:
+            break;}
+        case ADDR_ZERO_PAGE:{
             return {"$"+hex(operands[0]),2};
-            break;
-        case ADDR_ABSOLUTE:
+            break;}
+        case ADDR_ABSOLUTE:{
             uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
             return {"$"+hex(addr),3};
-            break;
-        case ADDR_RELATIVE:
+            break;}
+        case ADDR_RELATIVE:{
             int8_t rel;
             std::memcpy(&rel, &operands[0], sizeof(rel));
             uint16_t loc = pc + rel;
             return {"$"+hex(loc),2};
-            break;
-        case ADDR_INDIRECT:
+            break;}
+        case ADDR_INDIRECT:{
             uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
             return {"($"+hex(addr)+")",3};
-            break;
-        case ADDR_ZERO_PAGE_INDEXED_X:
+            break;}
+        case ADDR_ZERO_PAGE_INDEXED_X:{
             return {"$"+hex(operands[0])+",X",2};
-            break;
-        case ADDR_ZERO_PAGE_INDEXED_Y:
+            break;}
+        case ADDR_ZERO_PAGE_INDEXED_Y:{
             return {"$"+hex(operands[0])+",Y",2};
-            break;
-        case ADDR_ABSOLUTE_INDEXED_X:
+            break;}
+        case ADDR_ABSOLUTE_INDEXED_X:{
             uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
             return {"$"+hex(addr)+",X",3};
-            break;
-        case ADDR_ABSOLUTE_INDEXED_Y:
+            break;}
+        case ADDR_ABSOLUTE_INDEXED_Y:{
             uint16_t addr = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
             return {"$"+hex(addr)+",Y",3};
-            break;
-        case ADDR_INDEXED_INDIRECT_X:
+            break;}
+        case ADDR_INDEXED_INDIRECT_X:{
             return {"($"+hex(operands[0])+",X)",2};
-            break;
-        case ADDR_INDEXED_INDIRECT_Y:
+            break;}
+        case ADDR_INDEXED_INDIRECT_Y:{
             return {"($"+hex(operands[0])+"),Y",2};
-            break;
-        default:
-            return {"",1};
+            break;}
+        default:{
+            return {"",1};}
     }
 }
 
@@ -237,7 +238,7 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
 uint8_t Cpu::executeNextInstruction()
 {
     uint8_t opcode = read((uint8_t*) (intptr_t) PC);
-    const opcode_info &info = opcodes[opcode];
+    opcode_info info = opcodes[opcode];
     // std::cout << "FFFA (NMI): " << hex(read((uint8_t*)(uintptr_t)0xFFFA)) << std::endl;
     // std::cout << "FFFB (?): " << hex(read((uint8_t*)(uintptr_t)0xFFFB)) << std::endl;
     // std::cout << "FFFC (RESET): " << hex(read((uint8_t*)(uintptr_t)0xFFFC)) << std::endl;
@@ -272,13 +273,15 @@ uint8_t Cpu::executeNextInstruction()
     return cycles;
 }
 
-void Cpu::clockCPU()
+bool Cpu::clockCPU()
 {
     if(remainingCycles<=0){
         remainingCycles += pollInterrupts();
         remainingCycles += executeNextInstruction();
+        return true;
     }
     remainingCycles--;
+    return false;
 }
 
 // Logik prüfen

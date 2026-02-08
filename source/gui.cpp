@@ -18,10 +18,17 @@ std::optional<std::string> openFile(){
 
 void Gui::render()
 {
-    if(show){
+    if(state->show){
       ImGui_ImplOpenGL3_NewFrame();
       ImGui_ImplGlfw_NewFrame();
       ImGui::NewFrame();
+
+      if(state->showDebugger){
+        ImGui::Begin("Disassembly");
+          ImGui::Text(console->getCurrentDisassembly().c_str());
+        ImGui::End();
+      }
+
       ImGui::BeginMainMenuBar();
 
       if (ImGui::BeginMenu("Datei"))
@@ -53,6 +60,13 @@ void Gui::render()
           float volume = console->volume;
           if(ImGui::SliderFloat("Lautstärke", &volume, 0, 1)){
             console->volume = volume;
+          }
+          ImGui::EndMenu();
+        }
+        if(ImGui::BeginMenu("Debug")){
+          bool s = state->showDebugger;
+          if(ImGui::Checkbox("Disassembler", &s)){
+            toggleDebugger();
           }
           ImGui::EndMenu();
         }

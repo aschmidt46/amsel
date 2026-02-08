@@ -132,8 +132,9 @@ auto main() -> int
   screen = new Screen();
   controller1 = new Controller();
   console = new NES(screen, controller1);
+  SharedState* state = new SharedState();
   AudioSystem audiosystem(console);
-  Gui gui(console);
+  Gui gui(console, state);
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   // input implementieren
@@ -152,6 +153,7 @@ auto main() -> int
 
 
   std::thread t(&AudioSystem::start, &audiosystem);
+  ImGuiIO& io = ImGui::GetIO();
 
 
   while(!glfwWindowShouldClose(window)){
@@ -160,7 +162,16 @@ auto main() -> int
       screen->present();
       gui.render();
       glfwSwapBuffers(window);
-    } while (!console->frameReady);
+      
+      // Zusätzliche Viewports
+      if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+      {
+          ImGui::UpdatePlatformWindows();
+          ImGui::RenderPlatformWindowsDefault();
+          // TODO for OpenGL: restore current GL context.
+          glfwMakeContextCurrent(window);
+      }
+    } while (!console->frameReady && !glfwWindowShouldClose(window));
     {
       std::lock_guard<std::mutex> lock(cvm);
       console->frameReady = false;

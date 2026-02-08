@@ -84,10 +84,16 @@ bool NES::clock()
     ppu->clock();
     numClocks++;
     if(numClocks%3==0){
-        cpu->clockCPU();
+        bool cpuAdvanced = cpu->clockCPU();
         apu->clock();
         controller->clock();
         numClocks = 0;
+
+        // Debug
+        if(cpuAdvanced && produceDisassembly){
+            std::lock_guard<std::mutex> lock(debugM);
+            ASM = cpu->getNextNInstructions(10);
+        }
     }
     if(ppu->frameReady){
         frameReady = true;
@@ -102,4 +108,10 @@ bool NES::clock()
     }
 
     return audioSampleReady;
+}
+
+std::string NES::getCurrentDisassembly()
+{
+    std::lock_guard<std::mutex> lock(debugM);
+    return ASM;
 }

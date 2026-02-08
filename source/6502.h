@@ -138,7 +138,7 @@ class Cpu{
     bool getStatus(Statusbit s);
     uint8_t* getMemoryAddress(AddressMode mode, uint8_t &cycles);
     uint8_t executeNextInstruction(); //Gibt verstrichene Zyklen zurück
-    void clockCPU();
+    bool clockCPU(); // Wurde in diesem Zyklus eine Instruktion ausgeführt?
     uint8_t pollInterrupts();
     
     // suspend

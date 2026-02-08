@@ -50,4 +50,13 @@ class NES{
     void nextFrame();
     bool clock();
     int numClocks = 0;
+
+
+    // Debugging
+    bool produceDisassembly = false;
+    std::string getCurrentDisassembly();
+
+    private:
+    std::string ASM = "";
+    std::mutex debugM;
 };
