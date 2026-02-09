@@ -393,10 +393,11 @@ uint8_t Cpu::pullStack()
 
 uint8_t Cpu::ADC(uint8_t *mem)
 {
-    uint16_t result = A + read(mem) + (uint8_t)getStatus(STATUS_CARRY);
+    auto r = read(mem);
+    uint16_t result = A + r + (uint8_t)getStatus(STATUS_CARRY);
     setStatus(STATUS_CARRY, result > 0xFF);
     setStatus(STATUS_ZERO, (uint8_t)result == 0); // Nur bits in A testen! deshalb cast
-    setStatus(STATUS_OVERFLOW, ((uint8_t)result ^ A) & ((uint8_t)result ^ read(mem)) & 0x80);
+    setStatus(STATUS_OVERFLOW, ((uint8_t)result ^ A) & ((uint8_t)result ^ r) & 0x80);
     setStatus(STATUS_NEGATIVE, (uint8_t)result & 0b10000000);
     A = (uint8_t)result;
     return 0;
@@ -463,10 +464,12 @@ uint8_t Cpu::BEQ(uint8_t *mem)
 
 uint8_t Cpu::BIT(uint8_t *mem)
 {
-    uint8_t result = A & read(mem);
+    // Nur ein READ!!!
+    auto r = read(mem);
+    uint8_t result = A & r;
     setStatus(STATUS_ZERO, result==0);
-    setStatus(STATUS_OVERFLOW, read(mem) & 0b01000000);
-    setStatus(STATUS_NEGATIVE, read(mem) & 0b10000000);
+    setStatus(STATUS_OVERFLOW, r & 0b01000000);
+    setStatus(STATUS_NEGATIVE, r & 0b10000000);
     return 0;
 }
 
@@ -576,27 +579,30 @@ uint8_t Cpu::CLV(uint8_t *mem)
 
 uint8_t Cpu::CMP(uint8_t *mem)
 {
-    uint8_t result = A - read(mem);
-    setStatus(STATUS_CARRY, A >= read(mem));
-    setStatus(STATUS_ZERO, A == read(mem));
+    auto r = read(mem);
+    uint8_t result = A - r;
+    setStatus(STATUS_CARRY, A >= r);
+    setStatus(STATUS_ZERO, A == r);
     setStatus(STATUS_NEGATIVE, result & 0b10000000);
     return 0;
 }
 
 uint8_t Cpu::CPX(uint8_t *mem)
 {
-    uint8_t result = X - read(mem);
-    setStatus(STATUS_CARRY, X >= read(mem));
-    setStatus(STATUS_ZERO, X == read(mem));
+    auto r = read(mem);
+    uint8_t result = X - r;
+    setStatus(STATUS_CARRY, X >= r);
+    setStatus(STATUS_ZERO, X == r);
     setStatus(STATUS_NEGATIVE, result & 0b10000000);
     return 0;
 }
 
 uint8_t Cpu::CPY(uint8_t *mem)
 {
-    uint8_t result = Y - read(mem);
-    setStatus(STATUS_CARRY, Y >= read(mem));
-    setStatus(STATUS_ZERO, Y == read(mem));
+    auto r = read(mem);
+    uint8_t result = Y - r;
+    setStatus(STATUS_CARRY, Y >= r);
+    setStatus(STATUS_ZERO, Y == r);
     setStatus(STATUS_NEGATIVE, result & 0b10000000);
     return 0;
 }

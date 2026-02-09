@@ -13,7 +13,8 @@ void DeltaModulationChannel::clock(Apu* apu)
 
     if(!sampleBuffer && dmaReader.bytesRemain > 0){
         sampleBuffer = apu->mapper->read((uint8_t*)(uintptr_t)dmaReader.addressCounter);
-        apu->mapper->cpu->waitFor(4);
+        // Probleme bei AccuracyCoin -> Sehr große remainingCycles -> CPU arbeitet garnicht mehr
+        //apu->mapper->cpu->waitFor(4);
         if(dmaReader.addressCounter==0xFFFF)
             dmaReader.addressCounter = 0x8000;
         else dmaReader.addressCounter++;
