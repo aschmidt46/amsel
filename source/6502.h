@@ -150,10 +150,14 @@ class Cpu{
     void pushStack(uint8_t value);
     uint8_t pullStack();
 
-    // Disassembly
-    std::string getPrevNInstructions(int n);
-    std::string getNextNInstructions(int n);
+    // Debugger
+    std::pair<std::string, std::vector<int>> getPrev10Instructions(); // Zeilen mit Opcode + Operanden-Länge
+    std::pair<std::string, std::vector<int>> getNextNInstructions(int n);
+    void incrementCircular();
     std::pair<std::string, int> formatInstruction(AddressMode m, uint8_t op1, uint8_t op2, uint16_t pc);
+    std::vector<int> circular{std::vector<int>(10,-1)};
+    unsigned int circularIndex = 0;
+    
 
     // Instruktionen
     uint8_t ADC(uint8_t* mem);

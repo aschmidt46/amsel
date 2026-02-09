@@ -23,8 +23,8 @@ class Gui{
     uint8_t lastReadLow = 0;
     uint8_t lastReadHigh = 0;
     char memInputBuf[255];
-
-    std::vector<std::pair<std::string, ASMtype>> oASM;
+    char bpInputBuf[255];
+    std::vector<uint16_t> breakpoints;
 
     void toggleDebugger(){
         if(!state->showDebugger){
@@ -57,11 +57,13 @@ class Gui{
         this->state = state;
         for(int i = 0; i < 255; i++){
             memInputBuf[i] = 0;
+            bpInputBuf[i] = 0;
         }
     };
     void render();
     void assemblyRender();
     void drawRegisters();
     void drawMemoryReader();
+    void drawBreakpoints();
     void drawDebugger();
 };

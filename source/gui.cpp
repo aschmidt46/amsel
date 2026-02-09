@@ -35,110 +35,44 @@ std::optional<std::string> openFile(){
   return res[0];
 }
 
-std::vector<std::pair<std::string, ASMtype>> splitLines(const std::string &lines){
+std::vector<std::pair<std::string, ASMtype>> detectJumps(const std::pair<std::vector<std::pair<std::string, ASMtype>>, std::vector<int>> &lines){
+  std::vector<std::pair<std::string, ASMtype>> result;
+  
+  if(lines.first.size()==0) return result;
+
+  auto prevLine = lines.first[0];
+  auto prevLength = lines.second[0];
+  for(int i = 1; i < lines.first.size(); i++){
+    auto oldpc = stoi(prevLine.first.substr(1, 4), 0, 16);
+    auto newpc = stoi(lines.first[i].first.substr(1, 4), 0, 16);
+    if(oldpc + prevLength != newpc){
+      result.push_back({prevLine.first, ASM_JUMP});
+    }
+    else{
+      result.push_back(prevLine);
+    }
+
+    prevLine = lines.first[i];
+    prevLength = lines.second[i];
+  }
+
+  // Nicht benötigt, da die erste aktuelle Zeile hinten dran hängt
+  // result.push_back(prevLine);
+
+  return result;
+}
+
+std::vector<std::pair<std::string, ASMtype>> splitLines(const std::string &lines, bool old){
   std::stringstream f(lines);
   std::string line;
   std::vector<std::pair<std::string, ASMtype>> linesV;
   int i = 0;
   while(std::getline(f, line)){
-    ASMtype t = i==0 ? ASM_CURRENT : ASM_REGULAR;
+    ASMtype t = i==0 && !old ? ASM_CURRENT : ASM_REGULAR;
     linesV.push_back({line, t});
     i++;
   }
   return linesV;
-}
-
-// Program Counter
-bool fastCompare(const std::string &s1, const std::string &s2){
-  if(s1.size()<5 || s2.size()<5) return false;
-  bool equal = true;
-  for(int i = 0; i < 5; i++){
-    if(s1[i]!=s2[i])
-      equal = false;
-  }
-  return equal;
-}
-
-bool fastCompare(const std::vector<std::pair<std::string, ASMtype>> &v1, const std::vector<std::pair<std::string, ASMtype>> &v2){
-  if(v1.size()==v2.size()){
-    for(int i = 0; i < v1.size(); i++){
-      if(!fastCompare(v1[i].first, v2[i].first))
-        return false;
-    }
-  }
-  return false;
-}
-
-bool isContained(const std::vector<std::pair<std::string, ASMtype>> &v1, const std::vector<std::pair<std::string, ASMtype>> &v2){
-  // v1 in v2
-  if(v1.size()==0) return false; //?
-
-  if(v2.size()>= v1.size()){
-    for(int i = 0; i < v2.size(); i++){
-      if(fastCompare(v1[0].first, v2[i].first)){
-        if(v2.size()-i > v1.size()) return false;
-        if(i + v1.size() > v2.size()) return false;
-        bool success = true;
-        for(int j = 0; j < v1.size(); j++){
-          if(!fastCompare(v2[i+j].first, v1[j].first)){
-            success = false;
-            break;
-          }
-        }
-        if(success) return true;
-      }
-    }
-  }
-  return false;
-}
-
-std::vector<std::pair<std::string, ASMtype>> getPreceding(const std::vector<std::pair<std::string, ASMtype>> &nASM, const std::vector<std::pair<std::string, ASMtype>> &oASM){
-
-  if(nASM.size()==0) return std::vector<std::pair<std::string, ASMtype>>();
-
-  //Annahme: Sprung seit letztem Frame
-  ASMtype lastLineType = ASM_JUMP;
-  int index = -1;
-  for(int i = 0; i < oASM.size(); i++){
-    index++;
-    if(fastCompare(oASM[i].first, nASM[0].first)){
-      // Startzeile in altem ASM an Index gefunden (kein Sprung?)
-      index--;
-      // Letzte Zeile ist die vor Index
-      lastLineType = ASM_REGULAR;
-      break;
-    }
-  }
-
-  // Korrektur für Sprungzeile
-  if(lastLineType == ASM_JUMP){
-    for(int i = 0; i < oASM.size(); i++){
-      if(oASM[i].second == ASM_CURRENT){
-        index = i;
-        break;
-      }
-    }
-  }
-
-  std::vector<std::pair<std::string, ASMtype>> resLines;
-
-  for(int i = index-10; i <= index; i++){
-    if(i < 0)
-      continue;
-    if(i==index) resLines.push_back({oASM[i].first, lastLineType});
-    else{
-      if(oASM[i].second == ASM_CURRENT)
-        resLines.push_back({oASM[i].first, ASM_REGULAR});
-      else
-        resLines.push_back({oASM[i]});
-    }
-  }
-
-  for(const auto &e : nASM){
-    resLines.push_back(e);
-  }
-
-  return resLines;
 }
 
 void printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
@@ -160,16 +94,20 @@ void printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
 
 void Gui::assemblyRender()
 {
-  std::string nASM = console->getCurrentDisassembly();
-  auto lines = splitLines(nASM);
-  auto prev = getPreceding(lines, oASM);
-  bool wasIdentical = isContained(lines, oASM);
-  if(wasIdentical)
-    printASM(oASM);
-  else{
-    printASM(prev);
-    oASM = prev;
+  auto nASM = console->getCurrentDisassembly();
+  auto oASM = console->getOldDisassembly();
+  auto oldLines = splitLines(oASM.first, true);
+  auto newLines = splitLines(nASM.first, false);
+  assert(oASM.second.size() == oldLines.size());
+  auto oldLinesWithCurrent = oldLines;
+  auto oldLengthsWithCurrent = oASM.second;
+  if(newLines.size()>0 && nASM.second.size() > 0){
+    oldLinesWithCurrent.push_back(newLines[0]);
+    oldLengthsWithCurrent.push_back(nASM.second[0]);
   }
+  oldLines = detectJumps({oldLinesWithCurrent, oldLengthsWithCurrent});
+  printASM(oldLines);
+  printASM(newLines);
 }
 
 void Gui::drawRegisters()
@@ -190,7 +128,9 @@ void Gui::drawMemoryReader()
 {
   ImGui::Text("Adresse:");
   ImGui::SameLine();
+  ImGui::PushID(1);
   ImGui::InputText("", memInputBuf, 255);
+  ImGui::PopID();
   if(ImGui::Button("Lies 1 Byte")){
     std::string s(memInputBuf);
     removeCharsFromString(s, "x$");
@@ -218,9 +158,42 @@ void Gui::drawMemoryReader()
   ImGui::Text(("Bin: "+std::bitset<16>(getLastRead()).to_string()).c_str());
 }
 
+void Gui::drawBreakpoints()
+{
+  if(ImGui::Button("Hinzufügen:")){
+    std::string s(bpInputBuf);
+    removeCharsFromString(s, "x$");
+    if(s.size()>0){
+      uint16_t addr = std::stoi(s, 0, 16);
+      breakpoints = console->addBreakpoint(addr);
+    }
+  }
+  ImGui::SameLine();
+  ImGui::PushID(2);
+  ImGui::InputText("", bpInputBuf, 255);
+  ImGui::PopID();
+
+  ImGui::PushItemWidth(0);
+  if(ImGui::BeginListBox("")){
+    int i = 2;
+    for(const auto &bp : breakpoints){
+      i++;
+      ImGui::PushID(i);
+      ImGui::Text(("Break: $"+ghexNorm(ghex(bp), 4)).c_str());
+      ImGui::SameLine();
+      if(ImGui::Button("X")){
+        breakpoints = console->removeBreakpoint(bp);
+      }
+      ImGui::PopID();
+    }
+    ImGui::EndListBox();
+  }
+}
+
 void Gui::drawDebugger()
 {
-  ImGui::Begin("Disassembly");
+  state->halt = console->halt;
+  ImGui::Begin("Debugger", 0, ImGuiWindowFlags_NoCollapse);
     ImGui::BeginTable("Debugger", 2, ImGuiTableFlags_BordersInnerV);
       ImGui::TableNextColumn();
         assemblyRender();
@@ -239,6 +212,8 @@ void Gui::drawDebugger()
         drawRegisters();
         ImGui::SeparatorText("Speicher");
         drawMemoryReader();
+        ImGui::SeparatorText("Breakpoints");
+        drawBreakpoints();
     ImGui::EndTable();
   ImGui::End();
 }

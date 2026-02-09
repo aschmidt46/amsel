@@ -86,11 +86,18 @@ bool NES::clock()
     if(!loaded) return false;
     
     //Debug
+    if(watchBreakpoints && allowedClocks == 0){
+        if(std::find(breakpoints.begin(), breakpoints.end(), cpu->PC) != breakpoints.end()){
+            halt = true;
+        }
+    }
     if(halt && allowedClocks==0) return false;
 
     ppu->clock();
     numClocks++;
     if(numClocks%3==0){
+        if(produceDisassembly)
+            std::lock_guard<std::mutex> lock(debugM);
         bool cpuAdvanced = cpu->clockCPU();
         apu->clock();
         controller->clock();
@@ -98,10 +105,8 @@ bool NES::clock()
 
         // Debug
         if(cpuAdvanced && produceDisassembly){
-            if(halt && allowedClocks > 0)
+            if(allowedClocks > 0)
                 allowedClocks--;
-            std::lock_guard<std::mutex> lock(debugM);
-            ASM = cpu->getNextNInstructions(assemblyLines);
         }
     }
     if(ppu->frameReady){
@@ -119,8 +124,50 @@ bool NES::clock()
     return audioSampleReady;
 }
 
-std::string NES::getCurrentDisassembly()
+std::pair<std::string, std::vector<int>> NES::getCurrentDisassembly()
 {
     std::lock_guard<std::mutex> lock(debugM);
-    return ASM;
+    if(!loaded)
+        return {"", {}};
+    return cpu->getNextNInstructions(10);
+}
+
+std::pair<std::string, std::vector<int>> NES::getOldDisassembly()
+{
+    std::lock_guard<std::mutex> lock(debugM);
+    if(!loaded)
+        return {"", {}};
+    return cpu->getPrev10Instructions();
+}
+
+std::vector<uint16_t> NES::addBreakpoint(uint16_t bp)
+{
+    if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpoints){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpoints.push_back(bp);
+    }
+
+    return breakpoints;
+}
+
+std::vector<uint16_t> NES::removeBreakpoint(uint16_t bp)
+{
+    breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), 
+                       [&](uint16_t i) { return i == bp; }), breakpoints.end());
+
+
+    if(watchBreakpoints && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpoints;
 }

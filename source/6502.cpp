@@ -58,10 +58,47 @@ std::string hexNorm(std::string s){
     return s;
 }
 
-std::string Cpu::getNextNInstructions(int n)
+std::pair<std::string, std::vector<int>> Cpu::getPrev10Instructions()
+{
+    std::vector<uint16_t> pcList;
+    int it = circularIndex;
+    for(int i = 0; i < 10; i++){
+
+        int instruction = circular[it];
+
+        if(instruction >=0)
+            pcList.push_back(instruction);
+
+
+        if(it>=9){
+            it = 0;
+        }
+        else{
+            it++;
+        }
+    }
+
+    std::string res = "";
+    std::vector<int> length;
+    for(const auto &pc : pcList){
+        if(pc<0) continue;
+        uint8_t opcode = read((uint8_t*)(uintptr_t)pc);
+        uint8_t op1 = read((uint8_t*)(uintptr_t)pc+1);
+        uint8_t op2 = read((uint8_t*)(uintptr_t)pc+2);
+        const opcode_info &info = opcodes[opcode];
+
+        const std::pair<std::string, int> &address = formatInstruction(info.mode, op1, op2, pc);
+        res+="$"+hexNorm(hex(pc))+":\t"+info.name+"\t" + address.first+"\n";
+        length.push_back(address.second);
+    }
+    return {res, length};
+}
+
+std::pair<std::string, std::vector<int>> Cpu::getNextNInstructions(int n)
 {
     uint16_t pc = PC;
     std::string res = "";
+    std::vector<int> length;
 
     for(int i = 0; i < n; i++){
         uint8_t opcode = read((uint8_t*)(uintptr_t)pc);
@@ -71,9 +108,16 @@ std::string Cpu::getNextNInstructions(int n)
 
         const std::pair<std::string, int> &address = formatInstruction(info.mode, op1, op2, pc);
         res+="$"+hexNorm(hex(pc))+":\t"+info.name+"\t" + address.first+"\n";
+        length.push_back(address.second);
         pc += address.second;
     }
-    return res;
+    return {res, length};
+}
+
+void Cpu::incrementCircular()
+{
+    circularIndex += 1;
+    circularIndex %= 10;
 }
 
 std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, uint8_t op1, uint8_t op2, uint16_t pc)
@@ -281,6 +325,11 @@ bool Cpu::clockCPU()
 {
     bool res = false;
     if(remainingCycles<=0){
+
+        //Debugging
+        circular[circularIndex] = PC;
+        incrementCircular();
+
         remainingCycles += pollInterrupts();
         remainingCycles += executeNextInstruction();
         res = true;

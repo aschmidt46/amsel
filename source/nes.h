@@ -60,9 +60,14 @@ class NES{
     int assemblyLines = 10;
     bool halt = false;
     int allowedClocks = 0;
-    std::string getCurrentDisassembly();
+    std::pair<std::string, std::vector<int>> getCurrentDisassembly();
+    std::pair<std::string, std::vector<int>> getOldDisassembly();
+    std::vector<uint16_t> addBreakpoint(uint16_t bp);
+    std::vector<uint16_t> removeBreakpoint(uint16_t bp);
 
     private:
-    std::string ASM = "";
     std::mutex debugM;
+
+    bool watchBreakpoints = false;
+    std::vector<uint16_t> breakpoints;
 };
