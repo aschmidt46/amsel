@@ -265,8 +265,10 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
             uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
-            if(willCrossPage((uintptr_t)addr, (uintptr_t)X))
+            if(willCrossPage((uintptr_t)addr, (uintptr_t)X)){
                 cycles += 1;
+                // read((uint8_t*)(uintptr_t)addr); // dummy read
+            }
             uint16_t sum = addr + X; // Summe wegen 16-bit Überlauf, landet dann in der zero-page
             return (uint8_t*)((intptr_t)sum);}
         case ADDR_ABSOLUTE_INDEXED_Y:
@@ -275,8 +277,10 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
             uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
             cycles += 4;
             PC += 3;
-            if(willCrossPage((uintptr_t)addr, (uintptr_t)Y))
+            if(willCrossPage((uintptr_t)addr, (uintptr_t)Y)){
                 cycles += 1;
+                // read((uint8_t*)(uintptr_t)addr); // dummy read
+            }
             uint16_t sum = addr + Y;
             return (uint8_t*)((intptr_t)sum);}
     }
@@ -425,6 +429,7 @@ uint8_t Cpu::ASL(uint8_t *mem)
 
 uint8_t Cpu::BCC(uint8_t *mem)
 {
+    // Ist möglicherweise nicht die sicherste Art das zu machen
     int8_t offset = reinterpret_cast<intptr_t>(mem);
     uint8_t extraCycles = 0;
     if(!getStatus(STATUS_CARRY)){
@@ -926,8 +931,11 @@ uint8_t Cpu::SLO(uint8_t *mem)
 
 uint8_t Cpu::ANC(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
-    return 0;
+    A = A & read(mem);
+    setStatus(STATUS_ZERO, A == 0);
+    setStatus(STATUS_NEGATIVE, A & 0b10000000);
+    setStatus(STATUS_CARRY, A & 0b10000000);
+    return 2;
 }
 
 uint8_t Cpu::RLA(uint8_t *mem)
@@ -946,8 +954,13 @@ uint8_t Cpu::SRE(uint8_t *mem)
 
 uint8_t Cpu::ALR(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
-    return 0;
+    uint8_t val = A & read(mem);
+    A = val;
+    A >>= 1;
+    setStatus(STATUS_CARRY, val & 0b00000001);
+    setStatus(STATUS_ZERO, A == 0);
+    setStatus(STATUS_NEGATIVE, false);
+    return 2;
 }
 
 uint8_t Cpu::RRA(uint8_t *mem)
@@ -959,8 +972,29 @@ uint8_t Cpu::RRA(uint8_t *mem)
 
 uint8_t Cpu::ARR(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
-    return 0;
+    A = A & read(mem);
+    A = (A >> 1) | (getStatus(STATUS_CARRY) ? 0x80 : 0);
+    setStatus(STATUS_NEGATIVE, A & 0b10000000);
+    setStatus(STATUS_ZERO, A == 0);
+    switch((A & 0b01100000) >> 5){
+        case 3:
+            setStatus(STATUS_CARRY, true);
+            setStatus(STATUS_OVERFLOW, false);
+            break;
+        case 2:
+            setStatus(STATUS_OVERFLOW, true);
+            setStatus(STATUS_CARRY, true);
+            break;
+        case 1:
+            setStatus(STATUS_OVERFLOW, true);
+            setStatus(STATUS_CARRY, false);
+            break;
+        default:
+            setStatus(STATUS_OVERFLOW, false);
+            setStatus(STATUS_CARRY, false);
+            break;
+    }
+    return 2;
 }
 
 uint8_t Cpu::SAX(uint8_t *mem)
@@ -977,7 +1011,8 @@ uint8_t Cpu::XAA(uint8_t *mem)
 
 uint8_t Cpu::AHX(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    std::cout << "Instabile, Fehlerhafte Operation!"  << std::endl;
+    write(mem, (A & X) & ( 1 + (((uint16_t)(uintptr_t)mem) >> 8)));
     return 0;
 }
 
@@ -989,14 +1024,16 @@ uint8_t Cpu::TAS(uint8_t *mem)
 
 uint8_t Cpu::SHY(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
-    return 0;
+    std::cout << "Instabile, Fehlerhafte Operation!"  << std::endl;
+    write(mem, Y & ( 1 + (((uint16_t)(uintptr_t)mem) >> 8)));
+    return 1;
 }
 
 uint8_t Cpu::SHX(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
-    return 0;
+    std::cout << "Instabile, Fehlerhafte Operation!"  << std::endl;
+    write(mem, X & ( 1 + (((uint16_t)(uintptr_t)mem) >> 8)));
+    return 1;
 }
 
 uint8_t Cpu::LAX(uint8_t *mem)
@@ -1021,8 +1058,13 @@ uint8_t Cpu::DCP(uint8_t *mem)
 
 uint8_t Cpu::AXS(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
-    return 0;
+    uint8_t val = read(mem);
+    uint8_t res = (A & X) - val;
+    setStatus(STATUS_CARRY, (A & X) >= val);
+    setStatus(STATUS_ZERO, (A & X) == val);
+    setStatus(STATUS_NEGATIVE, res & 0b10000000);
+    X = res;
+    return 2;
 }
 
 uint8_t Cpu::ISC(uint8_t *mem)

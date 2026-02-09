@@ -107,7 +107,7 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
     }
 }
 
-void Mapper::changeCart(NESFile *cartridge)
+bool Mapper::changeCart(NESFile *cartridge)
 {
     this->cart = cartridge;
     int mappernum = cart->header.getMapper();
@@ -185,6 +185,9 @@ void Mapper::changeCart(NESFile *cartridge)
         case 0:
             mImpl = (AbstractMapper*) new Mapper0(shared_from_this());
             break;
+        case 1:
+            mImpl = (AbstractMapper*) new Mapper1(shared_from_this());
+            break;
         case 2:
             mImpl = (AbstractMapper*) new Mapper2(shared_from_this());
             break;
@@ -192,11 +195,11 @@ void Mapper::changeCart(NESFile *cartridge)
             mImpl = (AbstractMapper*) new Mapper3(shared_from_this());
             break;
         default:
-            mImpl = (AbstractMapper*) new Mapper0(shared_from_this());
-            break;
+            return false;
     }
 
     std::cout << "Mapper " << mappernum << " geladen." << std::endl;
+    return true;
 
 }
 
@@ -234,6 +237,8 @@ uint8_t Mapper::read(uint8_t *address)
 
 void Mapper::write(uint8_t *address, uint8_t value)
 {
+    // wrap round
+    if((uintptr_t)address==0x10000) address = 0;
     [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
         return;
     }
@@ -279,31 +284,12 @@ void Mapper::write(uint8_t *address, uint8_t value)
 
 uint8_t Mapper::readVRAM(uint8_t *address)
 {
-    if(this==nullptr){
-        std::cout << "Unmöglich" << std::endl;
-        return 0;
-    }
-    if(ppuMap==nullptr){
-        std::cout << "PpuMap existiert nicht zum aktuellen Zeitpunkt!" << std::endl;
-        return 0;
-    }
-    [[unlikely]] if(ppuMap[(uintptr_t)address]==nullptr){
-        return 0;
-    }
-    return *ppuMap[(uintptr_t)address];
+    return mImpl->readPPU(address);
 }
 
 void Mapper::writeVRAM(uint8_t *address, uint8_t value)
 {
-    [[unlikely]] if(ppuMap[(uintptr_t)address] == nullptr){
-        return;
-    }
-
-    // Falls kein character RAM, darf hier nicht geschrieben werden!
-    if((uintptr_t)address <= 0x2000 && !chrRAM)
-        return;
-
-    *ppuMap[(uintptr_t)address] = value;
+    mImpl->writePPU(address, value);
 }
 
 void Mapper::pullNMI()

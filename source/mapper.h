@@ -7,16 +7,9 @@
 #include "controller.h"
 #include "apu/apu.h"
 #include "abstract_mapper.h"
-#include "mappers/mapper0.h"
-#include "mappers/mapper2.h"
-#include "mappers/mapper3.h"
+#include "mappers/mappers.h"
 
 constexpr const size_t ADDRSPACE = 1 + (size_t) std::numeric_limits<uint16_t>::max();
-
-enum Mirror{
-    MIRROR_VERTICAL,
-    MIRROR_HORIZONTAL
-};
 
 class Cpu;
 class Ppu;
@@ -64,7 +57,7 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
         delete[] prgRam;
     };
 
-    void changeCart(NESFile* cartridge);
+    bool changeCart(NESFile* cartridge);
     void connectController(Controller* controller);
     
     Mirror mirror = MIRROR_HORIZONTAL; //Muss noch separat initialisiert werden

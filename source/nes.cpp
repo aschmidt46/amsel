@@ -26,14 +26,18 @@ void NES::load(const char *path)
         mapper = std::shared_ptr<Mapper>(std::make_shared<Mapper>(cpu, ppu, apu));
     }
     assert(mapper.use_count() > 0);
-    mapper->changeCart(Slot);
-    mapper->connectController(controller); 
-    apu->reset(mapper);
-    ppu->init(mapper);
-    cpu->init(0xC000, mapper);
-    loaded = true;
+    if(mapper->changeCart(Slot)){
+        mapper->connectController(controller); 
+        apu->reset(mapper);
+        ppu->init(mapper);
+        cpu->init(0xC000, mapper);
+        loaded = true;
+        changeTitle = true;
+    }
+    else{
+        unimplementedMapper = Slot->header.getMapper();
+    }
     loadNextClock = false;
-    changeTitle = true;
 }
 
 void NES::eject()

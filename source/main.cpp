@@ -20,6 +20,7 @@
 
 #include "audiosystem.h"
 #include <filesystem>
+#include <cstring>
 
 
 int width = 256, height = 240;

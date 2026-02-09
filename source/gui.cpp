@@ -272,6 +272,14 @@ void Gui::render()
         }
 
       ImGui::EndMainMenuBar();
+
+      if(console->unimplementedMapper>=0){
+        int m = console->unimplementedMapper;
+        console->unimplementedMapper = -1;
+        pfd::message("Fehler",
+          "Dieses Spiel (iNES-Mapper "+std::to_string(m)+") wird nicht unterstützt, weil der entsprechende Mapper nicht implementiert ist.",
+          pfd::choice::ok, pfd::icon::error);
+      }
   
       ImGui::Render();
       ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

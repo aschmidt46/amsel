@@ -18,6 +18,14 @@ void FrameSequencer::onWrite(uint8_t val)
     if(r)
         interruptFlag = false;
     inhibitFlag  = r;
+    if(mode){ // https://github.com/100thCoin/AccuracyCoin/README.md
+        apu->pulse1.clockLengthCounter();
+        apu->pulse2.clockLengthCounter();    
+
+        apu->triangle.length.clock();
+
+        apu->noise.length.clock();
+    }
 }
 
 void FrameSequencer::clockLengthCountersAndSweepUnits()

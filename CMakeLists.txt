@@ -72,7 +72,9 @@ source/apu/apu_noise_channel.cpp source/apu/apu_noise_channel.h
 source/apu/apu_delta_modulation_channel.cpp source/apu/apu_delta_modulation_channel.h
 source/apu/apu_linear_counter.cpp source/apu/apu_linear_counter.h
 source/audiosystem.cpp source/audiosystem.h
+source/abstract_mapper.cpp source/abstract_mapper.h
 source/mappers/mapper0.cpp source/mappers/mapper0.h
+source/mappers/mapper1.cpp source/mappers/mapper1.h
 source/mappers/mapper2.cpp source/mappers/mapper2.h
 source/mappers/mapper3.cpp source/mappers/mapper3.h
 )

@@ -46,7 +46,6 @@ void Apu::write(uint16_t reg, uint8_t val)
 	    case 0x4007:
 		    pulse2.writeRegister4(val);
 		    break;
-        break;
         case 0x4008:
             triangle.linearCtr.onWrite(val);
             triangle.length.setHaltFlag(val & 0b10000000);

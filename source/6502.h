@@ -100,7 +100,7 @@ class Cpu{
         uint16_t PCH = (PC >> 8) & 0b0000000011111111;
         pushStack(PCH);
         pushStack(PC);
-        pushStack(P | 0b00010000); // B gesetzt
+        pushStack(P & 0b11101111); // B clear!
         uint8_t lower = read((uint8_t*)0xFFFE);
         uint8_t higher = read((uint8_t*)0xFFFF);
         uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
@@ -112,7 +112,7 @@ class Cpu{
         uint16_t PCH = (PC >> 8) & 0b0000000011111111;
         pushStack(PCH);
         pushStack(PC);
-        pushStack(P | 0b00010000); // B gesetzt
+        pushStack(P & 0b11101111); // B clear!
         uint8_t lower = read((uint8_t*)0xFFFA);
         uint8_t higher = read((uint8_t*)0xFFFB);
         uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
@@ -220,18 +220,18 @@ class Cpu{
     // Nicht-Offizielle Instruktionen? Nicht sicher, ob das für alle zutrifft
     uint8_t STP(uint8_t* mem);
     uint8_t SLO(uint8_t* mem);
-    uint8_t ANC(uint8_t* mem);
+    uint8_t ANC(uint8_t* mem); // aka AAC
     uint8_t RLA(uint8_t* mem);
     uint8_t SRE(uint8_t* mem);
-    uint8_t ALR(uint8_t* mem);
+    uint8_t ALR(uint8_t* mem); // aka ASR
     uint8_t RRA(uint8_t* mem);
     uint8_t ARR(uint8_t* mem);
     uint8_t SAX(uint8_t* mem);
     uint8_t XAA(uint8_t* mem);
-    uint8_t AHX(uint8_t* mem);
+    uint8_t AHX(uint8_t* mem); // aka AXA, SHA
     uint8_t TAS(uint8_t* mem);
-    uint8_t SHY(uint8_t* mem);
-    uint8_t SHX(uint8_t* mem);
+    uint8_t SHY(uint8_t* mem); // aka SYA
+    uint8_t SHX(uint8_t* mem); // aka SXA
     uint8_t LAX(uint8_t* mem);
     uint8_t LAS(uint8_t* mem);
     uint8_t DCP(uint8_t* mem);
@@ -268,7 +268,7 @@ class Cpu{
         {"SLO", &Cpu::SLO, ADDR_ZERO_PAGE_INDEXED_X, 6},	// $17
         {"CLC", &Cpu::CLC, ADDR_IMPLICIT, 0},				// $18
         {"ORA", &Cpu::ORA, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $19
-        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 0},				// $1A
+        {"NOP", &Cpu::NOP, ADDR_IMPLICIT, 2},				// $1A
         {"SLO", &Cpu::SLO, ADDR_ABSOLUTE_INDEXED_Y, 7},		// $1B
         {"NOP", &Cpu::NOP, ADDR_ABSOLUTE_INDEXED_X, 0},		// $1C
         {"ORA", &Cpu::ORA, ADDR_ABSOLUTE_INDEXED_X, 0},		// $1D
@@ -389,7 +389,7 @@ class Cpu{
         {"BCC", &Cpu::BCC, ADDR_RELATIVE, 0},				// $90
         {"STA", &Cpu::STA, ADDR_INDEXED_INDIRECT_Y, 6},		// $91
         {"STP", &Cpu::STP, ADDR_IMPLICIT, 0},				// $92
-        {"AHX", &Cpu::AHX, ADDR_INDEXED_INDIRECT_Y, 0},		// $93
+        {"AHX", &Cpu::AHX, ADDR_INDEXED_INDIRECT_Y, 6},		// $93
         {"STY", &Cpu::STY, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $94
         {"STA", &Cpu::STA, ADDR_ZERO_PAGE_INDEXED_X, 0},	// $95
         {"STX", &Cpu::STX, ADDR_ZERO_PAGE_INDEXED_Y, 0},	// $96
@@ -401,7 +401,7 @@ class Cpu{
         {"SHY", &Cpu::SHY, ADDR_ABSOLUTE_INDEXED_X, 0},		// $9C
         {"STA", &Cpu::STA, ADDR_ABSOLUTE_INDEXED_X, 5},		// $9D
         {"SHX", &Cpu::SHX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9E
-        {"AHX", &Cpu::AHX, ADDR_ABSOLUTE_INDEXED_Y, 0},		// $9F
+        {"AHX", &Cpu::AHX, ADDR_ABSOLUTE_INDEXED_Y, 5},		// $9F
         {"LDY", &Cpu::LDY, ADDR_IMMEDIATE, 0},				// $A0
         {"LDA", &Cpu::LDA, ADDR_INDEXED_INDIRECT_X, 0},		// $A1
         {"LDX", &Cpu::LDX, ADDR_IMMEDIATE, 0},				// $A2
