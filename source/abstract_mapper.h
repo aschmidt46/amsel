@@ -11,6 +11,10 @@ enum Mirror{
 class Mapper;
 
 class AbstractMapper{
+    private:
+    uint8_t* translatePPUBus(uint8_t* addr);
+    // Paletten können nicht vom konkreten Mapper überschrieben werden
+    uint8_t** palletteMap;
     protected:
     uint8_t* prgRam;
     unsigned int prgRamSize = 0;
@@ -22,6 +26,7 @@ class AbstractMapper{
     // Prg Ram MUSS bereits erstellt sein, wenn die aufgerufen werden
     void loadSave();
     void saveFile();
+
 
     public:
     std::shared_ptr<Mapper> mapper;
@@ -35,5 +40,5 @@ class AbstractMapper{
     virtual uint8_t readPPU(uint8_t* addr);
 
     AbstractMapper(std::shared_ptr<Mapper> m);
-    virtual ~AbstractMapper() = default;
+    virtual ~AbstractMapper();
 };

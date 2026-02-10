@@ -19,7 +19,6 @@ class AbstractMapper;
 class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     public:
     uint8_t** memoryMap = nullptr;    // CPU-Adressraum
-    uint8_t** ppuMap = nullptr;       // PPU-Adressraum
 
     
     Cpu* cpu = nullptr;
@@ -54,7 +53,6 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
         if(mImpl!=nullptr)
             delete mImpl;
         delete[] memoryMap;
-        delete[] ppuMap;
         delete[] io;
         delete[] prgRam;
     };

@@ -57,8 +57,9 @@ uint8_t *Mapper1::translatePPUBus(uint8_t *addr)
             return mapper->cart->chrRom +           (uintptr_t)addr + ((chrBank0 & 0b11111110) * 0x1000); // Unterstes Bit ignoriert
         }
     }
-    else { // Nametables und Attribute tables
+    else if((uintptr_t)addr < 0x4000){ // Nametables und Attribute tables
         uint16_t a = (uintptr_t) addr - 0x2000;
+        a = a % 0x1000;
         uint16_t nametableNum = a / 0x400;
         uint16_t offset = a % 0x400;
         switch(nametableArrangement){
@@ -119,17 +120,6 @@ Mapper1::Mapper1(std::shared_ptr<Mapper> m) : AbstractMapper(m)
         mapper->memoryMap[0x6000 + i] = prgRam + i + (prgRamBank * 0x2000);
     }
 
-    int prgRomBanks = mapper->cart->header.PRGROMSize;
-    // Erste Prg Rom Bank
-    for(int i = 0; i < 0x4000; i++){
-        mapper->memoryMap[0x8000 + i] = mapper->cart->prgRom + i;
-    }
-
-    // Letzte Prg Rom Bank
-    for(int i = 0; i < 0x4000; i++){
-        mapper->memoryMap[0xC000 + i] = mapper->cart->prgRom + i + ((prgRomBanks-1) * 0x4000);
-    }
-
     // Chr Rom bereits gesetzt in Mapper?
 
     AbstractMapper::loadSave();
@@ -171,7 +161,7 @@ uint8_t Mapper1::readRam(uint8_t *addr)
 
 void Mapper1::writePPU(uint8_t *addr, uint8_t value)
 {
-    if((uintptr_t)addr < 0x3000){
+    if((uintptr_t)addr < 0x3F00){
         *translatePPUBus(addr) = value;
     }
     else AbstractMapper::writePPU(addr, value);
@@ -179,7 +169,7 @@ void Mapper1::writePPU(uint8_t *addr, uint8_t value)
 
 uint8_t Mapper1::readPPU(uint8_t *addr)
 {
-    if((uintptr_t)addr < 0x3000){
+    if((uintptr_t)addr < 0x3F00){
         return *translatePPUBus(addr);
     }
     else return AbstractMapper::readPPU(addr);

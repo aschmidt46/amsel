@@ -83,6 +83,7 @@ source/mappers/mapper0.cpp source/mappers/mapper0.h
 source/mappers/mapper1.cpp source/mappers/mapper1.h
 source/mappers/mapper2.cpp source/mappers/mapper2.h
 source/mappers/mapper3.cpp source/mappers/mapper3.h
+source/mappers/mappers.cpp source/mappers/mappers.h
 )
 #target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui apu)
 target_link_libraries(nes-emu whereami)

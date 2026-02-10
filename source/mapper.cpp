@@ -25,10 +25,10 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
     controller_state[1] = 0;
 
     // zu groß, aber egal?
-    ppuMap = new uint8_t*[ADDRSPACE];
+    // ppuMap = new uint8_t*[ADDRSPACE];
     for(unsigned int i = 0; i < ADDRSPACE; i++){
         memoryMap[i] = nullptr;
-        ppuMap[i] = nullptr;
+        // ppuMap[i] = nullptr;
     }
 
     int index = 0;
@@ -63,13 +63,9 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
     }
     index += 0x18;
 
-    //APU and I/O functionality that is normally disabled.
+    //APU und I/O Teile, die normalerweise nicht an sind
     index += 0x8;
 
-    //Cartridge
-    //Mapper0
-    //CPU
-    //assert(cartridge->header.PRGROMSize == 1 || cartridge->header.PRGROMSize == 2);
 
     //PRG-RAM 8KB
     index = 0x6000;
@@ -81,31 +77,22 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
         memoryMap[index + i] = prgRam + i;
     }
 
-    // Intern Mirror
-    index = 0x3000;
-    for(int i = 0; i < 0x0800; i++){
-        ppuMap[index + i] = ppu->internalMemory + i;
-    }
-    index = 0x3800;
-    //Mirror
-    for(int i = 0; i < 0x0800 - 0x20; i++){
-        ppuMap[index + i] = ppu->internalMemory + i;
-    }
+
 
     // Palletten gespiegelt bis 0x4000
-    for(index = 0x3F00; index < 0x4000; index += 0x0020){
-        for(int i = 0; i < 0x20; i++){
-            auto pIndex = ppu->palletteIndexes;
-            int j = i;
-            // Innerhalb zeigen alle diese Register auf das gleiche innere Register (Backdrop Farbe)
-            if (i == 0x0010) j = 0x0000;
-	        if (i == 0x0014) j = 0x0004;
-	        if (i == 0x0018) j = 0x0008;
-	        if (i == 0x001C) j = 0x000C;
+    // for(index = 0x3F00; index < 0x4000; index += 0x0020){
+    //     for(int i = 0; i < 0x20; i++){
+    //         auto pIndex = ppu->palletteIndexes;
+    //         int j = i;
+    //         // Innerhalb zeigen alle diese Register auf das gleiche innere Register (Backdrop Farbe)
+    //         if (i == 0x0010) j = 0x0000;
+	//         if (i == 0x0014) j = 0x0004;
+	//         if (i == 0x0018) j = 0x0008;
+	//         if (i == 0x001C) j = 0x000C;
             
-            ppuMap[index + i] = pIndex + j;
-        }
-    }
+    //         ppuMap[index + i] = pIndex + j;
+    //     }
+    // }
 }
 
 bool Mapper::changeCart(NESFile *cartridge)
@@ -139,62 +126,12 @@ bool Mapper::changeCart(NESFile *cartridge)
     if(cartridge->header.CHRROMSize == 0)
         chrRAM = true;
 
-    // Character Data
-    for(int i = 0; i < 0x2000; i++){
-        ppuMap[i] = cartridge->chrRom + i;
-    }
-    //Interner Ram
-    if(mirror == MIRROR_VERTICAL){
-        std::cout << "Horizontale Ausrichtung" << std::endl;
-        index = 0x2000;
-        for(int i = 0; i < 0x0800; i++){
-            ppuMap[index + i] = ppu->internalMemory + i;
-        }
-        index = 0x2800;
-        //Mirror
-        for(int i = 0; i < 0x0800; i++){
-            ppuMap[index + i] = ppu->internalMemory + i;
-        }
-    }
-    else{
-        std::cout << "Vertikale Ausrichtung" << std::endl;
-        index = 0x2000;
-        for(int i = 0; i < 0x0400; i++){
-            ppuMap[index + i] = ppu->internalMemory + i;
-        }
-        index = 0x2400;
-        for(int i = 0; i < 0x0400; i++){
-            ppuMap[index + i] = ppu->internalMemory + i;
-        }
-
-        index = 0x2800;
-        for(int i = 0; i < 0x0400; i++){
-            ppuMap[index + i] = ppu->internalMemory + i + 0x400;
-        }
-        index = 0x2C00;
-        for(int i = 0; i < 0x0400; i++){
-            ppuMap[index + i] = ppu->internalMemory + i + 0x400;
-        }
-    }
-
     eject();
 
-    switch(mappernum){
-        case 0:
-            mImpl = (AbstractMapper*) new Mapper0(shared_from_this());
-            break;
-        case 1:
-            mImpl = (AbstractMapper*) new Mapper1(shared_from_this());
-            break;
-        case 2:
-            mImpl = (AbstractMapper*) new Mapper2(shared_from_this());
-            break;
-        case 3:
-            mImpl = (AbstractMapper*) new Mapper3(shared_from_this());
-            break;
-        default:
-            return false;
-    }
+    auto m = getMapper(shared_from_this(), mappernum);
+    if(!m.has_value())
+        return false;
+    else mImpl = m.value();
 
     return true;
 
