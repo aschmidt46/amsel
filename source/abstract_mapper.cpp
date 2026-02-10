@@ -49,7 +49,7 @@ void AbstractMapper::saveFile()
 void AbstractMapper::writePPU(uint8_t *addr, uint8_t value)
 {
     // Falls kein character RAM, darf hier nicht geschrieben werden!
-    if((uintptr_t)addr <= 0x2000 && !mapper->chrRAM)
+    if((uintptr_t)addr <= 0x2000 && !chrRam)
         return;
 
     if((uintptr_t)addr < 0x4000){ // CHR, NT/AT, Paletten
@@ -63,9 +63,6 @@ uint8_t AbstractMapper::readPPU(uint8_t *addr)
         return *translatePPUBus(addr);
     }
     else return 0; // Open Bus?
-
-    //noch nicht weiter implementiert (OAM etc)
-    return *(mapper->ppuMap[(uintptr_t)addr]);
 }
 
 AbstractMapper::AbstractMapper(std::shared_ptr<Mapper> m)
@@ -73,6 +70,8 @@ AbstractMapper::AbstractMapper(std::shared_ptr<Mapper> m)
     this->mapper = m;
     mirror = mapper->cart->header.flags6.getNametableArrangement() ? MIRROR_VERTICAL : MIRROR_HORIZONTAL;
     palletteMap = new uint8_t*[0x100];
+    if(mapper->cart->header.CHRROMSize == 0)
+        chrRam = true;
 
     // Paletten sind immer fest, daher kann man die gut fest mappen
     for(int pi = 0; pi < 0x100; pi += 0x20){

@@ -23,6 +23,11 @@
 #include <cstring>
 
 #include "whereami.h"
+#include "icon.h"
+
+#ifdef NES_ON_WINDOWS
+#include <Windows.h>
+#endif
 
 
 int width = 256, height = 240;
@@ -142,7 +147,7 @@ void updateTitle(GLFWwindow* window){
     glfwSetWindowTitle(window, fn.c_str());
 }
 
-auto main() -> int
+int run()
 {
   GLFWwindow* window = initGL();
   screen = new Screen();
@@ -159,12 +164,15 @@ auto main() -> int
   wai_getExecutablePath(p, 4096, &dirNameLength);
   p[pathLength] = '\0';
   std::filesystem::path path(p);
+  free(p);
   exeDir = path.parent_path();
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   // input implementieren
   glfwSetKeyCallback(window, key_callback);
   glfwSetWindowPosCallback(window, position_callback);
+  const GLFWimage glfwIcon = {200,200,icon};
+  glfwSetWindowIcon(window, 1, &glfwIcon);
 
   float xscale, yscale;
   glfwGetWindowContentScale(window, &xscale, &yscale);
@@ -215,3 +223,19 @@ auto main() -> int
   cleanUp(window);
   return 0;
 }
+
+#ifdef NES_ON_WINDOWS
+
+  int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
+  {
+    return run();
+  }
+
+#else
+
+  int main()
+  {
+    return run();
+  }
+
+#endif

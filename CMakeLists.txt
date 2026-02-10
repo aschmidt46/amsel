@@ -11,12 +11,17 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+if(WIN32)
+add_compile_definitions(NES_ON_WINDOWS)
+endif()
+
 #set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
 
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
+add_link_options(-mwindows)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -28,28 +33,29 @@ find_package(OpenGL REQUIRED)
 
 find_package(GLEW REQUIRED)
 
-add_subdirectory(rtaudio)
+set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
+add_subdirectory(deps/rtaudio)
 
 include_directories(PUBLIC .)
-include_directories(PUBLIC imgui)
-include_directories(PUBLIC imgui/backends)
-include_directories(PUBLIC rtaudio)
-include_directories(PUBLIC whereami)
+include_directories(PUBLIC deps/imgui)
+include_directories(PUBLIC deps/imgui/backends)
+include_directories(PUBLIC deps/rtaudio)
+include_directories(PUBLIC deps/whereami)
 
 
 add_library(imgui STATIC
-  imgui/imgui.cpp
-  imgui/imgui_demo.cpp
-  imgui/imgui_draw.cpp
-  imgui/imgui_widgets.cpp
-  imgui/imgui_tables.cpp
-  imgui/backends/imgui_impl_glfw.cpp
-  imgui/backends/imgui_impl_opengl3.cpp
-  imgui/misc/cpp/imgui_stdlib.cpp
+  deps/imgui/imgui.cpp
+  deps/imgui/imgui_demo.cpp
+  deps/imgui/imgui_draw.cpp
+  deps/imgui/imgui_widgets.cpp
+  deps/imgui/imgui_tables.cpp
+  deps/imgui/backends/imgui_impl_glfw.cpp
+  deps/imgui/backends/imgui_impl_opengl3.cpp
+  deps/imgui/misc/cpp/imgui_stdlib.cpp
 )
 
 add_library(whereami STATIC
-  whereami/whereami.c
+  deps/whereami/whereami.c
 )
 
 
@@ -85,7 +91,7 @@ source/mappers/mapper2.cpp source/mappers/mapper2.h
 source/mappers/mapper3.cpp source/mappers/mapper3.h
 source/mappers/mappers.cpp source/mappers/mappers.h
 )
-#target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui apu)
+
 target_link_libraries(nes-emu whereami)
 target_link_libraries(nes-emu rtaudio)
 target_link_libraries(nes-emu OpenGL::GL)

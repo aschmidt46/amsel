@@ -9,6 +9,9 @@ class Mapper3 : AbstractMapper {
     void writeRam(uint8_t* addr, uint8_t value) override;
     uint8_t readRam(uint8_t* addr) override;
 
+    void writePPU(uint8_t* addr, uint8_t value) override;
+    uint8_t readPPU(uint8_t* addr) override;
+
     Mapper3(std::shared_ptr<Mapper> m);
     ~Mapper3() override;
 

@@ -57,7 +57,7 @@ uint8_t *Mapper1::translatePPUBus(uint8_t *addr)
             return mapper->cart->chrRom +           (uintptr_t)addr + ((chrBank0 & 0b11111110) * 0x1000); // Unterstes Bit ignoriert
         }
     }
-    else if((uintptr_t)addr < 0x4000){ // Nametables und Attribute tables
+    else { // Nametables und Attribute tables
         uint16_t a = (uintptr_t) addr - 0x2000;
         a = a % 0x1000;
         uint16_t nametableNum = a / 0x400;
@@ -88,7 +88,12 @@ uint8_t *Mapper1::translatePPUBus(uint8_t *addr)
 // Consecutive read-modify-writes noch mal abchecken, ob das stimmt, was im WIki steht und ob das bei mir auch geht
 void Mapper1::writeRam(uint8_t *addr, uint8_t value)
 {
-    if(value & 0b10000000){
+    if((uintptr_t)addr < 0x8000){ // PRG-Ram
+        // aktuell festgesetzt auf 8KiB RAM (nullte Bank)
+        prgRam[((uintptr_t)addr - 0x6000) + (0 * 0x2000)] = value;
+    }
+    else{ // Konfiguration über serielle Schnittstelle
+        if(value & 0b10000000){
         shiftReg = 0b10000000; // Detektions Eins
         prgRomBankMode = 3; // Reset, letzte Bank fixen
     }
@@ -105,22 +110,14 @@ void Mapper1::writeRam(uint8_t *addr, uint8_t value)
             shiftInto(bit0);
         }
     }
+    }
 }
 
 Mapper1::Mapper1(std::shared_ptr<Mapper> m) : AbstractMapper(m)
 {
     // 32KiB PRG Ram
-    prgRam = new uint8_t[0x8000];
     prgRamSize = 0x8000;
-
-
-    // Standardmäßig erste Bank?
-    int prgRamBank = 0;
-    for(int i = 0; i < 0x2000; i++){
-        mapper->memoryMap[0x6000 + i] = prgRam + i + (prgRamBank * 0x2000);
-    }
-
-    // Chr Rom bereits gesetzt in Mapper?
+    prgRam = new uint8_t[prgRamSize];
 
     AbstractMapper::loadSave();
 }
@@ -133,28 +130,34 @@ Mapper1::~Mapper1()
 
 uint8_t Mapper1::readRam(uint8_t *addr)
 {
-    switch(prgRomBankMode){
-        case 2:{ // Bank bei 0x8000 fest auf erste Bank, hintere getauscht
-            if((uintptr_t) addr < 0xC000){
-                return mapper->cart->prgRom[(uintptr_t)addr - 0x8000];
+    if((uintptr_t)addr < 0x8000){ // PRG-Ram
+        // aktuell festgesetzt auf 8KiB RAM (nullte Bank)
+        return prgRam[((uintptr_t)addr - 0x6000) + (0 * 0x2000)];
+    }
+    else{
+        switch(prgRomBankMode){ //PRG-ROM
+            case 2:{ // Bank bei 0x8000 fest auf erste Bank, hintere getauscht
+                if((uintptr_t) addr < 0xC000){
+                    return mapper->cart->prgRom[(uintptr_t)addr - 0x8000];
+                }
+                else{
+                    return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + (prgRomBankSelect * 0x4000)];
+                }
+                break;
             }
-            else{
-                return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + (prgRomBankSelect * 0x4000)];
+            case 3:{ // Bank bei 0xC000 fest auf letzte Bank, vordere getauscht
+                if((uintptr_t) addr < 0xC000){
+                    return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + (prgRomBankSelect * 0x4000)];
+                }
+                else{
+                    return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + ((mapper->cart->header.PRGROMSize-1) * 0x4000)];
+                }
+                break;
             }
-            break;
-        }
-        case 3:{ // Bank bei 0xC000 fest auf letzte Bank, vordere getauscht
-            if((uintptr_t) addr < 0xC000){
-                return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + (prgRomBankSelect * 0x4000)];
+            default:{ // 0,1 (32 KiB Mode), 32 KiB bei 0x8000 getauscht
+                return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + ((prgRomBankSelect & 0b11111110) * 0x4000)];
+                break;
             }
-            else{
-                return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + ((mapper->cart->header.PRGROMSize-1) * 0x4000)];
-            }
-            break;
-        }
-        default:{ // 0,1 (32 KiB Mode), 32 KiB bei 0x8000 getauscht
-            return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + ((prgRomBankSelect & 0b11111110) * 0x4000)];
-            break;
         }
     }
 }

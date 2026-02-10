@@ -14,7 +14,8 @@ std::string mhex(uintptr_t input){
 
 Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
 {
-    memoryMap = new uint8_t*[ADDRSPACE];
+    // Nur unterer Adressbereich, weil der fest ist
+    memoryMap = new uint8_t*[0x6000];
     this->ppu = ppu;
     this->cpu = cpu;
     this->apu = apu;
@@ -24,24 +25,20 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
     controller_state[0] = 0;
     controller_state[1] = 0;
 
-    // zu groß, aber egal?
-    // ppuMap = new uint8_t*[ADDRSPACE];
-    for(unsigned int i = 0; i < ADDRSPACE; i++){
+    for(unsigned int i = 0; i < 0x6000; i++){
         memoryMap[i] = nullptr;
-        // ppuMap[i] = nullptr;
     }
 
-    int index = 0;
-    // Interner Ram + 3 Mirrors vom internen Ram
+    int offset = 0;
+    // Interner Ram (2KiB) + 3 Mirrors vom internen Ram
     for(int j = 0; j < 4; j++){
         for(int i = 0; i < 0x0800; i++){
-            memoryMap[index + i] = cpu->internalMemory + i;
+            memoryMap[offset + i] = cpu->internalMemory + i;
         }
-        index += 0x0800;
+        offset += 0x0800;
     }
-    assert(index == 0x2000);
-    // PPU Register
-    for(int i = index; i < 0x4000; i+=0x8){
+    // Je 8 PPU Register ab 0x2000 bis < 0x4000 aufwärts (Mirror)
+    for(int i = offset; i < 0x4000; i+=0x8){
         memoryMap[i]   = (uint8_t*)&ppu->PPUCTRL;
         memoryMap[i+1] = (uint8_t*)&ppu->PPUMASK;
         memoryMap[i+2] = (uint8_t*)&ppu->PPUSTATUS;
@@ -51,80 +48,30 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
         memoryMap[i+6] = (uint8_t*)&ppu->PPUADDR;
         memoryMap[i+7] = (uint8_t*)&ppu->PPUDATA;
     }
-    index = 0x4000;
-    
+
     // IO Register (nicht implementiert)
     io = new uint8_t[0x18];
     for(int i = 0; i < 0x18; i++){
         io[i] = 0;
     }
+
+    offset = 0x4000;
     for(int i = 0; i < 0x18; i++){
-         memoryMap[i + index] = io + i;
+         memoryMap[i + offset] = io + i;
     }
-    index += 0x18;
+    offset += 0x18;
 
     //APU und I/O Teile, die normalerweise nicht an sind
-    index += 0x8;
+    offset += 0x8;
 
-
-    //PRG-RAM 8KB
-    index = 0x6000;
-    prgRam = new uint8_t[0x2000];
-    for(int i = 0; i < 0x2000; i++){
-        prgRam[i] = 0;
-    }
-    for(int i = 0; i < 0x2000; i++){
-        memoryMap[index + i] = prgRam + i;
-    }
-
-
-
-    // Palletten gespiegelt bis 0x4000
-    // for(index = 0x3F00; index < 0x4000; index += 0x0020){
-    //     for(int i = 0; i < 0x20; i++){
-    //         auto pIndex = ppu->palletteIndexes;
-    //         int j = i;
-    //         // Innerhalb zeigen alle diese Register auf das gleiche innere Register (Backdrop Farbe)
-    //         if (i == 0x0010) j = 0x0000;
-	//         if (i == 0x0014) j = 0x0004;
-	//         if (i == 0x0018) j = 0x0008;
-	//         if (i == 0x001C) j = 0x000C;
-            
-    //         ppuMap[index + i] = pIndex + j;
-    //     }
-    // }
+    // PRG-Ram, etc...
+    // Übernimmt Mapper-Implementierung
 }
 
 bool Mapper::changeCart(NESFile *cartridge)
 {
     this->cart = cartridge;
     int mappernum = cart->header.getMapper();
-
-    // 16-32KB ROM
-    int index = 0x8000;
-    if(cartridge->header.PRGROMSize == 1){
-        for(int i = 0; i < 0x4000; i++){
-            memoryMap[index + i] = cartridge->prgRom + i;
-        }
-        //Mirror
-        index += 0x4000;
-        for(int i = 0; i < 0x4000; i++){
-            memoryMap[index + i] = cartridge->prgRom + i;
-        }
-    }
-    else{
-        //32KB
-        for(int i = 0; i < 0x8000; i++){
-            memoryMap[index + i] = cartridge->prgRom + i;
-        }
-    }
-    
-    // PPU
-    mirror = cart->header.flags6.getNametableArrangement() ? MIRROR_VERTICAL : MIRROR_HORIZONTAL;
-    // Größe in x*8KiB, 0 bedeutet CHR Ram
-    // assert(cartridge->header.CHRROMSize == 0 || cartridge->header.CHRROMSize == 1);
-    if(cartridge->header.CHRROMSize == 0)
-        chrRAM = true;
 
     eject();
 
@@ -153,15 +100,17 @@ void Mapper::connectController(Controller *controller)
 
 uint8_t Mapper::read(uint8_t *address)
 {
+    //wrap round?
+    if((uintptr_t)address==0x10000) return *memoryMap[0];
+    
+    if((uintptr_t)address>= 0x6000)
+        return mImpl->readRam(address);
+    
     [[unlikely]] if(memoryMap[(uintptr_t)address]==nullptr){
         return 0;
     }
-    //wrap round?
-    if((uintptr_t)address==0x10000) return *memoryMap[0];
-
-    if((uintptr_t)address>= 0x8000)
-        return mImpl->readRam(address);
-
+    
+    // Feste Register
     auto val = *memoryMap[(uintptr_t)address];
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
@@ -181,16 +130,18 @@ void Mapper::write(uint8_t *address, uint8_t value)
 {
     // wrap round
     if((uintptr_t)address==0x10000) address = 0;
-    [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
-        return;
-    }
-    if((uintptr_t)address >= 0x8000){
+
+    if((uintptr_t)address >= 0x6000){
         mImpl->writeRam(address, value);
         return;
     }
 
-    // PRG-"ROM"!
-    if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
+    [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
+        return;
+    }
+
+    // // PRG-"ROM"!
+    // if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
 
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){

@@ -18,7 +18,7 @@ class Controller;
 class AbstractMapper;
 class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     public:
-    uint8_t** memoryMap = nullptr;    // CPU-Adressraum
+    uint8_t** memoryMap = nullptr;    // CPU-Adressraum (feste Mappings)
 
     
     Cpu* cpu = nullptr;
@@ -26,7 +26,6 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     Apu* apu = nullptr;
     Controller* controller1 = nullptr;
     NESFile* cart = nullptr;
-    uint8_t* prgRam = nullptr;
     //muss noch implementiert werden
     uint8_t* io = nullptr;
 
@@ -54,14 +53,11 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
             delete mImpl;
         delete[] memoryMap;
         delete[] io;
-        delete[] prgRam;
     };
 
     bool changeCart(NESFile* cartridge);
     void eject();
     void connectController(Controller* controller);
-    
-    Mirror mirror = MIRROR_HORIZONTAL; //Muss noch separat initialisiert werden
 
     AbstractMapper* mImpl = nullptr;
 
