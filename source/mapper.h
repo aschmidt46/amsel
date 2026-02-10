@@ -51,6 +51,8 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
 
     Mapper(Cpu* cpu, Ppu* ppu, Apu* apu);
     ~Mapper(){
+        if(mImpl!=nullptr)
+            delete mImpl;
         delete[] memoryMap;
         delete[] ppuMap;
         delete[] io;
@@ -58,6 +60,7 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     };
 
     bool changeCart(NESFile* cartridge);
+    void eject();
     void connectController(Controller* controller);
     
     Mirror mirror = MIRROR_HORIZONTAL; //Muss noch separat initialisiert werden

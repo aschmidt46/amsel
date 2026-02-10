@@ -5,12 +5,11 @@
 
 class Mapper3 : AbstractMapper {
     uint8_t bankSelect = 0;
-    uint8_t* prgRam;
     public:
     void writeRam(uint8_t* addr, uint8_t value) override;
     uint8_t readRam(uint8_t* addr) override;
 
     Mapper3(std::shared_ptr<Mapper> m);
-    ~Mapper3();
+    ~Mapper3() override;
 
 };

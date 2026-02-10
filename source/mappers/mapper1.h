@@ -4,7 +4,6 @@
 #include "../mapper.h"
 
 class Mapper1 : AbstractMapper {
-    uint8_t* prgRam;
     uint8_t shiftReg;
 
     void shiftInto(bool value);
@@ -36,6 +35,6 @@ class Mapper1 : AbstractMapper {
     virtual uint8_t readPPU(uint8_t* addr) override;
 
     Mapper1(std::shared_ptr<Mapper> m);
-    ~Mapper1();
+    ~Mapper1() override;
 
 };

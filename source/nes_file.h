@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <cstdint>
+#include <string>
 
 enum NAMETABLE_ARRANGEMENT{
     VERTICAL = 0,
@@ -17,7 +18,7 @@ struct Flags6{
     uint8_t data;
 
     NAMETABLE_ARRANGEMENT getNametableArrangement();
-    bool containsBatteryPackedPRG();
+    bool containsBatteryBackedPRG();
     bool containsTrainer();
     bool hasAlternativeNametableLayout();
 };
@@ -64,6 +65,9 @@ struct NESFile{
     uint8_t* footer;
 
     uint8_t* rawData;
+
+    // Nicht auf der Cartridge
+    std::string name = "";
 
     NESFile(const char* path);
     ~NESFile(){delete[] rawData;};

@@ -32,3 +32,11 @@ void TriangleChannel::writeB(uint8_t val)
     updateTimer();
     updateLength();
 }
+
+uint8_t TriangleChannel::getLastSequencerValue()
+{
+    if(timer.period<=1){
+        return 7;
+    }
+    else return lastSequencerValue;
+}

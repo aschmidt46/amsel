@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <vector>
 #include <bitset>
+#include "file_io.h"
 
 std::string ghex(uintptr_t input){
     std::string str = std::format("{:x}", input);
@@ -279,6 +280,12 @@ void Gui::render()
         pfd::message("Fehler",
           "Dieses Spiel (iNES-Mapper "+std::to_string(m)+") wird nicht unterstützt, weil der entsprechende Mapper nicht implementiert ist.",
           pfd::choice::ok, pfd::icon::error);
+      }
+
+      if(FileIO::getInstance().shouldDisplayMessage()){
+        pfd::message("Info",
+          "Dieses Spiel kann den Spielstand sichern. Ein Speicherstand wurde erstellt.",
+          pfd::choice::ok, pfd::icon::info);
       }
   
       ImGui::Render();

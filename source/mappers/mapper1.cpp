@@ -106,11 +106,11 @@ void Mapper1::writeRam(uint8_t *addr, uint8_t value)
     }
 }
 
-Mapper1::Mapper1(std::shared_ptr<Mapper> m)
+Mapper1::Mapper1(std::shared_ptr<Mapper> m) : AbstractMapper(m)
 {
-    this->mapper = m;
     // 32KiB PRG Ram
     prgRam = new uint8_t[0x8000];
+    prgRamSize = 0x8000;
 
 
     // Standardmäßig erste Bank?
@@ -131,11 +131,14 @@ Mapper1::Mapper1(std::shared_ptr<Mapper> m)
     }
 
     // Chr Rom bereits gesetzt in Mapper?
+
+    AbstractMapper::loadSave();
 }
 
 Mapper1::~Mapper1()
 {
-    delete prgRam;
+    AbstractMapper::saveFile();
+    delete[] prgRam;
 }
 
 uint8_t Mapper1::readRam(uint8_t *addr)

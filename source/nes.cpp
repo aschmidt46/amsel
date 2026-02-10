@@ -16,6 +16,15 @@ NES::NES(Screen* screen, Controller* c){
     controller = c;
 }
 
+NES::~NES()
+{
+    if(loaded)
+        eject();
+    delete apu;
+    delete ppu;
+    delete cpu;
+}
+
 void NES::load(const char *path)
 {
     std::lock_guard<std::mutex> lock(cvm);
@@ -43,6 +52,7 @@ void NES::load(const char *path)
 void NES::eject()
 {
     if(!loaded) return;
+    mapper->eject();
     delete Slot;
     fileName = "";
     loaded = false;

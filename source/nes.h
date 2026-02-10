@@ -48,6 +48,7 @@ class NES{
     bool frameReady = false;
     bool sound = true;
     NES(Screen* screen, Controller* c);
+    ~NES();
     void load(const char* path);
     void eject();
     void reset();

@@ -34,6 +34,7 @@ include_directories(PUBLIC .)
 include_directories(PUBLIC imgui)
 include_directories(PUBLIC imgui/backends)
 include_directories(PUBLIC rtaudio)
+include_directories(PUBLIC whereami)
 
 
 add_library(imgui STATIC
@@ -47,8 +48,13 @@ add_library(imgui STATIC
   imgui/misc/cpp/imgui_stdlib.cpp
 )
 
+add_library(whereami STATIC
+  whereami/whereami.c
+)
+
 
 add_executable(nes-emu source/main.cpp
+source/file_io.cpp source/file_io.h
 source/6502.cpp source/6502.h
 source/ppu.cpp source/ppu.h
 source/cputest.cpp source/cputest.h
@@ -79,6 +85,7 @@ source/mappers/mapper2.cpp source/mappers/mapper2.h
 source/mappers/mapper3.cpp source/mappers/mapper3.h
 )
 #target_link_libraries(nes-emu cputest nes palette nesfile cpu ppu mapper controller screen gui apu)
+target_link_libraries(nes-emu whereami)
 target_link_libraries(nes-emu rtaudio)
 target_link_libraries(nes-emu OpenGL::GL)
 target_link_libraries(nes-emu imgui)

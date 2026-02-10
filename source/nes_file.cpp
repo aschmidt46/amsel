@@ -5,13 +5,14 @@
 #include <string>
 #include <format>
 #include <algorithm>
+#include <filesystem>
 
 NAMETABLE_ARRANGEMENT Flags6::getNametableArrangement()
 {
     return (NAMETABLE_ARRANGEMENT)(data & 1u);
 }
 
-bool Flags6::containsBatteryPackedPRG()
+bool Flags6::containsBatteryBackedPRG()
 {
     return data & 2u;
 }
@@ -90,6 +91,9 @@ NESHeader NESHeader::createHeader(uint8_t *data)
 
 NESFile::NESFile(const char *path)
 {
+    std::filesystem::path p(path);
+    name = p.filename().string();
+
     std::ifstream stream(path, std::ios::in | std::ios::binary);
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     

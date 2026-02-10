@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <format>
+#include "file_io.h"
 
 std::string mhex(uintptr_t input){
     std::string str = std::format("{:x}", input);
@@ -176,10 +177,7 @@ bool Mapper::changeCart(NESFile *cartridge)
         }
     }
 
-    if(mImpl!=nullptr){
-        delete mImpl;
-        mImpl = nullptr;
-    }
+    eject();
 
     switch(mappernum){
         case 0:
@@ -198,9 +196,16 @@ bool Mapper::changeCart(NESFile *cartridge)
             return false;
     }
 
-    std::cout << "Mapper " << mappernum << " geladen." << std::endl;
     return true;
 
+}
+
+void Mapper::eject()
+{
+    if(mImpl!=nullptr){
+        delete mImpl;
+        mImpl = nullptr;
+    }
 }
 
 void Mapper::connectController(Controller *controller)

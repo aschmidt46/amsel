@@ -129,7 +129,7 @@ void Apu::clock()
     int p2Sample = pulse2.getDAC();
     square_sample = square_table[p1Sample + p2Sample];
 
-    int tSample = triangle.lastSequencerValue;
+    int tSample = triangle.getLastSequencerValue();
     int nSample = noise.getDAC();
     int dmcS = dmc.getDAC();
     tnd_sample = tnd_table[3 * tSample + 2 * nSample + dmcS];

@@ -22,6 +22,8 @@
 #include <filesystem>
 #include <cstring>
 
+#include "whereami.h"
+
 
 int width = 256, height = 240;
 
@@ -41,6 +43,7 @@ Controller* controller1;
 NES* console;
 
 std::string title = "Anton's NES-Emulator";
+std::filesystem::path exeDir;
 
 GLFWwindow* initGL(){
   int result = glfwInit();
@@ -149,6 +152,15 @@ auto main() -> int
   AudioSystem audiosystem(console);
   Gui gui(console, state);
 
+  // Verzeichnis finden
+  int pathLength = wai_getExecutablePath(NULL, 0, NULL);
+  char* p = (char*)malloc(pathLength + 1);
+  int dirNameLength = 0;
+  wai_getExecutablePath(p, 4096, &dirNameLength);
+  p[pathLength] = '\0';
+  std::filesystem::path path(p);
+  exeDir = path.parent_path();
+
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   // input implementieren
   glfwSetKeyCallback(window, key_callback);
@@ -198,8 +210,8 @@ auto main() -> int
     }
   }
 
-  cleanUp(window);
   audiosystem.close = true;
   t.join();
+  cleanUp(window);
   return 0;
 }

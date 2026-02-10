@@ -26,23 +26,22 @@ uint8_t Mapper3::readRam(uint8_t *addr)
     }
 }
 
-Mapper3::Mapper3(std::shared_ptr<Mapper> m)
+Mapper3::Mapper3(std::shared_ptr<Mapper> m) : AbstractMapper(m)
 {
-    this->mapper = m;
     //2KiB
     prgRam = new uint8_t[0x800];
+    prgRamSize = 0x800;
     for(int i = 0; i < 0x2000; i++){
         mapper->memoryMap[0x6000 + i] = prgRam + (i % 0x800);
     }
     //PRG ROM bereits gesetzt in Mapper
 
-    // 32KiB CHR ROM
-    // std::cout << mapper->cart->header.CHRROMSize << std::endl;
-    // assert(mapper->cart->header.CHRROMSize == 4 || mapper->cart->header.CHRROMSize == 16);
-
+    // Falls Persistenter PRG Ram
+    AbstractMapper::loadSave();
 }
 
 Mapper3::~Mapper3()
 {
+    AbstractMapper::saveFile();
     delete[] prgRam;
 }
