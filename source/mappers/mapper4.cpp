@@ -205,6 +205,9 @@ Mapper4::Mapper4(std::shared_ptr<Mapper> m) : AbstractMapper(m)
 {
     prgRamSize = 0x2000;
     prgRam = new uint8_t[prgRamSize];
+    for(int i = 0; i < prgRamSize; i++){
+        prgRam[i] = 0;
+    }
     bdwSelect = &R0;
 
     AbstractMapper::loadSave();

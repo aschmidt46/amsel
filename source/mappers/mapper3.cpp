@@ -54,6 +54,9 @@ Mapper3::Mapper3(std::shared_ptr<Mapper> m) : AbstractMapper(m)
     //2KiB
     prgRamSize = 0x800;
     prgRam = new uint8_t[prgRamSize];
+    for(int i = 0; i < prgRamSize; i++){
+        prgRam[i] = 0;
+    }
 
     // Falls Persistenter PRG Ram
     AbstractMapper::loadSave();

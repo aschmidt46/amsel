@@ -125,6 +125,9 @@ NESFile::NESFile(const char *path)
     int chrroms = (int)header.CHRROMSize * 8192;
     if(chrroms == 0){
         chrRom = new uint8_t[0x2000];
+        for(int i = 0; i < 0x2000; i++){
+            chrRom[i] = 0;
+        }
         index += 0x2000;
     }
     else{

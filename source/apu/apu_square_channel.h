@@ -30,8 +30,8 @@ struct SquareChannel{
     // $4002/6 pppp pppp   period low
     // $4003/7 llll lppp   length index, period high
 
-    uint8_t reg3;
-    uint8_t reg4;
+    uint8_t reg3 = 0;
+    uint8_t reg4 = 0;
 
     SquareChannel(bool isSquare2);
 
