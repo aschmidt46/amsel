@@ -76,18 +76,33 @@ std::vector<std::pair<std::string, ASMtype>> splitLines(const std::string &lines
   return linesV;
 }
 
-void printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
+void Gui::ASMLine(std::string l, int id, float r, float g, float b){
+  ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(r, g, b, 1.0f));
+  ImGui::PushID(runningID++);
+  if(ImGui::TextLink(l.substr(0,5).c_str())){
+    int pc = std::stoi(l.substr(1,5).c_str(), 0, 16);
+    breakpoints = console->addBreakpoint(pc);
+  }
+  ImGui::PopID();
+  ImGui::PopStyleColor();
+  ImGui::SameLine();
+  ImGui::TextColored(ImVec4(r, g, b, 1.0f), l.substr(5, l.size()-5).c_str());
+}
+
+void Gui::printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
+  int id = 0;
   for(const auto &e : v){
+    id++;
     switch(e.second){
       case ASM_JUMP:
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), e.first.c_str());
+        ASMLine(e.first, id, 1.0f, 0.0f, 0.0f);
         ImGui::SeparatorText("Sprung");
         break;
       case ASM_CURRENT:
-        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), e.first.c_str());
+        ASMLine(e.first, id, 1.0f, 1.0f, 0.0f);
         break;
       case ASM_REGULAR:
-        ImGui::Text(e.first.c_str());
+        ASMLine(e.first, id, 1.0f, 1.0f, 1.0f);
         break;
     }
   }
@@ -129,7 +144,7 @@ void Gui::drawMemoryReader()
 {
   ImGui::Text("Adresse:");
   ImGui::SameLine();
-  ImGui::PushID(1);
+  ImGui::PushID(runningID++);
   ImGui::InputText("", memInputBuf, 255);
   ImGui::PopID();
   if(ImGui::Button("Lies 1 Byte")){
@@ -156,6 +171,8 @@ void Gui::drawMemoryReader()
   }
 
   ImGui::Text(("Hex: "+ghexNorm(ghex(getLastRead()),4)).c_str());
+  ImGui::SameLine();
+  ImGui::Text(("Opcode: "+(getLastRead() < 256 ? console->cpu->opcodes[getLastRead()].name : "???")).c_str());
   ImGui::Text(("Bin: "+std::bitset<16>(getLastRead()).to_string()).c_str());
 }
 
@@ -170,16 +187,35 @@ void Gui::drawBreakpoints()
     }
   }
   ImGui::SameLine();
-  ImGui::PushID(2);
+  ImGui::PushID(runningID++);
   ImGui::InputText("", bpInputBuf, 255);
+  ImGui::PopID();
+
+
+  if(ImGui::Button("Hinzufügen Op:")){
+    std::string s(opInputBuf);
+    if(s.size()>0){
+      breakpointsOP = console->addBreakpointOP(s);
+    }
+  }
+  ImGui::SameLine();
+  ImGui::PushID(runningID++);
+  ImGui::InputText("", opInputBuf, 255);
   ImGui::PopID();
 
   ImGui::PushItemWidth(0);
   if(ImGui::BeginListBox("")){
-    int i = 2;
+    for(const auto &bp : breakpointsOP){
+      ImGui::PushID(runningID++);
+      ImGui::Text(("Break: "+bp).c_str());
+      ImGui::SameLine();
+      if(ImGui::Button("X")){
+        breakpointsOP = console->removeBreakpointOP(bp);
+      }
+      ImGui::PopID();
+    }
     for(const auto &bp : breakpoints){
-      i++;
-      ImGui::PushID(i);
+      ImGui::PushID(runningID++);
       ImGui::Text(("Break: $"+ghexNorm(ghex(bp), 4)).c_str());
       ImGui::SameLine();
       if(ImGui::Button("X")){
@@ -221,6 +257,7 @@ void Gui::drawDebugger()
 
 void Gui::render()
 {
+    runningID = 0;
     if(state->show){
       ImGui_ImplOpenGL3_NewFrame();
       ImGui_ImplGlfw_NewFrame();

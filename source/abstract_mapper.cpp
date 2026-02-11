@@ -13,22 +13,29 @@ uint8_t *AbstractMapper::translatePPUBus(uint8_t *addr)
         uint16_t nametableNum = a / 0x400;
         uint16_t offset = a % 0x400;
         switch(mirror){
-            case SINGLE_SCREEN_LOWER:{ // 0 - Ein Bildschirm, untere Bank
+            case SINGLE_SCREEN_LOWER:{ // Ein Bildschirm, untere Bank
                 return mapper->ppu->internalMemory +        offset; // Alle vier Nametables zeigen auf die untere interne PPU Bank
                 break;
             }
-            case SINGLE_SCREEN_UPPER:{ // 1 - Ein Bildschirm, obere Bank
+            case SINGLE_SCREEN_UPPER:{ // Ein Bildschirm, obere Bank
                 return mapper->ppu->internalMemory +        0x400 + offset; // Zweite Hälfte
                 break;
             }
-            case MIRROR_VERTICAL:{ // 2 - Vertical Mirror, Horizontal ausgelegt
+            case MIRROR_VERTICAL:{ // Vertical Mirror, Horizontal ausgelegt
                 int bank = nametableNum % 2 == 0 ? 0 : 1; // 0,2 sind untere Bank, 1,3 obere
                 return mapper->ppu->internalMemory +        offset + (bank * 0x400);
                 break;
             }
-            case MIRROR_HORIZONTAL:{ // 3 - Horizontal Mirror, Vertikal ausgelegt
+            case MIRROR_HORIZONTAL:{ // Horizontal Mirror, Vertikal ausgelegt
                 int bank = nametableNum < 2 ? 0 : 1; // 0,1 sind untere Bank, 2,3 obere
                 return mapper->ppu->internalMemory +        offset + (bank * 0x400);
+                break;
+            }
+            default:{ // Vier verschiedene Nametables
+                if(a < 0x800)
+                    return mapper->ppu->internalMemory + offset;
+                else
+                    return hardwiredVram + (offset - 0x800);
                 break;
             }
         }
@@ -82,6 +89,9 @@ AbstractMapper::AbstractMapper(std::shared_ptr<Mapper> m)
     this->mapper = m;
     mirror = mapper->cart->header.flags6.getNametableArrangement() ? MIRROR_VERTICAL : MIRROR_HORIZONTAL;
     palletteMap = new uint8_t*[0x100];
+
+    // 2KiB + 2KiB intern in der PPU
+    hardwiredVram = new uint8_t[0x800];
     if(mapper->cart->header.CHRROMSize == 0)
         chrRam = true;
 
@@ -103,5 +113,6 @@ AbstractMapper::AbstractMapper(std::shared_ptr<Mapper> m)
 
 AbstractMapper::~AbstractMapper()
 {
+    delete[] hardwiredVram;
     delete[] palletteMap;
 }

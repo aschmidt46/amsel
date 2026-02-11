@@ -26,6 +26,9 @@ class AbstractMapper{
     unsigned int prgRamSize = 0;
     bool chrRam = false;
 
+    // Rad Racer 2
+    uint8_t* hardwiredVram;
+
     // Weil mapper->cart zum Destruktorzeitpunkt nicht mehr existiert
     std::string name = "";
     bool containsBatteryBackedPRGRAM = false;

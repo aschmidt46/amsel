@@ -24,7 +24,10 @@ class Gui{
     uint8_t lastReadHigh = 0;
     char memInputBuf[255];
     char bpInputBuf[255];
+    char opInputBuf[255];
     std::vector<uint16_t> breakpoints;
+    std::vector<std::string> breakpointsOP;
+    int runningID;
 
     void toggleDebugger(){
         if(!state->showDebugger){
@@ -52,13 +55,19 @@ class Gui{
     };
 
     public:
-    Gui(NES* c, SharedState* state){
+    Gui(NES* c, SharedState* state, bool debug){
         this->console = c;
         this->state = state;
         for(int i = 0; i < 255; i++){
             memInputBuf[i] = 0;
             bpInputBuf[i] = 0;
         }
+        if(debug)
+            breakpointsOP = console->addBreakpointOP("BRK");
+        opInputBuf[0] = 'B';
+        opInputBuf[1] = 'R';
+        opInputBuf[2] = 'K';
+        opInputBuf[3] = '\0';
     };
     void render();
     void assemblyRender();
@@ -66,4 +75,7 @@ class Gui{
     void drawMemoryReader();
     void drawBreakpoints();
     void drawDebugger();
+
+    void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
+    void ASMLine(std::string l, int id, float r, float g, float b);
 };

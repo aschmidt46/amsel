@@ -15,6 +15,8 @@ if(WIN32)
 add_compile_definitions(NES_ON_WINDOWS)
 endif()
 
+add_compile_definitions(_DEBUG)
+
 #set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")

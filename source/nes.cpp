@@ -104,6 +104,9 @@ bool NES::clock()
         if(std::find(breakpoints.begin(), breakpoints.end(), cpu->PC) != breakpoints.end()){
             halt = true;
         }
+        if(std::find(breakpointsOP.begin(), breakpointsOP.end(), cpu->opcodes[cpu->read((uint8_t*)(uintptr_t)cpu->PC)].name) != breakpointsOP.end()){
+            halt = true;
+        }
     }
     if(halt && allowedClocks==0) return false;
 
@@ -180,8 +183,41 @@ std::vector<uint16_t> NES::removeBreakpoint(uint16_t bp)
                        [&](uint16_t i) { return i == bp; }), breakpoints.end());
 
 
-    if(watchBreakpoints && breakpoints.size() == 0){
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
         watchBreakpoints = false;
     }
     return breakpoints;
+}
+
+std::vector<std::string> NES::addBreakpointOP(std::string bp)
+{
+    
+    if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpointsOP){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpointsOP.push_back(bp);
+    }
+
+    return breakpointsOP;
+}
+
+std::vector<std::string> NES::removeBreakpointOP(std::string bp)
+{
+    breakpointsOP.erase(std::remove_if(breakpointsOP.begin(), breakpointsOP.end(), 
+                       [&](std::string i) { return i == bp; }), breakpointsOP.end());
+
+
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpointsOP;
 }

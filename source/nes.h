@@ -66,10 +66,13 @@ class NES{
     std::pair<std::string, std::vector<int>> getOldDisassembly();
     std::vector<uint16_t> addBreakpoint(uint16_t bp);
     std::vector<uint16_t> removeBreakpoint(uint16_t bp);
+    std::vector<std::string> addBreakpointOP(std::string bp);
+    std::vector<std::string> removeBreakpointOP(std::string bp);
 
     private:
     std::mutex debugM;
 
     bool watchBreakpoints = false;
     std::vector<uint16_t> breakpoints;
+    std::vector<std::string> breakpointsOP;
 };

@@ -155,7 +155,12 @@ int run()
   console = new NES(screen, controller1);
   SharedState* state = new SharedState();
   AudioSystem audiosystem(console);
-  Gui gui(console, state);
+  
+#ifdef _DEBUG
+  Gui gui(console, state, true);
+#else
+  Gui gui(console, state, false);
+#endif
 
   // Verzeichnis finden
   int pathLength = wai_getExecutablePath(NULL, 0, NULL);
