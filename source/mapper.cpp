@@ -194,3 +194,8 @@ void Mapper::pullIRQ()
 {
     cpu->pullIRQ();
 }
+
+void Mapper::riseA12()
+{
+    mImpl->onPPUA12RisingEdge();
+}

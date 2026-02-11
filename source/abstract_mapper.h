@@ -5,7 +5,10 @@
 
 enum Mirror{
     MIRROR_VERTICAL,
-    MIRROR_HORIZONTAL
+    MIRROR_HORIZONTAL,
+    SINGLE_SCREEN_LOWER,
+    SINGLE_SCREEN_UPPER,
+    QUAD_SCREEN
 };
 
 class Mapper;
@@ -44,6 +47,9 @@ class AbstractMapper{
     // Operationen auf PPU-Bus
     virtual void writePPU(uint8_t* addr, uint8_t value);
     virtual uint8_t readPPU(uint8_t* addr);
+
+    //MMC3 IRQ (Mapper4)
+    virtual void onPPUA12RisingEdge(){};
 
     AbstractMapper(std::shared_ptr<Mapper> m);
     virtual ~AbstractMapper();

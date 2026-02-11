@@ -67,4 +67,5 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     void writeVRAM(uint8_t* address, uint8_t value);
     void pullNMI();
     void pullIRQ();
+    void riseA12();
 };

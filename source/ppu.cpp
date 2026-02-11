@@ -187,6 +187,11 @@ void Ppu::fillTimings()
 				if(cycle==257 && scanline >= 0){
 					timings[i].first.push_back(&Ppu::evaluateSprites);
 				}
+
+				// Mapper4 IRQ
+				if(cycle==260){
+					timings[i].first.push_back(&Ppu::maybeRiseA12);
+				}
 			}
 
 			if(cycle == 340){
@@ -543,4 +548,10 @@ void Ppu::renderPixel()
 	
 	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)addr) & 0x3F;
 	setPixel(cycle-1, scanline, pal.getColor(palette_val & (PPUMASK.getGrayScale() ? 0x30 : 0x3F)));
+}
+
+void Ppu::maybeRiseA12()
+{
+	if(PPUMASK.getRenderBackground() || PPUMASK.getRenderSprites())
+		mapper->riseA12();
 }

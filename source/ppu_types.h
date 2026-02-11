@@ -68,6 +68,7 @@ struct ctrlReg {
     bool getPatternBackground(){
         return raw & 0b10000u;
     };
+    // 1 - 8x16, 0 - 8x8
     bool getSpriteSize(){
         return raw & 0b100000u;
     };

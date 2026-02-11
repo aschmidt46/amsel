@@ -21,7 +21,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
 
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
-add_link_options(-mwindows)
+#Kein Terminal:
+# add_link_options(-mwindows)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -89,6 +90,7 @@ source/mappers/mapper0.cpp source/mappers/mapper0.h
 source/mappers/mapper1.cpp source/mappers/mapper1.h
 source/mappers/mapper2.cpp source/mappers/mapper2.h
 source/mappers/mapper3.cpp source/mappers/mapper3.h
+source/mappers/mapper4.cpp source/mappers/mapper4.h
 source/mappers/mappers.cpp source/mappers/mappers.h
 )
 

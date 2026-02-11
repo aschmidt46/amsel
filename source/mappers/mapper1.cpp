@@ -17,7 +17,11 @@ void Mapper1::changeBanks(uint16_t bank, uint8_t mode)
     if(bank < 0xA000){ // 0x8000 - 0x9FFF: Control
         chrRomBankMode =       mode & 0b00010000;
         prgRomBankMode =      (mode & 0b00001100) >> 2;
-        nametableArrangement = mode & 0b00000011;
+        int nametableArrangement = mode & 0b00000011;
+        if(nametableArrangement==0)         mirror = SINGLE_SCREEN_LOWER;
+        else if(nametableArrangement==1)    mirror = SINGLE_SCREEN_UPPER;
+        else if(nametableArrangement==2)    mirror = MIRROR_VERTICAL;
+        else                                mirror = MIRROR_HORIZONTAL;
     }
     else if(bank < 0xC000){ // 0xA000 - 0xBFFF: CHR Bank 0
         //Ram ist 2* 8KiB;
@@ -44,44 +48,17 @@ void Mapper1::changeBanks(uint16_t bank, uint8_t mode)
 
 uint8_t *Mapper1::translatePPUBus(uint8_t *addr)
 {
-    if((uintptr_t)addr < 0x2000){ // Pattern Table / CHR Speicher
-        if(chrRomBankMode){ // 4KiB Modus
-            if((uintptr_t)addr < 0x1000){ // Bank 0
-                return mapper->cart->chrRom +       (uintptr_t)addr + (chrBank0 * 0x1000);
-            }
-            else{ // Bank 1
-                return mapper->cart->chrRom +       (uintptr_t)addr - 0x1000 + (chrBank1 * 0x1000);
-            }
+    // Pattern Table / CHR Speicher (0x0000 - 0x2000)
+    if(chrRomBankMode){ // 4KiB Modus
+        if((uintptr_t)addr < 0x1000){ // Bank 0
+            return mapper->cart->chrRom +       (uintptr_t)addr + (chrBank0 * 0x1000);
         }
-        else{ // 8KiB Modus
-            return mapper->cart->chrRom +           (uintptr_t)addr + ((chrBank0 & 0b11111110) * 0x1000); // Unterstes Bit ignoriert
+        else{ // Bank 1
+            return mapper->cart->chrRom +       (uintptr_t)addr - 0x1000 + (chrBank1 * 0x1000);
         }
     }
-    else { // Nametables und Attribute tables
-        uint16_t a = (uintptr_t) addr - 0x2000;
-        a = a % 0x1000;
-        uint16_t nametableNum = a / 0x400;
-        uint16_t offset = a % 0x400;
-        switch(nametableArrangement){
-            case 0:{ // 0 - Ein Bildschirm, untere Bank
-                return mapper->ppu->internalMemory +        offset; // Alle vier Nametables zeigen auf die untere interne PPU Bank
-                break;
-            }
-            case 1:{ // 1 - Ein Bildschirm, obere Bank
-                return mapper->ppu->internalMemory +        0x400 + offset; // Zweite Hälfte
-                break;
-            }
-            case 2:{ // 2 - Vertical Mirror, Horizontal ausgelegt
-                int bank = nametableNum % 2 == 0 ? 0 : 1; // 0,2 sind untere Bank, 1,3 obere
-                return mapper->ppu->internalMemory +        offset + (bank * 0x400);
-                break;
-            }
-            default:{ // 3 - Horizontal Mirror, Vertikal ausgelegt
-                int bank = nametableNum < 2 ? 0 : 1; // 0,1 sind untere Bank, 2,3 obere
-                return mapper->ppu->internalMemory +        offset + (bank * 0x400);
-                break;
-            }
-        }
+    else{ // 8KiB Modus
+        return mapper->cart->chrRom +           (uintptr_t)addr + ((chrBank0 & 0b11111110) * 0x1000); // Unterstes Bit ignoriert
     }
 }
 
@@ -164,7 +141,7 @@ uint8_t Mapper1::readRam(uint8_t *addr)
 
 void Mapper1::writePPU(uint8_t *addr, uint8_t value)
 {
-    if((uintptr_t)addr < 0x3F00){
+    if((uintptr_t)addr < 0x2000){
         *translatePPUBus(addr) = value;
     }
     else AbstractMapper::writePPU(addr, value);
@@ -172,7 +149,7 @@ void Mapper1::writePPU(uint8_t *addr, uint8_t value)
 
 uint8_t Mapper1::readPPU(uint8_t *addr)
 {
-    if((uintptr_t)addr < 0x3F00){
+    if((uintptr_t)addr < 0x2000){
         return *translatePPUBus(addr);
     }
     else return AbstractMapper::readPPU(addr);

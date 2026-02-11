@@ -14,6 +14,8 @@ std::optional<AbstractMapper *> getMapper(std::shared_ptr<Mapper> m, int number)
             break;
         case 3:
             return {(AbstractMapper*) new Mapper3(m)};
+        case 4:
+            return {(AbstractMapper*) new Mapper4(m)};
             break;
         default:
             return std::nullopt;

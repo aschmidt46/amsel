@@ -135,5 +135,5 @@ NESFile::NESFile(const char *path)
     // muss erstmal reichen...
 
     assert(chrRom != nullptr);
-    assert(this->prgRom != nullptr);
+    assert(this->prgRom != nullptr);    
 }

@@ -161,6 +161,7 @@ class Ppu{
     void setSpriteShifters();
     void pullNMI();
     void renderPixel();
+    void maybeRiseA12();
 
 };
 

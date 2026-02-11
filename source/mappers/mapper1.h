@@ -14,7 +14,6 @@ class Mapper1 : AbstractMapper {
     // Control
     bool chrRomBankMode = false;
     uint8_t prgRomBankMode = 3;
-    uint8_t nametableArrangement = 0;
 
     // Chr banks
     uint8_t chrBank0 = 0;
@@ -32,7 +31,7 @@ class Mapper1 : AbstractMapper {
     uint8_t readRam(uint8_t* addr) override;
 
     void writePPU(uint8_t* addr, uint8_t value) override;
-    virtual uint8_t readPPU(uint8_t* addr) override;
+    uint8_t readPPU(uint8_t* addr) override;
 
     Mapper1(std::shared_ptr<Mapper> m);
     ~Mapper1() override;
