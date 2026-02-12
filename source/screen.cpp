@@ -107,19 +107,38 @@ void Screen::copyBufferToScreen(float *buffer)
 }
 
 glm::vec4 computeRect(int x, int y){
+    float nesX = 256.0;
+    float nesY = 240;
+    float nesAspect = nesX / nesY;
     float aspect = (float)y/(float)x;
+    float cX = (float)x / 2.0;
+    float cY = (float)y / 2.0;
+    float h = 0;
+    float w = 0;
+    
     float x0=0, x1=1, y0=0, y1=1;
-    if(aspect < 1){
-        float aw = (1 - aspect) / 2;
-        x0 = aw;
-        x1 = aw + aspect;
+    if(aspect < nesAspect){ // Breiter als Nes
+        h = y;
+        w = h * nesAspect;
     }
-    else{
-        aspect = (float)x/(float)y;
-        float ah = (1 - aspect) / 2;
-        y0 = ah;
-        y1 = ah + aspect;
+    else{ // Schmaler als Nes
+        w = x;
+        h = x * (nesY / nesX);
     }
+    x0 = cX - (w/2);
+    x1 = cX + (w/2);
+    y0 = cY - (h/2);
+    y1 = cY + (h/2);
+
+    // Skalierung auf [0,1]
+
+    x0 /= x;
+    x1 /= x;
+    y0 /= y;
+    y1 /= y;
+
+    // Skalierung auf NDC im Shader
+
     return glm::vec4(x0,x1,y0,y1);
 }
 

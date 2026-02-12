@@ -24,6 +24,10 @@
 
 #include "whereami.h"
 #include "icon.h"
+#include "styles.h"
+#include "ImGuiNotify.hpp"
+#include "IconsFontAwesome6.h"
+#include "fa-solid-900.h"
 
 #ifdef NES_ON_WINDOWS
 #include <Windows.h>
@@ -38,8 +42,7 @@ int windowX, windowY;
 int oldX = windowX;
 int oldY = windowY;
 
-bool showGui;
-bool fullScreen;
+Gui* sharedGui;
 
 std::mutex cvm;
 
@@ -49,6 +52,7 @@ NES* console;
 
 std::string title = "Anton's NES-Emulator";
 std::filesystem::path exeDir;
+bool wasFullscreen = false;
 
 GLFWwindow* initGL(){
   int result = glfwInit();
@@ -84,6 +88,18 @@ GLFWwindow* initGL(){
   ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
   ImGui_ImplOpenGL3_Init();
 
+  io.Fonts->AddFontDefault();
+
+  float baseFontSize = 16.0f;
+  float iconFontSize = baseFontSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
+
+  static constexpr ImWchar iconsRanges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
+  ImFontConfig iconsConfig;
+  iconsConfig.MergeMode = true;
+  iconsConfig.PixelSnapH = true;
+  iconsConfig.GlyphMinAdvanceX = iconFontSize;
+  io.Fonts->AddFontFromMemoryCompressedTTF(fa_solid_900_compressed_data, fa_solid_900_compressed_size, iconFontSize, &iconsConfig, iconsRanges);
+
   return window;
 }
 
@@ -97,26 +113,25 @@ void cleanUp(GLFWwindow* window){
   delete console;
 }
 
-static void framebuffer_size_callback(GLFWwindow* window, int w, int h){
+static void mouseCallback(GLFWwindow* window, int button, int action, int mods){
+
+  ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+
+  if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
+    sharedGui->state->show = !sharedGui->state->show;
+}
+
+static void framebufferSizeCallback(GLFWwindow* window, int w, int h){
     width = w;
     height = h;
     screen->updateFramebufferSize(w, h);
   };
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-  unsigned int v = 0;
-  if(action == GLFW_PRESS) v = 1;
-  if(action == GLFW_RELEASE) v = 0;
-  if(action != GLFW_PRESS && action != GLFW_RELEASE) return;
-  if(v==1 && key == GLFW_KEY_ESCAPE){
-    console->reset();
-  }
-  if(v==1 && key == GLFW_KEY_F11){
-    if(fullScreen){
+void onToggleFullscreen(GLFWwindow* window){
+  if(!sharedGui->state->fullScreen){
       GLFWmonitor* monitor = glfwGetPrimaryMonitor();
       glfwSetWindowMonitor(window, NULL, oldX, oldY, oldwidth, oldheight, 0);
-      fullScreen = false;
+      sharedGui->state->fullScreen = false;
     }
     else{
       GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -127,13 +142,26 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
       oldY = windowY;
  
       glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-      fullScreen = true;
+      sharedGui->state->fullScreen = true;
     }
+}
+
+static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+  unsigned int v = 0;
+  if(action == GLFW_PRESS) v = 1;
+  if(action == GLFW_RELEASE) v = 0;
+  if(action != GLFW_PRESS && action != GLFW_RELEASE) return;
+  if(v==1 && key == GLFW_KEY_ESCAPE){
+    console->reset();
+  }
+  if(v==1 && key == GLFW_KEY_F11){
+    sharedGui->state->fullScreen = !sharedGui->state->fullScreen;
   }
   controller1->setKey(key, v);
 }
 
-static void position_callback(GLFWwindow* window, int posx, int posy){
+static void positionCallback(GLFWwindow* window, int posx, int posy){
   windowX = posx;
   windowY = posy;
 }
@@ -162,6 +190,8 @@ int run()
   Gui gui(console, state, false);
 #endif
 
+  sharedGui = &gui;
+
   // Verzeichnis finden
   int pathLength = wai_getExecutablePath(NULL, 0, NULL);
   char* p = (char*)malloc(pathLength + 1);
@@ -172,10 +202,11 @@ int run()
   free(p);
   exeDir = path.parent_path();
 
-  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+  glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
   // input implementieren
-  glfwSetKeyCallback(window, key_callback);
-  glfwSetWindowPosCallback(window, position_callback);
+  glfwSetKeyCallback(window, keyCallback);
+  glfwSetMouseButtonCallback(window, mouseCallback);
+  glfwSetWindowPosCallback(window, positionCallback);
   const GLFWimage glfwIcon = {200,200,icon};
   glfwSetWindowIcon(window, 1, &glfwIcon);
 
@@ -183,10 +214,12 @@ int run()
   glfwGetWindowContentScale(window, &xscale, &yscale);
   float mScale = (xscale + yscale) / 2.0;
 
+  SetupImGuiStyle();
   // Skalierung nach Auflösung
   ImGuiStyle& style = ImGui::GetStyle();
   style.FontScaleDpi = mScale;
   style.ScaleAllSizes(mScale);
+
 
 
 
@@ -197,6 +230,10 @@ int run()
   while(!glfwWindowShouldClose(window)){
     do {
       glfwPollEvents();
+      if(wasFullscreen != sharedGui->state->fullScreen){
+        wasFullscreen = sharedGui->state->fullScreen;
+        onToggleFullscreen(window);
+      }
       screen->present();
       gui.render();
       glfwSwapBuffers(window);

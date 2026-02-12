@@ -9,6 +9,10 @@
 #include <bitset>
 #include "file_io.h"
 
+#include "ImGuiNotify.hpp"
+#include "IconsFontAwesome6.h"
+#include "fa-solid-900.h"
+
 std::string ghex(uintptr_t input){
     std::string str = std::format("{:x}", input);
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
@@ -277,18 +281,19 @@ void Gui::drawOutput()
 void Gui::render()
 {
     runningID = 0;
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    if(state->showDebugger){
+      drawDebugger();
+    }
+
+    if(state->showOutput){
+      drawOutput();
+    }
+
     if(state->show){
-      ImGui_ImplOpenGL3_NewFrame();
-      ImGui_ImplGlfw_NewFrame();
-      ImGui::NewFrame();
-
-      if(state->showDebugger){
-        drawDebugger();
-      }
-
-      if(state->showOutput){
-        drawOutput();
-      }
 
       ImGui::BeginMainMenuBar();
 
@@ -314,6 +319,9 @@ void Gui::render()
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("Einstellungen")){
+          if(ImGui::MenuItem("Vollbild", "F11")){
+            state->fullScreen = !state->fullScreen;
+          }
           bool ton = console->sound;
           if(ImGui::Checkbox("Ton", &ton)){
             console->sound = !console->sound;
@@ -338,22 +346,34 @@ void Gui::render()
         }
 
       ImGui::EndMainMenuBar();
-
-      if(console->unimplementedMapper>=0){
-        int m = console->unimplementedMapper;
-        console->unimplementedMapper = -1;
-        pfd::message("Fehler",
-          "Dieses Spiel (iNES-Mapper "+std::to_string(m)+") wird nicht unterstützt, weil der entsprechende Mapper nicht implementiert ist.",
-          pfd::choice::ok, pfd::icon::error);
-      }
-
-      if(FileIO::getInstance().shouldDisplayMessage()){
-        pfd::message("Info",
-          "Dieses Spiel kann den Spielstand sichern. Ein Speicherstand wurde erstellt.",
-          pfd::choice::ok, pfd::icon::info);
-      }
-  
-      ImGui::Render();
-      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
+
+    if(console->unimplementedMapper>=0){
+      int m = console->unimplementedMapper;
+      console->unimplementedMapper = -1;
+      ImGuiToast toast(ImGuiToastType::Error, 3000);
+      toast.setTitle("Error");
+      toast.setContent(("Dieses Spiel (iNES-Mapper "+std::to_string(m)+") wird nicht unterstützt, weil der entsprechende Mapper nicht implementiert ist.").c_str());
+      ImGui::InsertNotification(toast);
+    }
+
+    if(FileIO::getInstance().shouldDisplayMessage()){
+      ImGuiToast toast(ImGuiToastType::Success, 3000);
+      toast.setTitle(std::filesystem::path(console->fileName).stem().string().c_str());
+      toast.setContent("Ein Speicherstand wurde erstellt!");
+      ImGui::InsertNotification(toast);
+    }
+
+    // Notifications
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+        
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.10f, 0.10f, 0.10f, 1.00f)); // Background color
+        
+    ImGui::RenderNotifications();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(1);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

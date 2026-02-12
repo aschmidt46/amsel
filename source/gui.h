@@ -4,6 +4,7 @@
 
 struct SharedState{
     bool show = true;
+    bool fullScreen = false;
     bool showDebugger = false;
     bool halt = false;
     bool showOutput = false;
@@ -18,8 +19,6 @@ enum ASMtype{
 class NES;
 class Gui{
     NES* console;
-
-    SharedState* state;
 
     uint8_t lastReadLow = 0;
     uint8_t lastReadHigh = 0;
@@ -86,4 +85,6 @@ class Gui{
 
     void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
     void ASMLine(std::string l, int id, float r, float g, float b);
+
+    SharedState* state;
 };
