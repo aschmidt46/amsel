@@ -11,6 +11,7 @@ struct FrameSequencer{
     Sequencer sequencer1 = Sequencer({1, 2, 3, 4, 5});
 
     Apu* apu;
+    int resetCounter = -1;
 
     FrameSequencer(Apu* apu);
 

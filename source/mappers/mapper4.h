@@ -2,6 +2,7 @@
 
 #include "../abstract_mapper.h"
 #include "../mapper.h"
+#include <fstream>
 
 class Mapper4 : AbstractMapper {
     
@@ -10,7 +11,7 @@ class Mapper4 : AbstractMapper {
     uint8_t* bdwSelect = nullptr;
 
     // Kompatibilität mit MMC6: Ram immer schreibbar
-    // bool prgRamEnable = false;
+    // bool prgRamEnable = true;
     bool prgRomBankMode = false;
     bool chrA12Inversion = false;
     uint8_t IRQCounterReload = 0;

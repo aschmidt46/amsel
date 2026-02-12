@@ -68,6 +68,7 @@ class NES{
     std::vector<uint16_t> removeBreakpoint(uint16_t bp);
     std::vector<std::string> addBreakpointOP(std::string bp);
     std::vector<std::string> removeBreakpointOP(std::string bp);
+    std::string getText(uint16_t addr);
 
     private:
     std::mutex debugM;

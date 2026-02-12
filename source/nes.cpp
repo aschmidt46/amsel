@@ -221,3 +221,22 @@ std::vector<std::string> NES::removeBreakpointOP(std::string bp)
     }
     return breakpointsOP;
 }
+
+std::string NES::getText(uint16_t addr)
+{
+    if(!loaded){
+        return "";
+    }
+    std::string res = "";
+    int max = 2000;
+    int i = 0;
+    while(addr < 0xFFFF && i < max){
+        char c = mapper->read((uint8_t*)(uintptr_t)addr);
+        if(c == '\0')
+            break;
+        res += c;
+        addr++;
+        i++;
+    }
+    return res;
+}

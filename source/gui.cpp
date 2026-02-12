@@ -255,6 +255,25 @@ void Gui::drawDebugger()
   ImGui::End();
 }
 
+void Gui::drawOutput()
+{
+  ImGui::Begin("Test-ROM Ausgabe (falls vorhanden)");
+    if(ImGui::Button("Startadresse:")){
+      std::string s(outInputBuf);
+      removeCharsFromString(s, "x$");
+      if(s.size()>0){
+        uint16_t addr = std::stoi(s, 0, 16);
+        outputStartsAt = addr;
+      }
+    }
+    ImGui::SameLine();
+    ImGui::PushID(runningID++);
+    ImGui::InputText("##", outInputBuf, 255);
+    ImGui::PopID();
+    ImGui::TextWrapped(console->getText(outputStartsAt).c_str());
+  ImGui::End();
+}
+
 void Gui::render()
 {
     runningID = 0;
@@ -265,6 +284,10 @@ void Gui::render()
 
       if(state->showDebugger){
         drawDebugger();
+      }
+
+      if(state->showOutput){
+        drawOutput();
       }
 
       ImGui::BeginMainMenuBar();
@@ -305,6 +328,11 @@ void Gui::render()
           bool s = state->showDebugger;
           if(ImGui::Checkbox("Disassembler", &s)){
             toggleDebugger();
+          }
+
+          s = state->showOutput;
+          if(ImGui::Checkbox("Textausgabe", &s)){
+            toggleTestRomOutput();
           }
           ImGui::EndMenu();
         }

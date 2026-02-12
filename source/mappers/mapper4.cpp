@@ -124,7 +124,6 @@ void Mapper4::writeRam(uint8_t *addr, uint8_t value)
         }
         else{ // ungerade, IRQ Reload
             IRQCounter = 0;
-            // mapper->pullIRQ();
         }
     }
     else{
@@ -145,22 +144,28 @@ uint8_t Mapper4::readRam(uint8_t *addr)
     R7 = R7 & 0b00111111;
 
     if((uintptr_t)addr < 0x8000){
-        return prgRam[(uintptr_t)addr - 0x6000];
+        // if(prgRamEnable)
+            return prgRam[(uintptr_t)addr - 0x6000];
+        // else return 0;
     }
     else if((uintptr_t)addr < 0xA000){
-        if(!prgRomBankMode) // tauschbar durch R6
+        if(!prgRomBankMode){ // tauschbar durch R6
             return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + ((R6) * 0x2000)];
-        else // fest, vorletzte
+        }
+        else{ // fest, vorletzte
             return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + ((mapper->cart->header.PRGROMSize - 1) * 0x4000)];
+        }
     }
     else if((uintptr_t)addr < 0xC000){ // tauschbar durch R7
         return mapper->cart->prgRom[(uintptr_t)addr - 0xA000 + ((R7) * 0x2000)];
     }
     else if((uintptr_t)addr < 0xE000){ // fest, vorletzte Bank oder tauschbar
-        if(!prgRomBankMode) // fest, vorletzte
+        if(!prgRomBankMode){ // fest, vorletzte
             return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + ((mapper->cart->header.PRGROMSize - 1) * 0x4000)];
-        else // tauschbar durch R6
+        }
+        else{ // tauschbar durch R6
             return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + ((R6) * 0x2000)];
+        }
     }
     else{ // fest, letzte Bank
         return mapper->cart->prgRom[(uintptr_t)addr - 0xE000 + ((mapper->cart->header.PRGROMSize - 1) * 0x4000) + 0x2000];
@@ -197,8 +202,9 @@ void Mapper4::onPPUA12RisingEdge()
         IRQCounter--;
     };
 
-    if(IRQCounter==0 && !disableIRQ)
+    if(IRQCounter==0 && !disableIRQ){
         mapper->pullIRQ();
+    }
 }
 
 Mapper4::Mapper4(std::shared_ptr<Mapper> m) : AbstractMapper(m)

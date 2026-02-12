@@ -1,6 +1,7 @@
 #include "apu_delta_modulation_channel.h"
 #include "apu.h"
 #include "../mapper.h"
+#include <iostream>
 
 void DeltaModulationChannel::restart()
 {
@@ -9,7 +10,9 @@ void DeltaModulationChannel::restart()
 
 void DeltaModulationChannel::clock(Apu* apu)
 {
-    if(interruptFlag) apu->mapper->pullIRQ();
+    if(interruptFlag){
+        apu->mapper->pullIRQ();
+    }
 
     if(!sampleBuffer && dmaReader.bytesRemain > 0){
         sampleBuffer = apu->mapper->read((uint8_t*)(uintptr_t)dmaReader.addressCounter);

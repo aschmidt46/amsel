@@ -13,8 +13,8 @@ void Cpu::RESET()
     uint8_t high = read((uint8_t*)(uintptr_t)0xFFFD);
     uint16_t addr = (high << 8) | low;
     PC = addr;
-    SP = 0xFD;
-    P = 0b00100000;
+    SP -= 3;
+    // P = 0b00100000;
     setStatus(STATUS_INTERRUPT_DISABLE, true);
     mapper->write((uint8_t*)0x4015, 0x00);
 }
@@ -35,9 +35,9 @@ bool Cpu::getStatus(Statusbit s)
 }
 
 bool willCrossPage(uintptr_t a, uintptr_t b){
-    uint8_t lowerA = a & 0xff;
-    uint8_t lowerB = b & 0xff;
-    return lowerB > std::numeric_limits<uint8_t>::max() - lowerA;
+    int lowerA = a & 0xff;
+    int lowerB = b & 0xff;
+    return lowerA + lowerB > static_cast<int>(std::numeric_limits<uint8_t>::max());
 }
 
 bool willCrossPage(uintptr_t a, int8_t b){
@@ -267,7 +267,7 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
             PC += 3;
             if(willCrossPage((uintptr_t)addr, (uintptr_t)X)){
                 cycles += 1;
-                // read((uint8_t*)(uintptr_t)addr); // dummy read
+                read((uint8_t*)(uintptr_t)addr); // dummy read
             }
             uint16_t sum = addr + X; // Summe wegen 16-bit Überlauf, landet dann in der zero-page
             return (uint8_t*)((intptr_t)sum);}
@@ -279,7 +279,7 @@ uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
             PC += 3;
             if(willCrossPage((uintptr_t)addr, (uintptr_t)Y)){
                 cycles += 1;
-                // read((uint8_t*)(uintptr_t)addr); // dummy read
+                read((uint8_t*)(uintptr_t)addr); // dummy read
             }
             uint16_t sum = addr + Y;
             return (uint8_t*)((intptr_t)sum);}
@@ -317,11 +317,11 @@ uint8_t Cpu::executeNextInstruction()
     uint8_t* addr = getMemoryAddress(info.mode, cycles);
     uint8_t modCycles = (this->*info.instruction)(addr);
     if(info.cycles > 0)
-        cycles = info.cycles; // Overwrite für "spezielle" Instruktionen, wie ASL
+    cycles = info.cycles; // Overwrite für "spezielle" Instruktionen, wie ASL
     else cycles += modCycles; // Für relative Adressierung, die davon abhängt, ob ein Branch genommen wird
-
+    
     totalCycles += cycles;
-
+    
     return cycles;
 }
 
@@ -334,7 +334,10 @@ bool Cpu::clockCPU()
         circular[circularIndex] = PC;
         incrementCircular();
 
-        remainingCycles += pollInterrupts();
+        if(!setInterruptNextInstruction.first)
+            remainingCycles += pollInterrupts();
+        if(remainingCycles)
+            return true;
         remainingCycles += executeNextInstruction();
         res = true;
     }
@@ -350,12 +353,14 @@ uint8_t Cpu::pollInterrupts()
             NMI();
             NMIWasHigh = true;
             NMIgenerated = false;
+            totalCycles += 7;
             return 7;
         }
         if(IRQgenerated){
             if(!getStatus(STATUS_INTERRUPT_DISABLE)){
                 IRQ();
                 IRQgenerated = false;
+                totalCycles += 7;
                 return 7;
             }
         }
@@ -935,7 +940,7 @@ uint8_t Cpu::ANC(uint8_t *mem)
     setStatus(STATUS_ZERO, A == 0);
     setStatus(STATUS_NEGATIVE, A & 0b10000000);
     setStatus(STATUS_CARRY, A & 0b10000000);
-    return 2;
+    return 0;
 }
 
 uint8_t Cpu::RLA(uint8_t *mem)
@@ -960,7 +965,7 @@ uint8_t Cpu::ALR(uint8_t *mem)
     setStatus(STATUS_CARRY, val & 0b00000001);
     setStatus(STATUS_ZERO, A == 0);
     setStatus(STATUS_NEGATIVE, false);
-    return 2;
+    return 0;
 }
 
 uint8_t Cpu::RRA(uint8_t *mem)
@@ -994,7 +999,7 @@ uint8_t Cpu::ARR(uint8_t *mem)
             setStatus(STATUS_CARRY, false);
             break;
     }
-    return 2;
+    return 0;
 }
 
 uint8_t Cpu::SAX(uint8_t *mem)

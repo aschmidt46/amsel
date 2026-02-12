@@ -104,9 +104,8 @@ void Apu::write(uint16_t reg, uint8_t val)
 uint8_t Apu::read(uint16_t reg)
 {
     bool fseqi = fseq.interruptFlag;
-    if(reg==0x4015){
-        fseq.interruptFlag = false;
-    }
+    fseq.interruptFlag = false;
+    
     return (dmc.interruptFlag << 7)
         | (fseqi << 6)
         | ((dmc.dmaReader.bytesRemain > 0) << 4)
@@ -118,6 +117,15 @@ uint8_t Apu::read(uint16_t reg)
 
 void Apu::clock()
 {
+    if(fseq.resetCounter==0){ // ApuClock Jitter
+        fseq.divider.reset();
+        fseq.resetCounter = -1;
+    }
+    else if(fseq.resetCounter>0){
+        fseq.resetCounter--;
+    }
+
+
     fseq.clock();
     pulse1.onCPUClock();
     pulse2.onCPUClock();

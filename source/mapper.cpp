@@ -111,14 +111,14 @@ uint8_t Mapper::read(uint8_t *address)
     }
     
     // Feste Register
-    auto val = *memoryMap[(uintptr_t)address];
     // PPU-Callback
-    if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
+    if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x3FFF){
         return ppu->readRegister(memoryMap[(uintptr_t)address]);
     }
     if((uintptr_t)address == 0x4015){
         return apu->read((uintptr_t)address);
     }
+    auto val = *memoryMap[(uintptr_t)address];
     if((uintptr_t)address >= 0x4016 && (uintptr_t)address <= 0x4017){
         val = (controller_state[(uintptr_t)address & 0x0001] & 0x80) > 0;
         controller_state[(uintptr_t)address & 0x0001] <<= 1;
@@ -144,7 +144,7 @@ void Mapper::write(uint8_t *address, uint8_t value)
     // if((uintptr_t)address >= 0x8000 && (uintptr_t)address <= 0x10000) return;
 
     // PPU-Callback
-    if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x2007){
+    if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x3FFF){
         ppu->writeRegister(memoryMap[(uintptr_t)address], value);
         return;
     }
@@ -161,8 +161,7 @@ void Mapper::write(uint8_t *address, uint8_t value)
         return;
     }
 
-    *memoryMap[(uintptr_t)address] = value;
-
+    
     // OAMDMA write
     if((uintptr_t)address == 0x4014){
         //uint8_t cpuPage = read(address);
@@ -173,6 +172,7 @@ void Mapper::write(uint8_t *address, uint8_t value)
         }
         cpu->remainingCycles += 512; // Oder 514???
     }
+    *memoryMap[(uintptr_t)address] = value;
 }
 
 uint8_t Mapper::readVRAM(uint8_t *address)

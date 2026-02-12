@@ -6,6 +6,7 @@ struct SharedState{
     bool show = true;
     bool showDebugger = false;
     bool halt = false;
+    bool showOutput = false;
 };
 
 enum ASMtype{
@@ -27,7 +28,10 @@ class Gui{
     char opInputBuf[255];
     std::vector<uint16_t> breakpoints;
     std::vector<std::string> breakpointsOP;
-    int runningID;
+    int runningID = 0;
+
+    uint16_t outputStartsAt = 0x6004;
+    char outInputBuf[255];
 
     void toggleDebugger(){
         if(!state->showDebugger){
@@ -38,6 +42,9 @@ class Gui{
             state->showDebugger = false;
             console->produceDisassembly = false;
         }
+    };
+    void toggleTestRomOutput(){
+        state->showOutput = !state->showOutput;
     };
     void toggleHalt(){
         if(!state->halt){
@@ -61,13 +68,13 @@ class Gui{
         for(int i = 0; i < 255; i++){
             memInputBuf[i] = 0;
             bpInputBuf[i] = 0;
+            opInputBuf[i] = 0;
+            outInputBuf[i] = 0;
         }
         if(debug)
             breakpointsOP = console->addBreakpointOP("BRK");
-        opInputBuf[0] = 'B';
-        opInputBuf[1] = 'R';
-        opInputBuf[2] = 'K';
-        opInputBuf[3] = '\0';
+        opInputBuf[0] = 'B'; opInputBuf[1] = 'R'; opInputBuf[2] = 'K'; opInputBuf[3] = '\0';
+        outInputBuf[0] = '6'; outInputBuf[0] = '0'; outInputBuf[0] = '0'; outInputBuf[0] = '4'; outInputBuf[0] = '\0';
     };
     void render();
     void assemblyRender();
@@ -75,6 +82,7 @@ class Gui{
     void drawMemoryReader();
     void drawBreakpoints();
     void drawDebugger();
+    void drawOutput();
 
     void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
     void ASMLine(std::string l, int id, float r, float g, float b);
