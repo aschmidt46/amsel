@@ -116,3 +116,5 @@ AbstractMapper::~AbstractMapper()
     delete[] hardwiredVram;
     delete[] palletteMap;
 }
+
+void AbstractMapper::reset(){}

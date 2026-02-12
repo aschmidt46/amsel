@@ -23,10 +23,9 @@ class NES{
     Cpu* cpu;
     private:
     Apu* apu;
-    std::shared_ptr<Mapper> mapper = nullptr;
-    NESFile* Slot;
-    Screen* tv;
     Controller* controller;
+    std::shared_ptr<Mapper> mapper = nullptr;
+    Screen* tv;
     
     std::chrono::time_point<std::chrono::high_resolution_clock> t1 = std::chrono::high_resolution_clock::now();
     
@@ -52,9 +51,17 @@ class NES{
     void load(const char* path);
     void eject();
     void reset();
-    void nextFrame();
     bool clock();
+    // Für CPU-Sync
     int numClocks = 0;
+
+
+
+
+
+
+
+
 
 
     // Debugging

@@ -68,28 +68,18 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
     // Übernimmt Mapper-Implementierung
 }
 
-bool Mapper::changeCart(NESFile *cartridge)
+bool Mapper::changeCart(std::shared_ptr<NESFile> cartridge)
 {
     this->cart = cartridge;
     int mappernum = cart->header.getMapper();
 
-    eject();
-
     auto m = getMapper(shared_from_this(), mappernum);
     if(!m.has_value())
         return false;
-    else mImpl = m.value();
+    else mapperImplementation = m.value();
 
     return true;
 
-}
-
-void Mapper::eject()
-{
-    if(mImpl!=nullptr){
-        delete mImpl;
-        mImpl = nullptr;
-    }
 }
 
 void Mapper::connectController(Controller *controller)
@@ -104,7 +94,7 @@ uint8_t Mapper::read(uint8_t *address)
     if((uintptr_t)address==0x10000) return *memoryMap[0];
     
     if((uintptr_t)address>= 0x6000)
-        return mImpl->readRam(address);
+        return mapperImplementation->readRam(address);
     
     [[unlikely]] if(memoryMap[(uintptr_t)address]==nullptr){
         return 0;
@@ -132,7 +122,7 @@ void Mapper::write(uint8_t *address, uint8_t value)
     if((uintptr_t)address==0x10000) address = 0;
 
     if((uintptr_t)address >= 0x6000){
-        mImpl->writeRam(address, value);
+        mapperImplementation->writeRam(address, value);
         return;
     }
 
@@ -177,12 +167,12 @@ void Mapper::write(uint8_t *address, uint8_t value)
 
 uint8_t Mapper::readVRAM(uint8_t *address)
 {
-    return mImpl->readPPU(address);
+    return mapperImplementation->readPPU(address);
 }
 
 void Mapper::writeVRAM(uint8_t *address, uint8_t value)
 {
-    mImpl->writePPU(address, value);
+    mapperImplementation->writePPU(address, value);
 }
 
 void Mapper::pullNMI()
@@ -197,5 +187,11 @@ void Mapper::pullIRQ()
 
 void Mapper::riseA12()
 {
-    mImpl->onPPUA12RisingEdge();
+    mapperImplementation->onPPUA12RisingEdge();
+}
+
+void Mapper::reset()
+{
+    if(mapperImplementation)
+        mapperImplementation->reset();
 }

@@ -108,6 +108,21 @@ Mapper1::~Mapper1()
     delete[] prgRam;
 }
 
+void Mapper1::reset()
+{
+    shiftReg = 0;
+    chrRomBankMode = false;
+    prgRomBankMode = 3;
+
+    // Chr banks
+    chrBank0 = 0;
+    chrBank1 = 1;
+
+    // Prg Bank
+    enablePRGRam = false;
+    prgRomBankSelect = 0;
+}
+
 uint8_t Mapper1::readRam(uint8_t *addr)
 {
     if((uintptr_t)addr < 0x8000){ // PRG-Ram

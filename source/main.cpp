@@ -206,7 +206,6 @@ int run()
       {
           ImGui::UpdatePlatformWindows();
           ImGui::RenderPlatformWindowsDefault();
-          // TODO for OpenGL: restore current GL context.
           glfwMakeContextCurrent(window);
       }
 
@@ -216,6 +215,9 @@ int run()
       }
 
     } while (!console->frameReady && !glfwWindowShouldClose(window));
+
+
+
     {
       std::lock_guard<std::mutex> lock(cvm);
       console->frameReady = false;

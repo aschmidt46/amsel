@@ -93,6 +93,17 @@ void FrameSequencer::clock()
                     clockEnvelopesAndTrianglesLinearCounter();
                     if(!inhibitFlag){
                         interruptFlag = true;
+
+                        /*
+                            "Since Frame IRQs are a worthless misfeature of the NES anyway, anything that suppresses them will improve game compatibility.
+                            Just a few games actually use the feature, such as the JP version of Dragon Quest 1, 2, and Door Door.
+                            (This also has the side effect of making those games play music at the correct speed on Dendy)
+
+                            Frame IRQs were useful for the arcade games which used the 2A03 without a PPU, Punch Out and Donkey Kong 3."
+
+                            https://forums.nesdev.org/viewtopic.php?t=24582
+                        */
+
                         // Das Timing des Frame Sequencers ist leider kaputt, daher werden die Interrupts manche Spiele zum Crash bringen
                         // apu->mapper->pullIRQ();
                     }

@@ -224,3 +224,26 @@ Mapper4::~Mapper4()
     AbstractMapper::saveFile();
     delete[] prgRam;
 }
+
+void Mapper4::reset()
+{
+    bdwSelect = &R0;
+
+    prgRomBankMode = false;
+    chrA12Inversion = false;
+    IRQCounterReload = 0;
+    IRQCounter = 0;
+    disableIRQ = false;
+
+    //CHR Bänke
+    R0 = 0;
+    R1 = 0;
+    R2 = 0;
+    R3 = 0;
+    R4 = 0;
+    R5 = 0;
+
+    // PRG Bänke
+    R6 = 0;
+    R7 = 0;
+}

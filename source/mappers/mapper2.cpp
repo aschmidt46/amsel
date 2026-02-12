@@ -19,3 +19,8 @@ uint8_t Mapper2::readRam(uint8_t *addr)
 }
 
 Mapper2::Mapper2(std::shared_ptr<Mapper> m) : AbstractMapper(m) {}
+
+void Mapper2::reset()
+{
+    bankSelect = 0;
+}

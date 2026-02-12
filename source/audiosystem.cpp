@@ -1,13 +1,12 @@
 #include "audiosystem.h"
 #include <thread>
 
-static NES* n;
+static NES* nes;
 static AudioSystem* t;
 
 AudioSystem::AudioSystem(NES *console)
 {
     nes = console;
-    n = console;
     t = this;
 }
 
@@ -27,9 +26,9 @@ int waveFun( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   std::cout << "Stream underflow detected!" << std::endl;
   
   for(int i = 0; i < nBufferFrames; i++){
-      while(!n->clock() && !t->close) {}
-        buffer[2*i + 0] = n->audioSample;
-        buffer[2*i + 1] = n->audioSample;
+      while(!nes->clock() && !t->close) {}
+        buffer[2*i + 0] = nes->audioSample;
+        buffer[2*i + 1] = nes->audioSample;
       }
   return 0;
 }
@@ -55,8 +54,8 @@ void AudioSystem::start()
     exit( 0 ); // problem with device settings
 }
 auto err = dac.startStream();
-while(!close){
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-}
-dac.stopStream();
+// while(!close){
+//     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+// }
+// dac.stopStream();
 }

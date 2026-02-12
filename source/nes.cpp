@@ -9,17 +9,17 @@ using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
 NES::NES(Screen* screen, Controller* c){
+    tv = screen;
     cpu = new Cpu();
     ppu = new Ppu();
     apu = new Apu();
-    tv = screen;
     controller = c;
+    mapper = std::make_shared<Mapper>(cpu, ppu, apu);
+    mapper->connectController(controller); 
 }
 
 NES::~NES()
 {
-    if(loaded)
-        eject();
     delete apu;
     delete ppu;
     delete cpu;
@@ -28,15 +28,8 @@ NES::~NES()
 void NES::load(const char *path)
 {
     std::lock_guard<std::mutex> lock(cvm);
-    if(loaded)
-        eject();
-    Slot = new NESFile(path);
-    if(mapper==nullptr){
-        mapper = std::shared_ptr<Mapper>(std::make_shared<Mapper>(cpu, ppu, apu));
-    }
-    assert(mapper.use_count() > 0);
+    auto Slot = std::make_shared<NESFile>(path);
     if(mapper->changeCart(Slot)){
-        mapper->connectController(controller); 
         apu->reset(mapper);
         ppu->init(mapper);
         cpu->init(0xC000, mapper);
@@ -52,8 +45,6 @@ void NES::load(const char *path)
 void NES::eject()
 {
     if(!loaded) return;
-    mapper->eject();
-    delete Slot;
     fileName = "";
     loaded = false;
     ejectNextClock = false;
@@ -64,32 +55,8 @@ void NES::reset()
 {
     if(loaded)
     cpu->RESET();
+    mapper->reset();
     resetNextClock = false;
-}
-
-// NTSC
-constexpr const double nsPerClock = 558.73007359033799258341700316185;
-
-// Veraltet
-void NES::nextFrame()
-{
-    t1 = high_resolution_clock::now();
-    while(!ppu->frameReady){
-        auto t2 = high_resolution_clock::now();
-        while(duration_cast<nanoseconds>(t2-t1).count() < nsPerClock) {
-            t2 = high_resolution_clock::now();
-        }
-        
-        ppu->clock();
-        ppu->clock();
-        ppu->clock();
-        cpu->clockCPU();
-        controller->clock();
-
-        t1 = high_resolution_clock::now();
-    }
-    ppu->frameReady = false;
-    tv->present();
 }
 
 bool NES::clock()
@@ -140,6 +107,16 @@ bool NES::clock()
 
     return audioSampleReady;
 }
+
+
+
+
+
+
+
+
+
+// Debug Funktionen
 
 std::pair<std::string, std::vector<int>> NES::getCurrentDisassembly()
 {

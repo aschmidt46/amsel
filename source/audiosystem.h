@@ -9,8 +9,6 @@ class AudioSystem{
     const double audioTimePerNESClock = 1.0 / 5369318.0; // ppu clock
     double audioTime = 0.0;
     
-    NES* nes;
-    
     RtAudio dac;
     
     public:

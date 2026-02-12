@@ -4,7 +4,7 @@
 #include "../mapper.h"
 
 class Mapper1 : AbstractMapper {
-    uint8_t shiftReg;
+    uint8_t shiftReg = 0;
 
     void shiftInto(bool value);
     bool shiftIsFull();
@@ -35,5 +35,6 @@ class Mapper1 : AbstractMapper {
 
     Mapper1(std::shared_ptr<Mapper> m);
     ~Mapper1() override;
+    void reset() override;
 
 };

@@ -105,7 +105,7 @@ uint8_t Apu::read(uint16_t reg)
 {
     bool fseqi = fseq.interruptFlag;
     fseq.interruptFlag = false;
-    
+
     return (dmc.interruptFlag << 7)
         | (fseqi << 6)
         | ((dmc.dmaReader.bytesRemain > 0) << 4)

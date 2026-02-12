@@ -93,6 +93,7 @@ source/mappers/mapper1.cpp source/mappers/mapper1.h
 source/mappers/mapper2.cpp source/mappers/mapper2.h
 source/mappers/mapper3.cpp source/mappers/mapper3.h
 source/mappers/mapper4.cpp source/mappers/mapper4.h
+source/mappers/mapper7.cpp source/mappers/mapper7.h
 source/mappers/mappers.cpp source/mappers/mappers.h
 )
 

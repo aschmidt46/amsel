@@ -67,3 +67,8 @@ Mapper3::~Mapper3()
     AbstractMapper::saveFile();
     delete[] prgRam;
 }
+
+void Mapper3::reset()
+{
+    bankSelect = 0;
+}

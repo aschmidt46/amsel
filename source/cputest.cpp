@@ -18,13 +18,12 @@ using std::chrono::seconds;
 //You can make an iNES parser once you start trying to actually run Concentration Room or Donkey Kong.
 
 CPUTest::CPUTest(){
-    NESFile* cart = new NESFile("nestest.nes");
+    auto cart = std::make_shared<NESFile>("nestest.nes");
     Ppu* ppu = new Ppu();
     cpu = new Cpu();
     std::shared_ptr<Mapper> m(std::make_shared<Mapper>(cpu, ppu, nullptr));
     m->changeCart(cart);
     auto finalize = [&](){
-        delete cart;
         delete ppu;
         delete cpu;
     };
@@ -71,15 +70,15 @@ CPUTest::CPUTest(){
                 throw;
             }
             if(line>8991){
-                std::cout << "NESTEST BESTANDEN!!! GRATULIERE!" << std::endl;    
+                std::cout << "Nestest bestanden." << std::endl;    
             }
             line++;
         }
         if(line>8991){
-            std::cout << "NESTEST BESTANDEN!!! GRATULIERE!" << std::endl;    
+            std::cout << "Nestest bestanden." << std::endl;    
         }
         else{
-            std::cout << "Programm zu kurz gelaufen?" << std::endl;    
+            std::cout << "Programm zu kurz gelaufen." << std::endl;    
         }
     }
     else {

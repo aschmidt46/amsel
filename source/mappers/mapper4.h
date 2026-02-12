@@ -45,5 +45,6 @@ class Mapper4 : AbstractMapper {
 
     Mapper4(std::shared_ptr<Mapper> m);
     ~Mapper4() override;
+    void reset() override;
 
 };

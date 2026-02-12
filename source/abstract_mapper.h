@@ -56,4 +56,5 @@ class AbstractMapper{
 
     AbstractMapper(std::shared_ptr<Mapper> m);
     virtual ~AbstractMapper();
+    virtual void reset();
 };
