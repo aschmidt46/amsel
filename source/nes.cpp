@@ -8,14 +8,15 @@ using std::chrono::microseconds;
 using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
-NES::NES(Screen* screen, Controller* c){
+NES::NES(Screen* screen, Controller* c1, Controller* c2){
     tv = screen;
     cpu = new Cpu();
     ppu = new Ppu();
     apu = new Apu();
-    controller = c;
+    controller1 = c1;
+    controller2 = c2;
     mapper = std::make_shared<Mapper>(cpu, ppu, apu);
-    mapper->connectController(controller); 
+    mapper->connectController(controller1, controller2); 
 }
 
 NES::~NES()
@@ -37,7 +38,12 @@ void NES::load(const char *path)
         changeTitle = true;
     }
     else{
-        unimplementedMapper = Slot->header.getMapper();
+        MessageStruct m = {
+            .type=MT_ERROR,
+            .title="Error",
+            .content="Dieses Spiel (iNES-Mapper "+std::to_string(Slot->header.getMapper())+") wird nicht unterstützt, weil der entsprechende Mapper nicht implementiert ist."
+        };
+        messageQueue.enqueue(m);
     }
     loadNextClock = false;
 }
@@ -84,7 +90,8 @@ bool NES::clock()
             std::lock_guard<std::mutex> lock(debugM);
         bool cpuAdvanced = cpu->clockCPU();
         apu->clock();
-        controller->clock();
+        controller1->clock();
+        controller2->clock();
         numClocks = 0;
 
         // Debug
@@ -101,7 +108,7 @@ bool NES::clock()
     audioTime += audioTimePerNESClock;
     if(audioTime >= audioTimePerSystemSample){
         audioTime -= audioTimePerSystemSample;
-        audioSample = apu->getSample(sound) * volume;
+        audioSample = apu->getSample(sound) * globalConfig.volume;
         audioSampleReady = true;
     }
 

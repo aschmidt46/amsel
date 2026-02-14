@@ -23,7 +23,8 @@ class NES{
     Cpu* cpu;
     private:
     Apu* apu;
-    Controller* controller;
+    Controller* controller1;
+    Controller* controller2;
     std::shared_ptr<Mapper> mapper = nullptr;
     Screen* tv;
     
@@ -39,14 +40,12 @@ class NES{
     public:
     bool ejectNextClock = false, loadNextClock = false, resetNextClock = false;
     bool changeTitle = false;
-    int unimplementedMapper = -1;
     std::string fileName;
     double audioSample;
-    float volume = 1.0f;
     Ppu* ppu;
     bool frameReady = false;
     bool sound = true;
-    NES(Screen* screen, Controller* c);
+    NES(Screen* screen, Controller* c1, Controller* c2);
     ~NES();
     void load(const char* path);
     void eject();

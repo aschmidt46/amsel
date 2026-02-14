@@ -13,4 +13,4 @@
 
 class Mapper;
 
-std::optional<std::shared_ptr<AbstractMapper>> getMapper(std::shared_ptr<Mapper> m, int number);
+std::optional<std::unique_ptr<AbstractMapper>> getMapper(std::shared_ptr<Mapper> m, int number);

@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <iostream>
 #include <memory>
+#include "global.h"
 
 
 enum Statusbit{
@@ -157,6 +158,9 @@ class Cpu{
     std::pair<std::string, int> formatInstruction(AddressMode m, uint8_t op1, uint8_t op2, uint16_t pc);
     std::vector<int> circular{std::vector<int>(10,-1)};
     unsigned int circularIndex = 0;
+
+    void unimplemented(const std::string& instruction);
+    void falseImplementation(const std::string& instruction);
     
 
     // Instruktionen

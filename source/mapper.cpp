@@ -76,16 +76,18 @@ bool Mapper::changeCart(std::shared_ptr<NESFile> cartridge)
     auto m = getMapper(shared_from_this(), mappernum);
     if(!m.has_value())
         return false;
-    else mapperImplementation = m.value();
+    else mapperImplementation = std::move(m.value());
 
     return true;
 
 }
 
-void Mapper::connectController(Controller *controller)
+void Mapper::connectController(Controller *controller1, Controller *controller2)
 {
-    this->controller1 = controller;
+    this->controller1 = controller1;
+    this->controller2 = controller2;
     controller1->init(shared_from_this());
+    controller2->init(shared_from_this());
 }
 
 uint8_t Mapper::read(uint8_t *address)
@@ -141,7 +143,8 @@ void Mapper::write(uint8_t *address, uint8_t value)
 
     // Controller
     if((uintptr_t)address == 0x4016){
-        controller_state[(uintptr_t)address & 0x0001] = controller[(uintptr_t) address & 0x0001];
+        controller_state[0] = controller[0];
+        controller_state[1] = controller[1];
         return;
     }
 

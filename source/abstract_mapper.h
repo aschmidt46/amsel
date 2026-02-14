@@ -39,7 +39,7 @@ class AbstractMapper{
 
 
     public:
-    std::shared_ptr<Mapper> mapper;
+    Mapper* mapper;
     Mirror mirror = MIRROR_VERTICAL;
 
     // Diese beiden Funktionen werden nur im Adressraum >= 0x6000 aufgerufen, Mappings darunter sind fest

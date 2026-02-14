@@ -86,7 +86,7 @@ uint8_t AbstractMapper::readPPU(uint8_t *addr)
 
 AbstractMapper::AbstractMapper(std::shared_ptr<Mapper> m)
 {
-    this->mapper = m;
+    this->mapper = m.get();
     mirror = mapper->cart->header.flags6.getNametableArrangement() ? MIRROR_VERTICAL : MIRROR_HORIZONTAL;
     palletteMap = new uint8_t*[0x100];
 

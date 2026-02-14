@@ -21,14 +21,20 @@ class Controller{
 
     std::shared_ptr<Mapper> mapper = nullptr;
 
+    void setAddressOf(int i, int to);
+
     public:
 
     ControllerState state;
+    bool secondary = false;
+    Controller(bool secondary){
+        this->secondary = secondary;
+    };
 
     void init(std::shared_ptr<Mapper> m){
         mapper = m;
     };
 
-    void setKey(int key, int v);
+    void setKey(bool gamepad, int key, int v);
     void clock();
 };

@@ -2,12 +2,23 @@
 #include "nes.h"
 
 
+struct InputWaitContext{
+    bool wait = false;
+    unsigned int controller = 0;
+    Action actionToSet = AC_BUTTON_START;
+    bool secondary = false;
+};
+
+// Gui Zustand
 struct SharedState{
     bool show = true;
     bool fullScreen = false;
     bool showDebugger = false;
     bool halt = false;
     bool showOutput = false;
+    bool showInput = false;
+    int controllerContext = 1; // Controller Nummer
+    InputWaitContext waitOn;
 };
 
 enum ASMtype{
@@ -27,7 +38,7 @@ class Gui{
     char opInputBuf[255];
     std::vector<uint16_t> breakpoints;
     std::vector<std::string> breakpointsOP;
-    int runningID = 0;
+    int runningID = 1;
 
     uint16_t outputStartsAt = 0x6004;
     char outInputBuf[255];
@@ -82,6 +93,9 @@ class Gui{
     void drawBreakpoints();
     void drawDebugger();
     void drawOutput();
+    void drawControlSettings();
+    void drawControlSettingsPage(int controller);
+    void buttonChangePrompt(int i, int controller, bool secondary);
 
     void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
     void ASMLine(std::string l, int id, float r, float g, float b);

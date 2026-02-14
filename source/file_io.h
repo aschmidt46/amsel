@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include "global.h"
 
 
 class FileIO{
@@ -9,7 +10,9 @@ class FileIO{
     
     
     std::filesystem::path workDirectory;
-    bool message = false;
+    std::filesystem::path saveDirectory;
+
+    void writeDefaultSettings(const std::string &fileName);
 
     public:
     static FileIO& getInstance();
@@ -19,5 +22,6 @@ class FileIO{
     void saveData(std::string romName, uint8_t* data, int size);
     void loadSave(std::string romName, uint8_t* destination, int size);
 
-    bool shouldDisplayMessage();
+    SettingsConfig loadSettings();
+    void saveSettings(const SettingsConfig &config);
 };

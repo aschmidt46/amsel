@@ -3,7 +3,7 @@
 #include "../abstract_mapper.h"
 #include "../mapper.h"
 
-class Mapper1 : AbstractMapper {
+class Mapper1 : public AbstractMapper {
     uint8_t shiftReg = 0;
 
     void shiftInto(bool value);

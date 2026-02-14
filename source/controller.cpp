@@ -4,40 +4,68 @@
 #include <GLFW/glfw3.h>
 #include <assert.h>
 
-
-void Controller::setKey(int key, int v)
+void Controller::setKey(bool gamepad, int key, int v)
 {
-    switch(key){
-    case GLFW_KEY_UP:
-      state.up = v;
+  auto c = secondary ? &globalConfig.controller2 : &globalConfig.controller1;
+  // Das ist nicht die tollste Lösung, reicht aber für diesen einfachen Anwendungsfall mit nur 8 Tasten
+  if(gamepad){
+    for(int i = 0; i < 8; i++){
+      if((*c)[i].second == key){
+        setAddressOf(i, v);
+        return;
+      }
+    }
+  }
+  else{ // Tastatur
+    for(int i = 0; i < 8; i++){
+      if((*c)[i].first == key){
+        setAddressOf(i, v);
+        return;
+      }
+    }
+  }
+}
+
+void Controller::setAddressOf(int i, int to)
+{
+  switch(i){
+    case 0:{ // hoch
+      state.up = to;
       break;
-    case GLFW_KEY_DOWN:
-      state.down = v;
+    }
+    case 1:{ // runter
+      state.down = to;
       break;
-    case GLFW_KEY_LEFT:
-      state.left = v;
+    }
+    case 2:{ // links
+      state.left = to;
       break;
-    case GLFW_KEY_RIGHT:
-      state.right = v;
+    }
+    case 3:{ // rechts
+      state.right = to;
       break;
-    case GLFW_KEY_S:
-      state.a = v;
+    }
+    case 4:{ // a
+      state.a = to;
       break;
-    case GLFW_KEY_A:
-      state.b = v;
+    }
+    case 5:{ // b
+      state.b = to;
       break;
-    case GLFW_KEY_ENTER:
-      state.start = v;
+    }
+    case 6:{ // start
+      state.start = to;
       break;
-    case GLFW_KEY_BACKSPACE:
-      state.select = v;
+    }
+    case 7:{ // select
+      state.select = to;
       break;
-    default:
-      break;
+    }
   }
 }
 
 void Controller::clock()
 {
-    mapper->controller[0] = state.raw;
+  int index = secondary ? 1 : 0;
+  mapper->controller[index] = state.raw;
 }

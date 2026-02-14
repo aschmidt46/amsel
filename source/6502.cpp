@@ -174,6 +174,26 @@ std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, uint8_t op1, u
     }
 }
 
+void Cpu::unimplemented(const std::string &instruction)
+{
+    MessageStruct m{
+        .type = MT_ERROR,
+        .title = "Emulator-Fehler!",
+        .content = "Eine nicht-implementierte Instruktion wurde ausgeführt. ("+instruction+")"
+    };
+    messageQueue.enqueue(m);
+}
+
+void Cpu::falseImplementation(const std::string &instruction)
+{
+    MessageStruct m{
+        .type = MT_WARNING,
+        .title = "Emulator-Fehler!",
+        .content = "Eine unsichere Instruktion wurde ausgeführt. ("+instruction+")"
+    };
+    messageQueue.enqueue(m);
+}
+
 uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
 {
     switch(mode){
@@ -533,7 +553,15 @@ uint8_t Cpu::BRK(uint8_t *mem)
     uint16_t addr = ((uint16_t)higher << 8) | (uint16_t)lower;
     PC = addr;
     setStatus(STATUS_INTERRUPT_DISABLE, true);
-    std::cout << "BRK wurde ausgelöst!" << std::endl;
+
+
+    MessageStruct m{
+        .type = MT_WARNING,
+        .title = "Achtung!",
+        .content = "BRK wurde ausgelöst."
+    };
+    messageQueue.enqueue(m);
+
     return 0;
 }
 
@@ -923,7 +951,7 @@ uint8_t Cpu::TYA(uint8_t *mem)
 
 uint8_t Cpu::STP(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    unimplemented("STP");
     return 0;
 }
 
@@ -1010,33 +1038,33 @@ uint8_t Cpu::SAX(uint8_t *mem)
 
 uint8_t Cpu::XAA(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    unimplemented("XAA");
     return 0;
 }
 
 uint8_t Cpu::AHX(uint8_t *mem)
 {
-    std::cout << "Instabile, Fehlerhafte Operation!"  << std::endl;
+    falseImplementation("AHX");
     write(mem, (A & X) & ( 1 + (((uint16_t)(uintptr_t)mem) >> 8)));
     return 0;
 }
 
 uint8_t Cpu::TAS(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    unimplemented("TAS");
     return 0;
 }
 
 uint8_t Cpu::SHY(uint8_t *mem)
 {
-    std::cout << "Instabile, Fehlerhafte Operation!"  << std::endl;
+    falseImplementation("SHY");
     write(mem, Y & ( 1 + (((uint16_t)(uintptr_t)mem) >> 8)));
     return 1;
 }
 
 uint8_t Cpu::SHX(uint8_t *mem)
 {
-    std::cout << "Instabile, Fehlerhafte Operation!"  << std::endl;
+    falseImplementation("SHX");
     write(mem, X & ( 1 + (((uint16_t)(uintptr_t)mem) >> 8)));
     return 1;
 }
@@ -1050,7 +1078,7 @@ uint8_t Cpu::LAX(uint8_t *mem)
 
 uint8_t Cpu::LAS(uint8_t *mem)
 {
-    std::cout << "NICHT IMPLEMENTIERT"  << std::endl;
+    unimplemented("LAS");
     return 0;
 }
 

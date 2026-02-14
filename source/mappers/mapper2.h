@@ -3,7 +3,7 @@
 #include "../abstract_mapper.h"
 #include "../mapper.h"
 
-class Mapper2 : AbstractMapper {
+class Mapper2 : public AbstractMapper {
     uint8_t bankSelect = 0;
     public:
     void writeRam(uint8_t* addr, uint8_t value) override;

@@ -3,7 +3,7 @@
 #include "../abstract_mapper.h"
 #include "../mapper.h"
 
-class Mapper7 : AbstractMapper {
+class Mapper7 : public AbstractMapper {
     uint8_t bankSelect = 0;
 
 

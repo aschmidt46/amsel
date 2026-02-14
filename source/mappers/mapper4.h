@@ -9,7 +9,7 @@
 // G.I. Joe The Atlantis Factor
 // Contra Force
 
-class Mapper4 : AbstractMapper {
+class Mapper4 : public AbstractMapper {
     
     void bankDataWriteSelect(uint8_t value);
 
