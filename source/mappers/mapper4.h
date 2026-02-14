@@ -4,6 +4,11 @@
 #include "../mapper.h"
 #include <fstream>
 
+// The Lone Ranger untersuchen
+// Power Blade 2
+// G.I. Joe The Atlantis Factor
+// Contra Force
+
 class Mapper4 : AbstractMapper {
     
     void bankDataWriteSelect(uint8_t value);

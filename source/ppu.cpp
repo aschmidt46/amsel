@@ -16,6 +16,39 @@ void Ppu::clock()
 	// Renderer fortschalten
 	scanline = timings[ppuTiming].second.scanline;
 	cycle = timings[ppuTiming].second.cycle;
+
+	if(toggleBackgroundRenderIn>0){
+		toggleBackgroundRenderIn--;
+	}
+	if(toggleSpriteRenderIn>0){
+		toggleSpriteRenderIn--;
+	}
+	if(pullNMIIn>0){
+		pullNMIIn--;
+	}
+
+	if(toggleBackgroundRenderIn==0){
+		toggleBackgroundRenderIn = -1;
+		PPUMASK.setRenderBackground(!PPUMASK.getRenderBackground());
+	}
+	if(toggleSpriteRenderIn==0){
+		toggleSpriteRenderIn = -1;
+		PPUMASK.setRenderSprites(!PPUMASK.getRenderSprites());
+	}
+	if(pullNMIIn==0){
+		pullNMIIn = -1;
+		mapper->pullNMI();
+	}
+
+	// Skip bei gerade Frames (Ende vom ungeraden Frame)
+	if(!unevenFrame && PPUMASK.getRenderBackground()){
+		if(scanline == 0 && cycle == 0){
+			ppuTiming++;
+			scanline = timings[ppuTiming].second.scanline;
+			cycle = timings[ppuTiming].second.cycle;
+		}
+	}
+
 	for(auto &cmd : timings[ppuTiming].first){
 		(this->*cmd)();
 	}
@@ -56,7 +89,18 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
 
     }
     else if(reg==(uint8_t*)&PPUMASK){
+		bool spriteRender = PPUMASK.getRenderSprites();
+		bool backgroundRender = PPUMASK.getRenderBackground();
 		PPUMASK.raw = val;
+		// "Toggling rendering takes effect approximately 3-4 dots after the write. This delay is required by Battletoads to avoid a crash." (NESDEV Wiki)
+		if(PPUMASK.getRenderSprites() != spriteRender){
+			PPUMASK.setRenderSprites(spriteRender);
+			toggleSpriteRenderIn = 4;
+		}
+		if(PPUMASK.getRenderBackground() != backgroundRender){
+			PPUMASK.setRenderBackground(backgroundRender);
+			toggleBackgroundRenderIn = 4;
+		}
     }
     else if(reg==&OAMADDR){
         OAMADDR = val;
@@ -68,7 +112,7 @@ void Ppu::writeRegister(uint8_t *reg, uint8_t val)
     }
     else if(reg==&PPUSCROLL){
         if(!w){
-            fine_x = val & 0x07;
+            fineX = val & 0x07;
             t.setCoarseX(val >> 3);
             w = true;
         }
@@ -106,13 +150,16 @@ uint8_t Ppu::readRegister(uint8_t *reg)
         uint8_t value = PPUSTATUS.raw;
         // Clear Vblank
         PPUSTATUS.setVerticalBlank(false);
+		// Ein Zyklus vor VBlank
+		if(scanline==241 && cycle==0){
+			suppressVBLThisFrame = true;
+		}
 		return value;
     }
 	if(reg == &OAMDATA){
 		if(scanline >= -1 && scanline <= 239 && cycle >= 0 && cycle < 64){
 			return 0xFF;
 		}
-		/* Read from OAM */
 		return pOAM[OAMADDR];
     }
 	if(reg == &PPUDATA){
@@ -120,7 +167,7 @@ uint8_t Ppu::readRegister(uint8_t *reg)
 		tmp = vramReadBuffer;
 		vramReadBuffer = mapper->readVRAM((uint8_t*)(uintptr_t)v.raw);
 		v.raw += PPUCTRL.getIncrementMode() ? 32 : 1;
-        // 0x3F00 = BG_PALETTE_START
+        // Palette sofort lesen
 		if (v.raw >= 0x3F00)
 			tmp = vramReadBuffer;
 		return tmp;
@@ -188,7 +235,7 @@ void Ppu::fillTimings()
 					timings[i].first.push_back(&Ppu::evaluateSprites);
 				}
 
-				// Mapper4 IRQ
+				// Mapper4/MMC3 IRQ
 				if(cycle==260){
 					timings[i].first.push_back(&Ppu::maybeRiseA12);
 				}
@@ -278,8 +325,8 @@ void Ppu::updateShifters()
 		shifterATHigh <<= 1;
 	}
 	if(PPUMASK.getRenderSprites() && cycle >= 1 && cycle < 258){
-		for(int i = 0; i < sprite_count; i++){
-			if(sprite_count > 8) break;
+		for(int i = 0; i < spriteCount; i++){
+			if(spriteCount > 8) break;
 			if(secondaryOAM[i].xPos > 0){
 				secondaryOAM[i].xPos--;
 			}
@@ -319,7 +366,7 @@ void Ppu::readATByte()
 void Ppu::readCHRByteLow()
 {
 	nextTileCHRLow = mapper->readVRAM((uint8_t*)(uintptr_t)(
-                                             (PPUCTRL.getPatternBackground() << 12) 
+                                             (PPUCTRL.getPatternBackground() << 12) // 0x1000
 					                       + ((uint16_t)nextTileNTByte << 4) 
 					                       + (v.getFineY()) + 0));
 }
@@ -332,14 +379,10 @@ void Ppu::readCHRByteHigh()
 					                       + (v.getFineY()) + 8));
 }
 
-// void Ppu::clearSecondaryOAM(){
-// 	std::memset(secondaryOAM, 0xFF, 8 * sizeof(OAMSprite));
-// }
-
 void Ppu::evaluateSprites()
 {
 	std::memset(secondaryOAM, 0xFF, 8 * sizeof(OAMSprite));
-	sprite_count = 0;
+	spriteCount = 0;
 	for (uint8_t i = 0; i < 8; i++)
 	{
 		spriteShifterCHRLow[i] = 0;
@@ -347,25 +390,25 @@ void Ppu::evaluateSprites()
 	}
 	uint8_t iOAM = 0;
 	spriteZeroHitPossible = false;
-	while(iOAM < 64 && sprite_count < 9){
+	while(iOAM < 64 && spriteCount < 9){
 		int16_t diff = ((int16_t)scanline - (int16_t)OAM[iOAM].yPos);
 		if(diff >= 0 && diff < (PPUCTRL.getSpriteSize() ? 16 : 8)){
-			if(sprite_count < 8){
+			if(spriteCount < 8){
 				if(iOAM == 0){
 					spriteZeroHitPossible = true;
 				}
-				memcpy(&secondaryOAM[sprite_count], &OAM[iOAM], sizeof(OAMSprite));
-				sprite_count++;
+				memcpy(&secondaryOAM[spriteCount], &OAM[iOAM], sizeof(OAMSprite));
+				spriteCount++;
 			}
 		}
 		iOAM++;
 	}
-	PPUSTATUS.setSpriteOverflow(sprite_count > 8);
+	PPUSTATUS.setSpriteOverflow(spriteCount > 8);
 }
 
 void Ppu::setSpriteShifters()
 {
-	for(uint8_t i = 0; i < sprite_count; i++){
+	for(uint8_t i = 0; i < spriteCount; i++){
 		uint8_t spriteCHRLow, spriteCHRHigh;
 		uint16_t spriteAddrLow, spriteAddrHigh;
 		if(!PPUCTRL.getSpriteSize()){
@@ -402,7 +445,7 @@ void Ppu::setSpriteShifters()
 			}
 			else{
 				// Vertikal umgedreht
-				if(scanline - secondaryOAM[i].yPos < 8){
+				if(scanline - secondaryOAM[i].yPos >= 8){
 					// Obere Hälfte
 					spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
 								  | ((secondaryOAM[i].tileIndex & 0xFE) << 4)
@@ -442,52 +485,54 @@ void Ppu::setSpriteShifters()
 
 void Ppu::pullNMI()
 {
-	PPUSTATUS.setVerticalBlank(true);
-	if (PPUCTRL.getEnableNMI())
-		mapper->pullNMI();
+	if(!suppressVBLThisFrame){
+		PPUSTATUS.setVerticalBlank(true);
+		if (PPUCTRL.getEnableNMI())
+			// Experimentell ergeben aus der blargg 5-nmi-timing testrom
+			pullNMIIn = 14;
+	}
+	else suppressVBLThisFrame = false;
 }
 
 void Ppu::renderPixel()
 {
-	uint8_t bg_pixel = 0x00;   // The 2-bit pixel to be rendered
-	uint8_t bg_palette = 0x00; // The 3-bit index of the palette the pixel indexes
-
+	//Pixelwert und AT-Palette
+	uint8_t backgroundPixelValue = 0;
+	uint8_t backgroundPaletteValue = 0;
 
 	// Hintergrund-Evaluierung
 	if (PPUMASK.getRenderBackground()){
-		uint16_t bit_mux = 0x8000 >> fine_x;
+		// Verschiebung wählt das maskierte Bit des aktuellen Pixels
+		uint16_t fineXMux = 0x8000 >> fineX;
 
-		// Select Plane pixels by extracting from the shifter 
-		// at the required location. 
-		uint8_t p0_pixel = (shifterCHRLow & bit_mux) > 0;
-		uint8_t p1_pixel = (shifterCHRHigh & bit_mux) > 0;
+		// Aus den beiden Pattern Table Bitplanes wird der Pixel gewählt
+		bool chrLow = shifterCHRLow & fineXMux;
+		bool chrHigh = shifterCHRHigh & fineXMux;
+		backgroundPixelValue = chrLow + (chrHigh << 1);
 
-		// Combine to form pixel index
-		bg_pixel = (p1_pixel << 1) | p0_pixel;
+		// Gleiches für Palette (Hintergrund immer untere Paletten)
+		bool atLow = shifterATLow & fineXMux;
+		bool atHigh = shifterATHigh & fineXMux;
 
-		// Get palette
-		uint8_t bg_pal0 = (shifterATLow& bit_mux) > 0;
-		uint8_t bg_pal1 = (shifterATHigh & bit_mux) > 0;
-		bg_palette = (bg_pal1 << 1) | bg_pal0;
+		backgroundPaletteValue = atLow + (atHigh << 1);
 	}
 
-	uint8_t fg_pixel = 0x00;
-	uint8_t fg_palette = 0x00;
-	uint8_t fg_priority = 0x00;
+	uint8_t spritePixelValue = 0;
+	uint8_t spritePaletteValue = 0;
+	bool spritePriority = false;
 
+	spriteZeroBeingRendered = false;
 	if (PPUMASK.getRenderSprites()){
-		spriteZeroBeingRendered = false;
-		for(uint8_t i = 0; i < sprite_count; i++){
+		for(uint8_t i = 0; i < spriteCount; i++){
 			if(secondaryOAM[i].xPos == 0){
-				uint8_t fg_pixel_lo = (spriteShifterCHRLow[i] & 0x80) > 0;
-				uint8_t fg_pixel_hi = (spriteShifterCHRHigh[i] & 0x80) > 0;
-				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+				bool spritePixelLow = spriteShifterCHRLow[i]  & 0b10000000;
+				bool spritePixelHigh  = spriteShifterCHRHigh[i] & 0b10000000;
+				spritePixelValue = spritePixelLow + (spritePixelHigh << 1);
 
-				fg_palette = (secondaryOAM[i].attributes & 0x03) + 0x04;
-				fg_priority = (secondaryOAM[i].attributes & 0x20) == 0;
+				spritePaletteValue = (secondaryOAM[i].attributes & 0b11) + 0b100;
+				spritePriority = !(secondaryOAM[i].attributes & 0b100000);
 
-				if(fg_pixel != 0){
-					// Erster nicht-transparenter Sprite gefunden
+				if(spritePixelValue != 0){
 					if(i==0){
 						spriteZeroBeingRendered = true;
 					}
@@ -497,57 +542,56 @@ void Ppu::renderPixel()
 		}
 	}
 
-	uint8_t pixel = 0x00;
-	uint8_t palette = 0x00;
+	if(!PPUMASK.getRenderBackgroundLeft() && cycle >= 1 && cycle <=9){
+		backgroundPixelValue = 0;
+		backgroundPaletteValue = 0;
+	}
 
-	if(bg_pixel == 0 && fg_pixel == 0){
-		// beide transparent
-		pixel = 0x00;
-		palette = 0x00;
+	if(!PPUMASK.getRenderSpritesLeft() && cycle >= 1 && cycle <=9){
+		spritePixelValue = 0;
+		spritePaletteValue= 0;
 	}
-	else if(bg_pixel == 0 && fg_pixel > 0){
+
+
+
+	uint8_t pixel = 0;
+	uint8_t palette = 0;
+	if(!backgroundPixelValue && spritePixelValue){
 		// hintergrund transparent
-		pixel = fg_pixel;
-		palette = fg_palette;
+		pixel = spritePixelValue;
+		palette = spritePaletteValue;
 	}
-	else if(bg_pixel > 0 && fg_pixel == 0){
+	else if(backgroundPixelValue && !spritePixelValue){
 		// vordergrund transparent
-		pixel = bg_pixel;
-		palette = bg_palette;
+		pixel = backgroundPixelValue;
+		palette = backgroundPaletteValue;
 	}
-	else if(bg_pixel > 0 && fg_pixel > 0){
-		if(fg_priority){
-			pixel = fg_pixel;
-			palette = fg_palette;
+	else if(backgroundPixelValue && spritePixelValue){
+		if(spritePriority){
+			pixel = spritePixelValue;
+			palette = spritePaletteValue;
 		}
 		else{
-			pixel = bg_pixel;
-			palette = bg_palette;
+			pixel = backgroundPixelValue;
+			palette = backgroundPaletteValue;
 		}
 
 		// Sprite Zero Hit
-		if(spriteZeroHitPossible && spriteZeroBeingRendered){
+		if(spriteZeroHitPossible && spriteZeroBeingRendered && backgroundPixelValue > 0 && spritePixelValue > 0){
 			if(PPUMASK.getRenderSprites() && PPUMASK.getRenderBackground()){
-				if(!(PPUMASK.getRenderBackgroundLeft() || PPUMASK.getRenderSpritesLeft())){
-					if(cycle >= 9 && cycle < 258){
-						PPUSTATUS.setSpriteZeroHit(true);
-					}
-				}
-				else{
-					if(cycle >= 1 && cycle < 258){
-						PPUSTATUS.setSpriteZeroHit(true);
-					}
+				if(cycle >= 1 && cycle < 256){
+					PPUSTATUS.setSpriteZeroHit(true);
 				}
 			}
 		}
 	}
 
 	// Zeichnen
-	uint8_t color_index = ((palette << 2) + pixel );
-	auto addr = (0x3F00) + color_index;
+	uint8_t colorIndex = ((palette << 2) + pixel );
+	auto addr = 0x3F00 + colorIndex;
 	
-	uint8_t palette_val = mapper->readVRAM((uint8_t*)(uintptr_t)addr) & 0x3F;
-	setPixel(cycle-1, scanline, pal.getColor(palette_val & (PPUMASK.getGrayScale() ? 0x30 : 0x3F)));
+	uint8_t paletteVal = mapper->readVRAM((uint8_t*)(uintptr_t)addr) & 0x3F;
+	setPixel(cycle-1, scanline, pal.getColor(paletteVal & (PPUMASK.getGrayScale() ? 0x30 : 0x3F)));
 }
 
 void Ppu::maybeRiseA12()

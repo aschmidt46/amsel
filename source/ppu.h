@@ -22,17 +22,17 @@ struct renderState{
     int cycle = 0;
 };
 
-static_assert(sizeof(OAMSprite)==4);
-
-
 class Screen;
 class Mapper;
+
 class Ppu{
     private:
     typedef void (Ppu::*ppuCmd) ();
+    // Beide jeweils 15 bit
     loopyReg v;
     loopyReg t;
-    uint8_t fine_x = 0;
+    // 3-bit Register
+    uint8_t fineX = 0;
     bool w = false;
 
     const int numDots = 341 * 262;
@@ -55,10 +55,9 @@ class Ppu{
     // Intern
     uint8_t* internalMemory; // 2KB
     uint8_t* palletteIndexes; // 0x0020 Bytes
-    //uint8_t* OAM; // 256 Bytes (64 * 4)
     OAMSprite OAM[64];
     OAMSprite secondaryOAM[8];
-    uint8_t sprite_count = 0;
+    uint8_t spriteCount = 0;
     uint8_t spriteShifterCHRLow[8];
     uint8_t spriteShifterCHRHigh[8];
 
@@ -66,7 +65,6 @@ class Ppu{
     bool spriteZeroBeingRendered = false;
 
 
-    uint8_t oamBuffer = 0;
 
     uint8_t* pOAM = (uint8_t*)OAM;
 
@@ -140,6 +138,12 @@ class Ppu{
     void clock();
     void setPixel(int x, int y, glm::vec3 c);
     void swapBuffers();
+
+    int toggleSpriteRenderIn = -1;
+    int toggleBackgroundRenderIn = -1;
+    bool suppressVBLThisFrame = false;
+    int pullNMIIn = -1;
+
 
     // Callbacks
     void writeRegister(uint8_t* reg, uint8_t val);
