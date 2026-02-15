@@ -40,6 +40,7 @@ set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
 add_subdirectory(deps/rtaudio)
 
 include_directories(PUBLIC .)
+include_directories(PUBLIC source)
 include_directories(PUBLIC deps/imgui)
 include_directories(PUBLIC deps/imgui/backends)
 include_directories(PUBLIC deps/rtaudio)
@@ -63,38 +64,39 @@ add_library(whereami STATIC
 
 
 add_executable(nes-emu source/main.cpp
-source/file_io.cpp source/file_io.h
-source/6502.cpp source/6502.h
-source/ppu.cpp source/ppu.h
-source/cputest.cpp source/cputest.h
-source/nes_file.cpp source/nes_file.h
-source/mapper.cpp source/mapper.h
-source/screen.cpp source/screen.h
-source/controller.cpp source/controller.h
-source/nes.cpp source/nes.h
-source/palette.cpp source/palette.h
+source/framework/file_io.cpp source/framework/file_io.h
+source/framework/input.cpp source/framework/input.h
+source/framework/windowing.cpp source/framework/windowing.h
+source/nes/6502.cpp source/nes/6502.h
+source/nes/ppu.cpp source/nes/ppu.h
+source/nes/nes_file.cpp source/nes/nes_file.h
+source/nes/mapper.cpp source/nes/mapper.h
+source/framework/screen.cpp source/framework/screen.h
+source/nes/controller.cpp source/nes/controller.h
+source/nes/nes.cpp source/nes/nes.h
+source/nes/palette.cpp source/nes/palette.h
 source/gui.cpp source/gui.h
-source/apu/apu.cpp source/apu/apu.h
-source/apu/apu_divider.cpp source/apu/apu_divider.h
-source/apu/apu_envelope.cpp source/apu/apu_envelope.h
-source/apu/apu_frame_sequencer.cpp source/apu/apu_frame_sequencer.h
-source/apu/apu_length_counter.cpp source/apu/apu_length_counter.h
-source/apu/apu_sequencer.cpp source/apu/apu_sequencer.h
-source/apu/apu_square_channel.cpp source/apu/apu_square_channel.h
-source/apu/apu_sweep.cpp source/apu/apu_sweep.h
-source/apu/apu_triangle_channel.cpp source/apu/apu_triangle_channel.h
-source/apu/apu_noise_channel.cpp source/apu/apu_noise_channel.h
-source/apu/apu_delta_modulation_channel.cpp source/apu/apu_delta_modulation_channel.h
-source/apu/apu_linear_counter.cpp source/apu/apu_linear_counter.h
-source/audiosystem.cpp source/audiosystem.h
-source/abstract_mapper.cpp source/abstract_mapper.h
-source/mappers/mapper0.cpp source/mappers/mapper0.h
-source/mappers/mapper1.cpp source/mappers/mapper1.h
-source/mappers/mapper2.cpp source/mappers/mapper2.h
-source/mappers/mapper3.cpp source/mappers/mapper3.h
-source/mappers/mapper4.cpp source/mappers/mapper4.h
-source/mappers/mapper7.cpp source/mappers/mapper7.h
-source/mappers/mappers.cpp source/mappers/mappers.h
+source/nes/apu/apu.cpp source/nes/apu/apu.h
+source/nes/apu/apu_divider.cpp source/nes/apu/apu_divider.h
+source/nes/apu/apu_envelope.cpp source/nes/apu/apu_envelope.h
+source/nes/apu/apu_frame_sequencer.cpp source/nes/apu/apu_frame_sequencer.h
+source/nes/apu/apu_length_counter.cpp source/nes/apu/apu_length_counter.h
+source/nes/apu/apu_sequencer.cpp source/nes/apu/apu_sequencer.h
+source/nes/apu/apu_square_channel.cpp source/nes/apu/apu_square_channel.h
+source/nes/apu/apu_sweep.cpp source/nes/apu/apu_sweep.h
+source/nes/apu/apu_triangle_channel.cpp source/nes/apu/apu_triangle_channel.h
+source/nes/apu/apu_noise_channel.cpp source/nes/apu/apu_noise_channel.h
+source/nes/apu/apu_delta_modulation_channel.cpp source/nes/apu/apu_delta_modulation_channel.h
+source/nes/apu/apu_linear_counter.cpp source/nes/apu/apu_linear_counter.h
+source/framework/audiosystem.cpp source/framework/audiosystem.h
+source/nes/mappers/abstract_mapper.cpp source/nes/mappers/abstract_mapper.h
+source/nes/mappers/mapper0.cpp source/nes/mappers/mapper0.h
+source/nes/mappers/mapper1.cpp source/nes/mappers/mapper1.h
+source/nes/mappers/mapper2.cpp source/nes/mappers/mapper2.h
+source/nes/mappers/mapper3.cpp source/nes/mappers/mapper3.h
+source/nes/mappers/mapper4.cpp source/nes/mappers/mapper4.h
+source/nes/mappers/mapper7.cpp source/nes/mappers/mapper7.h
+source/nes/mappers/mappers.cpp source/nes/mappers/mappers.h
 )
 
 target_link_libraries(nes-emu whereami)

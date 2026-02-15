@@ -1,7 +1,7 @@
 #pragma once
-#include "nes.h"
+#include "nes/nes.h"
 
-
+// Eingabeänderung / Steuerungseinstellung (Gui Zustand)
 struct InputWaitContext{
     bool wait = false;
     unsigned int controller = 0;
@@ -73,20 +73,7 @@ class Gui{
     
     
     public:
-    Gui(NES* c, SharedState* state, bool debug){
-        this->console = c;
-        this->state = state;
-        for(int i = 0; i < 255; i++){
-            memInputBuf[i] = 0;
-            bpInputBuf[i] = 0;
-            opInputBuf[i] = 0;
-            outInputBuf[i] = 0;
-        }
-        if(debug)
-        breakpointsOP = console->addBreakpointOP("BRK");
-        opInputBuf[0] = 'B'; opInputBuf[1] = 'R'; opInputBuf[2] = 'K'; opInputBuf[3] = '\0';
-        outInputBuf[0] = '6'; outInputBuf[0] = '0'; outInputBuf[0] = '0'; outInputBuf[0] = '4'; outInputBuf[0] = '\0';
-    };
+    Gui(NES* c, SharedState* state, bool debug);
     
     void render();
     void toggleDebugger();

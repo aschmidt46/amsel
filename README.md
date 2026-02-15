@@ -1,19 +1,14 @@
-# antons-nes-emu
+# Antons NES-Emulator (ANES)
 
-This is the antons-nes-emu project.
+Cross-Plattform NES-Emulator in C++
 
-# Building and installing
+# Build
 
-See the [BUILDING](BUILDING.md) document.
-
-# Contributing
-
-See the [CONTRIBUTING](CONTRIBUTING.md) document.
-
-# Licensing
-
-<!--
-Please go to https://choosealicense.com/licenses/ and choose a license that
-fits your needs. The recommended license for a project of this type is the
-GNU AGPLv3.
--->
+Erfordert CMake.
+Erfordert glew und glfw3. Für Windows MinGW sind bereits vorkompilierte Bibliotheken vorhanden.
+Bauen unter MinGW und Linux:
+```
+cd build
+cmake ..
+make
+```

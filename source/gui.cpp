@@ -1,18 +1,23 @@
 #include "gui.h"
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+
 #include <string>
-#include "portable-file-dialogs.h"
 #include <filesystem>
 #include <vector>
 #include <bitset>
-#include "file_io.h"
 
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "portable-file-dialogs.h"
 #include "ImGuiNotify.hpp"
 #include "IconsFontAwesome6.h"
 #include "fa-solid-900.h"
-#include <GLFW/glfw3.h>
+
+#include "framework/file_io.h"
+#include "framework/input.h"
+#include "nes/nes.h"
 
 std::string ghex(uintptr_t input){
     std::string str = std::format("{:x}", input);
@@ -201,7 +206,6 @@ const char* translateKeyCode(int c){
   return "?";
 }
 
-// Noch separate Übersetzungsfunktion für andere Tasten bauen...
 std::string getBindingString(int controller, Action a, bool secondary){
     auto v = &globalConfig.controller1;
     if(controller==2){
@@ -217,23 +221,6 @@ std::string getBindingString(int controller, Action a, bool secondary){
         return (name != nullptr) ? std::string(name) : std::string(translateKeyCode((*v)[(int)a].first));
     }
 }
-
-void changeGamepadTo(int number, int jid){
-  if(number==1){
-    if(globalConfig.jidController2 == jid){
-      globalConfig.jidController2 = globalConfig.jidController1;
-    }
-    globalConfig.jidController1 = jid;
-  }
-  else{
-    if(globalConfig.jidController1 == jid){
-      globalConfig.jidController1 = globalConfig.jidController2;
-    }
-    globalConfig.jidController2 = jid;
-  }
-  FileIO::getInstance().saveSettings(globalConfig);
-}
-
 
 std::vector<std::pair<std::string, ASMtype>> detectJumps(const std::pair<std::vector<std::pair<std::string, ASMtype>>, std::vector<int>> &lines){
   std::vector<std::pair<std::string, ASMtype>> result;
@@ -478,11 +465,11 @@ void Gui::drawControlSettings()
     if(ImGui::BeginViewportSideBar("Steuerung", ImGui::GetMainViewport(), ImGuiDir_Down, ImGui::GetMainViewport()->Size.y / 2, ImGuiWindowFlags_None)){
     bool cs = true;
     if(ImGui::BeginTabBar("TabBarInput##")){
-        if(ImGui::BeginTabItem("Controller 1", &cs, ImGuiTabItemFlags_NoReorder | ImGuiTabItemFlags_NoCloseButton)){
+        if(ImGui::BeginTabItem("Controller 1", &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
           drawControlSettingsPage(1);
           ImGui::EndTabItem();
         }
-        if(ImGui::BeginTabItem("Controller 2", &cs, ImGuiTabItemFlags_NoReorder | ImGuiTabItemFlags_NoCloseButton)){
+        if(ImGui::BeginTabItem("Controller 2", &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
           drawControlSettingsPage(2);
           ImGui::EndTabItem();
         }
@@ -566,6 +553,22 @@ void Gui::buttonChangePrompt(int i, int controller, bool secondary)
     state->waitOn.secondary = secondary;
   }
   ImGui::PopID();
+}
+
+Gui::Gui(NES *c, SharedState *state, bool debug)
+{
+  this->console = c;
+  this->state = state;
+  for(int i = 0; i < 255; i++){
+      memInputBuf[i] = 0;
+      bpInputBuf[i] = 0;
+      opInputBuf[i] = 0;
+      outInputBuf[i] = 0;
+  }
+  if(debug)
+  breakpointsOP = console->addBreakpointOP("BRK");
+  opInputBuf[0] = 'B'; opInputBuf[1] = 'R'; opInputBuf[2] = 'K'; opInputBuf[3] = '\0';
+  outInputBuf[0] = '6'; outInputBuf[0] = '0'; outInputBuf[0] = '0'; outInputBuf[0] = '4'; outInputBuf[0] = '\0';
 }
 
 void Gui::render()
