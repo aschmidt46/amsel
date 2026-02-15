@@ -73,14 +73,23 @@ const char* getVolumeIcon(float f, bool enabled){
 
 const char* translateGamepadCode(int c){
   // Zuerst Achsen, dann Knöpfe
-  int tc = c - 6;
+  int mc = c - 6;
+  int tc = mc - 6;
   switch(c){
-    case GLFW_GAMEPAD_AXIS_LEFT_X: return "Stick-L-X";
-    case GLFW_GAMEPAD_AXIS_LEFT_Y: return "Stick-L-Y";
-    case GLFW_GAMEPAD_AXIS_RIGHT_X: return "Stick-R-X";
-    case GLFW_GAMEPAD_AXIS_RIGHT_Y: return "Stick-R-Y";
-    case GLFW_GAMEPAD_AXIS_LEFT_TRIGGER: return "Trigger-L";
-    case GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER: return "Trigger-R";
+    case GLFW_GAMEPAD_AXIS_LEFT_X: return "Stick-L-X+";
+    case GLFW_GAMEPAD_AXIS_LEFT_Y: return "Stick-L-Y+";
+    case GLFW_GAMEPAD_AXIS_RIGHT_X: return "Stick-R-X+";
+    case GLFW_GAMEPAD_AXIS_RIGHT_Y: return "Stick-R-Y+";
+    case GLFW_GAMEPAD_AXIS_LEFT_TRIGGER: return "Trigger-L+";
+    case GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER: return "Trigger-R+";
+  }
+  switch(mc){
+    case GLFW_GAMEPAD_AXIS_LEFT_X: return "Stick-L-X-";
+    case GLFW_GAMEPAD_AXIS_LEFT_Y: return "Stick-L-Y-";
+    case GLFW_GAMEPAD_AXIS_RIGHT_X: return "Stick-R-X-";
+    case GLFW_GAMEPAD_AXIS_RIGHT_Y: return "Stick-R-Y-";
+    case GLFW_GAMEPAD_AXIS_LEFT_TRIGGER: return "Trigger-L-";
+    case GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER: return "Trigger-R-";
   }
   switch(tc){
     case GLFW_GAMEPAD_BUTTON_A: return "A";
@@ -592,7 +601,8 @@ void Gui::render()
               }
             }
             if(ImGui::MenuItem("Auswerfen")){
-              console->ejectNextClock = true;
+              if(console->loaded)
+                console->ejectNextClock = true;
             }
             ImGui::EndMenu();
         }
@@ -653,4 +663,21 @@ void Gui::render()
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void Gui::toggleDebugger()
+{
+  if(!state->showDebugger){
+    state->showDebugger = true;
+    console->produceDisassembly = true;
+  }
+  else{
+    state->showDebugger = false;
+    console->produceDisassembly = false;
+  }
+}
+
+void Gui::toggleTestRomOutput()
+{
+  state->showOutput = !state->showOutput;
 }

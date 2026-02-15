@@ -20,6 +20,12 @@ struct MessageStruct{
 };
 
 struct SettingsConfig{
+    // Display
+    int posX = 0;
+    int posY = 0;
+    int sizeX = 2 * 256;
+    int sizeY = 2 * 240;
+    bool maximize = false;
     // Sound
     float volume = 1.0f;
     // Input

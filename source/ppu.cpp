@@ -13,6 +13,15 @@ std::string phex(uintptr_t input){
 
 void Ppu::clock()
 {
+	// NMI Suppression
+	if(VBLWasSetThisCycle >= 0){
+		if(suppressNMI){
+			pullNMIIn = -1;
+			suppressNMI = false;
+		}
+		VBLWasSetThisCycle--;
+	}
+
 	// Renderer fortschalten
 	scanline = timings[ppuTiming].second.scanline;
 	cycle = timings[ppuTiming].second.cycle;
@@ -81,8 +90,15 @@ void Ppu::swapBuffers()
 void Ppu::writeRegister(uint8_t *reg, uint8_t val)
 {
     if(reg==(uint8_t*)&PPUCTRL){
+		bool canTriggerNMI = false;
+		if(!PPUCTRL.getEnableNMI())
+			canTriggerNMI = true;
         // Wert schreiben
         PPUCTRL.raw = val;
+		if(PPUSTATUS.getVerticalBlank() && canTriggerNMI && PPUCTRL.getEnableNMI()){
+			if(pullNMIIn < 0)
+				pullNMIIn = 14;
+		}
         // Nametable select
         t.setNametableX(PPUCTRL.getNametableX());
         t.setNametableY(PPUCTRL.getNametableY());
@@ -145,6 +161,9 @@ uint8_t Ppu::readRegister(uint8_t *reg)
     uint8_t tmp;
 
 	if(reg == (uint8_t*)&PPUSTATUS){
+		if(VBLWasSetThisCycle >= 0){
+			suppressNMI = true;
+		}
 		w = false;
 
         uint8_t value = PPUSTATUS.raw;
@@ -487,6 +506,7 @@ void Ppu::pullNMI()
 {
 	if(!suppressVBLThisFrame){
 		PPUSTATUS.setVerticalBlank(true);
+		VBLWasSetThisCycle = 1;
 		if (PPUCTRL.getEnableNMI())
 			// Experimentell ergeben aus der blargg 5-nmi-timing testrom
 			pullNMIIn = 14;

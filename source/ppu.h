@@ -143,6 +143,9 @@ class Ppu{
     int toggleBackgroundRenderIn = -1;
     bool suppressVBLThisFrame = false;
     int pullNMIIn = -1;
+    // 0: letzten Zyklus, 1: diesen Zyklus
+    int VBLWasSetThisCycle = -1;
+    bool suppressNMI = false;
 
 
     // Callbacks

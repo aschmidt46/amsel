@@ -26,14 +26,14 @@ void initSettings(SettingsConfig &c){
   c.controller1[6].first = 257;
   c.controller1[7].first = 259;
 
-  c.controller1[0].second = 17;
-  c.controller1[1].second = 19;
-  c.controller1[2].second = 20;
-  c.controller1[3].second = 18;
-  c.controller1[4].second = 7;
-  c.controller1[5].second = 6;
-  c.controller1[6].second = 13;
-  c.controller1[7].second = 12;
+  c.controller1[0].second = 23;
+  c.controller1[1].second = 25;
+  c.controller1[2].second = 26;
+  c.controller1[3].second = 24;
+  c.controller1[4].second = 12;
+  c.controller1[5].second = 14;
+  c.controller1[6].second = 19;
+  c.controller1[7].second = 18;
 
   // Standard Belegung Controller 2
   c.controller2[0].first = 328;
@@ -45,20 +45,22 @@ void initSettings(SettingsConfig &c){
   c.controller2[6].first = 335;
   c.controller2[7].first = 334;
 
-  c.controller2[0].second = 17;
-  c.controller2[1].second = 19;
-  c.controller2[2].second = 20;
-  c.controller2[3].second = 18;
-  c.controller2[4].second = 7;
-  c.controller2[5].second = 6;
-  c.controller2[6].second = 13;
-  c.controller2[7].second = 12;
+  c.controller2[0].second = 23;
+  c.controller2[1].second = 25;
+  c.controller2[2].second = 26;
+  c.controller2[3].second = 24;
+  c.controller2[4].second = 12;
+  c.controller2[5].second = 14;
+  c.controller2[6].second = 19;
+  c.controller2[7].second = 18;
 
 }
 
-void FileIO::writeDefaultSettings(const std::string &fileName)
+void FileIO::writeDefaultSettings(const std::string &fileName, int posX, int posY)
 {
     SettingsConfig c;
+    c.posX = posX;
+    c.posY = posY;
     initSettings(c);
 
     saveSettings(c);
@@ -99,10 +101,10 @@ void FileIO::loadSave(std::string romName, uint8_t *destination, int size)
     f.close();
 }
 
-SettingsConfig FileIO::loadSettings()
+SettingsConfig FileIO::loadSettings(int posX, int posY)
 {
     if(!std::filesystem::exists(workDirectory / "settings.ini")){
-        writeDefaultSettings((workDirectory / "settings.ini").string());
+        writeDefaultSettings((workDirectory / "settings.ini").string(), posX, posY);
     }
 
     ini::IniFile ini((workDirectory / "settings.ini").string());
@@ -121,6 +123,11 @@ SettingsConfig FileIO::loadSettings()
     }
 
     return SettingsConfig{
+            .posX = ini["Display"]["WindowPosX"].as<int>(),
+            .posY = ini["Display"]["WindowPosY"].as<int>(),
+            .sizeX = ini["Display"]["WindowSizeX"].as<int>(),
+            .sizeY = ini["Display"]["WindowSizeY"].as<int>(),
+            .maximize = ini["Display"]["Maximize"].as<bool>(),
 			.volume = ini["Sound"]["Volume"].as<float>(),
             .controller1 = c1,
             .controller2 = c2,
@@ -133,6 +140,11 @@ void FileIO::saveSettings(const SettingsConfig &config)
 {
     ini::IniFile ini;
 
+    ini["Display"]["WindowPosX"] =config. posX;
+    ini["Display"]["WindowPosY"] =config. posY;
+    ini["Display"]["WindowSizeX"] = config.sizeX;
+    ini["Display"]["WindowSizeY"] = config.sizeY;
+    ini["Display"]["Maximize"] = config.maximize;
     ini["Sound"]["Volume"] = config.volume;
 
     for(int i = 0; i < 8; i++){

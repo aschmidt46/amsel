@@ -12,7 +12,7 @@ class FileIO{
     std::filesystem::path workDirectory;
     std::filesystem::path saveDirectory;
 
-    void writeDefaultSettings(const std::string &fileName);
+    void writeDefaultSettings(const std::string &fileName , int posX, int posY);
 
     public:
     static FileIO& getInstance();
@@ -22,6 +22,6 @@ class FileIO{
     void saveData(std::string romName, uint8_t* data, int size);
     void loadSave(std::string romName, uint8_t* destination, int size);
 
-    SettingsConfig loadSettings();
+    SettingsConfig loadSettings(int posX, int posY);
     void saveSettings(const SettingsConfig &config);
 };

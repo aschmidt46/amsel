@@ -67,20 +67,26 @@ GLFWgamepadstate previousState2;
 // -1 - Release, 0 - Nichts, 1 - Press
 std::pair<std::vector<int>, std::vector<int>> calculateGamepadStateDelta(const GLFWgamepadstate &prev, const GLFWgamepadstate &now){
   std::pair<std::vector<int>, std::vector<int>> delta;
-  delta.first = std::vector<int>(6);
+  delta.first = std::vector<int>(12);
   delta.second = std::vector<int>(15);
+  const float axisThreshold = 0.75;
 
+  // Delta für Positive Achsen
   for(int i = 0; i < 6; i++){
-    if(prev.axes[i] > 0.5 && now.axes[i] < 0.5){
+    if(prev.axes[i] > axisThreshold && now.axes[i] < axisThreshold){
       delta.first[i] = -1;
     }
-    if(prev.axes[i] > -0.5 && now.axes[i] < -0.5){
-      delta.first[i] = -1;
-    }
-    if(prev.axes[i] < -0.5 && now.axes[i] > -0.5){
+    else if(prev.axes[i] < axisThreshold && now.axes[i] > axisThreshold){
       delta.first[i] = 1;
     }
-    else if(prev.axes[i] < 0.5 && now.axes[i] > 0.5){
+    else delta.first[i] = 0;
+  }
+  // Delta für Negative Achsen
+  for(int i = 6; i < 12; i++){
+    if(prev.axes[i-6] < -axisThreshold && now.axes[i-6] > -axisThreshold){
+      delta.first[i] = -1;
+    }
+    else if(prev.axes[i-6] > -axisThreshold && now.axes[i-6] < -axisThreshold){
       delta.first[i] = 1;
     }
     else delta.first[i] = 0;
@@ -172,6 +178,13 @@ static void framebufferSizeCallback(GLFWwindow* window, int w, int h){
     width = w;
     height = h;
     screen->updateFramebufferSize(w, h);
+
+    // Nicht durch maximiertes Fenster und Vollbild beeinflussen lassen
+    if(!sharedGui->state->fullScreen && !glfwGetWindowAttrib(window, GLFW_MAXIMIZED)){
+      globalConfig.sizeX = w;
+      globalConfig.sizeY = h;
+      FileIO::getInstance().saveSettings(globalConfig);
+    }
   };
 
 void onToggleFullscreen(GLFWwindow* window){
@@ -270,12 +283,15 @@ std::vector<int> enumerateGamepads(){
   return pads;
 }
 
+static void maximizeCallback(GLFWwindow* window, int maximized){
+  globalConfig.maximize = maximized;
+  FileIO::getInstance().saveSettings(globalConfig);
+}
+
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-  unsigned int v = 0;
-  if(action == GLFW_PRESS) v = 1;
-  if(action == GLFW_RELEASE) v = 0;
   if(action != GLFW_PRESS && action != GLFW_RELEASE) return;
+  unsigned int v = action;
 
   // Warten und zwar nicht auf Gamepad, sondern Tastatur
   if(sharedGui->state->waitOn.wait && !sharedGui->state->waitOn.secondary){
@@ -295,13 +311,28 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
   if(v==1 && key == GLFW_KEY_F11){
     sharedGui->state->fullScreen = !sharedGui->state->fullScreen;
   }
+  if(v==1 && key == GLFW_KEY_F1){
+    sharedGui->toggleDebugger();
+  }
+  if(v==1 && key == GLFW_KEY_F2){
+    sharedGui->toggleTestRomOutput();
+  }
   controller1->setKey(false, key, v);
   controller2->setKey(false, key, v);
 }
 
 static void positionCallback(GLFWwindow* window, int posx, int posy){
+  // Für Vollbild
   windowX = posx;
   windowY = posy;
+
+
+  // Für Ini
+  if(!glfwGetWindowAttrib(window, GLFW_MAXIMIZED) && !sharedGui->state->fullScreen){
+    globalConfig.posX = posx;
+    globalConfig.posY = posy;
+    FileIO::getInstance().saveSettings(globalConfig);
+  }
 }
 
 void updateTitle(GLFWwindow* window){
@@ -323,7 +354,15 @@ int run()
   SharedState* state = new SharedState();
   AudioSystem audiosystem(console);
 
-  globalConfig = FileIO::getInstance().loadSettings();
+  // Nur im Falle, dass noch keine Ini existiert.
+  int autoX, autoY;
+  glfwGetWindowPos(window, &autoX, &autoY);
+
+  globalConfig = FileIO::getInstance().loadSettings(autoX, autoY);
+  glfwSetWindowPos(window, globalConfig.posX, globalConfig.posY);
+  glfwSetWindowSize(window, globalConfig.sizeX, globalConfig.sizeY);
+  if(globalConfig.maximize)
+    glfwMaximizeWindow(window);
   
 #ifdef _DEBUG
   Gui gui(console, state, true);
@@ -343,6 +382,7 @@ int run()
   free(p);
   exeDir = path.parent_path();
 
+  glfwSetWindowMaximizeCallback(window, maximizeCallback);
   glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
   // input implementieren
   connectedJoysticks = enumerateGamepads();

@@ -31,18 +31,26 @@ void Controller::setAddressOf(int i, int to)
   switch(i){
     case 0:{ // hoch
       state.up = to;
+      if(to && state.down)
+        state.down = 0;
       break;
     }
     case 1:{ // runter
       state.down = to;
+      if(to && state.up)
+        state.up = 0;
       break;
     }
     case 2:{ // links
       state.left = to;
+      if(to && state.right)
+        state.right = 0;
       break;
     }
     case 3:{ // rechts
       state.right = to;
+      if(to && state.left)
+        state.left = 0;
       break;
     }
     case 4:{ // a

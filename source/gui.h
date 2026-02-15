@@ -43,19 +43,6 @@ class Gui{
     uint16_t outputStartsAt = 0x6004;
     char outInputBuf[255];
 
-    void toggleDebugger(){
-        if(!state->showDebugger){
-            state->showDebugger = true;
-            console->produceDisassembly = true;
-        }
-        else{
-            state->showDebugger = false;
-            console->produceDisassembly = false;
-        }
-    };
-    void toggleTestRomOutput(){
-        state->showOutput = !state->showOutput;
-    };
     void toggleHalt(){
         if(!state->halt){
             state->halt = true;
@@ -66,11 +53,25 @@ class Gui{
             console->halt = false;
         }
     };
-
+    
     uint16_t getLastRead(){
         return (uint16_t)lastReadLow | ((uint16_t)lastReadHigh << 8);
     };
-
+    
+    void assemblyRender();
+    void drawRegisters();
+    void drawMemoryReader();
+    void drawBreakpoints();
+    void drawDebugger();
+    void drawOutput();
+    void drawControlSettings();
+    void drawControlSettingsPage(int controller);
+    void buttonChangePrompt(int i, int controller, bool secondary);
+    
+    void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
+    void ASMLine(std::string l, int id, float r, float g, float b);
+    
+    
     public:
     Gui(NES* c, SharedState* state, bool debug){
         this->console = c;
@@ -82,23 +83,14 @@ class Gui{
             outInputBuf[i] = 0;
         }
         if(debug)
-            breakpointsOP = console->addBreakpointOP("BRK");
+        breakpointsOP = console->addBreakpointOP("BRK");
         opInputBuf[0] = 'B'; opInputBuf[1] = 'R'; opInputBuf[2] = 'K'; opInputBuf[3] = '\0';
         outInputBuf[0] = '6'; outInputBuf[0] = '0'; outInputBuf[0] = '0'; outInputBuf[0] = '4'; outInputBuf[0] = '\0';
     };
+    
     void render();
-    void assemblyRender();
-    void drawRegisters();
-    void drawMemoryReader();
-    void drawBreakpoints();
-    void drawDebugger();
-    void drawOutput();
-    void drawControlSettings();
-    void drawControlSettingsPage(int controller);
-    void buttonChangePrompt(int i, int controller, bool secondary);
-
-    void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
-    void ASMLine(std::string l, int id, float r, float g, float b);
-
+    void toggleDebugger();
+    void toggleTestRomOutput();
+    
     SharedState* state;
 };
