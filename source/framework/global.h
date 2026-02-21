@@ -31,6 +31,7 @@ struct SettingsConfig{
     int sizeX = 2 * 256;
     int sizeY = 2 * 240;
     bool maximize = false;
+    bool useCRTShader = false;
     // Sound
     float volume = 1.0f;
     // Input

@@ -1,5 +1,6 @@
 #include "screen.h"
 #include <iostream>
+#include "global.h"
 
 void Screen::setQSize(float x0, float x1, float y0, float y1)
 {
@@ -26,7 +27,7 @@ Screen::Screen()
     glBindTexture(GL_TEXTURE_2D, screenTexture);
     glActiveTexture(GL_TEXTURE0);
     
-    unsigned int vertex, fragment;
+    unsigned int vertex, fragmentBasic, fragmentCRT;
     int success;
     char infoLog[512];
 
@@ -42,50 +43,90 @@ Screen::Screen()
         throw;
     };
 
-    fragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment, 1, &fs, NULL);
-    glCompileShader(fragment);
-    glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
+    fragmentBasic = glCreateShader(GL_FRAGMENT_SHADER);
+
+    glShaderSource(fragmentBasic, 1, &fs, NULL);
+    glCompileShader(fragmentBasic);
+    glGetShaderiv(fragmentBasic, GL_COMPILE_STATUS, &success);
     if (!success)
     {
-        glGetShaderInfoLog(fragment, 512, NULL, infoLog);
+        glGetShaderInfoLog(fragmentBasic, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
         throw;
     };
 
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertex);
-    glAttachShader(shaderProgram, fragment);
-    glLinkProgram(shaderProgram);
+    fragmentCRT = glCreateShader(GL_FRAGMENT_SHADER);
 
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    glShaderSource(fragmentCRT, 1, &fixingPixelArt, NULL);
+    glCompileShader(fragmentCRT);
+    glGetShaderiv(fragmentCRT, GL_COMPILE_STATUS, &success);
     if (!success)
     {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        glGetShaderInfoLog(fragmentCRT, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+        throw;
+    };
+
+    basicShader = glCreateProgram();
+    glAttachShader(basicShader, vertex);
+    glAttachShader(basicShader, fragmentBasic);
+    glLinkProgram(basicShader);
+
+    glGetProgramiv(basicShader, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        glGetProgramInfoLog(basicShader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        throw;
+    }
+
+    crtShader = glCreateProgram();
+    glAttachShader(crtShader, vertex);
+    glAttachShader(crtShader, fragmentCRT);
+    glLinkProgram(crtShader);
+
+    glGetProgramiv(crtShader, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        glGetProgramInfoLog(crtShader, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
         throw;
     }
 
     glDeleteShader(vertex);
-    glDeleteShader(fragment);
+    glDeleteShader(fragmentBasic);
+    glDeleteShader(fragmentCRT);
 
-    glUseProgram(shaderProgram);
-
+    glUseProgram(basicShader);
+    
     glTextureStorage2D(screenTexture, 1, GL_RGB8, screenWidth, screenHeight);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Für CRT Shader
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
     glNamedBufferData(ssbo, quad.size()*sizeof(float), quad.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
-
+    
     glNamedBufferData(uvssbo, quad.size()*sizeof(float), quad.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, uvssbo);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uvssbo);
+    glUniform3f(glGetUniformLocation(basicShader, "iResolution"), iResolutionX, iResolutionY, 1);
+    glUseProgram(crtShader);
+    glUniform3f(glGetUniformLocation(crtShader, "iResolution"), iResolutionX, iResolutionY, 1);
     
 }
 
 void Screen::present()
 {
+    if(globalConfig.useCRTShader){
+        glUseProgram(crtShader);
+    }
+    else{
+        glUseProgram(basicShader);
+    }
     glClear(GL_COLOR_BUFFER_BIT);
     glBindVertexArray(vao);
     glActiveTexture(GL_TEXTURE0);
@@ -105,7 +146,7 @@ void Screen::copyBufferToScreen(float *buffer)
 }
 
 // Abbildung des NES-Seitenverhätnisses auf den Bildschirm
-glm::vec4 computeRect(int x, int y){
+glm::vec4 Screen::computeRect(int x, int y){
     float nesX = 256.0;
     float nesY = 240;
     float nesAspect = nesX / nesY;
@@ -128,6 +169,9 @@ glm::vec4 computeRect(int x, int y){
     x1 = cX + (w/2);
     y0 = cY - (h/2);
     y1 = cY + (h/2);
+
+    iResolutionX = w;
+    iResolutionY = h;
 
     // Skalierung auf [0,1]
 
@@ -152,4 +196,6 @@ void Screen::updateFramebufferSize(int w, int h)
     setQSize(xxyy.x, xxyy.y, xxyy.z, xxyy.w);
     glNamedBufferData(ssbo, qSize.size()*sizeof(float), qSize.data(), GL_STATIC_DRAW);
     glViewport(0, 0, w, h);
+    glUniform3f(glGetUniformLocation(basicShader, "iResolution"), iResolutionX, iResolutionY, 1);
+    glUniform3f(glGetUniformLocation(crtShader, "iResolution"), iResolutionX, iResolutionY, 1);
 }

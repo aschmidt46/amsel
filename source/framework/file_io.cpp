@@ -128,6 +128,7 @@ SettingsConfig FileIO::loadSettings(int posX, int posY)
             .sizeX = ini["Display"]["WindowSizeX"].as<int>(),
             .sizeY = ini["Display"]["WindowSizeY"].as<int>(),
             .maximize = ini["Display"]["Maximize"].as<bool>(),
+            .useCRTShader = ini["Display"]["CRTShader"].as<bool>(),
 			.volume = ini["Sound"]["Volume"].as<float>(),
             .controller1 = c1,
             .controller2 = c2,
@@ -145,6 +146,7 @@ void FileIO::saveSettings(const SettingsConfig &config)
     ini["Display"]["WindowSizeX"] = config.sizeX;
     ini["Display"]["WindowSizeY"] = config.sizeY;
     ini["Display"]["Maximize"] = config.maximize;
+    ini["Display"]["CRTShader"] = config.useCRTShader;
     ini["Sound"]["Volume"] = config.volume;
 
     for(int i = 0; i < 8; i++){

@@ -115,7 +115,9 @@ GLFWwindow* initWindow(){
 
 void postInit()
 {
-  screen->updateFramebufferSize(globalConfig.sizeX, globalConfig.sizeY);
+  int fw, fh;
+  glfwGetFramebufferSize(window, &fw, &fh);
+  screen->updateFramebufferSize(fw, fh);
 }
 
 void cleanUp(GLFWwindow* window){

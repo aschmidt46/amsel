@@ -621,6 +621,9 @@ void Gui::render()
             state->showInput = !state->showInput;
           }
           ImGui::MenuItem("Vollbild", "F11", &state->fullScreen);
+          if(ImGui::MenuItem("CRT Shader", "", &globalConfig.useCRTShader)){
+            FileIO::getInstance().saveSettings(globalConfig);
+          };
           ImGui::MenuItem("Ton", "", &console->sound);
           ImGui::EndMenu();
         }
