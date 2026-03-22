@@ -73,7 +73,7 @@ mod rom_tests {
 
     fn test_rom_against_log(rom_path: &str, log_path: &str, pc_off: u16){
         let bus = Rc::new(RefCell::new(Bus::new()));
-        let mut cpu = SM83::new_init(Rc::clone(&bus));
+        let mut cpu = SM83::new_init(Rc::downgrade(&bus));
         cpu.set_initial_state_dmg();
         cpu.reg_pc += pc_off;
         let bytes = std::fs::read(rom_path).unwrap();

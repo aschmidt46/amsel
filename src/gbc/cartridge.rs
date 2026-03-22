@@ -7,7 +7,7 @@ const NINTENDO_LOGO: [u8; LOGO_SIZE] = [
     0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
 ]; 
 
-struct RomInfo{
+pub struct RomInfo{
     valid_logo: bool,
     title: String,
     manufacturer_code: String,
@@ -22,20 +22,23 @@ struct RomInfo{
 
 pub struct RomObject{
     pub (crate) raw_data: Vec<u8>,
-    info: RomInfo,
-    cgb_flag: u8,
-    sgb_flag: u8,
-    cartridge_type: u8, // Muss noch geparsed werden
-    rom_size: u8, // Muss noch geparsed werden
-    ram_size: u8, // Muss noch geparsed werden
+    pub (crate) info: RomInfo,
+    pub (crate) cgb_flag: u8,
+    pub (crate) sgb_flag: u8,
+    pub (crate) cartridge_type: u8, // Muss noch geparsed werden
+    pub (crate) rom_size: u8, // Muss noch geparsed werden
+    pub (crate) ram_size: u8, // Muss noch geparsed werden
 }
+
+// Anzahl 8KiB Bänke
+const RAM_SIZE_TABLE: [u8;6] = [0,0,1,4,16,8];
 
 impl RomObject{
     pub fn new(path: &str) -> Result<Self, std::io::Error> {
         let bytes = std::fs::read(path)?;
         Ok(RomObject {info: RomObject::get_rom_info(&bytes), cgb_flag: bytes[0x0143].clone()
             , sgb_flag: bytes[0x0146].clone(), cartridge_type: bytes[0x0147].clone()
-            , rom_size: bytes[0x0148].clone(), ram_size: bytes[0x0149].clone(), raw_data: bytes })
+            , rom_size: bytes[0x0148].clone(), ram_size: RAM_SIZE_TABLE[bytes[0x0149].clone() as usize], raw_data: bytes })
     }
 
     fn get_rom_info(bytes: &Vec<u8>) -> RomInfo{

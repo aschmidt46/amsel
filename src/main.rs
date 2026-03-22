@@ -3,7 +3,11 @@
 
 use std::{sync::Mutex, thread};
 
-use crate::gui::Scene;
+
+
+use iced::Subscription;
+
+use crate::gui::{Message, Scene};
 
 mod gbc;
 mod gui;
@@ -11,23 +15,10 @@ mod gui;
 const N: usize = 160 * 144 * 4;
 static FRAMEBUFFER: Mutex<[u8; N]> = Mutex::new([255; N]);
 
+pub fn index_framebuffer(x: usize, y: usize) -> usize{
+    (x + 160 * y) * 4 + 0 // Kanal 0 (rot) angenommen
+}
+
 fn main() -> iced::Result {
-    // Test um Farbe zu ändern
-    thread::spawn(move || {
-        loop {
-            for y in 0..144 {
-                for x in 0..160 {
-                    for c in 0..3 {
-                        match FRAMEBUFFER.lock().as_mut() {
-                            Err(e) => panic!("Konnte nicht sperren!"),
-                            Ok(m) => {
-                                m[(y + 144 * x) * 4 + c] = m[(y + 144 * x) * 4 + c].wrapping_add(1);
-                            }
-                        };
-                    }
-                }
-            }
-        }
-    });
-    iced::run(Scene::update, Scene::view)
+    iced::application(Scene::default, Scene::update, Scene::view).subscription(Scene::subscription).run()
 }

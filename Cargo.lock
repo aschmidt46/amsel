@@ -109,6 +109,7 @@ dependencies = [
  "lazy_static",
  "serde",
  "serde_json",
+ "smol_str 0.3.6",
 ]
 
 [[package]]
@@ -436,6 +437,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "borsh"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfd1e3f8955a5d7de9fab72fc8373fade9fb8a703968cb200ae3dc6cf08e185a"
+dependencies = [
+ "bytes",
+ "cfg_aliases",
+]
+
+[[package]]
 name = "built"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -729,7 +740,7 @@ dependencies = [
  "rustc-hash 1.1.0",
  "self_cell",
  "skrifa",
- "smol_str",
+ "smol_str 0.2.2",
  "swash",
  "sys-locale",
  "unicode-bidi",
@@ -1443,7 +1454,7 @@ dependencies = [
  "log",
  "num-traits",
  "rustc-hash 2.1.1",
- "smol_str",
+ "smol_str 0.2.2",
  "thiserror 2.0.18",
  "web-time",
 ]
@@ -3248,6 +3259,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "smol_str"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4aaa7368fcf4852a4c2dd92df0cace6a71f2091ca0a23391ce7f3a31833f1523"
+dependencies = [
+ "borsh",
+ "serde_core",
+]
+
+[[package]]
 name = "softbuffer"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4481,7 +4502,7 @@ dependencies = [
  "rustix 0.38.44",
  "sctk-adwaita",
  "smithay-client-toolkit 0.19.2",
- "smol_str",
+ "smol_str 0.2.2",
  "tracing",
  "unicode-segmentation",
  "wasm-bindgen",
