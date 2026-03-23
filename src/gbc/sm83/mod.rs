@@ -202,12 +202,12 @@ impl SM83 {
                             // Checken und aufrufen von Interrupt Handler...
                             self.poll_interrupts();
                             // dann...
-                            if self.ie_itr || self.if_itr { self.mode = CPUMode::Running; }
+                            if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
                         }
                         else{
                             // Hier eigentlich Hardware Bug in HALT (nicht hier), weiß nicht ob wichtig zu emulieren
                             // Kein Interrupt Handler aufgerufen
-                            if self.ie_itr || self.if_itr { self.mode = CPUMode::Running; }
+                            if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
                         }
                     },
                     CPUMode::Stopped =>{

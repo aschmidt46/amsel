@@ -7,6 +7,8 @@ pub struct Bus{
     work_ram: [u8; 0x8000], // 32KiB, 8KiB auf DMG
     high_ram: [u8; 0x80],
     external_ram_bank: usize,
+    rom_bank_lower: usize,
+    rom_bank_upper: usize,
     external_ram: [[u8; 0x2000]; 16], //max 16 Bänke
     cpu: Option<SM83>,
     ppu: Option<PPU>,
@@ -24,6 +26,14 @@ pub struct Bus{
     read_buttons: bool,
     pub has_frame: bool,
     dma_next_clock: i32,
+
+    // mbc3
+    enable_ram_rtc: bool,
+    rtc_s: u8,
+    rtc_m: u8,
+    rtc_h: u8,
+    rtc_dl: u8,
+    rtc_dh: u8,
 }
 
 const TAC_TABLE: [u16; 4] = [256 * 4, 4 * 4, 16 * 4, 64 * 4];
@@ -31,7 +41,8 @@ const TAC_TABLE: [u16; 4] = [256 * 4, 4 * 4, 16 * 4, 64 * 4];
 impl Bus{
     pub fn new() -> Self{
         Bus { work_ram: [0; 0x8000], high_ram: [0; 0x80], cart: None, cpu: None, ppu: None, has_frame: false, external_ram_bank: 0, external_ram: [[0; 0x2000]; 16],
-            div: 0, tima: 0,  tma: 0, tac: 0, div_counter: 0, tima_counter: 0, joypad: [true; 4], buttons: [true; 4], read_buttons: false, read_joypad: false, oam_dma: 0, dma_next_clock: -1}
+            div: 0, tima: 0,  tma: 0, tac: 0, div_counter: 0, tima_counter: 0, joypad: [true; 4], buttons: [true; 4], read_buttons: false, read_joypad: false,
+            oam_dma: 0, dma_next_clock: -1, rom_bank_lower: 0, rom_bank_upper: 1, rtc_s: 0, rtc_m: 0, rtc_h: 0, rtc_dl: 0, rtc_dh: 0, enable_ram_rtc: true}
     }
     pub fn new_init(path: &str) -> Self{
         let mut bus = Bus::new();
@@ -40,7 +51,7 @@ impl Bus{
     }
     pub fn create_components(&mut self, this: Rc<RefCell<Bus>>){
         let mut cpu = SM83::new_init(Rc::downgrade(&this));
-        cpu.set_initial_state_dmg();
+        cpu.set_initial_state_cgb();
         let ppu = PPU::new(Rc::downgrade(&this));
         self.cpu = Some(cpu);
         self.ppu = Some(ppu);
@@ -68,8 +79,33 @@ impl Bus{
         let ppu = self.ppu.as_mut().unwrap();
         let cpu = self.cpu.as_mut().unwrap();
         match addr{
-            0x0000..0x4000 => cart.raw_data[addr as usize],
-            0x4000..0x8000 => cart.raw_data[addr as usize],
+            0x0000..0x4000 => cart.raw_data[self.rom_bank_lower * 0x4000 + addr as usize],
+            0x4000..0x8000 => cart.raw_data[self.rom_bank_upper * 0x4000 + addr as usize - 0x4000],
+            0xA000..0xC000 => { // Ram auf Cartridge und tauschbare Bank, falls vorhanden
+                match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC3 => {
+                        if self.enable_ram_rtc{
+                            match self.external_ram_bank{
+                                0..8 => self.external_ram[self.external_ram_bank][addr as usize - 0xA000],
+                                0x8 => self.rtc_s,
+                                0x9 => self.rtc_m,
+                                0xA => self.rtc_h,
+                                0xB => self.rtc_dl,
+                                0xC => self.rtc_dh,
+                                _ => self.external_ram[self.external_ram_bank % 8][addr as usize - 0xA000],
+                            }
+                        }
+                        else { 0xFF }
+                    }
+                    super::cartridge::Mapper::MBC5 => {
+                        if self.enable_ram_rtc{
+                            self.external_ram[self.external_ram_bank % 0x10][addr as usize - 0xA000]
+                        }
+                        else { 0xFF }
+                    },
+                    _ => self.external_ram[self.external_ram_bank][addr as usize - 0xA000]
+                }
+            },
             0xFF00 => {
                 let mut res = 0xFF;
                 if !self.read_joypad && self.read_buttons{
@@ -98,6 +134,9 @@ impl Bus{
             0xFF42 => ppu.scy,
             0xFF43 => ppu.scx,
             0xFF46 => self.oam_dma,
+            0xFF47 => ppu.bgp,
+            0xFF48 => ppu.obp0,
+            0xFF49 => ppu.obp1,
             0xFF4A => ppu.wy,
             0xFF4B => ppu.wx,
             0xFF44 => ppu.scanline,
@@ -111,6 +150,82 @@ impl Bus{
         let ppu = self.ppu.as_mut().unwrap();
         let cpu = self.cpu.as_mut().unwrap();
         match addr{
+            0x0000..0x2000 => {
+                match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC3 =>{
+                        if val == 0x0A {
+                            self.enable_ram_rtc = true;
+                        }
+                        if val == 0x00 {
+                            self.enable_ram_rtc = false;
+                        }
+                    },
+                    super::cartridge::Mapper::MBC5 =>{
+                        if val == 0x0A {
+                            self.enable_ram_rtc = true;
+                        }
+                        if val == 0x00 {
+                            self.enable_ram_rtc = false;
+                        }
+                    },
+                    _ => ()
+                }
+            }
+            0x2000..0x3000 => {
+                match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC3 => {
+                        self.rom_bank_upper = (val & 127) as usize;
+                        if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
+                    },
+                    super::cartridge::Mapper::MBC5 => { // Untere 8 bit der Bank number
+                        self.rom_bank_upper = (self.rom_bank_upper & (!0xFF)) | (val as usize);
+                    },
+                    _ => ()
+                }
+            }
+            0x3000..0x4000 => {
+                match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC3 => {
+                        self.rom_bank_upper = (val & 127) as usize;
+                        if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
+                    },
+                    super::cartridge::Mapper::MBC5 => { // Neuntes Bit der Bank number
+                        self.rom_bank_upper = (self.rom_bank_upper & !(1 << 8)) | ((val as usize) << 8);
+                    },
+                    _ => ()
+                }
+            }
+            0x4000..0x5000 => {
+                match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC3 => self.external_ram_bank = val as usize,
+                    super::cartridge::Mapper::MBC5 => self.external_ram_bank = val as usize,
+                    _ => (),
+                }
+            }
+            0x5000..0x6000 => {
+                match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC3 => self.external_ram_bank = val as usize,
+                    _ => (),
+                }
+            }
+            0xA000..0xC000 => { // Ram auf Cartridge und tauschbare Bank, falls vorhanden
+                match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC3 => {
+                        if self.enable_ram_rtc{
+                            match self.external_ram_bank{
+                                0..8 => self.external_ram[self.external_ram_bank][addr as usize - 0xA000] = val,
+                                0x8 => self.rtc_s = val,
+                                0x9 => self.rtc_m = val,
+                                0xA => self.rtc_h = val,
+                                0xB => self.rtc_dl = val,
+                                0xC => self.rtc_dh = val,
+                                _ => self.external_ram[self.external_ram_bank % 8][addr as usize - 0xA000] = val,
+                            }
+                        }
+                    }
+                    _ => self.external_ram[self.external_ram_bank][addr as usize - 0xA000] = val
+                }
+            },
             0xFF00 => {
                 self.read_buttons = (val & 0b00100000) > 0;
                 self.read_joypad = (val &  0b00010000) > 0;
@@ -130,6 +245,9 @@ impl Bus{
                 let source = (val as u16) * 0x100;
                 self.dma_next_clock = source as i32;
             }
+            0xFF47 => ppu.bgp = val,
+            0xFF48 => ppu.obp0 = val,
+            0xFF49 => ppu.obp1 = val,
             0xFF4A => ppu.wy = val,
             0xFF4B => ppu.wx = val,
             0xFF44 => (),
@@ -148,9 +266,7 @@ impl Bus{
             0x0000..0x4000 => None, // Deswegen Delegat an Side Effects Funktion
             0x4000..0x8000 => None,
             0x8000..0xA000 => Some(&mut ppu.vram[ppu.bank_select][addr as usize - 0x8000]),
-            0xA000..0xC000 => { // Ram auf Cartridge und tauschbare Bank, falls vorhanden
-                Some(&mut self.external_ram[self.external_ram_bank][addr as usize - 0xA000])
-            },
+            0xA000..0xC000 => None, //Ram auf Cartridge und tauschbare Bank
             0xC000..0xD000 => Some(&mut self.work_ram[addr as usize - 0xC000]),
             0xD000..0xE000 => Some(&mut self.work_ram[addr as usize - 0xC000]), // In CGB tauschbar
             0xE000..0xFE00 => None,//panic!("Illegaler Speicherbereich!"),

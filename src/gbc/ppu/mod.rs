@@ -19,11 +19,14 @@ pub struct PPU{
     pub (crate) scx: u8, // FF42 (x scroll bg)
     pub (crate) wy: u8, // FF4A (y scroll window)
     pub (crate) wx: u8, // FF4B (x scroll window)
+    pub (crate) bgp: u8, // FF47 (bg palette) nur dmg
+    pub (crate) obp0: u8, // FF48 (ob palette 0) nur dmg
+    pub (crate) obp1: u8, // FF49 (ob palette 1) nur dmg
 }
 
 impl PPU{
     pub fn new(bus: Weak<RefCell<Bus>>) -> Self{
-        PPU { vram: [[0; 0x2000]; 2], bus, bank_select: 0 , scanline: 0, cycle: 0, new_scanline: true, stat: 0, lyc: 0, lcdc: 0, scx: 0, scy: 0, wx: 0, wy: 0, secondary_oam: Vec::new(), oam: [0; 160]}
+        PPU { vram: [[0; 0x2000]; 2], bus, bank_select: 0 , scanline: 0, cycle: 0, new_scanline: true, stat: 0, lyc: 0, lcdc: 0, scx: 0, scy: 0, wx: 0, wy: 0, secondary_oam: Vec::new(), oam: [0; 160], bgp: 0, obp0: 0, obp1: 0}
     }
     pub fn write_stat(&mut self, val: u8){
         self.stat = (self.stat & !0b01111000) | (val & 0b01111000);
@@ -92,6 +95,15 @@ impl PPU{
     fn obj_enable(&self) -> bool{
         self.lcdc & 0b10 > 0
     }
+    fn get_color_bgp(&self, index: u8) -> u8{
+        (self.bgp & (0b11 << (index * 2))) >> (index * 2)
+    }
+    fn get_color_obp0(&self, index: u8) -> u8{
+        (self.obp0 & (0b11 << (index * 2))) >> (index * 2)
+    }
+    fn get_color_obp1(&self, index: u8) -> u8{
+        (self.obp1 & (0b11 << (index * 2))) >> (index * 2)
+    }
     fn scan_sprites(&mut self){
         self.secondary_oam = Vec::new();
 
@@ -120,7 +132,7 @@ impl PPU{
             self.scan_sprites();
         }
 
-        if self.cycle < 160 + 80 && self.scanline < 144 {
+        if self.cycle >= 80 && self.cycle < 240 && self.scanline < 144 {
 
             // Background
 
@@ -148,7 +160,7 @@ impl PPU{
 
             if self.window_enable(){
                 let pxx = (self.wx as i32).saturating_sub(7).wrapping_add((self.cycle as i32).saturating_sub(80));
-                if pxx >= 0{
+                if pxx >= 0 && self.scanline >= self.wy{
                     let px = pxx as u8;
                     let py = self.wy.wrapping_add(self.scanline);
                     let tile_x = px / 8;
@@ -171,6 +183,8 @@ impl PPU{
 
             // Sprites
 
+            let mut sprite_overwrote_bg = false;
+
             if self.obj_enable(){
                 let pixel_x = self.cycle.saturating_sub(80) as u8;
                 for oam in self.secondary_oam.clone(){
@@ -182,6 +196,7 @@ impl PPU{
                     let priority = oam[3] & 128 > 0;
                     let y_flip = oam[3] & 64 > 0;
                     let x_flip = oam[3] & 32 > 0;
+                    let fg_palette = oam[3] & 16 > 0;
                     // Pixel wird gezeichnet für diesen Sprite
                     if !(priority && bg_color > 0){
                         if x_pos <= pixel_x as i32 && x_pos + 8 > pixel_x as i32{
@@ -196,18 +211,29 @@ impl PPU{
                             let ad_y = if y_flip {8 - y_offset} else {y_offset};
                             let tile_low = self.read(0x8000 + ((tile_index as u16) * 16) + (ad_y as u16) * 2);
                             let tile_high = self.read(0x8000 + ((tile_index as u16) * 16) + (ad_y as u16) * 2 + 1);
+                            let fg_color;
                             if x_flip{
-                                bg_color = ((tile_low >> (x_offset)) & 1) | (((tile_high >> (x_offset)) & 1) << 1);
+                                fg_color = ((tile_low >> (x_offset)) & 1) | (((tile_high >> (x_offset)) & 1) << 1);
                             }
                             else{
-                                bg_color = ((tile_low >> (7 - x_offset)) & 1) | (((tile_high >> (7 - x_offset)) & 1) << 1);
+                                fg_color = ((tile_low >> (7 - x_offset)) & 1) | (((tile_high >> (7 - x_offset)) & 1) << 1);
+                            }
+                            if fg_color > 0{
+                                let real_fg_color = if fg_palette {self.get_color_obp1(fg_color)} else {self.get_color_obp0(fg_color)};
+                                bg_color = real_fg_color;
+                                sprite_overwrote_bg = true;
                             }
                         }
                     }
                 }
             }
 
-            self.set_pixel_palette(self.cycle.saturating_sub(80), self.scanline as usize, bg_color);
+            if sprite_overwrote_bg{ // Index ist bereits Farbe
+                self.set_pixel_palette(self.cycle.saturating_sub(80), self.scanline as usize, bg_color);
+            }
+            else{ // BGP Index
+                self.set_pixel_palette(self.cycle.saturating_sub(80), self.scanline as usize, self.get_color_bgp(bg_color));
+            }
 
 
         }
