@@ -26,12 +26,15 @@ pub struct RomObject{
     pub (crate) cgb_flag: u8,
     pub (crate) sgb_flag: u8,
     pub (crate) cartridge_type: Mapper, // Muss noch geparsed werden
-    pub (crate) rom_size: u8, // Muss noch geparsed werden
+    pub (crate) rom_size_mask: u16, // in bitmask
     pub (crate) ram_size: u8, // Muss noch geparsed werden
 }
 
 // Anzahl 8KiB Bänke
 const RAM_SIZE_TABLE: [u8;6] = [0,0,1,4,16,8];
+
+// Rom Bänke
+const ROM_BIT_MASK: [u16; 9] = [1,3,7,15,31,63,127,255,511];
 
 #[derive(Debug)]
 pub enum Mapper{
@@ -56,7 +59,7 @@ impl RomObject{
             0x1C => Mapper::MBC5,
             0x1D => Mapper::MBC5,
             0x1E => Mapper::MBC5,
-            _ => Mapper::MBC3,//panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
+            _ => Mapper::NoMapper,//panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
         }
     }
     pub fn new(path: &str) -> Result<Self, std::io::Error> {
@@ -64,7 +67,7 @@ impl RomObject{
         println!("Mapper: {:?}", RomObject::get_cartridge_type(bytes[0x0147].clone()));
         Ok(RomObject {info: RomObject::get_rom_info(&bytes), cgb_flag: bytes[0x0143].clone()
             , sgb_flag: bytes[0x0146].clone(), cartridge_type: RomObject::get_cartridge_type(bytes[0x0147].clone())
-            , rom_size: bytes[0x0148].clone(), ram_size: RAM_SIZE_TABLE[bytes[0x0149].clone() as usize], raw_data: bytes })
+            , rom_size_mask: ROM_BIT_MASK[bytes[0x0148].clone() as usize], ram_size: RAM_SIZE_TABLE[bytes[0x0149].clone() as usize], raw_data: bytes })
     }
 
     fn get_rom_info(bytes: &Vec<u8>) -> RomInfo{

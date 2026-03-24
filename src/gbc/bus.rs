@@ -243,7 +243,7 @@ impl Bus{
             0x2000..0x3000 => {
                 match cart.cartridge_type{
                     super::cartridge::Mapper::MBC3 => {
-                        self.rom_bank_upper = (val & 127) as usize;
+                        self.rom_bank_upper = (val & 127 & (cart.rom_size_mask as u8)) as usize;
                         if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
                     },
                     super::cartridge::Mapper::MBC5 => { // Untere 8 bit der Bank number
@@ -255,7 +255,7 @@ impl Bus{
             0x3000..0x4000 => {
                 match cart.cartridge_type{
                     super::cartridge::Mapper::MBC3 => {
-                        self.rom_bank_upper = (val & 127) as usize;
+                        self.rom_bank_upper = (val & 127 & (cart.rom_size_mask as u8)) as usize;
                         if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
                     },
                     super::cartridge::Mapper::MBC5 => { // Neuntes Bit der Bank number

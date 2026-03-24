@@ -49,10 +49,12 @@ impl PPU{
     pub fn clock(&mut self, color_mode: bool){
         if !color_mode {self.next_dot()} else {self.next_dot_color()};
 
+        let prev_mode = self.stat & 0b11;
         self.stat &= !0b111;
         if self.scanline == self.lyc {
             self.stat |= 0b100;
         }
+
 
         // ppu mode
         if self.lcdc & 0b10000000 > 0 {
@@ -69,12 +71,17 @@ impl PPU{
             }
         }
 
+        let mode_changed = prev_mode != (self.stat & 0b11);
+
         //stat interrupt
         let mut cond = ((self.stat & 0b01000000) > 0) && (self.lyc == self.scanline) && (self.cycle == 0); // Nur einmal feuern
-        for m in 3..6{
-            let mode = m - 3;
-            if self.stat & (1 << m) > 0{
-                cond |= (self.stat & 0b11) == mode;
+        
+        if mode_changed {
+            for m in 3..6{
+                let mode = m - 3;
+                if self.stat & (1 << m) > 0{
+                    cond |= (self.stat & 0b11) == mode;
+                }
             }
         }
         if cond {
