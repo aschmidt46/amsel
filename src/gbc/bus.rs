@@ -362,8 +362,8 @@ impl Bus{
                     ppu.palette_ram[(self.palette_address & 0b111111) as usize] = val;
 
                     if (self.palette_address & 128) > 0{
-                        if self.palette_address & 0b1111111 > 0b111111 {self.palette_address -= 0b111111}
                         self.palette_address += 1;
+                        if self.palette_address & 0b1111111 > 0b111111 {self.palette_address -= 64}
                     }
                 }
             },
@@ -373,8 +373,8 @@ impl Bus{
                     ppu.palette_ram_obj[(self.palette_address_obj & 0b111111) as usize] = val;
 
                     if (self.palette_address_obj & 128) > 0{
-                        if self.palette_address_obj & 0b1111111 > 0b111111 {self.palette_address_obj -= 0b111111}
                         self.palette_address_obj += 1;
+                        if self.palette_address_obj & 0b1111111 > 0b111111 {self.palette_address_obj -= 64}
                     }
                 }
             },

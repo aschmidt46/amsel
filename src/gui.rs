@@ -65,7 +65,7 @@ fn worker() -> impl Stream<Item = Message>{
            // Send the sender back to the application
            output.send(Message::Ready(sender)).await;
         
-           let mut cgb = CGB::new("resources/linksawakening.gbc");
+           let mut cgb = CGB::new("resources/oracleofages.gbc");
 
            loop {
                 cgb.clock();

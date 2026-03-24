@@ -362,8 +362,8 @@ impl PPU{
             let x_offset = px % 8;
             let y_offset = py % 8;
                                     // start            select                         größe    x index            y index * zeile
-            let tile_index =   self.vram[0][0x1800 + ((self.window_tile_map() as usize) * 0x400) + tile_x as usize + (tile_y as usize * 32)];
-            let tile_attribs = self.vram[1][0x1800 + ((self.window_tile_map() as usize) * 0x400) + tile_x as usize + (tile_y as usize * 32)];
+            let tile_index =   self.vram[0][0x1800 + ((self.bg_tile_map_area() as usize) * 0x400) + tile_x as usize + (tile_y as usize * 32)];
+            let tile_attribs = self.vram[1][0x1800 + ((self.bg_tile_map_area() as usize) * 0x400) + tile_x as usize + (tile_y as usize * 32)];
             let y_flip = (tile_attribs & 64) > 0;
             let x_flip = (tile_attribs & 32) > 0;
             let tile_bank = ((tile_attribs & 8) > 0) as usize;
@@ -469,8 +469,6 @@ impl PPU{
                             if fg_color > 0{
                                 let real_fg_color = self.get_color_cgb(false, fg_palette as usize, fg_color);
                                 bg_color = real_fg_color;
-                                //debug
-                                if x_offset == 4 && y_offset == 4 {bg_color = (255,0,0)}
                             }
                         }
                     }
