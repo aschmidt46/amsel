@@ -18,7 +18,7 @@ use crate::gbc::CGB;
 use crate::gbc::sm83::{Opcode, OperandType};
 use crate::{FRAMEBUFFER};
 
-
+#[derive(Clone)]
 pub struct CpuState{
     current_line: String,
     pc: u16
@@ -65,7 +65,7 @@ fn worker() -> impl Stream<Item = Message>{
            // Send the sender back to the application
            output.send(Message::Ready(sender)).await;
         
-           let mut cgb = CGB::new("resources/pokemonblau.gb");
+           let mut cgb = CGB::new("resources/dmg-acid2.gb");
 
            loop {
                 cgb.clock();
@@ -89,7 +89,15 @@ fn worker() -> impl Stream<Item = Message>{
                             InternalMessage::ToggleBreak => {
                                 cgb.bus.borrow_mut().break_exec()
                             },
-                            InternalMessage::Step => cgb.bus.borrow_mut().step(),
+                            InternalMessage::Step => {
+                                cgb.bus.borrow_mut().step();
+                                cgb.clock();
+                                let (line, pc) = cgb.bus.borrow_mut().get_instruction_offset(0);
+                                match output.send(Message::UpdateCurrentOperation(line,pc)).await{
+                                    Ok(_) => (),
+                                    Err(e) => panic!("Konnte nicht senden!"),
+                                };
+                            },
                         }   
                     },
                     Err(e) => (),
@@ -140,8 +148,9 @@ impl Scene {
             ]
         }
         else {
-            let pc_count = format!("{:#06x}:   ", self.cpu_state.as_ref().unwrap().pc);
-            let opcode = self.cpu_state.as_ref().unwrap().current_line.clone();
+            let state = self.cpu_state.clone().unwrap();
+            let pc_count = format!("{:#06x}:   ", state.pc);
+            let opcode = state.current_line.clone();
 
             column![
                 button(text!("Debugger")).on_press(Message::ToggleDebugger),

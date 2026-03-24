@@ -33,6 +33,7 @@ pub struct RomObject{
 // Anzahl 8KiB Bänke
 const RAM_SIZE_TABLE: [u8;6] = [0,0,1,4,16,8];
 
+#[derive(Debug)]
 pub enum Mapper{
     NoMapper,
     MBC3,
@@ -55,11 +56,12 @@ impl RomObject{
             0x1C => Mapper::MBC5,
             0x1D => Mapper::MBC5,
             0x1E => Mapper::MBC5,
-            _ => panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
+            _ => Mapper::NoMapper,//panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
         }
     }
     pub fn new(path: &str) -> Result<Self, std::io::Error> {
         let bytes = std::fs::read(path)?;
+        println!("Mapper: {:?}", RomObject::get_cartridge_type(bytes[0x0147].clone()));
         Ok(RomObject {info: RomObject::get_rom_info(&bytes), cgb_flag: bytes[0x0143].clone()
             , sgb_flag: bytes[0x0146].clone(), cartridge_type: RomObject::get_cartridge_type(bytes[0x0147].clone())
             , rom_size: bytes[0x0148].clone(), ram_size: RAM_SIZE_TABLE[bytes[0x0149].clone() as usize], raw_data: bytes })

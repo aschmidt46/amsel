@@ -88,6 +88,7 @@ pub enum CPUMode{
     #[default]
     Running,
     Halted,
+    HaltBug,
     Stopped,
 }
 
@@ -108,15 +109,13 @@ pub struct SM83 {
     total_cycles: i64,
     total_operations: i64,
 
-    // Interrupts, ACHTUNG, betrifft HALT Instruktion
-    ie_itr: bool,
-    if_itr: bool,
+    pub (crate) speed_switch_armed: bool,
+    pub (crate) dual_speed_mode: bool,
 
     pub (crate) ie_reg: u8, // 0xFFFF
     pub (crate) if_reg: u8, // 0xFF0F
 
     //debug
-    pub (crate) break_execution: bool,
     pub (crate) remaining_steps: i32,
 }
 
@@ -171,6 +170,7 @@ impl SM83 {
             let enable: bool = (self.ie_reg & (1 << bit)) > 0;
             let flag: bool = (self.if_reg & (1 << bit)) > 0;
             if enable && flag {
+                if bit == 1 {println!("STAT handler gerufen!");}
                 self.remaining_cycles += 5 * 4; // 20 t-Zyklen, bzw. 5 m-Zyklen
                 let vector = 0x40 + 0x8 * bit;
                 self.push_stack_16(self.reg_pc);
@@ -187,31 +187,38 @@ impl SM83 {
             self.remaining_cycles -= 1;
         }
         else{
-            if !self.break_execution || self.remaining_steps > 0{
-                if self.remaining_steps > 0{
-                    self.remaining_steps -= 1;
-                }
-                match self.mode {
-                    CPUMode::Running => {
-                        if !self.poll_interrupts() {
-                            self.run_next_instruction();
-                        }
-                    },
-                    CPUMode::Halted => {
-                        if self.ime {
-                            // Checken und aufrufen von Interrupt Handler...
-                            self.poll_interrupts();
-                            // dann...
-                            if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
-                        }
-                        else{
-                            // Hier eigentlich Hardware Bug in HALT (nicht hier), weiß nicht ob wichtig zu emulieren
-                            // Kein Interrupt Handler aufgerufen
-                            if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
-                        }
-                    },
-                    CPUMode::Stopped =>{
-                        // Nichts
+            if self.remaining_steps > 0{
+                self.remaining_steps -= 1;
+            }
+            match self.mode {
+                CPUMode::Running => {
+                    if !self.poll_interrupts() {
+                        self.run_next_instruction();
+                    }
+                },
+                CPUMode::Halted => {
+                    if self.ime {
+                        // Checken und aufrufen von Interrupt Handler...
+                        self.poll_interrupts();
+                        // dann...
+                        if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
+                    }
+                    else{
+                        // Hier eigentlich Hardware Bug in HALT (nicht hier), weiß nicht ob wichtig zu emulieren
+                        // Kein Interrupt Handler aufgerufen
+                        if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
+                    }
+                },
+                CPUMode::HaltBug => {
+                    println!("Halt bug ausgelöst");
+                },
+                CPUMode::Stopped =>{
+                    // Speed Switch
+                    if self.speed_switch_armed{
+                        self.speed_switch_armed = false;
+                        self.remaining_cycles += if self.dual_speed_mode {8200} else {16400}; // oder 8200?
+                        self.dual_speed_mode = !self.dual_speed_mode;
+                        self.mode = CPUMode::Running;
                     }
                 }
             }
@@ -337,7 +344,8 @@ impl SM83 {
         let (unpref, pref) = SM83::fill_instructions();
         let cpu = SM83 { regs: [0; 8], reg_sp: 0, reg_pc: 0,
             opcodes_unprefixed: unpref, opcodes_prefixed: pref, bus: Weak::new(), mode: CPUMode::Running,
-            ime: false, set_ime: -1, remaining_cycles: 0, total_cycles: 0, total_operations: 1, ie_itr: false, if_itr: false, ie_reg: 0, if_reg: 0, break_execution: false, remaining_steps: 0
+            ime: false, set_ime: -1, remaining_cycles: 0, total_cycles: 0, total_operations: 1, ie_reg: 0, if_reg: 0, remaining_steps: 0,
+            speed_switch_armed: false, dual_speed_mode: false
         };
         cpu
     }

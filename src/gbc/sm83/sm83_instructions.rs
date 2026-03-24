@@ -230,7 +230,10 @@ mod sm83 {
             false
         }
         pub fn halt(&mut self, op1: OperandType, op2: OperandType) -> bool{
-            self.mode = CPUMode::Halted;
+            if !self.ime && (self.ie_reg & self.if_reg > 0){
+                self.mode = CPUMode::HaltBug;
+            }
+            else {self.mode = CPUMode::Halted;}
             false
         }
         pub fn inc(&mut self, op1: OperandType, op2: OperandType) -> bool{
