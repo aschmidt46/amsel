@@ -170,7 +170,6 @@ impl SM83 {
             let enable: bool = (self.ie_reg & (1 << bit)) > 0;
             let flag: bool = (self.if_reg & (1 << bit)) > 0;
             if enable && flag {
-                if bit == 1 {println!("STAT handler gerufen!");}
                 self.remaining_cycles += 5 * 4; // 20 t-Zyklen, bzw. 5 m-Zyklen
                 let vector = 0x40 + 0x8 * bit;
                 self.push_stack_16(self.reg_pc);
@@ -199,9 +198,11 @@ impl SM83 {
                 CPUMode::Halted => {
                     if self.ime {
                         // Checken und aufrufen von Interrupt Handler...
-                        self.poll_interrupts();
-                        // dann...
-                        if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
+                        if self.poll_interrupts(){
+                            self.mode = CPUMode::Running;
+                        }
+                        // // dann...
+                        // if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
                     }
                     else{
                         // Hier eigentlich Hardware Bug in HALT (nicht hier), weiß nicht ob wichtig zu emulieren
@@ -252,7 +253,7 @@ impl SM83 {
         let mut opcode = self.read(addr);
         let mut instruction = self.opcodes_unprefixed[opcode as usize].clone();
         if opcode == 0xCB {
-            opcode = self.read(self.reg_pc + 1);
+            opcode = self.read(addr + 1);
             instruction = self.opcodes_prefixed[opcode as usize].clone();
         }
         let oplen = instruction.operands.len();

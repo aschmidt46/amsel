@@ -56,7 +56,7 @@ impl RomObject{
             0x1C => Mapper::MBC5,
             0x1D => Mapper::MBC5,
             0x1E => Mapper::MBC5,
-            _ => Mapper::NoMapper,//panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
+            _ => Mapper::MBC3,//panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
         }
     }
     pub fn new(path: &str) -> Result<Self, std::io::Error> {

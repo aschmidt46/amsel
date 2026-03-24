@@ -317,14 +317,12 @@ impl Bus{
             0xFF47 => ppu.bgp = val,
             0xFF48 => ppu.obp0 = val,
             0xFF49 => ppu.obp1 = val,
-            0xFF4A => {ppu.wy = val; println!("wy auf {}", val);},
+            0xFF4A => ppu.wy = val,
             0xFF4B => ppu.wx = val,
             0xFF44 => (),
             0xFF45 => {
                 ppu.lyc = val;
-                println!("LYC neu: {}, scanline: {}", val, ppu.scanline);
                 if (ppu.stat & 0b01000000) > 0 && (ppu.lyc == ppu.scanline) {
-                    println!("Immediate STAT auf lyc: {}", val);
                     self.request_stat();
                 }
             },
@@ -531,8 +529,8 @@ impl Bus{
     pub fn step(&mut self){
         self.cpu.as_mut().unwrap().remaining_steps += 1;
     }
-    pub fn get_instruction_offset(&mut self, offset: i32) -> (String, u16) {
-        let pc = self.cpu.as_mut().unwrap().reg_pc.saturating_add_signed(offset as i16);
+    pub fn get_instruction_offset(&mut self, offset: i16) -> (String, u16) {
+        let pc = self.cpu.as_mut().unwrap().reg_pc.saturating_add_signed(offset);
         (self.cpu.as_mut().unwrap().get_instruction_print_at(pc), pc)
     }
 }

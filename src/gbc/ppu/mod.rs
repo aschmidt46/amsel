@@ -71,9 +71,6 @@ impl PPU{
 
         //stat interrupt
         let mut cond = ((self.stat & 0b01000000) > 0) && (self.lyc == self.scanline) && (self.cycle == 0); // Nur einmal feuern
-        if cond{
-            println!("Coincidence auf lyc: {} in Frame {}", self.lyc, self.num_frames);
-        }
         for m in 3..6{
             let mode = m - 3;
             if self.stat & (1 << m) > 0{
@@ -169,6 +166,7 @@ impl PPU{
         }
         // Hier eigentlich IF Mode DMG else nur reverse
         if !cgb_mode{
+            self.secondary_oam.reverse();
             self.secondary_oam.sort_by(|a, b| a[1].cmp(&b[1]).reverse());
         }
         else {
@@ -231,8 +229,8 @@ impl PPU{
                 let current_x = (self.cycle - 80) as i32;
                 let wx = (self.wx as i32).saturating_sub(7);
                 if self.wx_condition && self.wy_condition {
-                    let px = (current_x as u8).wrapping_add(wx as u8);
-                    let py = self.wy.wrapping_add(self.wy_count);
+                    let px = (current_x).wrapping_sub(wx) as u8;
+                    let py = self.wy_count.wrapping_sub(self.wy);
                     let tile_x = px / 8;
                     let tile_y = py / 8;
                     let x_offset = px % 8;
@@ -271,14 +269,14 @@ impl PPU{
                     if !(priority && bg_color > 0){
                         if x_pos <= pixel_x as i32 && x_pos + 8 > pixel_x as i32{
                             let tile_index = if self.mode_8_16() {
-                                if y_offset > 8 {
-                                    if y_flip {oam[2]} else {oam[2] + 1}
+                                if y_offset >= 8 {
+                                    if y_flip {oam[2] & !1} else {oam[2] | 1}
                                 } else {
-                                    if y_flip {oam[2] + 1} else {oam[2]}
+                                    if y_flip {oam[2] | 1} else {oam[2] & !1}
                                 }
                             } else {oam[2]};
-                            if self.mode_8_16() && y_offset > 8 {y_offset -= 8};
-                            let ad_y = if y_flip {8 - y_offset} else {y_offset};
+                            if self.mode_8_16() && y_offset >= 8 {y_offset -= 8};
+                            let ad_y = if y_flip {7 - y_offset} else {y_offset};
                             let tile_low = self.read(0x8000 + ((tile_index as u16) * 16) + (ad_y as u16) * 2);
                             let tile_high = self.read(0x8000 + ((tile_index as u16) * 16) + (ad_y as u16) * 2 + 1);
                             let fg_color;
@@ -354,7 +352,7 @@ impl PPU{
             // Background
 
             let mut bg_color: (u8, u8, u8) = (255, 255, 255);
-            let mut bg_index = 0;
+            let mut bg_index;
             let mut bg_attr_bit_7: bool;
 
             let px = self.scx.wrapping_add((self.cycle as u8).saturating_sub(80));
@@ -392,8 +390,8 @@ impl PPU{
                 let current_x = (self.cycle - 80) as i32;
                 let wx = (self.wx as i32).saturating_sub(7);
                 if self.wx_condition && self.wy_condition {
-                    let px = (current_x as u8).wrapping_add(wx as u8);
-                    let py = self.wy.wrapping_add(self.wy_count);
+                    let px = (current_x).wrapping_sub(wx) as u8;
+                    let py = self.wy_count.wrapping_sub(self.wy);
                     let tile_x = px / 8;
                     let tile_y = py / 8;
                     let x_offset = px % 8;
@@ -451,14 +449,14 @@ impl PPU{
                     if priority{
                         if x_pos <= pixel_x as i32 && x_pos + 8 > pixel_x as i32{
                             let tile_index = if self.mode_8_16() {
-                                if y_offset > 8 {
-                                    if y_flip {oam[2]} else {oam[2] + 1}
+                                if y_offset >= 8 {
+                                    if y_flip {oam[2] & !1} else {oam[2] | 1}
                                 } else {
-                                    if y_flip {oam[2] + 1} else {oam[2]}
+                                    if y_flip {oam[2] | 1} else {oam[2] & !1}
                                 }
                             } else {oam[2]};
-                            if self.mode_8_16() && y_offset > 8 {y_offset -= 8};
-                            let ad_y = if y_flip {8 - y_offset} else {y_offset};
+                            if self.mode_8_16() && y_offset >= 8 {y_offset -= 8};
+                            let ad_y = if y_flip {7 - y_offset} else {y_offset};
                             let tile_low = self.vram[sprite_bank][((tile_index as usize) * 16) + (ad_y as usize) * 2];
                             let tile_high = self.vram[sprite_bank][((tile_index as usize) * 16) + (ad_y as usize) * 2 + 1];
                             let fg_color;
