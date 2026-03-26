@@ -1,6 +1,6 @@
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
-use crate::gbc::{cartridge::RomObject, ppu::PPU, sm83::{Opcode, OperandType, SM83}};
+use crate::gbc::{cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Opcode, OperandType, SM83}};
 
 #[derive(PartialEq)]
 enum DmaMode{
@@ -17,15 +17,14 @@ pub struct Bus{
     rom_bank_upper: usize,
     external_ram: [[u8; 0x2000]; 16], //max 16 Bänke
     pub cpu: Option<SM83>,
-    ppu: Option<PPU>,
+    pub ppu: Option<PPU>,
     cart: Option<RomObject>,
-    div: u8, //FF04
+    pub div: u16, //FF04
     tima: u8, //FF05
     tma: u8, //FF06
     tac: u8, //FF07
     oam_dma: u8, // FF46
-    div_counter: usize,
-    tima_counter: usize,
+    tima_last_comparison: bool,
     joypad: [bool; 4],
     buttons: [bool; 4],
     read_joypad: bool,
@@ -38,11 +37,16 @@ pub struct Bus{
     wram_bank: usize,
     hdma1: u8, hdma2: u8, hdma3: u8, hdma4: u8, hdma5: u8,
     vram_dma_active: DmaMode,
+    hdma_initiated_now: bool,
     vram_dma_bytes_remaining: u8,
     vram_dma_pointer: u16,
     palette_address: u8,
     palette_address_obj: u8,
     ff72: u8, ff73: u8, ff74: u8, ff75: u8,
+
+    //serial
+    sb: u8,
+    sc: u8,
 
     // mbc3
     enable_ram_rtc: bool,
@@ -52,19 +56,26 @@ pub struct Bus{
     rtc_dl: u8,
     rtc_dh: u8,
 
+    //mbc1
+    mbc1_bank_mode: bool,
+    mbc1_magic_register: u8,
+
     //debug
     pub (crate) br: bool,
+    pub (crate) cpu_advanced: bool,
 }
 
 const TAC_TABLE: [u16; 4] = [256 * 4, 4 * 4, 16 * 4, 64 * 4];
+const BIT_TABLE: [u8; 4] = [9,3,5,7];
 
 impl Bus{
     pub fn new() -> Self{
         Bus { work_ram: [[0; 0x1000]; 8], high_ram: [0; 0x80], cart: None, cpu: None, ppu: None, has_frame: false, external_ram_bank: 0, external_ram: [[0; 0x2000]; 16],
-            div: 0, tima: 0,  tma: 0, tac: 0, div_counter: 0, tima_counter: 0, joypad: [true; 4], buttons: [true; 4], read_buttons: false, read_joypad: false,
-            oam_dma: 0, dma_next_clock: -1, rom_bank_lower: 0, rom_bank_upper: 1, rtc_s: 0, rtc_m: 0, rtc_h: 0, rtc_dl: 0, rtc_dh: 0, enable_ram_rtc: true,
+            div: 0, tima: 0,  tma: 0, tac: 0, tima_last_comparison: false, joypad: [true; 4], buttons: [true; 4], read_buttons: false, read_joypad: false,
+            oam_dma: 0, dma_next_clock: -1, rom_bank_lower: 0, rom_bank_upper: 1, rtc_s: 0, rtc_m: 0, rtc_h: 0, rtc_dl: 0, rtc_dh: 0, enable_ram_rtc: false, // sicher?
             cgb_mode: false, wram_bank: 1, hdma1: 0, hdma2: 0, hdma3: 0, hdma4: 0, hdma5: 0, vram_dma_active: DmaMode::Finished, vram_dma_bytes_remaining: 0,
-            vram_dma_pointer: 0, br: false, palette_address: 0, palette_address_obj: 0, ff72: 0, ff73: 0, ff74: 0, ff75: 0,
+            vram_dma_pointer: 0, br: false, palette_address: 0, palette_address_obj: 0, ff72: 0, ff73: 0, ff74: 0, ff75: 0, mbc1_bank_mode: false, mbc1_magic_register: 0,
+            sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false,
         }
     }
     pub fn new_init(path: &str) -> Self{
@@ -110,10 +121,35 @@ impl Bus{
         let ppu = self.ppu.as_mut().unwrap();
         let cpu = self.cpu.as_mut().unwrap();
         match addr{
-            0x0000..0x4000 => cart.raw_data[self.rom_bank_lower * 0x4000 + addr as usize],
-            0x4000..0x8000 => cart.raw_data[self.rom_bank_upper * 0x4000 + addr as usize - 0x4000],
+            0x0000..0x4000 => match cart.cartridge_type{
+                super::cartridge::Mapper::MBC1 => {
+                    if self.mbc1_bank_mode{
+                        cart.raw_data[((self.mbc1_magic_register as usize) << 19) + self.rom_bank_lower * 0x4000 + addr as usize]
+                    }
+                    else{
+                        cart.raw_data[addr as usize]
+                    }
+                },
+                _ => cart.raw_data[self.rom_bank_lower * 0x4000 + addr as usize]
+            }
+            0x4000..0x8000 => cart.raw_data[((self.mbc1_magic_register as usize) << 19) + self.rom_bank_upper * 0x4000 + addr as usize - 0x4000],
             0xA000..0xC000 => { // Ram auf Cartridge und tauschbare Bank, falls vorhanden
                 match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC1 => {
+                        if self.enable_ram_rtc {
+                            if self.mbc1_bank_mode{
+                                self.external_ram[self.mbc1_magic_register as usize][addr as usize - 0xA000]
+                            }
+                            else{
+                                self.external_ram[0][addr as usize - 0xA000]
+                            }
+                        }
+                        else {0xFF}
+                    }
+                    super::cartridge::Mapper::MBC2 => {
+                        let real_address = (addr - 0xA000) & 511; // untere 9 bits
+                        self.external_ram[0][real_address as usize] & 0b1111 // untere 4 bits, ram besteht nur als "Half Bytes"
+                    }
                     super::cartridge::Mapper::MBC3 => {
                         if self.enable_ram_rtc{
                             match self.external_ram_bank{
@@ -155,7 +191,9 @@ impl Bus{
                 res |= (self.read_buttons as u8) << 5;
                 res
             },
-            0xFF04 => self.div,
+            0xFF01 => self.sb,
+            0xFF02 => self.sc,
+            0xFF04 => (self.div >> 8) as u8,
             0xFF05 => self.tima,
             0xFF06 => self.tma,
             0xFF07 => self.tac,
@@ -188,18 +226,14 @@ impl Bus{
             },
             0xFF55 => {
                 if self.cgb_mode{
-                    match self.vram_dma_active{
-                        DmaMode::Finished => 0xFF,
-                        DmaMode::VramDma => 0xFF,
-                        DmaMode::Hblank => self.vram_dma_bytes_remaining,
-                    }
+                    self.vram_dma_bytes_remaining
                 }
                 else {0xFF}
             },
             0xFF68 => if self.cgb_mode {self.palette_address} else {0xFF},
-            0xFF69 => if self.cgb_mode {ppu.palette_ram[(self.palette_address & 0b111111) as usize]} else {0xFF},
+            0xFF69 => if self.cgb_mode && ppu.get_mode() != 3 {ppu.palette_ram[(self.palette_address & 0b111111) as usize]} else {0xFF},
             0xFF6A => if self.cgb_mode {self.palette_address_obj} else {0xFF},
-            0xFF6B => if self.cgb_mode {ppu.palette_ram_obj[(self.palette_address_obj & 0b111111) as usize]} else {0xFF},
+            0xFF6B => if self.cgb_mode && ppu.get_mode() !=3 {ppu.palette_ram_obj[(self.palette_address_obj & 0b111111) as usize]} else {0xFF},
             0xFF70 => {
                 if self.cgb_mode {
                     self.wram_bank as u8
@@ -221,6 +255,29 @@ impl Bus{
         match addr{
             0x0000..0x2000 => {
                 match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC1 => {
+                        if (val & 0b1111) == 0x0A {
+                            self.enable_ram_rtc = true;
+                        }
+                        else {
+                            self.enable_ram_rtc = false;
+                        }
+                    }
+                    super::cartridge::Mapper::MBC2 => {
+                        let b8 = (addr & 256) > 0;
+                        if b8{
+                            let rb = val & 0b1111;
+                            if rb == 0 {self.rom_bank_upper = 1} else {self.rom_bank_upper = rb as usize}
+                        }
+                        else{
+                            if (val & 0b1111) == 0x0A {
+                                self.enable_ram_rtc = true;
+                            }
+                            else {
+                                self.enable_ram_rtc = false;
+                            }
+                        }
+                    }
                     super::cartridge::Mapper::MBC3 =>{
                         if (val & 0b1111) == 0x0A {
                             self.enable_ram_rtc = true;
@@ -242,9 +299,31 @@ impl Bus{
             }
             0x2000..0x3000 => {
                 match cart.cartridge_type{
-                    super::cartridge::Mapper::MBC3 => {
-                        self.rom_bank_upper = (val & 127 & (cart.rom_size_mask as u8)) as usize;
+                    super::cartridge::Mapper::MBC1 => {
+                        self.rom_bank_upper = (val & 31) as usize;
                         if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
+                        // Erst danach maskiert, um duplizieren von Bank 0 zu erlauben
+                        self.rom_bank_upper = self.rom_bank_upper & (cart.rom_size_mask as usize);
+                    },
+                    super::cartridge::Mapper::MBC2 => {
+                        let b8 = (addr & 256) > 0;
+                        if b8{
+                            let rb = val & 0b1111;
+                            if rb == 0 {self.rom_bank_upper = 1} else {self.rom_bank_upper = rb as usize}
+                        }
+                        else{
+                            if (val & 0b1111) == 0x0A {
+                                self.enable_ram_rtc = true;
+                            }
+                            else {
+                                self.enable_ram_rtc = false;
+                            }
+                        }
+                    },
+                    super::cartridge::Mapper::MBC3 => {
+                        self.rom_bank_upper = (val & 127) as usize;
+                        if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
+                        self.rom_bank_upper = self.rom_bank_upper & (cart.rom_size_mask as usize);
                     },
                     super::cartridge::Mapper::MBC5 => { // Untere 8 bit der Bank number
                         self.rom_bank_upper = (self.rom_bank_upper & (!0xFF)) | (val as usize);
@@ -254,9 +333,30 @@ impl Bus{
             }
             0x3000..0x4000 => {
                 match cart.cartridge_type{
-                    super::cartridge::Mapper::MBC3 => {
-                        self.rom_bank_upper = (val & 127 & (cart.rom_size_mask as u8)) as usize;
+                    super::cartridge::Mapper::MBC1 => {
+                        self.rom_bank_upper = (val & 31) as usize;
                         if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
+                        self.rom_bank_upper = self.rom_bank_upper & (cart.rom_size_mask as usize);
+                    },
+                    super::cartridge::Mapper::MBC2 => {
+                        let b8 = (addr & 256) > 0;
+                        if b8{
+                            let rb = val & 0b1111;
+                            if rb == 0 {self.rom_bank_upper = 1} else {self.rom_bank_upper = rb as usize}
+                        }
+                        else{
+                            if (val & 0b1111) == 0x0A {
+                                self.enable_ram_rtc = true;
+                            }
+                            else {
+                                self.enable_ram_rtc = false;
+                            }
+                        }
+                    },
+                    super::cartridge::Mapper::MBC3 => {
+                        self.rom_bank_upper = (val & 127) as usize;
+                        if self.rom_bank_upper == 0 { self.rom_bank_upper = 1 }
+                        self.rom_bank_upper = self.rom_bank_upper & (cart.rom_size_mask as usize);
                     },
                     super::cartridge::Mapper::MBC5 => { // Neuntes Bit der Bank number
                         self.rom_bank_upper = (self.rom_bank_upper & !(1 << 8)) | (((val as usize) & 1) << 8);
@@ -266,6 +366,7 @@ impl Bus{
             }
             0x4000..0x5000 => {
                 match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC1 => self.mbc1_magic_register = val & 0b11,
                     super::cartridge::Mapper::MBC3 => self.external_ram_bank = val as usize,
                     super::cartridge::Mapper::MBC5 => self.external_ram_bank = val as usize,
                     _ => (),
@@ -273,12 +374,25 @@ impl Bus{
             }
             0x5000..0x6000 => {
                 match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC1 => self.mbc1_magic_register = val & 0b11,
                     super::cartridge::Mapper::MBC3 => self.external_ram_bank = val as usize,
                     _ => (),
                 }
             }
+            0x6000..0x8000 => {
+                self.mbc1_bank_mode = (val & 1) > 0;
+            }
             0xA000..0xC000 => { // Ram auf Cartridge und tauschbare Bank, falls vorhanden
                 match cart.cartridge_type{
+                    super::cartridge::Mapper::MBC1 => {
+                        if self.enable_ram_rtc {
+                            self.external_ram[self.external_ram_bank % 4][addr as usize - 0xA000] = val
+                        }
+                    }
+                    super::cartridge::Mapper::MBC2 => {
+                        let real_address = (addr - 0xA000) & 511; // untere 9 bits
+                        self.external_ram[0][real_address as usize] = val & 0b1111 // untere 4 bits, ram besteht nur als "Half Bytes"
+                    }
                     super::cartridge::Mapper::MBC3 => {
                         if self.enable_ram_rtc{
                             match self.external_ram_bank{
@@ -299,6 +413,13 @@ impl Bus{
                 self.read_buttons = (val & 0b00100000) > 0;
                 self.read_joypad = (val &  0b00010000) > 0;
             },
+            0xFF01 => self.sb = val,
+            0xFF02 => {
+                let speed = if self.cgb_mode {val & 0b10} else {0};
+                let clock_select = val & 1;
+                let transfer_enable = val & 128;
+                self.sc = speed | clock_select | transfer_enable;
+            },
             0xFF04 => self.div = 0,
             0xFF05 => self.tima = val,
             0xFF06 => self.tma = val,
@@ -311,6 +432,7 @@ impl Bus{
             0xFF46 => {
                 self.oam_dma = val;
                 cpu.remaining_cycles += 640;
+                cpu.total_cycles += 640;
                 let source = (val as u16) * 0x100;
                 self.dma_next_clock = source as i32;
             }
@@ -338,28 +460,31 @@ impl Bus{
             },
             0xFF51 => if self.cgb_mode {self.hdma1 = val},
             0xFF52 => if self.cgb_mode {self.hdma2 = val & 0b11110000},
-            0xFF53 => if self.cgb_mode {self.hdma3 = val},
+            0xFF53 => if self.cgb_mode {self.hdma3 = val & 0b00011111},
             0xFF54 => if self.cgb_mode {self.hdma4 = val & 0b11110000},
             0xFF55 => if self.cgb_mode {
                 if self.vram_dma_active != DmaMode::Finished {
-                    if (val & 128) == 0 {self.vram_dma_active = DmaMode::Finished;}
+                    if (val & 128) == 0 {println!("Terminated"); self.vram_dma_active = DmaMode::Finished; self.vram_dma_bytes_remaining |= 128;}
                 }
                 else{
                     self.vram_dma_pointer = 0;
-                    self.vram_dma_bytes_remaining = val & 0b01111111;
+                    self.vram_dma_bytes_remaining = val & 127;
                     if val & 128 > 0{
                         self.vram_dma_active = DmaMode::Hblank;
+                        self.hdma_initiated_now = true;
+                        println!("Hblank!");
                     }
                     else{
                         self.vram_dma_active = DmaMode::VramDma;
-                        cpu.remaining_cycles += if cpu.dual_speed_mode {64 * ((self.vram_dma_bytes_remaining as i32) + 1)} else {32 * ((self.vram_dma_bytes_remaining as i32) + 1)}
+                        cpu.remaining_cycles += if cpu.dual_speed_mode {64 * ((self.vram_dma_bytes_remaining as i32) + 1)} else {32 * ((self.vram_dma_bytes_remaining as i32) + 1)};
+                        cpu.total_cycles += if cpu.dual_speed_mode {64 * ((self.vram_dma_bytes_remaining as usize) + 1)} else {32 * ((self.vram_dma_bytes_remaining as usize) + 1)};
                     }
                 }
             },
             0xFF68 => if self.cgb_mode {self.palette_address = val},
             0xFF69 => {
                 if self.cgb_mode{
-                    ppu.palette_ram[(self.palette_address & 0b111111) as usize] = val;
+                    if ppu.get_mode() != 3 {ppu.palette_ram[(self.palette_address & 0b111111) as usize] = val};
 
                     if (self.palette_address & 128) > 0{
                         self.palette_address += 1;
@@ -370,7 +495,7 @@ impl Bus{
             0xFF6A => if self.cgb_mode {self.palette_address_obj = val},
             0xFF6B => {
                 if self.cgb_mode{
-                    ppu.palette_ram_obj[(self.palette_address_obj & 0b111111) as usize] = val;
+                    if ppu.get_mode() != 3 {ppu.palette_ram_obj[(self.palette_address_obj & 0b111111) as usize] = val};
 
                     if (self.palette_address_obj & 128) > 0{
                         self.palette_address_obj += 1;
@@ -427,37 +552,54 @@ impl Bus{
     pub fn request_joypad(&mut self){
         self.cpu.as_mut().unwrap().if_reg |= 1 << 4;
     }
+    pub fn cpu_has_advanced(&mut self) -> bool{
+        let res = self.cpu_advanced;
+        self.cpu_advanced = false;
+        res
+    }
+    pub fn force_ly(&mut self, val: u8){
+        self.ppu.as_mut().unwrap().force_ly(val);
+    }
+    pub fn force_ppu_cycle(&mut self, val: usize){
+        self.ppu.as_mut().unwrap().force_cycle(val);
+    }
+    pub fn force_cpu_cycle(&mut self, val: usize){
+        self.cpu.as_mut().unwrap().total_cycles = val;
+    }
     pub fn clock(&mut self){
         if (!self.br) || (self.cpu.as_mut().unwrap().remaining_steps > 0) {
             let dual_speed = self.cpu.as_mut().unwrap().dual_speed_mode;
-            let div_mod = if dual_speed {128} else {256};
-            if self.div_counter % div_mod == 0{
+
+            // Timer Quelle: https://github.com/Ashiepaws/GBEDG/blob/master/timers/index.md
+
+            if self.cpu.as_mut().unwrap().mode != CPUMode::Stopped{
+                // Ist noch falsch, Nur Inkrement bei M-Zyklen?
                 self.div = self.div.wrapping_add(1);
-            }
-            self.div_counter = self.div_counter.wrapping_add(1);
-    
-            let tima_mod = if dual_speed {2} else {1};
-    
-            if self.tima_counter % ((TAC_TABLE[(self.tac & 0b11) as usize] as usize) / tima_mod) == 0{
-                if self.tac % 0b100 > 0{
-                    match self.tima.checked_add(1){
-                        None => {self.tima = self.tma; self.request_timer();},
-                        Some(val) => { self.tima = val },
-                    }
+                if dual_speed{
+                    self.div = self.div.wrapping_add(1);
                 }
             }
-            self.tima_counter = self.tima_counter.wrapping_add(1);
-    
-            self.ppu.as_mut().unwrap().clock(self.cgb_mode);
+            let bit_pos = BIT_TABLE[(self.tac & 0b11) as usize];
+            let div_bit = (self.div & (1 << bit_pos)) > 0;
+            let and_res = ((self.tac & 0b100) > 0) && div_bit;
+
+            if !and_res && self.tima_last_comparison {
+                match self.tima.checked_add(1){
+                    None => {self.tima = self.tma; self.request_timer();},
+                    Some(val) => { self.tima = val },
+                }
+            }
+
+            self.tima_last_comparison = and_res;
     
     
             let dma_source = ((self.hdma1 as u16) << 8) | (self.hdma2 as u16);
-            let dma_dest = ((self.hdma3 as u16) << 8) | (self.hdma4 as u16);
+            let dma_dest = ((self.hdma3 as u16) << 8) | (self.hdma4 as u16) | 0x8000;
             match self.vram_dma_active{
                 DmaMode::Finished => {
-                    self.cpu.as_mut().unwrap().clock();
+                    self.cpu_advanced = self.cpu.as_mut().unwrap().clock();
                     if dual_speed {
-                        self.cpu.as_mut().unwrap().clock();
+                        self.cpu_advanced = self.cpu.as_mut().unwrap().clock();
                     }
                 },
                 DmaMode::VramDma => {
@@ -466,36 +608,40 @@ impl Bus{
                         let v = self.read_memory(dma_source + i);
                         self.write_memory(dma_dest + i, v);
                     }
-                    self.vram_dma_bytes_remaining = 0;
+                    self.vram_dma_bytes_remaining = 0xFF;
                     self.vram_dma_active = DmaMode::Finished;
                 },
                 DmaMode::Hblank => {
-                    if self.ppu.as_mut().unwrap().get_mode() == 0{
-                        if self.ppu.as_mut().unwrap().cycle == 455 {
+                    if self.ppu.as_mut().unwrap().get_mode() == 0 && self.cpu.as_mut().unwrap().mode == CPUMode::Running{
+                        if self.ppu.as_mut().unwrap().first_hblank_cycle || self.hdma_initiated_now {
+                            self.hdma_initiated_now = false;
+                            self.ppu.as_mut().unwrap().first_hblank_cycle = false;
                             let byte_len = (self.vram_dma_bytes_remaining as u16 + 1) * 0x10;
-                            for i in 0..0x10{
+                            for i in 0..min(0x10, byte_len){
                                 let v = self.read_memory(dma_source + i + self.vram_dma_pointer);
                                 self.write_memory(dma_dest + i + self.vram_dma_pointer, v);
                             }
                             self.vram_dma_pointer += 0x10;
-                            if self.vram_dma_bytes_remaining == 0{
-                                self.vram_dma_active = DmaMode::Finished;
-                            }
-                            else{
-                                self.vram_dma_bytes_remaining -= 1;
+                            self.cpu.as_mut().unwrap().remaining_cycles += if self.cpu.as_mut().unwrap().dual_speed_mode {64} else {32};
+                            self.cpu.as_mut().unwrap().total_cycles += if self.cpu.as_mut().unwrap().dual_speed_mode {64} else {32};
+                            self.vram_dma_bytes_remaining = match self.vram_dma_bytes_remaining.checked_sub(1){
+                                Some(vr) => vr,
+                                None => {
+                                    self.vram_dma_active = DmaMode::Finished;
+                                    println!("Dma finished");
+                                    0xFF
+                                },
                             }
                         }
                     }
-                    else{
-                        self.cpu.as_mut().unwrap().clock();
-                        if dual_speed {
-                            if !self.br || self.cpu.as_mut().unwrap().remaining_steps > 0 {
-                                self.cpu.as_mut().unwrap().clock();
-                            }
-                        }
+                    self.cpu_advanced = self.cpu.as_mut().unwrap().clock();
+                    if dual_speed {
+                        self.cpu_advanced = self.cpu.as_mut().unwrap().clock();
                     }
                 },
             }
+
+            self.ppu.as_mut().unwrap().clock(self.cgb_mode);
     
             if self.dma_next_clock >= 0{
                 let mut oams = self.ppu.as_mut().unwrap().oam.clone();

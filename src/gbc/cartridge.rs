@@ -39,6 +39,8 @@ const ROM_BIT_MASK: [u16; 9] = [1,3,7,15,31,63,127,255,511];
 #[derive(Debug)]
 pub enum Mapper{
     NoMapper,
+    MBC1,
+    MBC2,
     MBC3,
     MBC5,
     UnknownMapper
@@ -48,6 +50,11 @@ impl RomObject{
     fn get_cartridge_type(t: u8) -> Mapper{
         match t{
             0x0 => Mapper::NoMapper,
+            0x01 => Mapper::MBC1,
+            0x02 => Mapper::MBC1,
+            0x03 => Mapper::MBC1,
+            0x05 => Mapper::MBC2,
+            0x06 => Mapper::MBC2,
             0x0F => Mapper::MBC3,
             0x10 => Mapper::MBC3,
             0x11 => Mapper::MBC3,
@@ -59,7 +66,7 @@ impl RomObject{
             0x1C => Mapper::MBC5,
             0x1D => Mapper::MBC5,
             0x1E => Mapper::MBC5,
-            _ => Mapper::NoMapper,//panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
+            _ => panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
         }
     }
     pub fn new(path: &str) -> Result<Self, std::io::Error> {

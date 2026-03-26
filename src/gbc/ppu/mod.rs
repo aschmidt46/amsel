@@ -24,6 +24,7 @@ pub struct PPU{
     pub (crate) obp1: u8, // FF49 (ob palette 1) nur dmg
     pub (crate) palette_ram: [u8; 64], // nur cgb
     pub (crate) palette_ram_obj: [u8; 64], // nur cgb
+    pub (crate) first_hblank_cycle: bool,
     mode_3_penalty: usize,
     num_frames: usize,
     last_coincidence_lyc: u8,
@@ -36,9 +37,9 @@ pub struct PPU{
 
 impl PPU{
     pub fn new(bus: Weak<RefCell<Bus>>) -> Self{
-        PPU { vram: [[0; 0x2000]; 2], bus, bank_select: 0 , scanline: 0, cycle: 0, new_scanline: true, stat: 0, lyc: 0, lcdc: 0, scx: 0, scy: 0, wx: 0, wy: 0,
+        PPU { vram: [[0; 0x2000]; 2], bus, bank_select: 0 , scanline: 0, cycle: 0, new_scanline: true, stat: 0, lyc: 0, lcdc: 128, scx: 0, scy: 0, wx: 0, wy: 0,
              secondary_oam: Vec::new(), oam: [0; 160], bgp: 0, obp0: 0, obp1: 0, palette_ram: [255; 64], palette_ram_obj: [255; 64], wy_condition: false, wx_condition: false, wy_count: 0,
-             mode_3_penalty: 12, num_frames: 0, last_coincidence_lyc: 255}
+             mode_3_penalty: 12, num_frames: 0, last_coincidence_lyc: 255, first_hblank_cycle: false}
     }
     pub fn write_stat(&mut self, val: u8){
         self.stat = (self.stat & !0b01111000) | (val & 0b01111000);
@@ -46,10 +47,25 @@ impl PPU{
     pub fn get_mode(&self) -> u8 {
         self.stat & 0b11
     }
+    pub fn ppu_enable(&self) -> bool{
+        (self.lcdc & 128) > 0
+    }
+    pub fn force_ly(&mut self, val: u8){
+        self.scanline = val;
+    }
+    pub fn force_cycle(&mut self, val: usize){
+        self.cycle = val;
+    }
     pub fn clock(&mut self, color_mode: bool){
+        if !self.ppu_enable(){
+            self.scanline = 0;
+            self.stat &= !(0b111);
+            self.secondary_oam = Vec::new();
+            return;
+        }
+        let prev_mode = self.stat & 0b11;
         if !color_mode {self.next_dot()} else {self.next_dot_color()};
 
-        let prev_mode = self.stat & 0b11;
         self.stat &= !0b111;
         if self.scanline == self.lyc {
             self.stat |= 0b100;
@@ -68,15 +84,21 @@ impl PPU{
                 else if self.cycle < 240 + self.mode_3_penalty {
                     self.stat |= 3;
                 }
+                else {self.stat &= !0b11}
             }
         }
 
         let mode_changed = prev_mode != (self.stat & 0b11);
+        if mode_changed && self.get_mode()==0{
+            self.first_hblank_cycle = true;
+        }
+        else {self.first_hblank_cycle = false;}
 
         //stat interrupt
         let mut cond = ((self.stat & 0b01000000) > 0) && (self.lyc == self.scanline) && (self.cycle == 0); // Nur einmal feuern
         
         if mode_changed {
+
             for m in 3..6{
                 let mode = m - 3;
                 if self.stat & (1 << m) > 0{
@@ -193,7 +215,7 @@ impl PPU{
         }
 
         if self.scanline < 144 && self.cycle == 240 && self.wx_condition{
-            if self.window_enable() {self.wy_count += 1;}
+            if self.window_enable() && self.wy_condition {self.wy_count += 1;}
         }
 
         if self.cycle >= 80 && self.cycle < 240 && self.scanline < 144 {
@@ -347,14 +369,17 @@ impl PPU{
             self.scan_sprites(true);
         }
         if self.scanline < 144 && self.cycle == 240 && self.wx_condition{
-            if self.window_enable() {self.wy_count += 1;}
+            if self.window_enable() && self.wy_condition {self.wy_count += 1;}
         }
 
         if self.cycle >= 80 && self.cycle < 240 && self.scanline < 144 {
+            if self.cycle == 80 {
+                self.mode_3_penalty += (self.scx as usize) % 8;
+            }
 
             if !self.wx_condition {
                 self.wx_condition = ((self.cycle - 80) + 7) == (self.wx as usize);
-                if self.wx_condition {}
+                if self.wx_condition {self.mode_3_penalty += 6;}
             }
             // Background
 

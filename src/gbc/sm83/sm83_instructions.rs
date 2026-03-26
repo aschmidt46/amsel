@@ -223,9 +223,11 @@ mod sm83 {
         }
         pub fn di(&mut self, op1: OperandType, op2: OperandType) -> bool{
             self.ime = false;
+            self.set_ime = -1; // Falls di direkt nach ei
             false
         }
         pub fn ei(&mut self, op1: OperandType, op2: OperandType) -> bool{
+            // println!("ei");
             self.set_ime = 1;
             false
         }
@@ -287,13 +289,7 @@ mod sm83 {
             };
             let rel: i8 = self.read(self.reg_pc + 1) as i8;
             let mut target = self.reg_pc + 2; // Op ist immer 2 Bytes
-            if rel < 0{ // Wieder dieser Schrott
-                let rel_a = (-rel) as u16;
-                target -= rel_a;
-            }
-            else{
-                target += rel as u16;
-            }
+            target = target.wrapping_add_signed(rel as i16);
             
             if cond{
                 self.set_16(Register16::PC, target);
@@ -762,6 +758,11 @@ mod sm83 {
         }
         pub fn stop(&mut self, op1: OperandType, op2: OperandType) -> bool{
             self.mode = CPUMode::Stopped;
+            match &self.bus.upgrade(){
+                None => (),
+                Some(b) => unsafe {(*b.as_ptr()).div = 0},
+            }
+            println!("Gestoppt");
             false
         }
         pub fn sub(&mut self, op1: OperandType, op2: OperandType) -> bool{
@@ -828,6 +829,9 @@ mod sm83 {
             // dummy Funktion
             panic!("Dummy-Funktion (Prefix) aufgerufen!");
             // false
+        }
+        pub fn illegal(&mut self, op1: OperandType, op2: OperandType) -> bool{
+            panic!("Illegale Funktion")
         }
     }
 }

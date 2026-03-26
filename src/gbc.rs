@@ -19,6 +19,10 @@ impl CGB{
         CGB { bus, has_frame: false }
     }
 
+    pub fn cpu_has_advanced(&mut self) -> bool{
+        self.bus.borrow_mut().cpu_has_advanced()
+    }
+
     pub fn clock(&mut self){
         self.bus.borrow_mut().clock();
         if self.bus.borrow().has_frame{

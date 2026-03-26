@@ -17,6 +17,7 @@ use iced::{Subscription, futures::{SinkExt, Stream}, stream};
 use crate::gbc::CGB;
 use crate::gbc::sm83::{Opcode, OperandType};
 use crate::{FRAMEBUFFER};
+use rfd::FileDialog;
 
 #[derive(Clone)]
 pub struct CpuState{
@@ -45,7 +46,8 @@ pub enum Message {
     ToggleDebugger,
     ToggleBreak,
     Step,
-    UpdateCurrentOperation(String, u16)
+    UpdateCurrentOperation(String, u16),
+    SelectFile,
 }
 
 pub enum InternalMessage {
@@ -55,6 +57,7 @@ pub enum InternalMessage {
     ReleaseButton(usize),
     ToggleBreak,
     Step,
+    LoadFile(String),
 }
 
 fn worker() -> impl Stream<Item = Message>{
@@ -65,7 +68,7 @@ fn worker() -> impl Stream<Item = Message>{
            // Send the sender back to the application
            output.send(Message::Ready(sender)).await;
         
-           let mut cgb = CGB::new("resources/pokemongold.gbc");
+           let mut cgb = CGB::new("resources/pokemonkristall.gbc");
 
            loop {
                 cgb.clock();
@@ -82,6 +85,7 @@ fn worker() -> impl Stream<Item = Message>{
                 match input{
                     Ok(msg) => {
                         match msg{
+                            InternalMessage::LoadFile(f) => cgb = CGB::new(&f),
                             InternalMessage::PressButton(b) => cgb.bus.borrow_mut().press_button(b),
                             InternalMessage::ReleaseButton(b) => cgb.bus.borrow_mut().release_button(b),
                             InternalMessage::PressJoypad(b) => cgb.bus.borrow_mut().press_joypad(b),
@@ -158,7 +162,8 @@ impl Scene {
                     column![
                         row![checkbox(self.is_break).on_toggle(|_| Message::ToggleBreak), text!("Break")],
                         button("Step").on_press(Message::Step),
-                        text([pc_count, opcode].concat())
+                        text([pc_count, opcode].concat()),
+                        button("Laden").on_press(Message::SelectFile)
                     ]
                 )
             ]
@@ -167,6 +172,25 @@ impl Scene {
 
     pub fn update(&mut self, message: Message) {
         match message {
+            Message::SelectFile => {
+                let file = FileDialog::new().set_directory(".").pick_file();
+                match file{
+                    Some(f) => {
+                        let str = f.to_str();
+                        match str{
+                            Some(s) => {
+                                let os = s.to_owned();
+                                match &mut self.sender{
+                                    None => (),
+                                    Some(s) => {s.try_send(InternalMessage::LoadFile(os));}
+                                }
+                            },
+                            None => panic!("Wat 2"),
+                        }
+                    },
+                    None => panic!("Keine Selektion"),
+                }
+            }
             Message::UpdateCurrentOperation(line, pc) => self.cpu_state = Some(CpuState {current_line: line, pc}),
             Message::ToggleBreak => {
                 self.is_break = !self.is_break;

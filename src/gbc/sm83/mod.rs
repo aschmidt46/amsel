@@ -102,11 +102,11 @@ pub struct SM83 {
     opcodes_unprefixed: Vec<Opcode>,
     opcodes_prefixed: Vec<Opcode>,
 
-    mode: CPUMode,
+    pub (crate) mode: CPUMode,
     ime: bool, // IME, erlaubt / verbietet Interrupt Handling
     set_ime: i32, // EI hat Verzögerung beim Setzen von ime
     pub (crate) remaining_cycles: i32,
-    total_cycles: i64,
+    pub (crate) total_cycles: usize,
     total_operations: i64,
 
     pub (crate) speed_switch_armed: bool,
@@ -171,6 +171,7 @@ impl SM83 {
             let flag: bool = (self.if_reg & (1 << bit)) > 0;
             if enable && flag {
                 self.remaining_cycles += 5 * 4; // 20 t-Zyklen, bzw. 5 m-Zyklen
+                self.total_cycles += 5 * 4; // 20 t-Zyklen, bzw. 5 m-Zyklen
                 let vector = 0x40 + 0x8 * bit;
                 self.push_stack_16(self.reg_pc);
                 self.set_16(Register16::PC, vector);
@@ -181,18 +182,22 @@ impl SM83 {
         }
         false
     }
-    pub fn clock(&mut self){
+    pub fn clock(&mut self) -> bool{
+        let mut b = false;
         if self.remaining_cycles > 0 {
             self.remaining_cycles -= 1;
+            b = false;
         }
-        else{
-            if self.remaining_steps > 0{
-                self.remaining_steps -= 1;
-            }
+        if self.remaining_cycles == 0{
             match self.mode {
                 CPUMode::Running => {
+                    if self.remaining_steps > 0{
+                        self.remaining_steps -= 1;
+                    }
                     if !self.poll_interrupts() {
+                        // println!("Zyklus {}, PC: {:#x}", self.total_cycles, self.reg_pc);
                         self.run_next_instruction();
+                        b = true;
                     }
                 },
                 CPUMode::Halted => {
@@ -201,29 +206,34 @@ impl SM83 {
                         if self.poll_interrupts(){
                             self.mode = CPUMode::Running;
                         }
-                        // // dann...
-                        // if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
                     }
                     else{
                         // Hier eigentlich Hardware Bug in HALT (nicht hier), weiß nicht ob wichtig zu emulieren
                         // Kein Interrupt Handler aufgerufen
                         if (self.if_reg & self.ie_reg) > 0 { self.mode = CPUMode::Running; }
                     }
+                    b = false;
                 },
                 CPUMode::HaltBug => {
                     println!("Halt bug ausgelöst");
+                    self.mode = CPUMode::Halted;
+                    b =false;
                 },
                 CPUMode::Stopped =>{
                     // Speed Switch
                     if self.speed_switch_armed{
                         self.speed_switch_armed = false;
                         self.remaining_cycles += if self.dual_speed_mode {8200} else {16400}; // oder 8200?
+                        self.total_cycles += if self.dual_speed_mode {8200} else {16400}; // oder 8200?
                         self.dual_speed_mode = !self.dual_speed_mode;
                         self.mode = CPUMode::Running;
                     }
+                    if self.if_reg & 0b00010000 > 0 { self.mode = CPUMode::Running; } // Bei Joypad Interrupt
+                    b =false
                 }
             }
         }
+        b
     }
     fn print_operands(&mut self, ops: &Vec<Operand>) -> String{
         let mut str = "".to_owned();
@@ -289,11 +299,13 @@ impl SM83 {
 
         // Vergangene Zyklen bestimmen
         if instruction.cycles.len() > 1 {
-            if jump { self.remaining_cycles += instruction.cycles[0]; }
-            else { self.remaining_cycles += instruction.cycles[1]; }
+            if jump { self.remaining_cycles += instruction.cycles[0];
+            self.total_cycles += instruction.cycles[0] as usize; }
+            else { self.remaining_cycles += instruction.cycles[1];
+            self.total_cycles += instruction.cycles[1] as usize; }
         }
-        else { self.remaining_cycles += instruction.cycles[0]; }
-        self.total_cycles += self.remaining_cycles as i64;
+        else { self.remaining_cycles += instruction.cycles[0];
+        self.total_cycles += instruction.cycles[0] as usize; }
         self.total_operations += 1;
 
         // Verspätetes Setzen von ime nach der Instruktion
@@ -364,7 +376,7 @@ impl SM83 {
     }
     pub fn set_initial_state_cgb(&mut self){
         self.set_8(Register8::A, 0x11);
-        self.set_8(Register8::F, 0xB0);
+        self.set_8(Register8::F, 0x80);
         self.set_8(Register8::B, 0x00);
         self.set_8(Register8::C, 0x00);
         self.set_8(Register8::D, 0xFF);
