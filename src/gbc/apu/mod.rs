@@ -91,20 +91,20 @@ impl APU {
         if (self.master_control & 128) == 0 /*|| (self.master_volume_panning & 128) == 0*/ { return 0.0; }
         let scaling = ((self.master_volume_panning & 0b01110000) >> 4) + 1;
         let mut current_sample_left: f64 = 0.0;
-        current_sample_left += self.pulse1_sample as f64 * (self.pulse1.volume as f64 / 15.0);
-        current_sample_left += self.pulse2_sample as f64 * (self.pulse2.volume as f64 / 15.0);
-        current_sample_left += self.wave_sample as f64 / 15.0;
-        current_sample_left += self.noise_sample as f64 * (self.noise.volume as f64 / 15.0);
+        if self.channel_audible(false, 0) {current_sample_left += self.pulse1_sample as f64 * (self.pulse1.volume as f64 / 15.0)};
+        if self.channel_audible(false, 1) {current_sample_left += self.pulse2_sample as f64 * (self.pulse2.volume as f64 / 15.0)};
+        if self.channel_audible(false, 2) {current_sample_left += self.wave_sample as f64 / 15.0};
+        if self.channel_audible(false, 3) {current_sample_left += self.noise_sample as f64 * (self.noise.volume as f64 / 15.0)};
         current_sample_left * (scaling as f64 / 8.0)
     }
     pub fn get_sample_right(&self) -> f64{
         if (self.master_control & 128) == 0 /*|| (self.master_volume_panning & 8) == 0*/ { return 0.0; }
         let scaling = (self.master_volume_panning & 0b111) + 1;
         let mut current_sample_right: f64 = 0.0;
-        current_sample_right += self.pulse1_sample as f64 * (self.pulse1.volume as f64 / 15.0);
-        current_sample_right += self.pulse2_sample as f64 * (self.pulse2.volume as f64 / 15.0);
-        current_sample_right += self.wave_sample as f64 / 15.0;
-        current_sample_right += self.noise_sample as f64 * (self.noise.volume as f64 / 15.0);
+        if self.channel_audible(true, 0) {current_sample_right += self.pulse1_sample as f64 * (self.pulse1.volume as f64 / 15.0)};
+        if self.channel_audible(true, 1) {current_sample_right += self.pulse2_sample as f64 * (self.pulse2.volume as f64 / 15.0)};
+        if self.channel_audible(true, 2) {current_sample_right += self.wave_sample as f64 / 15.0};
+        if self.channel_audible(true, 3) {current_sample_right += self.noise_sample as f64 * (self.noise.volume as f64 / 15.0)};
         current_sample_right * (scaling as f64 / 8.0)
     }
     pub fn maybe_write(&mut self, addr: u16, val: u8){
@@ -155,20 +155,20 @@ impl APU {
             0xFF25 => self.panning = val,
             0xFF24 => self.master_volume_panning = val,
             0xFF10 => self.pulse1.sweep = val,
-            0xFF11 => self.pulse1.length_duty = val,
+            0xFF11 => {self.pulse1.length_duty = val; self.pulse1.length_timer = self.pulse1.length_timer_base()},
             0xFF12 => self.pulse1.vol_env = val,
             0xFF13 => self.pulse1.on_write_period_low(val),
             0xFF14 => self.pulse1.on_write_period_high_control(val),
-            0xFF16 => self.pulse2.length_duty = val,
+            0xFF16 => {self.pulse2.length_duty = val; self.pulse2.length_timer = self.pulse2.length_timer_base()},
             0xFF17 => self.pulse2.vol_env = val,
             0xFF18 => self.pulse2.on_write_period_low(val),
             0xFF19 => self.pulse2.on_write_period_high_control(val),
             0xFF1A => self.wave.dac_enable = (val & 128) > 0,
-            0xFF1B => self.wave.initial_length_timer = val,
-            0xFF1C => self.wave.output_level = val & 0b01100000,
+            0xFF1B => {self.wave.initial_length_timer = val; self.wave.length_timer = 256 - self.wave.initial_length_timer as u16},
+            0xFF1C => {self.wave.output_level = val & 0b01100000; self.wave.set_volume();},
             0xFF1D => self.wave.period_low = val,
             0xFF1E => self.wave.on_write_control(val),
-            0xFF20 => self.noise.length_timer_reg = val & 0b00111111,
+            0xFF20 => {self.noise.length_timer_reg = val & 0b00111111; self.noise.length_timer = 64 - self.noise.length_timer_reg},
             0xFF21 => self.noise.vol_env = val,
             0xFF22 => self.noise.freq_rand = val,
             0xFF23 => self.noise.on_write_control(val),
@@ -225,6 +225,7 @@ struct PulseChannel{
     envelope_counter: usize,
     sweep_enabled: bool,
     sweep_timer: usize,
+    shadow_register: u16,
     length_timer: u8,
     length_enabled: bool,
     disabled_by_sweep: bool,
@@ -242,22 +243,19 @@ const WAVEFORM_PULSE: [[u8; 8]; 4] = [
 impl PulseChannel{
     fn new(has_sweep: bool) -> Self{
         PulseChannel { dac: 0, sweep: 0, length_duty: 0, vol_env: 0, period_low: 0, period_high_control: 0, has_sweep, period_divider: 0, waveform_counter: 0, volume: 0,
-        sweep_enabled: false, sweep_timer: 0, length_timer: 0, disabled_by_sweep: false, length_enabled: false, envelope_counter: 0, sweep_pace: 0 }
+        sweep_enabled: false, sweep_timer: 0, length_timer: 0, disabled_by_sweep: false, length_enabled: false, envelope_counter: 0, sweep_pace: 0, shadow_register: 0 }
     }
     fn active(&self) -> bool{
-        let l = if self.length_enabled {self.length_timer < 64} else {true};
+        let l = if self.length_enabled {self.length_timer > 0} else {true};
         (self.vol_env & 0xF8) > 0 && !self.disabled_by_sweep && l
     }
-    fn length_enable(&self) -> bool{
-        (self.period_high_control & 0b01000000) > 0
-    }
     fn increment_length(&mut self){
-        if self.length_timer < 64{
-            self.length_timer += 1;
+        if self.length_timer > 0{
+            self.length_timer -= 1;
         }
     }
     fn length_timer_base(&self) -> u8{
-        self.length_duty & 0b00111111
+        64 - (self.length_duty & 0b00111111)
     }
     fn envelope_increase_volume(&self) -> bool{
         (self.vol_env & 0b00001000) > 0
@@ -304,8 +302,9 @@ impl PulseChannel{
                 //Zurückschreiben
                 if self.get_sweep_individual_step() > 0 && new_freq <= 2047 {
                     self.period_divider = new_freq;
+                    self.shadow_register = new_freq;
                     self.period_low = (new_freq & 255) as u8;
-                    self.period_high_control = (self.period_high_control & !0b111) | ((new_freq >> 8) as u8)
+                    self.period_high_control = (self.period_high_control & !0b111) | ((new_freq >> 8) as u8);
                 }
                 self.sweep_pace = self.get_sweep_pace();
                 let _ = self.calc_freq();
@@ -314,10 +313,10 @@ impl PulseChannel{
     }
     fn calc_freq(&mut self) -> u16{
         //Frequenzberechnung
-        let mut new_freq = self.period_divider >> self.get_sweep_individual_step();
+        let mut new_freq = (self.shadow_register) >> self.get_sweep_individual_step();
         new_freq = if self.get_sweep_direction()
-                 {self.period_divider.saturating_sub(new_freq)}
-            else {self.period_divider.saturating_add(new_freq)};
+                 {self.shadow_register.saturating_sub(new_freq)}
+            else {self.shadow_register.saturating_add(new_freq)};
         // Overflow Check...
         //Kanal ausschalten, falls zu groß (11 bit limit)
         if new_freq > 0x7FF{
@@ -328,11 +327,12 @@ impl PulseChannel{
     fn on_write_period_high_control(&mut self, val: u8){
         self.period_high_control = val;
         self.disabled_by_sweep = false;
+        self.length_enabled = (self.period_high_control & 64) > 0;
         // Trigger event
-        if (self.period_high_control & 128) > 0 {
+        if (self.period_high_control & 128) > 0 && (self.vol_env & 0xF8) > 0 {
             // Hier fehlen noch Sachen
             // if length timer expired it reset
-            if self.length_timer >= 64{
+            if self.length_timer == 0{
                 self.length_timer = self.length_timer_base();
             }
             // envelope timer reset
@@ -342,6 +342,7 @@ impl PulseChannel{
             self.volume = self.envelope_initial_volume();
             // sweep sachen
             if self.has_sweep{
+                self.shadow_register = self.period_divider;
                 self.sweep_timer = if self.get_sweep_pace() > 0 {self.get_sweep_pace() as usize} else {8};
                 self.sweep_pace = self.get_sweep_pace();
                 if self.get_sweep_pace() > 0 || self.get_sweep_individual_step() > 0{
@@ -363,7 +364,7 @@ impl PulseChannel{
         ((self.length_duty & 0b11000000) >> 6) as usize
     }
     fn on_divider_clock(&mut self){
-        if self.period_divider == 2047{
+        if self.period_divider >= 2047{
             //reset
             self.period_divider = self.period_low as u16 | ((self.period_high_control as u16 & 0b111) << 8);
             // Inkrement Welle
@@ -388,7 +389,7 @@ struct WaveChannel{
 
     //Internal
     period_divider: u16,
-    length_timer: u8,
+    length_timer: u16,
     length_enable: bool,
     volume: u8,
     wave_ram_index: usize,
@@ -417,7 +418,7 @@ impl WaveChannel{
         self.dac= 0;
     }
     fn active(&self) -> bool{
-        let l = if self.length_enable {self.length_timer < 255} else {true};
+        let l = if self.length_enable {self.length_timer > 0} else {true};
         self.dac_enable && l
     }
     fn get_output_level(&self) -> u8{
@@ -436,29 +437,29 @@ impl WaveChannel{
         self.volume = self.get_output_level();
     }
     fn increment_length(&mut self){
-        if self.length_timer < 255{
-            self.length_timer += 1;
+        if self.length_timer > 0{
+            self.length_timer -= 1;
         }
     }
     fn on_write_control(&mut self, val: u8){
         self.period_high_control = val;
-        if (val & 128) > 0{
+        self.length_enable = (self.period_high_control & 64) > 0;
+        if (val & 128) > 0 && self.dac_enable{
             //Trigger
             //enable channel
-            if self.length_timer == 255{
-                self.length_timer = self.initial_length_timer;
+            if self.length_timer == 0{
+                self.length_timer = 256 - self.initial_length_timer as u16;
             }
             self.period_divider = self.period_low as u16 | ((self.period_high_control as u16 & 0b111) << 8);
             self.set_volume();
-            self.wave_ram_index = 1;
+            self.wave_ram_index = 0;
         }
-        self.length_enable = (self.period_high_control & 64) > 0;
     }
     fn on_read_control(&self) -> u8{
         self.period_high_control & 64
     }
     fn on_divider_clock(&mut self){
-        if self.period_divider == 0b011111111111{
+        if self.period_divider >= 2047{
             //reset
             self.period_divider = self.period_low as u16 | ((self.period_high_control as u16 & 0b111) << 8);
             // Sample lesen
@@ -466,6 +467,7 @@ impl WaveChannel{
             let nibble = self.wave_ram_index % 2;
             let sample = self.wave_ram[index];
             self.sample_buffer = if nibble > 0 { sample & 0b1111 } else { sample >> 4 };
+            self.dac = self.sample_buffer >> self.get_output_shift();
 
             // Inkrement
             self.wave_ram_index += 1;
@@ -476,7 +478,6 @@ impl WaveChannel{
         else{
             self.period_divider += 1;
         }
-        self.dac = self.sample_buffer >> self.get_output_shift();
     }
 }
 
@@ -503,7 +504,7 @@ impl NoiseChannel{
         NoiseChannel { length_timer_reg: 0, vol_env: 0, freq_rand: 0, control: 0, volume: 0, envelope_counter: 0, length_enabled: false, length_timer: 0, dac: 0, lfsr: 0, internal_divider: 0 }
     }
     fn active(&self) -> bool{
-        let l = if self.length_enabled {self.length_timer < 64} else {true};
+        let l = if self.length_enabled {self.length_timer > 0} else {true};
         (self.vol_env & 0xF8) > 0 && l
     }
     fn envelope_increase_volume(&self) -> bool{
@@ -540,17 +541,17 @@ impl NoiseChannel{
         }
     }
     fn increment_length(&mut self){
-        if self.length_timer < 64{
-            self.length_timer += 1;
+        if self.length_timer > 0{
+            self.length_timer -= 1;
         }
     }
     fn on_write_control(&mut self, val: u8){
         self.control = val;
-        if (self.control & 128) > 0{
+        if (self.control & 128) > 0 && (self.vol_env & 0xF8) > 0{
             //Trigger
             //enable channel
-            if self.length_timer >= 64{
-                self.length_timer = self.length_timer_reg;
+            if self.length_timer == 0{
+                self.length_timer = 64 - (self.length_timer_reg & 0b00111111);
             }
             self.envelope_counter = 0;
             self.volume = self.envelope_initial_volume();

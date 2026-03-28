@@ -117,8 +117,8 @@ fn write_data<T: SizedSample + FromSample<f64>>(
 ) {
     for frame in output.chunks_mut(channels) {
         let sample = next_sample();
-        let left = T::from_sample(sample.0);
-        let right = T::from_sample(sample.1);
+        let left = T::from_sample(sample.0 * 0.1);
+        let right = T::from_sample(sample.1 * 0.1);
 
         for (channel, sample) in frame.iter_mut().enumerate() {
             *sample = if channel & 1 == 0 { left } else { right };
@@ -219,7 +219,9 @@ impl eframe::App for MyApp {
                             Some(s) => {
                                 match self.cgb.lock(){
                                     Ok(mut m) => {
-                                        *m = CGB::new(s);
+                                        if s.len() > 0 {
+                                            *m = CGB::new(s);
+                                        }
                                     },
                                     Err(e) => panic!("Lock fehler: {}", e),
                                 }
@@ -227,37 +229,30 @@ impl eframe::App for MyApp {
                             None => panic!("Wat 2"),
                         }
                     },
-                    None => panic!("Keine Selektion"),
+                    None => (),
                 }
             }
-
-            // match FRAMEBUFFER.lock().as_mut(){
-                // Ok(m) => {
-                unsafe{
-                    // let colimg = egui::ColorImage::from_rgba_unmultiplied([160,144], FRAMEBUFFER.clone().map(|v| v.as_ptr().read()).as_ref());
-                    let mut colimg = egui::ColorImage::filled([160,144], Color32::WHITE);
-                    let iterable = colimg.as_raw_mut();
-                    for i in 0..160*144*4 {
-                        iterable[i] = FRAMEBUFFER[i].as_ptr().read();
-                    }
-                    let texture: &mut egui::TextureHandle = self.texture.get_or_insert_with(|| {
-                        // Load the texture only once.
-                        ui.ctx().load_texture(
-                            "fb",
-                            colimg.clone(),
-                            TextureOptions::NEAREST
-                        )
-                    });
-                    texture.set(colimg, TextureOptions::NEAREST);
-                    ui.centered_and_justified(|ui|
-                        ui.add(
-                            egui::Image::from_texture(egui::load::SizedTexture::new(texture.id(), texture.size_vec2())).fit_to_fraction(Vec2::new(1.0, 1.0))
-                        )
-                    );
+            unsafe{
+                let mut colimg = egui::ColorImage::filled([160,144], Color32::WHITE);
+                let iterable = colimg.as_raw_mut();
+                for i in 0..160*144*4 {
+                    iterable[i] = FRAMEBUFFER[i].as_ptr().read();
                 }
-                // },
-                // Err(e) => panic!("Konnte nicht sperren"),
-            // };
+                let texture: &mut egui::TextureHandle = self.texture.get_or_insert_with(|| {
+                    // Load the texture only once.
+                    ui.ctx().load_texture(
+                        "fb",
+                        colimg.clone(),
+                        TextureOptions::NEAREST
+                    )
+                });
+                texture.set(colimg, TextureOptions::NEAREST);
+                ui.centered_and_justified(|ui|
+                    ui.add(
+                        egui::Image::from_texture(egui::load::SizedTexture::new(texture.id(), texture.size_vec2())).fit_to_fraction(Vec2::new(1.0, 1.0))
+                    )
+                );
+            }
             ui.ctx().request_repaint();
         });
     }
