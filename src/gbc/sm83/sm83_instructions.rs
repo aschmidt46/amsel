@@ -762,7 +762,6 @@ mod sm83 {
                 None => (),
                 Some(b) => unsafe {(*b.as_ptr()).div = 0},
             }
-            println!("Gestoppt");
             false
         }
         pub fn sub(&mut self, op1: OperandType, op2: OperandType) -> bool{

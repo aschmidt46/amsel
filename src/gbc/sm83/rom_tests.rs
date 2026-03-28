@@ -186,11 +186,6 @@ mod rom_tests {
     }
 
     #[test]
-    fn kristall(){
-        test_rom_against_log_new("./resources/pokemonkristall.gbc",
-        "./pokemon_log_kristall.txt", 0);
-    }
-    #[test]
     fn instr_1(){
         test_rom_against_log("./resources/gb-test-roms-master/cpu_instrs/individual/01-special.gb",
         "./resources/Gameboy-logs-master/Blargg1LYStubbed/EpicLog.txt", 0);

@@ -60,7 +60,7 @@ impl PPU{
         if !self.ppu_enable(){
             self.scanline = 0;
             self.stat &= !(0b111);
-            self.secondary_oam = Vec::new();
+            self.secondary_oam.clear();
             return;
         }
         let prev_mode = self.stat & 0b11;
@@ -174,7 +174,7 @@ impl PPU{
         (self.obp1 & (0b11 << (index * 2))) >> (index * 2)
     }
     fn scan_sprites(&mut self, cgb_mode: bool){
-        self.secondary_oam = Vec::new();
+        self.secondary_oam.clear();
 
         let mut oam_ptr = 0;
 
@@ -284,8 +284,11 @@ impl PPU{
 
             if self.obj_enable(){
                 let pixel_x = self.cycle.saturating_sub(80) as u8;
-                for oam in self.secondary_oam.clone(){
 
+                for i in 0..self.secondary_oam.len(){
+                // for &mut oam in &mut self.secondary_oam{
+
+                    let oam = &self.secondary_oam[i];
                     let y_pos_i = (oam[0] as i32) - 16;
                     let x_pos = (oam[1] as i32) - 8;
                     let mut  y_offset = (self.scanline as i32) - y_pos_i;
@@ -457,7 +460,9 @@ impl PPU{
 
             if self.obj_enable(){
                 let pixel_x = self.cycle.saturating_sub(80) as u8;
-                for oam in self.secondary_oam.clone(){
+                // for oam in self.secondary_oam.clone(){
+                for i in 0..self.secondary_oam.len(){
+                    let oam = &self.secondary_oam[i];
 
                     let y_pos_i = (oam[0] as i32) - 16;
                     let x_pos = (oam[1] as i32) - 8;
@@ -523,15 +528,15 @@ impl PPU{
         }
     }
     fn set_pixel(&self, x: usize, y: usize, r: u8, g: u8, b: u8){
-        match FRAMEBUFFER.lock().as_mut(){
-            Ok(m) => {
-                m[index_framebuffer(x, y)] = r;
-                m[index_framebuffer(x, y) + 1] = g;
-                m[index_framebuffer(x, y) + 2] = b;
-                m[index_framebuffer(x, y) + 3] = 255;
-            },
-            Err(e) => panic!("Konnte Framebuffer nicht sperren!"),
-        }
+        // match FRAMEBUFFER.lock().as_mut(){
+        //     Ok(m) => {
+                FRAMEBUFFER[index_framebuffer(x, y)].store(r, std::sync::atomic::Ordering::Relaxed);
+                FRAMEBUFFER[index_framebuffer(x, y) + 1].store(g, std::sync::atomic::Ordering::Relaxed);
+                FRAMEBUFFER[index_framebuffer(x, y) + 2].store(b, std::sync::atomic::Ordering::Relaxed);
+                FRAMEBUFFER[index_framebuffer(x, y) + 3].store(255, std::sync::atomic::Ordering::Relaxed);
+        //     },
+        //     Err(e) => panic!("Konnte Framebuffer nicht sperren!"),
+        // }
     }
     fn set_pixel_palette(&self, x: usize, y: usize, val: u8){
         let col = 255 - ((val as f32 / 3.0) * 255.0) as u8;

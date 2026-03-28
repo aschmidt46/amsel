@@ -1,6 +1,6 @@
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
-use crate::gbc::{cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Opcode, OperandType, SM83}};
+use crate::gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Opcode, OperandType, SM83}};
 
 #[derive(PartialEq)]
 enum DmaMode{
@@ -18,6 +18,7 @@ pub struct Bus{
     external_ram: [[u8; 0x2000]; 16], //max 16 Bänke
     pub cpu: Option<SM83>,
     pub ppu: Option<PPU>,
+    pub apu: Option<APU>,
     cart: Option<RomObject>,
     pub div: u16, //FF04
     tima: u8, //FF05
@@ -75,7 +76,7 @@ impl Bus{
             oam_dma: 0, dma_next_clock: -1, rom_bank_lower: 0, rom_bank_upper: 1, rtc_s: 0, rtc_m: 0, rtc_h: 0, rtc_dl: 0, rtc_dh: 0, enable_ram_rtc: false, // sicher?
             cgb_mode: false, wram_bank: 1, hdma1: 0, hdma2: 0, hdma3: 0, hdma4: 0, hdma5: 0, vram_dma_active: DmaMode::Finished, vram_dma_bytes_remaining: 0,
             vram_dma_pointer: 0, br: false, palette_address: 0, palette_address_obj: 0, ff72: 0, ff73: 0, ff74: 0, ff75: 0, mbc1_bank_mode: false, mbc1_magic_register: 0,
-            sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false,
+            sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false, apu: None
         }
     }
     pub fn new_init(path: &str) -> Self{
@@ -95,8 +96,10 @@ impl Bus{
             cpu.set_initial_state_dmg();
         }
         let ppu = PPU::new(Rc::downgrade(&this));
+        let apu = APU::new(Rc::downgrade(&this));
         self.cpu = Some(cpu);
         self.ppu = Some(ppu);
+        self.apu = Some(apu);
     }
     pub fn read_memory(&mut self, addr: u16) -> u8{
         match self.get_path(addr){
@@ -245,6 +248,8 @@ impl Bus{
             0xFF74 => if self.cgb_mode {self.ff74} else {0xFF},
             0xFF75 => self.ff75,
             0xFFFF => cpu.ie_reg,
+            0xFF10..0xFF27 => self.apu.as_mut().unwrap().on_read(addr),
+            0xFF30..0xFF40 => self.apu.as_mut().unwrap().on_read(addr),
             _ => 0xFF, // IO Register geben das zurück, wenn keine Tasten gedrückt
         }
     }
@@ -464,7 +469,7 @@ impl Bus{
             0xFF54 => if self.cgb_mode {self.hdma4 = val & 0b11110000},
             0xFF55 => if self.cgb_mode {
                 if self.vram_dma_active != DmaMode::Finished {
-                    if (val & 128) == 0 {println!("Terminated"); self.vram_dma_active = DmaMode::Finished; self.vram_dma_bytes_remaining |= 128;}
+                    if (val & 128) == 0 {self.vram_dma_active = DmaMode::Finished; self.vram_dma_bytes_remaining |= 128;}
                 }
                 else{
                     self.vram_dma_pointer = 0;
@@ -472,7 +477,6 @@ impl Bus{
                     if val & 128 > 0{
                         self.vram_dma_active = DmaMode::Hblank;
                         self.hdma_initiated_now = true;
-                        println!("Hblank!");
                     }
                     else{
                         self.vram_dma_active = DmaMode::VramDma;
@@ -513,6 +517,8 @@ impl Bus{
             0xFF73 => self.ff73 = val,
             0xFF74 => self.ff74 = val,
             0xFF75 => self.ff75 = val & 0b01110000,
+            0xFF10..0xFF27 => self.apu.as_mut().unwrap().maybe_write(addr, val),
+            0xFF30..0xFF40 => self.apu.as_mut().unwrap().maybe_write(addr, val),
             0xFFFF => cpu.ie_reg = val,
             _ => (),//panic!("Konnte nicht schreiben!"),
         }
@@ -566,14 +572,21 @@ impl Bus{
     pub fn force_cpu_cycle(&mut self, val: usize){
         self.cpu.as_mut().unwrap().total_cycles = val;
     }
+    pub fn get_audio_sample_left(&self) -> f64{
+        self.apu.as_ref().unwrap().get_sample_left()
+    }
+    pub fn get_audio_sample_right(&self) -> f64{
+        self.apu.as_ref().unwrap().get_sample_right()
+    }
     pub fn clock(&mut self){
         if (!self.br) || (self.cpu.as_mut().unwrap().remaining_steps > 0) {
             let dual_speed = self.cpu.as_mut().unwrap().dual_speed_mode;
 
             // Timer Quelle: https://github.com/Ashiepaws/GBEDG/blob/master/timers/index.md
 
+            let prev_div = (self.div >> 8) as u8;
+
             if self.cpu.as_mut().unwrap().mode != CPUMode::Stopped{
-                // Ist noch falsch, Nur Inkrement bei M-Zyklen?
                 self.div = self.div.wrapping_add(1);
                 if dual_speed{
                     self.div = self.div.wrapping_add(1);
@@ -591,6 +604,13 @@ impl Bus{
             }
 
             self.tima_last_comparison = and_res;
+
+            //apu div clock
+            let new_div = (self.div >> 8) as u8;
+            let bits = if dual_speed {5} else {4};
+            if ((prev_div & (1 << bits)) > 0) && ((new_div & (1 << bits)) == 0){
+                self.apu.as_mut().unwrap().clock_div_apu();
+            }
     
     
             let dma_source = ((self.hdma1 as u16) << 8) | (self.hdma2 as u16);
@@ -628,7 +648,6 @@ impl Bus{
                                 Some(vr) => vr,
                                 None => {
                                     self.vram_dma_active = DmaMode::Finished;
-                                    println!("Dma finished");
                                     0xFF
                                 },
                             }
@@ -642,6 +661,7 @@ impl Bus{
             }
 
             self.ppu.as_mut().unwrap().clock(self.cgb_mode);
+            self.apu.as_mut().unwrap().clock();
     
             if self.dma_next_clock >= 0{
                 let mut oams = self.ppu.as_mut().unwrap().oam.clone();
