@@ -460,7 +460,6 @@ impl PPU{
 
             if self.obj_enable(){
                 let pixel_x = self.cycle.saturating_sub(80) as u8;
-                // for oam in self.secondary_oam.clone(){
                 for i in 0..self.secondary_oam.len(){
                     let oam = &self.secondary_oam[i];
 

@@ -664,7 +664,7 @@ impl Bus{
             self.apu.as_mut().unwrap().clock();
     
             if self.dma_next_clock >= 0{
-                let mut oams = self.ppu.as_mut().unwrap().oam.clone();
+                let mut oams = self.ppu.as_mut().unwrap().oam;
                 for i in 0..160{
                     let v = self.read_memory(i + (self.dma_next_clock as u16));
                     oams[i as usize] = v;

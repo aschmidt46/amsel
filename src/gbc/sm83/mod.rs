@@ -81,7 +81,7 @@ impl Default for Opcode {
     fn default() -> Self { Opcode { mnemonic: (SM83::prefix, "CB-Prefixed".into()), bytes: 0, cycles: Vec::new(), operands: Vec::new() } }
 }
 
-type InstructionFn = fn(&mut SM83, OperandType, OperandType) -> bool;
+type InstructionFn = fn(&mut SM83, &OperandType, &OperandType) -> bool;
 
 #[derive(Default, Clone, PartialEq)]
 pub enum CPUMode{
@@ -99,8 +99,8 @@ pub struct SM83 {
 
     bus: Weak<RefCell<Bus>>,
 
-    opcodes_unprefixed: Vec<Opcode>,
-    opcodes_prefixed: Vec<Opcode>,
+    opcodes_unprefixed: [Opcode; 256],
+    opcodes_prefixed: [Opcode; 256],
 
     pub (crate) mode: CPUMode,
     ime: bool, // IME, erlaubt / verbietet Interrupt Handling
@@ -287,16 +287,15 @@ impl SM83 {
         }
         let oplen = instruction.operands.len();
         let (op1, op2) = match oplen {
-            0 => (OperandType::Dummy, OperandType::Dummy),
-            1 => (instruction.operands[0].name.clone(), OperandType::Dummy),
-            2 => (instruction.operands[0].name.clone(), instruction.operands[1].name.clone()),
-            3 => (instruction.operands[1].name.clone(), instruction.operands[2].name.clone()), // NUR 0xF8 (LD  HL, SP+e8)
+            0 => (&OperandType::Dummy, &OperandType::Dummy),
+            1 => (&instruction.operands[0].name, &OperandType::Dummy),
+            2 => (&instruction.operands[0].name, &instruction.operands[1].name),
+            3 => (&instruction.operands[1].name, &instruction.operands[2].name), // NUR 0xF8 (LD  HL, SP+e8)
             _ => panic!("Mehr als drei Operanden!"),
         };
         // Instruktion durchführen
         let jump = (instruction.mnemonic.0)(self, op1, op2);
         if !jump {self.reg_pc += instruction.bytes as u16;}
-
         // Vergangene Zyklen bestimmen
         if instruction.cycles.len() > 1 {
             if jump { self.remaining_cycles += instruction.cycles[0];
@@ -306,6 +305,7 @@ impl SM83 {
         }
         else { self.remaining_cycles += instruction.cycles[0];
         self.total_cycles += instruction.cycles[0] as usize; }
+
         self.total_operations += 1;
 
         // Verspätetes Setzen von ime nach der Instruktion
@@ -356,7 +356,7 @@ impl SM83 {
     pub fn new() -> Self{
         let (unpref, pref) = SM83::fill_instructions();
         let cpu = SM83 { regs: [0; 8], reg_sp: 0, reg_pc: 0,
-            opcodes_unprefixed: unpref, opcodes_prefixed: pref, bus: Weak::new(), mode: CPUMode::Running,
+            opcodes_unprefixed: unpref.try_into().unwrap(), opcodes_prefixed: pref.try_into().unwrap(), bus: Weak::new(), mode: CPUMode::Running,
             ime: false, set_ime: -1, remaining_cycles: 0, total_cycles: 0, total_operations: 1, ie_reg: 0, if_reg: 0, remaining_steps: 0,
             speed_switch_armed: false, dual_speed_mode: false
         };

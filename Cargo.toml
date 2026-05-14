@@ -10,6 +10,7 @@ debug = true
 arr_macro = "0.2.1"
 bytes = "1.11.1"
 cpal = "0.17.3"
+cxx = "1.0.194"
 eframe = "0.33.3"
 egui = "0.33.3"
 egui_extras = "0.33.3"
