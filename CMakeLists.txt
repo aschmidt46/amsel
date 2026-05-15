@@ -99,6 +99,8 @@ source/nes/mappers/mapper7.cpp source/nes/mappers/mapper7.h
 source/nes/mappers/mappers.cpp source/nes/mappers/mappers.h
 )
 
+add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp)
+
 target_link_libraries(nes-emu whereami)
 target_link_libraries(nes-emu rtaudio)
 target_link_libraries(nes-emu OpenGL::GL)
@@ -108,4 +110,4 @@ target_link_libraries(nes-emu GLEW::GLEW)
 
 
 file(COPY "lib/glew32.dll" DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY "resources/palette.pal" DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY "resources/nes/palette.pal" DESTINATION ${CMAKE_BINARY_DIR})
