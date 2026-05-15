@@ -184,8 +184,6 @@ constexpr const char* fixingPixelArt =
 
 
 
-constexpr const int screenWidth = 256;
-constexpr const int screenHeight = 240;
 
 const std::vector<float> quad{      // UVs      // VertexArrays mit 6 Instanzen zeichnen, dann mit gl_InstanceID Position bestimmen
     0,0,
@@ -203,12 +201,14 @@ class Screen{
 
     unsigned int screenTexture, vao, ssbo, uvssbo, basicShader, crtShader;
 
-    int width = 256, height = 240;
+    int width = 256, height = 240; // Wird immer durch Einstellungen überschrieben
 
     int iResolutionX = width;
     int iResolutionY = height;
 
     void setQSize(float x0, float x1, float y0, float y1);
+
+    void recreateTexture(int width, int height);
 
     public:
     Screen();
@@ -217,8 +217,9 @@ class Screen{
     };
 
     glm::vec4 computeRect(int x, int y);
+    void onSwitchConsole();
     void present();
     void setPixelColor(int x, int y, glm::vec3 c);
-    void copyBufferToScreen(float* buffer);   //float array, jeder Wert ist eine Farbe zwischen 0 und 1
+    void copyBufferToScreen(const float* buffer);   //float array, jeder Wert ist eine Farbe zwischen 0 und 1
     void updateFramebufferSize(int w, int h);
 };

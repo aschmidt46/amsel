@@ -126,7 +126,6 @@ void cleanUp(GLFWwindow* window){
   ImGui::DestroyContext();
   glfwDestroyWindow(window);
   delete screen;
-  delete console;
 }
 
 static void framebufferSizeCallback(GLFWwindow* window, int w, int h){
@@ -180,14 +179,16 @@ void onWindowUpdate()
     wasFullscreen = sharedGui->state->fullScreen;
     onToggleFullscreen(window);
   }
-  if(console->changeTitle){
-    updateTitle(window);
-    console->changeTitle = false;
+  {
+    // std::lock_guard lock{consoleLock};
+    if(console->shouldChangeTitle()){
+      updateTitle(window);
+    }
   }
 }
 
 void updateTitle(GLFWwindow* window){
-  std::filesystem::path p(console->fileName);
+  std::filesystem::path p(console->getTitle());
     auto fn = title + " - " + p.filename().string();
     if(p.filename().string().size()==0){
       fn = title;

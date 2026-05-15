@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include "../console/console.h"
 
 class NES;
 class Gui;
@@ -34,6 +35,7 @@ struct SettingsConfig{
     bool useCRTShader = false;
     // Sound
     float volume = 1.0f;
+    bool unmute = true;
     // Input
     // Controller 1, Primär- und Sekundärbelegung (Sekundär ist nur für Controller)
     std::vector<std::pair<int, int>> controller1;
@@ -65,5 +67,6 @@ extern SettingsConfig globalConfig;
 extern std::vector<int> connectedJoysticks;
 extern Gui* sharedGui;
 extern Screen* screen;
-extern NES* console;
+extern std::shared_ptr<Console> console;
+extern std::mutex consoleLock;
 extern GLFWwindow* window; // Haupt-Viewport

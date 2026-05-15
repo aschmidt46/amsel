@@ -99,8 +99,9 @@ class Ppu{
             spriteShifterCHRLow[i] = 0;
             spriteShifterCHRHigh[i] = 0;
         }
-        backBuffer = new float[256*240*3];
-        pixelBuffer = new float[256*240*3];
+        // rgba
+        backBuffer = new float[256*240*4];
+        pixelBuffer = new float[256*240*4];
         for(int i = 0; i < 256*240*3; i++){
             pixelBuffer[i] = 0;
             backBuffer[i] = 0;

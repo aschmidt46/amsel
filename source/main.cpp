@@ -5,8 +5,9 @@
 #include "framework/windowing.h"
 #include "framework/input.h"
 #include "framework/screen.h"
-#include "nes/nes.h"
 #include "gui.h"
+#include "console/nes_implementation.h"
+#include "console/cgb_implementation.h"
 
 #ifdef NES_ON_WINDOWS
   #include <Windows.h>
@@ -23,7 +24,8 @@ SettingsConfig globalConfig;
 std::vector<int> connectedJoysticks;
 Gui* sharedGui;
 Screen* screen;
-NES* console;
+std::shared_ptr<Console> console;
+std::mutex consoleLock;
 GLFWwindow* window;
 // ---------------------------
 
@@ -34,15 +36,15 @@ int run()
   window  = initWindow();
   initInput();
   screen = new Screen();
-  console = new NES(screen);
-  AudioSystem audiosystem(console);
+  console = std::make_shared<NesImplementation>();
+  AudioSystem audiosystem;
   SharedState state;
   postInit();
   
 #ifdef _DEBUG
-  Gui gui(console, &state, true);
+  Gui gui(&state, true);
 #else
-  Gui gui(console, &state, false);
+  Gui gui(&state, false);
 #endif
 
   sharedGui = &gui;
@@ -59,12 +61,11 @@ int run()
       glfwSwapBuffers(window);
       updateOtherViewports();
 
-    } while (!console->frameReady && !glfwWindowShouldClose(window));
+    } while (!console->frameIsReady() && !glfwWindowShouldClose(window));
 
     {
-      // std::lock_guard<std::mutex> lock(framebufferM);
-      console->frameReady = false;
-      screen->copyBufferToScreen(console->ppu->backBuffer);
+      std::lock_guard lock{consoleLock};
+      screen->copyBufferToScreen(console->accessFramebuffer());
     }
   }
 

@@ -195,14 +195,14 @@ bool gba::CPU::executeDataProc(Word instruction)
                 logicalCarry = op2RegValue & (1u << (amount - 1));
                 operand2Value = op2RegValue >> amount;
                 break;
-            case ArithmeticRight:
+            case ArithmeticRight:{
                 if(amount == 0) amount = 32;
                 logicalCarry = op2RegValue & (1u << (amount - 1));
                 // In der Hoffnung, dass das funktioniert
                 int32_t temp = std::bit_cast<int32_t>(op2RegValue);
                 temp = temp >> amount;
                 operand2Value = std::bit_cast<Word>(temp);
-                break;
+                break;}
             case RotateRight:
                 if(amount > 0){ // RR
                     logicalCarry = op2RegValue & (1u << (amount - 1));
@@ -270,7 +270,7 @@ bool gba::CPU::executeDataProc(Word instruction)
     }
     Word result32 = (Word)result;
     // carry out xor carry in
-    bool overflow = ((result & (1ul << 32)) > 0) != ((result & (1u << 31)) > 0);
+    bool overflow = ((result & (1ull << 32)) > 0) != ((result & (1ull << 31)) > 0);
 
     // Bei Testoperationen nicht Ergebnis schreiben
     if(opcode < 0b1000 || opcode > 0b1011){
@@ -307,9 +307,9 @@ bool gba::CPU::executeDataProc(Word instruction)
             else{
                 StatusRegister cpsr = (StatusRegister)(*registerMap[mode][CPSR]);
                 cpsr.V = Rd!=R15 ? overflow : false; // Korrekt?
-                cpsr.C = (result & (1ul << 32)) > 0;
+                cpsr.C = (result & (1ull << 32)) > 0;
                 cpsr.Z = result32 == 0;
-                cpsr.N = (result32 & (1u << 31)) > 0;
+                cpsr.N = (result32 & (1ull << 31)) > 0;
                 *registerMap[mode][CPSR] = cpsr.raw;
             }
         }

@@ -29,7 +29,6 @@ enum ASMtype{
 
 class NES;
 class Gui{
-    NES* console;
 
     uint8_t lastReadLow = 0;
     uint8_t lastReadHigh = 0;
@@ -46,11 +45,11 @@ class Gui{
     void toggleHalt(){
         if(!state->halt){
             state->halt = true;
-            console->halt = true;
+            // console->halt = true;
         }
         else{
             state->halt = false;
-            console->halt = false;
+            // console->halt = false;
         }
     };
     
@@ -73,7 +72,7 @@ class Gui{
     
     
     public:
-    Gui(NES* c, SharedState* state, bool debug);
+    Gui(SharedState* state, bool debug);
     
     void render();
     void toggleDebugger();

@@ -1,12 +1,10 @@
 #include "audiosystem.h"
 #include <thread>
 
-static NES* nes;
 static AudioSystem* t;
 
-AudioSystem::AudioSystem(NES *console)
+AudioSystem::AudioSystem()
 {
-    nes = console;
     t = this;
 }
 
@@ -24,12 +22,19 @@ int waveFun( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   
   if ( status )
   std::cout << "Stream underflow detected!" << std::endl;
-  
-  for(int i = 0; i < nBufferFrames; i++){
-      while(!nes->clock() && !t->close) {}
-        buffer[2*i + 0] = nes->audioSample;
-        buffer[2*i + 1] = nes->audioSample;
+
+  {
+    std::lock_guard lock{consoleLock};
+    for(int i = 0; i < nBufferFrames; i++){
+      if(!t->close && console->isLoaded()) {
+        console->clockUntilSampleReady();
       }
+
+      auto sample = console->getSample();
+      buffer[2*i + 0] = globalConfig.unmute * globalConfig.volume * sample.first;
+      buffer[2*i + 1] = globalConfig.unmute * globalConfig.volume * sample.second;
+    }
+  }
   return 0;
 }
 

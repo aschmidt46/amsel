@@ -130,6 +130,7 @@ SettingsConfig FileIO::loadSettings(int posX, int posY)
             .maximize = ini["Display"]["Maximize"].as<bool>(),
             .useCRTShader = ini["Display"]["CRTShader"].as<bool>(),
 			.volume = ini["Sound"]["Volume"].as<float>(),
+            .unmute = ini["Sound"]["Unmute"].as<bool>(),
             .controller1 = c1,
             .controller2 = c2,
             .jidController1 = ini["Devices"]["Gamepad_1"].as<int>(),
@@ -148,6 +149,7 @@ void FileIO::saveSettings(const SettingsConfig &config)
     ini["Display"]["Maximize"] = config.maximize;
     ini["Display"]["CRTShader"] = config.useCRTShader;
     ini["Sound"]["Volume"] = config.volume;
+    ini["Sound"]["Unmute"] = config.unmute;
 
     for(int i = 0; i < 8; i++){
         ini["Controller1"]["Action_"+std::to_string(i)+"_primary"] = config.controller1[i].first;

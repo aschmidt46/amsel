@@ -28,6 +28,28 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
+include(FetchContent)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS true)
+
+FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(Corrosion)
+
+find_program(CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
+if (CXXBRIDGE STREQUAL "CXXBRIDGE-NOTFOUND")
+    message("Could not find cxxbridge, trying to install with `cargo install cxxbridge-cmd'")
+    find_program(CARGO cargo PATHS "$ENV{HOME}/.cargo/bin/")
+    if (CARGO STREQUAL "CARGO-NOTFOUND")
+        message(FATAL_ERROR "Requires cargo available in path, install via rustup https://rustup.rs/")
+    endif()
+    execute_process(COMMAND ${CARGO} install cxxbridge-cmd)
+    find_program(CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
+endif()
+
 include_directories(PUBLIC include)
 
 find_package(glfw3 REQUIRED)
@@ -62,6 +84,9 @@ add_library(whereami STATIC
   deps/whereami/whereami.c
 )
 
+# Rust
+corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
+corrosion_add_cxxbridge(rusty_bridge CRATE antons-gbc-emu FILES bridge.rs)
 
 add_executable(nes-emu source/main.cpp
 source/framework/file_io.cpp source/framework/file_io.h
@@ -97,9 +122,12 @@ source/nes/mappers/mapper3.cpp source/nes/mappers/mapper3.h
 source/nes/mappers/mapper4.cpp source/nes/mappers/mapper4.h
 source/nes/mappers/mapper7.cpp source/nes/mappers/mapper7.h
 source/nes/mappers/mappers.cpp source/nes/mappers/mappers.h
+source/console/console.h
+source/console/nes_implementation.h source/console/nes_implementation.cpp
+source/console/cgb_implementation.h source/console/cgb_implementation.cpp
 )
 
-add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp)
+# add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)
 
 target_link_libraries(nes-emu whereami)
 target_link_libraries(nes-emu rtaudio)
@@ -107,6 +135,9 @@ target_link_libraries(nes-emu OpenGL::GL)
 target_link_libraries(nes-emu imgui)
 target_link_libraries(nes-emu glfw)
 target_link_libraries(nes-emu GLEW::GLEW)
+
+target_link_libraries(nes-emu cgbcore)
+target_link_libraries(nes-emu rusty_bridge)
 
 
 file(COPY "lib/glew32.dll" DESTINATION ${CMAKE_BINARY_DIR})

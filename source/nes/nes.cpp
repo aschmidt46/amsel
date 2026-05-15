@@ -8,7 +8,7 @@ using std::chrono::microseconds;
 using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
-NES::NES(Screen* screens){
+NES::NES(){
     cpu = new Cpu();
     ppu = new Ppu();
     apu = new Apu();
@@ -35,8 +35,8 @@ void NES::load(const char *path)
         apu->reset(mapper);
         ppu->init(mapper);
         cpu->init(0xC000, mapper);
-        loaded = true;
         changeTitle = true;
+        loaded = true;
     }
     else{
         MessageStruct m = {
@@ -46,32 +46,31 @@ void NES::load(const char *path)
         };
         messageQueue.enqueue(m);
     }
-    loadNextClock = false;
 }
 
 void NES::eject()
 {
-    if(!loaded) return;
-    fileName = "";
-    loaded = false;
-    ejectNextClock = false;
-    changeTitle = true;
+    // if(!loaded) return;
+    // fileName = "";
+    // loaded = false;
+    // ejectNextClock = false;
+    // changeTitle = true;
 }
 
 void NES::reset()
 {
-    if(loaded)
-    cpu->RESET();
-    mapper->reset();
-    resetNextClock = false;
+    // if(loaded)
+    // cpu->RESET();
+    // mapper->reset();
+    // resetNextClock = false;
 }
 
-bool NES::clock()
+void NES::clock()
 {
-    if(loadNextClock) load(fileName.c_str());
-    if(ejectNextClock) eject();
-    if(resetNextClock) reset();
-    if(!loaded) return false;
+    // if(loadNextClock) load(fileName.c_str());
+    // if(ejectNextClock) eject();
+    // if(resetNextClock) reset();
+    if(!loaded) return;
     
     //Debug
     if(watchBreakpoints && allowedClocks == 0){
@@ -82,7 +81,7 @@ bool NES::clock()
             halt = true;
         }
     }
-    if(halt && allowedClocks==0) return false;
+    if(halt && allowedClocks==0) return;
 
     ppu->clock();
     numClocks++;
@@ -109,11 +108,62 @@ bool NES::clock()
     audioTime += audioTimePerNESClock;
     if(audioTime >= audioTimePerSystemSample){
         audioTime -= audioTimePerSystemSample;
-        audioSample = apu->getSample(sound) * globalConfig.volume;
+        audioSample = apu->getSample(true);
         audioSampleReady = true;
     }
 
-    return audioSampleReady;
+    this->newAudioSample = audioSampleReady;
+}
+
+float *NES::accessFramebuffer()
+{
+    return ppu->backBuffer;
+}
+
+bool NES::frameIsReady()
+{
+    auto tmp = this->frameReady;
+    if(tmp) this->frameReady = false;
+    return tmp;
+}
+
+bool NES::hasAudioSample()
+{
+    auto tmp = this->newAudioSample;
+    if(tmp) this->newAudioSample = false;
+    return tmp;
+}
+
+bool NES::shouldChangeTitle()
+{
+    auto tmp = this->changeTitle;
+    if(tmp) this->changeTitle = false;
+    return tmp;
+}
+
+std::string NES::getTitle()
+{
+    return fileName;
+}
+
+double NES::getSample()
+{
+    return audioSample;
+}
+
+bool NES::isLoaded()
+{
+    return loaded;
+}
+
+float NES::getX()
+{
+    return this->x;
+}
+
+float NES::getY()
+{
+    return this->y;
 }
 
 void NES::setController1Key(bool gamepad, int key, int action)
@@ -131,16 +181,16 @@ void NES::setController2Key(bool gamepad, int key, int action)
 std::pair<std::string, std::vector<int>> NES::getCurrentDisassembly()
 {
     std::lock_guard<std::mutex> lock(debugM);
-    if(!loaded)
-        return {"", {}};
+    // if(!loaded)
+    //     return {"", {}};
     return cpu->getNextNInstructions(10);
 }
 
 std::pair<std::string, std::vector<int>> NES::getOldDisassembly()
 {
     std::lock_guard<std::mutex> lock(debugM);
-    if(!loaded)
-        return {"", {}};
+    // if(!loaded)
+    //     return {"", {}};
     return cpu->getPrev10Instructions();
 }
 
@@ -211,9 +261,9 @@ std::vector<std::string> NES::removeBreakpointOP(std::string bp)
 
 std::string NES::getText(uint16_t addr)
 {
-    if(!loaded){
-        return "";
-    }
+    // if(!loaded){
+    //     return "";
+    // }
     std::string res = "";
     int max = 2000;
     int i = 0;
@@ -226,4 +276,27 @@ std::string NES::getText(uint16_t addr)
         i++;
     }
     return res;
+}
+
+std::string NES::getOpcodeName(size_t index)
+{
+    return this->cpu->opcodes[index].name;
+}
+
+uint8_t NES::readCpuBus(uint16_t addr)
+{
+    return this->cpu->read((uint8_t*)(uintptr_t)addr);
+}
+
+uint16_t NES::readRegister(CpuReg reg)
+{
+    switch(reg){
+        case RegP: return this->cpu->P;
+        case RegPC: return this->cpu->PC;
+        case RegSP: return this->cpu->SP;
+        case RegA: return this->cpu->A;
+        case RegX: return this->cpu->X;
+        case RegY: return this->cpu->Y;
+    }
+    return 0;
 }

@@ -72,7 +72,7 @@ void Ppu::clock()
 
 void Ppu::setPixel(int x, int y, glm::vec3 c)
 {
-    int index = (3*x) + (3*256*y);
+    int index = (x + 256 * y) * 4;//alter Index: (3*x) + (3*256*y);
 	if(x > 255 || y > 239 || x < 0 || y < 0){
 		//std::cout << "Pixel out of bounds: " << "x: " << x << ", y: " << y << std::endl;
 		return;
@@ -80,6 +80,7 @@ void Ppu::setPixel(int x, int y, glm::vec3 c)
     pixelBuffer[index] = c.r;
     pixelBuffer[index + 1] = c.g;
     pixelBuffer[index + 2] = c.b;
+	pixelBuffer[index + 3] = 1.0f;
 }
 
 void Ppu::swapBuffers()

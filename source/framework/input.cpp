@@ -45,11 +45,14 @@ void gamepadCallback(int controller, int key, int action){
   }
 
 
-  if(controller == 1){
-    console->setController1Key(true, key, action);
-  }
-  else{
-    console->setController2Key(true, key, action);
+  {
+    std::lock_guard lock{consoleLock};
+    if(controller == 1){
+      console->setController1Key(true, key, action);
+    }
+    else{
+      console->setController2Key(true, key, action);
+    }
   }
 }
 
@@ -115,20 +118,23 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
   }
 
 
-  if(v==1 && key == GLFW_KEY_ESCAPE){
-    console->reset();
+  {
+    std::lock_guard lock{consoleLock};
+    // if(v==1 && key == GLFW_KEY_ESCAPE){
+    //   console->reset();
+    // }
+    if(v==1 && key == GLFW_KEY_F11){
+      sharedGui->state->fullScreen = !sharedGui->state->fullScreen;
+    }
+    if(v==1 && key == GLFW_KEY_F1){
+      sharedGui->toggleDebugger();
+    }
+    if(v==1 && key == GLFW_KEY_F2){
+      sharedGui->toggleTestRomOutput();
+    }
+    console->setController1Key(false, key, action);
+    console->setController2Key(false, key, action);
   }
-  if(v==1 && key == GLFW_KEY_F11){
-    sharedGui->state->fullScreen = !sharedGui->state->fullScreen;
-  }
-  if(v==1 && key == GLFW_KEY_F1){
-    sharedGui->toggleDebugger();
-  }
-  if(v==1 && key == GLFW_KEY_F2){
-    sharedGui->toggleTestRomOutput();
-  }
-  console->setController1Key(false, key, action);
-  console->setController2Key(false, key, action);
 }
 
 // -1 - Release, 0 - Nichts, 1 - Press

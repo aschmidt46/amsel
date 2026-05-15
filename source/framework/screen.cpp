@@ -1,6 +1,7 @@
 #include "screen.h"
 #include <iostream>
 #include "global.h"
+#include "nes/nes.h"
 
 void Screen::setQSize(float x0, float x1, float y0, float y1)
 {
@@ -18,14 +19,25 @@ void Screen::setQSize(float x0, float x1, float y0, float y1)
     qSize[11] = y1;
 }
 
+void Screen::recreateTexture(int width, int height)
+{
+    glGenTextures(1, &screenTexture);
+    glBindTexture(GL_TEXTURE_2D, screenTexture);
+    glActiveTexture(GL_TEXTURE0);
+
+    glTextureStorage2D(screenTexture, 1, GL_RGBA8, width, height);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Für CRT Shader
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
 Screen::Screen()
 {
     glGenVertexArrays(1, &vao);
     glCreateBuffers(1, &ssbo);
     glCreateBuffers(1, &uvssbo);
-    glGenTextures(1, &screenTexture);
-    glBindTexture(GL_TEXTURE_2D, screenTexture);
-    glActiveTexture(GL_TEXTURE0);
     
     unsigned int vertex, fragmentBasic, fragmentCRT;
     int success;
@@ -99,12 +111,7 @@ Screen::Screen()
 
     glUseProgram(basicShader);
     
-    glTextureStorage2D(screenTexture, 1, GL_RGB8, screenWidth, screenHeight);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Für CRT Shader
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    recreateTexture(256,240);
 
     glNamedBufferData(ssbo, quad.size()*sizeof(float), quad.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
@@ -140,16 +147,16 @@ void Screen::setPixelColor(int x, int y, glm::vec3 c)
     glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGB, GL_FLOAT, &c);
 }
 
-void Screen::copyBufferToScreen(float *buffer)
+void Screen::copyBufferToScreen(const float *buffer)
 {
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, screenWidth, screenHeight, GL_RGB, GL_FLOAT, buffer);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, console->getX(), console->getY(), GL_RGBA, GL_FLOAT, buffer);
 }
 
-// Abbildung des NES-Seitenverhätnisses auf den Bildschirm
+// Abbildung des Konsolen-Seitenverhätnisses auf den Bildschirm
 glm::vec4 Screen::computeRect(int x, int y){
-    float nesX = 256.0;
-    float nesY = 240;
-    float nesAspect = nesX / nesY;
+    float consoleX = console->getX();
+    float consoleY = console->getY();
+    float consoleAspect = consoleX / consoleY;
     float aspect = (float)y/(float)x;
     float cX = (float)x / 2.0;
     float cY = (float)y / 2.0;
@@ -157,13 +164,13 @@ glm::vec4 Screen::computeRect(int x, int y){
     float w = 0;
     
     float x0=0, x1=1, y0=0, y1=1;
-    if(aspect < nesAspect){ // Breiter als Nes
+    if(aspect < consoleAspect){ // Breiter als Nes
         h = y;
-        w = h * nesAspect;
+        w = h * consoleAspect;
     }
     else{ // Schmaler als Nes
         w = x;
-        h = x * (nesY / nesX);
+        h = x * (consoleY / consoleX);
     }
     x0 = cX - (w/2);
     x1 = cX + (w/2);
@@ -185,6 +192,11 @@ glm::vec4 Screen::computeRect(int x, int y){
     return glm::vec4(x0,x1,y0,y1);
 }
 
+void Screen::onSwitchConsole()
+{
+    glDeleteTextures(1, &screenTexture);
+    recreateTexture(console->getX(), console->getY());
+}
 
 // Konstantes Seitenverhältnis
 void Screen::updateFramebufferSize(int w, int h)

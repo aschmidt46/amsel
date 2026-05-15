@@ -17,7 +17,9 @@
 
 #include "framework/file_io.h"
 #include "framework/input.h"
-#include "nes/nes.h"
+#include "console/nes_implementation.h"
+#include "console/cgb_implementation.h"
+#include "framework/screen.h"
 
 std::string ghex(uintptr_t input){
     std::string str = std::format("{:x}", input);
@@ -38,7 +40,7 @@ void removeCharsFromString( std::string &str, const char* charsToRemove ) {
 }
 
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string() + "\\..\\roms", {"iNES Rom-Dateien (.nes)", "*.nes"}, pfd::opt::none);
+  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string() + "\\..\\roms", {"iNES Rom-Dateien (.nes)", "*.nes *.gbc"}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};
@@ -314,16 +316,7 @@ void Gui::assemblyRender()
 
 void Gui::drawRegisters()
 {
-  ImGui::BeginTable("Register", 2);
-  ImGui::TableNextColumn();
-    ImGui::Text(("P: "+std::bitset<8>(console->cpu->P).to_string()).c_str());
-    ImGui::Text(("PC: $"+ghexNorm(ghex(console->cpu->PC), 4)).c_str());
-    ImGui::Text(("SP: $"+ghexNorm(ghex(console->cpu->SP), 2)).c_str());
-  ImGui::TableNextColumn();
-    ImGui::Text(("A: $"+ghexNorm(ghex(console->cpu->A), 2)).c_str());
-    ImGui::Text(("X: $"+ghexNorm(ghex(console->cpu->X), 2)).c_str());
-    ImGui::Text(("Y: $"+ghexNorm(ghex(console->cpu->Y), 2)).c_str());
-  ImGui::EndTable();
+  console->displayRegisters();
 }
 
 void Gui::drawMemoryReader()
@@ -340,7 +333,7 @@ void Gui::drawMemoryReader()
     lastReadHigh = 0;
     if(s.size()>0){
       uint16_t addr = std::stoi(s, 0, 16);
-      lastReadLow = console->cpu->read((uint8_t*)(uintptr_t)addr);
+      lastReadLow = console->readCpuBus(addr);
     }
   }
   ImGui::SameLine();
@@ -351,14 +344,14 @@ void Gui::drawMemoryReader()
     lastReadHigh = 0;
     if(s.size()>0){
       uint16_t addr = std::stoi(s, 0, 16);
-      lastReadLow = console->cpu->read((uint8_t*)(uintptr_t)addr);
-      lastReadHigh = console->cpu->read((uint8_t*)(uintptr_t)addr+1);
+      lastReadLow = console->readCpuBus(addr);
+      lastReadHigh = console->readCpuBus(addr+1);
     }
   }
 
   ImGui::Text(("Hex: "+ghexNorm(ghex(getLastRead()),4)).c_str());
   ImGui::SameLine();
-  ImGui::Text(("Opcode: "+(getLastRead() < 256 ? console->cpu->opcodes[getLastRead()].name : "???")).c_str());
+  ImGui::Text(("Opcode: "+(getLastRead() < 256 ? console->getOpcodeName(getLastRead()) : "???")).c_str());
   ImGui::Text(("Bin: "+std::bitset<16>(getLastRead()).to_string()).c_str());
 }
 
@@ -415,7 +408,7 @@ void Gui::drawBreakpoints()
 
 void Gui::drawDebugger()
 {
-  state->halt = console->halt;
+  // state->halt = console->halt;
   ImGui::Begin("Debugger", &state->showDebugger, ImGuiWindowFlags_NoCollapse);
     ImGui::BeginTable("Debugger", 2, ImGuiTableFlags_BordersInnerV);
       ImGui::TableNextColumn();
@@ -428,7 +421,7 @@ void Gui::drawDebugger()
         ImGui::SameLine();
         if(ImGui::Button("Step")){
           if(state->halt){
-            console->allowedClocks = 1;
+            // console->allowedClocks = 1;
           }
         }
         ImGui::SeparatorText("Register");
@@ -555,9 +548,8 @@ void Gui::buttonChangePrompt(int i, int controller, bool secondary)
   ImGui::PopID();
 }
 
-Gui::Gui(NES *c, SharedState *state, bool debug)
+Gui::Gui(SharedState *state, bool debug)
 {
-  this->console = c;
   this->state = state;
   for(int i = 0; i < 255; i++){
       memInputBuf[i] = 0;
@@ -599,21 +591,34 @@ void Gui::render()
             if(ImGui::MenuItem("Laden")){
               auto result = openFile();
               if(result.has_value()){
-                console->fileName = result.value();
-                console->loadNextClock = true;
+                std::lock_guard lock{consoleLock};
+                if(result.value().substr(result.value().find_last_of(".") + 1) == "nes"){
+                  new (&*console) NesImplementation();  
+                  console->load(result.value().c_str());
+                  screen->onSwitchConsole();
+                }
+                else if(result.value().substr(result.value().find_last_of(".") + 1) == "gb"){
+                  new (&*console) CgbImplementation(result.value().c_str());
+                  screen->onSwitchConsole();
+                }
+                else if(result.value().substr(result.value().find_last_of(".") + 1) == "gbc"){
+                  new (&*console) CgbImplementation(result.value().c_str());
+                  screen->onSwitchConsole();
+                }
+                // console->load(result.value().c_str());
               }
             }
-            if(ImGui::MenuItem("Auswerfen")){
-              if(console->loaded)
-                console->ejectNextClock = true;
-            }
+            // if(ImGui::MenuItem("Auswerfen")){
+            //   if(console->loaded)
+            //     console->ejectNextClock = true;
+            // }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("System"))
         {
-            if (ImGui::MenuItem("RESET", "Esc")) {
-              console->resetNextClock = true;
-            }
+            // if (ImGui::MenuItem("RESET", "Esc")) {
+            //   console->resetNextClock = true;
+            // }
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("Einstellungen")){
@@ -624,7 +629,7 @@ void Gui::render()
           if(ImGui::MenuItem("CRT Shader", "", &globalConfig.useCRTShader)){
             FileIO::getInstance().saveSettings(globalConfig);
           };
-          ImGui::MenuItem("Ton", "", &console->sound);
+          ImGui::MenuItem("Ton", "", &globalConfig.unmute);
           ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("Debug")){
@@ -637,9 +642,9 @@ void Gui::render()
           }
           ImGui::EndMenu();
         }
-        bool s = console->sound;
+        bool s = globalConfig.unmute;
         if(!s) ImGui::BeginDisabled();
-          ImGui::Text(getVolumeIcon(globalConfig.volume, console->sound));
+          ImGui::Text(getVolumeIcon(globalConfig.volume, globalConfig.unmute));
           ImGui::SetNextItemWidth(-10);
           if(ImGui::SliderFloat("", &globalConfig.volume, 0, 1, "%.2f"))
             FileIO::getInstance().saveSettings(globalConfig);
@@ -675,11 +680,11 @@ void Gui::toggleDebugger()
 {
   if(!state->showDebugger){
     state->showDebugger = true;
-    console->produceDisassembly = true;
+    // console->produceDisassembly = true;
   }
   else{
     state->showDebugger = false;
-    console->produceDisassembly = false;
+    // console->produceDisassembly = false;
   }
 }
 

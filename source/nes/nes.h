@@ -16,10 +16,19 @@ class Mapper;
 struct NESFile;
 class Controller;
 
+enum CpuReg : unsigned int{
+    RegP = 0,
+    RegPC = 1,
+    RegSP = 2,
+    RegA = 3,
+    RegX = 4,
+    RegY = 5,
+};
+
 class NES{
-    public:
-    Cpu* cpu;
     private:
+    Ppu* ppu;
+    Cpu* cpu;
     Apu* apu;
     Controller* controller1;
     Controller* controller2;
@@ -31,25 +40,35 @@ class NES{
     const double audioTimePerSystemSample = 1.0 / sampleRate;
     const double audioTimePerNESClock = 1.0 / 5369318.0; // ppu clock
     double audioTime = 0.0;
+    const float x = 256.0f;
+    const float y = 240.0f;
     
-    
-    public:
-    bool loaded = false;
-    bool ejectNextClock = false, loadNextClock = false, resetNextClock = false;
+    bool frameReady = false;
     bool changeTitle = false;
     std::string fileName;
     double audioSample;
-    Ppu* ppu;
-    bool frameReady = false;
-    bool sound = true;
-    NES(Screen* screen);
+    bool loaded = false;
+    // Für CPU-Sync
+    int numClocks = 0;
+    bool newAudioSample = false;
+    
+    public:
+    NES();
     ~NES();
     void load(const char* path);
     void eject();
     void reset();
-    bool clock();
-    // Für CPU-Sync
-    int numClocks = 0;
+    void clock();
+    float* accessFramebuffer();
+    bool frameIsReady();
+    bool hasAudioSample();
+    bool shouldChangeTitle();
+    std::string getTitle();
+    double getSample();
+    bool isLoaded();
+    float getX();
+    float getY();
+
 
     void setController1Key(bool gamepad, int key, int action);
     void setController2Key(bool gamepad, int key, int action);
@@ -75,6 +94,9 @@ class NES{
     std::vector<std::string> addBreakpointOP(std::string bp);
     std::vector<std::string> removeBreakpointOP(std::string bp);
     std::string getText(uint16_t addr);
+    std::string getOpcodeName(size_t index);
+    uint8_t readCpuBus(uint16_t addr);
+    uint16_t readRegister(CpuReg reg);
 
     private:
     std::mutex debugM;
