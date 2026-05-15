@@ -1,6 +1,6 @@
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
-use crate::gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Opcode, OperandType, SM83}};
+use crate::gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, SM83}};
 
 #[derive(PartialEq)]
 enum DmaMode{

@@ -1,9 +1,12 @@
-use std::{cell::RefCell, rc::{Rc, Weak}};
+use std::{cell::RefCell, rc::Weak, sync::atomic::AtomicU8};
 
-use crate::{FRAMEBUFFER, gbc::bus::Bus, index_framebuffer};
+use crate::{gbc::bus::Bus};
+
+const N: usize = 160 * 144 * 4;
 
 
 pub struct PPU{
+    pub (crate) framebuffer: Vec<AtomicU8>,
     pub (crate) vram: [[u8; 0x2000]; 2], // Beide Bänke zu je 8KiB
     pub (crate) bank_select: usize,
     bus: Weak<RefCell<Bus>>,
@@ -35,11 +38,17 @@ pub struct PPU{
     wy_count: u8,
 }
 
+fn create_framebuffer() -> Vec<AtomicU8>{
+    let mut v = Vec::new();
+    v.resize_with(N, || AtomicU8::new(255));
+    v
+}
+
 impl PPU{
     pub fn new(bus: Weak<RefCell<Bus>>) -> Self{
         PPU { vram: [[0; 0x2000]; 2], bus, bank_select: 0 , scanline: 0, cycle: 0, new_scanline: true, stat: 0, lyc: 0, lcdc: 128, scx: 0, scy: 0, wx: 0, wy: 0,
              secondary_oam: Vec::new(), oam: [0; 160], bgp: 0, obp0: 0, obp1: 0, palette_ram: [255; 64], palette_ram_obj: [255; 64], wy_condition: false, wx_condition: false, wy_count: 0,
-             mode_3_penalty: 12, num_frames: 0, last_coincidence_lyc: 255, first_hblank_cycle: false}
+             mode_3_penalty: 12, num_frames: 0, last_coincidence_lyc: 255, first_hblank_cycle: false, framebuffer: create_framebuffer()}
     }
     pub fn write_stat(&mut self, val: u8){
         self.stat = (self.stat & !0b01111000) | (val & 0b01111000);
@@ -386,7 +395,7 @@ impl PPU{
             }
             // Background
 
-            let mut bg_color: (u8, u8, u8) = (255, 255, 255);
+            let mut bg_color: (u8, u8, u8);
             let mut bg_index;
             let mut bg_attr_bit_7: bool;
 
@@ -407,7 +416,7 @@ impl PPU{
             let mut tile_start = if !self.tile_address_mode() && tile_index < 128{   
                 0x1000 + (tile_index as u16 * 16)
             }
-            else { (tile_index as u16 * 16) };
+            else { tile_index as u16 * 16 };
             tile_start += if y_flip {2 * (7-y_offset as u16)} else {2 * (y_offset as u16)};
             let tile_lower =  self.vram[tile_bank][tile_start as usize];
             let tile_higher = self.vram[tile_bank][(tile_start + 1) as usize];
@@ -442,7 +451,7 @@ impl PPU{
                     let mut tile_start = if !self.tile_address_mode() && tile_index < 128{   
                         0x1000 + (tile_index as u16 * 16)
                     }
-                    else { (tile_index as u16 * 16) };
+                    else { tile_index as u16 * 16 };
                     tile_start += if y_flip {2 * (7-y_offset as u16)} else {2 * (y_offset as u16)};
                     let tile_lower =  self.vram[tile_bank][tile_start as usize];
                     let tile_higher = self.vram[tile_bank][(tile_start + 1) as usize];
@@ -526,13 +535,17 @@ impl PPU{
             }
         }
     }
+    #[inline(always)]
+    fn index_framebuffer(x: usize, y: usize) -> usize{
+        (x + 160 * y) * 4 + 0 // Kanal 0 (rot) angenommen
+    }
     fn set_pixel(&self, x: usize, y: usize, r: u8, g: u8, b: u8){
         // match FRAMEBUFFER.lock().as_mut(){
         //     Ok(m) => {
-                FRAMEBUFFER[index_framebuffer(x, y)].store(r, std::sync::atomic::Ordering::Relaxed);
-                FRAMEBUFFER[index_framebuffer(x, y) + 1].store(g, std::sync::atomic::Ordering::Relaxed);
-                FRAMEBUFFER[index_framebuffer(x, y) + 2].store(b, std::sync::atomic::Ordering::Relaxed);
-                FRAMEBUFFER[index_framebuffer(x, y) + 3].store(255, std::sync::atomic::Ordering::Relaxed);
+                self.framebuffer[Self::index_framebuffer(x, y)].store(r, std::sync::atomic::Ordering::Relaxed);
+                self.framebuffer[Self::index_framebuffer(x, y) + 1].store(g, std::sync::atomic::Ordering::Relaxed);
+                self.framebuffer[Self::index_framebuffer(x, y) + 2].store(b, std::sync::atomic::Ordering::Relaxed);
+                self.framebuffer[Self::index_framebuffer(x, y) + 3].store(255, std::sync::atomic::Ordering::Relaxed);
         //     },
         //     Err(e) => panic!("Konnte Framebuffer nicht sperren!"),
         // }

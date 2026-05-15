@@ -22,3 +22,6 @@ serde = "1.0.228"
 serde_json = "1.0.149"
 smol_str = "0.3.6"
 # tinyaudio = "2.0.0"
+
+[build-dependencies]
+cxx-build = "1.0.194"

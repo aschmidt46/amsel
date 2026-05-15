@@ -1,7 +1,5 @@
 use core::panic;
-use std::{cell::RefCell, rc::{Rc, Weak}};
-
-use serde_json::Value;
+use std::{cell::RefCell, rc::{Weak}};
 
 use crate::gbc::bus::Bus;
 
@@ -11,7 +9,7 @@ mod register_tests;
 mod json_parser;
 
 #[derive(Default, Clone, Debug)]
-struct Operand{
+pub struct Operand{
     name: OperandType,
     immediate: bool,
     bytes: Option<i32>,

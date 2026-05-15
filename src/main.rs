@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::{cell::RefCell, ops::Deref, rc::Rc, sync::{Arc, Mutex, atomic::{AtomicU8, Ordering}}, thread, time::{SystemTime, UNIX_EPOCH}};
+
+
+use std::{sync::{Arc, Mutex, atomic::{AtomicU8}}};
 
 use cpal::{self, Device, FromSample, StreamConfig, traits::{DeviceTrait, HostTrait, StreamTrait}};
 use cpal::SizedSample;
@@ -9,21 +11,19 @@ use eframe::egui;
 
 
 
-use egui::{AtomExt, Color32, Key, TextureOptions, Vec2};
+use egui::{Color32, Key, TextureOptions, Vec2};
 use rfd::FileDialog;
 
-use crate::{gbc::CGB};
 
-mod gbc;
 
 use arr_macro::arr;
 
+mod gbc;
+mod bridge;
+use crate::gbc::gbc::CGB;
+
 const N: usize = 160 * 144 * 4;
 static FRAMEBUFFER: [AtomicU8; N] = arr![AtomicU8::new(255); 92160];
-
-pub fn index_framebuffer(x: usize, y: usize) -> usize{
-    (x + 160 * y) * 4 + 0 // Kanal 0 (rot) angenommen
-}
 
 fn e_main(cgb: Arc<Mutex<CGB>>) -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -142,16 +142,16 @@ impl MyApp {
     }
     fn add_key(&mut self, key: egui::Key){
         match self.cgb.lock(){
-            Ok(m) => {
+            Ok(mut m) => {
                 match key{
-                    Key::Enter => m.bus.borrow_mut().press_button(3),
-                    Key::Backspace => m.bus.borrow_mut().press_button(2),
-                    Key::A => m.bus.borrow_mut().press_button(1),
-                    Key::S => m.bus.borrow_mut().press_button(0),
-                    Key::ArrowDown => m.bus.borrow_mut().press_joypad(3),
-                    Key::ArrowUp => m.bus.borrow_mut().press_joypad(2),
-                    Key::ArrowLeft => m.bus.borrow_mut().press_joypad(1),
-                    Key::ArrowRight => m.bus.borrow_mut().press_joypad(0),
+                    Key::Enter => m.press_button(3),
+                    Key::Backspace => m.press_button(2),
+                    Key::A => m.press_button(1),
+                    Key::S => m.press_button(0),
+                    Key::ArrowDown => m.press_joypad(3),
+                    Key::ArrowUp => m.press_joypad(2),
+                    Key::ArrowLeft => m.press_joypad(1),
+                    Key::ArrowRight => m.press_joypad(0),
                     _ => ()
                 }
             },
@@ -160,16 +160,16 @@ impl MyApp {
     }
     fn remove_key(&mut self, key: egui::Key){
         match self.cgb.lock(){
-            Ok(m) => {
+            Ok(mut m) => {
                 match key{
-                    Key::Enter => m.bus.borrow_mut().release_button(3),
-                    Key::Backspace => m.bus.borrow_mut().release_button(2),
-                    Key::A => m.bus.borrow_mut().release_button(1),
-                    Key::S => m.bus.borrow_mut().release_button(0),
-                    Key::ArrowDown => m.bus.borrow_mut().release_joypad(3),
-                    Key::ArrowUp => m.bus.borrow_mut().release_joypad(2),
-                    Key::ArrowLeft => m.bus.borrow_mut().release_joypad(1),
-                    Key::ArrowRight => m.bus.borrow_mut().release_joypad(0),
+                    Key::Enter => m.release_button(3),
+                    Key::Backspace => m.release_button(2),
+                    Key::A => m.release_button(1),
+                    Key::S => m.release_button(0),
+                    Key::ArrowDown => m.release_joypad(3),
+                    Key::ArrowUp => m.release_joypad(2),
+                    Key::ArrowLeft => m.release_joypad(1),
+                    Key::ArrowRight => m.release_joypad(0),
                     _ => ()
                 }
             },
@@ -235,8 +235,14 @@ impl eframe::App for MyApp {
             unsafe{
                 let mut colimg = egui::ColorImage::filled([160,144], Color32::WHITE);
                 let iterable = colimg.as_raw_mut();
-                for i in 0..160*144*4 {
-                    iterable[i] = FRAMEBUFFER[i].as_ptr().read();
+                match self.cgb.lock(){
+                    Ok(m) => {
+                        let fb = m.access_framebuffer();
+                        for i in 0..160*144*4 {
+                            iterable[i] = (*fb.offset(i as isize)).as_ptr().read();
+                        }
+                    },
+                    Err(e) => panic!("Lock fehler: {}", e),
                 }
                 let texture: &mut egui::TextureHandle = self.texture.get_or_insert_with(|| {
                     // Load the texture only once.
