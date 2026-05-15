@@ -7,6 +7,7 @@ const N: usize = 160 * 144 * 4;
 
 pub struct PPU{
     pub (crate) framebuffer: Vec<AtomicU8>,
+    pub (crate) float_framebuffer: Vec<f32>,
     pub (crate) vram: [[u8; 0x2000]; 2], // Beide Bänke zu je 8KiB
     pub (crate) bank_select: usize,
     bus: Weak<RefCell<Bus>>,
@@ -44,11 +45,18 @@ fn create_framebuffer() -> Vec<AtomicU8>{
     v
 }
 
+fn create_float_framebuffer() -> Vec<f32>{
+    let mut v = Vec::new();
+    v.resize_with(N, || 1.0);
+    v
+}
+
+
 impl PPU{
     pub fn new(bus: Weak<RefCell<Bus>>) -> Self{
         PPU { vram: [[0; 0x2000]; 2], bus, bank_select: 0 , scanline: 0, cycle: 0, new_scanline: true, stat: 0, lyc: 0, lcdc: 128, scx: 0, scy: 0, wx: 0, wy: 0,
              secondary_oam: Vec::new(), oam: [0; 160], bgp: 0, obp0: 0, obp1: 0, palette_ram: [255; 64], palette_ram_obj: [255; 64], wy_condition: false, wx_condition: false, wy_count: 0,
-             mode_3_penalty: 12, num_frames: 0, last_coincidence_lyc: 255, first_hblank_cycle: false, framebuffer: create_framebuffer()}
+             mode_3_penalty: 12, num_frames: 0, last_coincidence_lyc: 255, first_hblank_cycle: false, framebuffer: create_framebuffer(), float_framebuffer: create_float_framebuffer()}
     }
     pub fn write_stat(&mut self, val: u8){
         self.stat = (self.stat & !0b01111000) | (val & 0b01111000);
@@ -539,18 +547,18 @@ impl PPU{
     fn index_framebuffer(x: usize, y: usize) -> usize{
         (x + 160 * y) * 4 + 0 // Kanal 0 (rot) angenommen
     }
-    fn set_pixel(&self, x: usize, y: usize, r: u8, g: u8, b: u8){
-        // match FRAMEBUFFER.lock().as_mut(){
-        //     Ok(m) => {
-                self.framebuffer[Self::index_framebuffer(x, y)].store(r, std::sync::atomic::Ordering::Relaxed);
-                self.framebuffer[Self::index_framebuffer(x, y) + 1].store(g, std::sync::atomic::Ordering::Relaxed);
-                self.framebuffer[Self::index_framebuffer(x, y) + 2].store(b, std::sync::atomic::Ordering::Relaxed);
-                self.framebuffer[Self::index_framebuffer(x, y) + 3].store(255, std::sync::atomic::Ordering::Relaxed);
-        //     },
-        //     Err(e) => panic!("Konnte Framebuffer nicht sperren!"),
-        // }
+    fn set_pixel(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8){
+        self.framebuffer[Self::index_framebuffer(x, y)].store(r, std::sync::atomic::Ordering::Relaxed);
+        self.framebuffer[Self::index_framebuffer(x, y) + 1].store(g, std::sync::atomic::Ordering::Relaxed);
+        self.framebuffer[Self::index_framebuffer(x, y) + 2].store(b, std::sync::atomic::Ordering::Relaxed);
+        self.framebuffer[Self::index_framebuffer(x, y) + 3].store(255, std::sync::atomic::Ordering::Relaxed);
+
+        self.float_framebuffer[Self::index_framebuffer(x, y)] = r as f32 / 255.0;
+        self.float_framebuffer[Self::index_framebuffer(x, y) + 1] = g as f32 / 255.0;
+        self.float_framebuffer[Self::index_framebuffer(x, y) + 2] = b as f32 / 255.0;
+        self.float_framebuffer[Self::index_framebuffer(x, y) + 3] = 1.0;
     }
-    fn set_pixel_palette(&self, x: usize, y: usize, val: u8){
+    fn set_pixel_palette(&mut self, x: usize, y: usize, val: u8){
         let col = 255 - ((val as f32 / 3.0) * 255.0) as u8;
         self.set_pixel(x, y, col, col, col);
     }

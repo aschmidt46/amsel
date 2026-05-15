@@ -32,7 +32,8 @@ pub(crate) mod gbc{
         pub fn new(path: &str) -> Self{
             let bus: Rc<RefCell<Bus>> = Rc::new(RefCell::new(Bus::new_init(path)));
             bus.borrow_mut().create_components(bus.clone());
-            CGB { bus, has_frame: false, audio_time: 0.0, audio_sample_ready: false, audio_sample_left: 0.0, audio_sample_right: 0.0, sample_rate: 20000.0, audio_time_per_clock: 0.0, audio_time_per_sample: 0.0 }
+            CGB { bus, has_frame: false, audio_time: 0.0, audio_sample_ready: false, audio_sample_left: 0.0, audio_sample_right: 0.0
+                , sample_rate: 20000.0, audio_time_per_clock: 1.0 / CGB_CLOCK, audio_time_per_sample: 1.0 / 20000.0 }
         }
     
         pub fn has_frame(&mut self) -> bool{
@@ -57,6 +58,9 @@ pub(crate) mod gbc{
     
         pub fn access_framebuffer(&self) -> *const AtomicU8{
             (self.bus.borrow()).ppu.as_ref().unwrap().framebuffer.as_ptr()
+        }
+        pub fn access_float_framebuffer(&self) -> *const f32{
+            (self.bus.borrow()).ppu.as_ref().unwrap().float_framebuffer.as_ptr()
         }
     
         pub fn set_sample_rate(&mut self, sample_rate: f64){
@@ -92,6 +96,12 @@ pub(crate) mod gbc{
                 self.audio_sample_left = self.bus.borrow().get_audio_sample_left();
                 self.audio_sample_right = self.bus.borrow().get_audio_sample_right();
                 self.audio_sample_ready = true;
+            }
+        }
+
+        pub fn clock_until_sample_ready(&mut self){
+            while !self.audio_sample_ready(){
+                self.clock();
             }
         }
     }

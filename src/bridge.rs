@@ -27,7 +27,7 @@ pub mod ffi{
 
         fn release_joypad(cgb: &mut Box<CGB>, b: usize);
     
-        fn access_framebuffer(cgb: &Box<CGB>) -> *const u8;
+        fn access_framebuffer(cgb: &Box<CGB>) -> *const f32;
     
         fn set_sample_rate(cgb: &mut Box<CGB>, sample_rate: f64);
     
@@ -36,7 +36,8 @@ pub mod ffi{
     
         fn get_stereo(cgb: &Box<CGB>) -> StereoTuple;
     
-        fn clock(cgb: &mut Box<CGB>);
+        fn cgb_clock(cgb: &mut Box<CGB>);
+        fn cgb_clock_until_samle_ready(cgb: &mut Box<CGB>);
     }
 }
 
@@ -61,8 +62,8 @@ fn press_joypad(cgb: &mut Box<CGB>, b: usize){
 fn release_joypad(cgb: &mut Box<CGB>, b: usize){
     cgb.release_joypad(b);
 }
-fn access_framebuffer(cgb: &Box<CGB>) -> *const u8{
-    cgb.access_framebuffer().cast()
+fn access_framebuffer(cgb: &Box<CGB>) -> *const f32{
+    cgb.access_float_framebuffer()
 }
 fn set_sample_rate(cgb: &mut Box<CGB>, sample_rate: f64){
     cgb.set_sample_rate(sample_rate);
@@ -77,6 +78,10 @@ fn get_stereo(cgb: &Box<CGB>) -> StereoTuple{
     let t = cgb.get_stereo();
     StereoTuple {left: t.0, right: t.1}
 }
-fn clock(cgb: &mut Box<CGB>){
+fn cgb_clock(cgb: &mut Box<CGB>){
     cgb.clock();
+}
+
+fn cgb_clock_until_samle_ready(cgb: &mut Box<CGB>){
+    cgb.clock_until_sample_ready();
 }
