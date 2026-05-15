@@ -19,7 +19,6 @@ use rfd::FileDialog;
 use arr_macro::arr;
 
 mod gbc;
-mod bridge;
 use crate::gbc::gbc::CGB;
 
 const N: usize = 160 * 144 * 4;
