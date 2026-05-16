@@ -3,8 +3,6 @@
 #include <vector>
 #include <cstdint>
 
-enum CpuReg : unsigned int;
-
 class Console{
     public:
 
@@ -42,8 +40,9 @@ class Console{
     virtual std::string getText(uint16_t addr) = 0;
     virtual std::string getOpcodeName(size_t index) = 0;
     virtual uint8_t readCpuBus(uint16_t addr) = 0;
-    virtual uint16_t readRegister(CpuReg reg) = 0;
 
     virtual void displayRegisters() = 0;
 };
+
+void createConsole(const char* path);
 

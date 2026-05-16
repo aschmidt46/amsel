@@ -22,7 +22,7 @@
 
 int width = 256, height = 240;
 
-std::string title = "Anton's NES-Emulator";
+std::string title = "Anton's MSE";
 
 bool wasFullscreen = false;
 
@@ -75,14 +75,6 @@ GLFWwindow* initWindow(){
   int autoX, autoY;
   glfwGetWindowPos(window, &autoX, &autoY);
 
-  // Config laden
-  globalConfig = FileIO::getInstance().loadSettings(autoX, autoY);
-  glfwSetWindowPos(window, globalConfig.posX, globalConfig.posY);
-  glfwSetWindowSize(window, globalConfig.sizeX, globalConfig.sizeY);
-  if(globalConfig.maximize)
-    glfwMaximizeWindow(window);
-  
-
   // Verzeichnis finden
   int pathLength = wai_getExecutablePath(NULL, 0, NULL);
   char* p = (char*)malloc(pathLength + 1);
@@ -92,6 +84,16 @@ GLFWwindow* initWindow(){
   std::filesystem::path path(p);
   free(p);
   exeDir = path.parent_path();
+
+
+  // Config laden
+  globalConfig = FileIO::getInstance().loadSettings(autoX, autoY);
+  glfwSetWindowPos(window, globalConfig.posX, globalConfig.posY);
+  glfwSetWindowSize(window, globalConfig.sizeX, globalConfig.sizeY);
+  if(globalConfig.maximize)
+    glfwMaximizeWindow(window);
+  
+
 
   glfwSetWindowMaximizeCallback(window, maximizeCallback);
   glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);

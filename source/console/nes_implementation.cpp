@@ -133,11 +133,6 @@ uint8_t NesImplementation::readCpuBus(uint16_t addr)
     return this->console.readCpuBus(addr);
 }
 
-uint16_t NesImplementation::readRegister(CpuReg reg)
-{
-    return this->console.readRegister(reg);
-}
-
 void NesImplementation::displayRegisters()
 {
     ImGui::BeginTable("Register", 2);

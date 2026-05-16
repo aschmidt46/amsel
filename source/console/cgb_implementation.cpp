@@ -216,10 +216,6 @@ uint8_t CgbImplementation::readCpuBus(uint16_t addr)
     return 0;
 }
 
-uint16_t CgbImplementation::readRegister(CpuReg reg)
-{
-    return 0;
-}
 
 void CgbImplementation::displayRegisters()
 {

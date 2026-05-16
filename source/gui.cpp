@@ -40,11 +40,14 @@ void removeCharsFromString( std::string &str, const char* charsToRemove ) {
 }
 
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string() + "\\..\\roms", {"Rom-Dateien (.nes, .gb, .gbc)", "*.nes *.gbc *.gb"}, pfd::opt::none);
+  auto result = pfd::open_file("Rom auswählen", globalConfig.directory, {"Rom-Dateien (.nes, .gb, .gbc)", "*.nes *.gbc *.gb"}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};
   }
+  std::replace(res[0].begin(), res[0].end(), '\\', '/');
+  globalConfig.directory = res[0].substr(0, res[0].find_last_of('/'));
+  FileIO::getInstance().saveSettings(globalConfig);
   return res[0];
 }
 
@@ -591,21 +594,7 @@ void Gui::render()
             if(ImGui::MenuItem("Laden")){
               auto result = openFile();
               if(result.has_value()){
-                std::lock_guard lock{consoleLock};
-                if(result.value().substr(result.value().find_last_of(".") + 1) == "nes"){
-                  new (&*console) NesImplementation();  
-                  console->load(result.value().c_str());
-                  screen->onSwitchConsole();
-                }
-                else if(result.value().substr(result.value().find_last_of(".") + 1) == "gb"){
-                  new (&*console) CgbImplementation(result.value().c_str());
-                  screen->onSwitchConsole();
-                }
-                else if(result.value().substr(result.value().find_last_of(".") + 1) == "gbc"){
-                  new (&*console) CgbImplementation(result.value().c_str());
-                  screen->onSwitchConsole();
-                }
-                // console->load(result.value().c_str());
+                createConsole(result.value().c_str());
               }
             }
             // if(ImGui::MenuItem("Auswerfen")){
@@ -614,13 +603,13 @@ void Gui::render()
             // }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("System"))
-        {
-            // if (ImGui::MenuItem("RESET", "Esc")) {
-            //   console->resetNextClock = true;
-            // }
-            ImGui::EndMenu();
-        }
+        // if (ImGui::BeginMenu("System"))
+        // {
+        //     // if (ImGui::MenuItem("RESET", "Esc")) {
+        //     //   console->resetNextClock = true;
+        //     // }
+        //     ImGui::EndMenu();
+        // }
         if(ImGui::BeginMenu("Einstellungen")){
           if(ImGui::MenuItemEx("Steuerung", ICON_FA_UP_RIGHT_FROM_SQUARE, "", state->showInput)){
             state->showInput = !state->showInput;

@@ -26,6 +26,8 @@ struct MessageStruct{
 };
 
 struct SettingsConfig{
+    //General
+    std::string directory; // Suchverzeichnis für roms
     // Display
     int posX = 0; // Wird automatisch bestimmt, dann von GLFW abgefragt und hier eingetragen
     int posY = 0;

@@ -54,6 +54,8 @@ void initSettings(SettingsConfig &c){
   c.controller2[6].second = 19;
   c.controller2[7].second = 18;
 
+  c.directory = exeDir.generic_string();
+
 }
 
 void FileIO::writeDefaultSettings(const std::string &fileName, int posX, int posY)
@@ -123,6 +125,7 @@ SettingsConfig FileIO::loadSettings(int posX, int posY)
     }
 
     return SettingsConfig{
+            .directory = ini["General"]["WorkDirectory"].as<std::string>(),
             .posX = ini["Display"]["WindowPosX"].as<int>(),
             .posY = ini["Display"]["WindowPosY"].as<int>(),
             .sizeX = ini["Display"]["WindowSizeX"].as<int>(),
@@ -142,8 +145,9 @@ void FileIO::saveSettings(const SettingsConfig &config)
 {
     ini::IniFile ini;
 
-    ini["Display"]["WindowPosX"] =config. posX;
-    ini["Display"]["WindowPosY"] =config. posY;
+    ini["General"]["WorkDirectory"] = config.directory;
+    ini["Display"]["WindowPosX"] = config.posX;
+    ini["Display"]["WindowPosY"] = config.posY;
     ini["Display"]["WindowSizeX"] = config.sizeX;
     ini["Display"]["WindowSizeY"] = config.sizeY;
     ini["Display"]["Maximize"] = config.maximize;

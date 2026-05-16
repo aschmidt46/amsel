@@ -34,7 +34,6 @@ class NesImplementation : public Console{
     std::string getText(uint16_t addr) override;
     std::string getOpcodeName(size_t index) override;
     uint8_t readCpuBus(uint16_t addr) override;
-    uint16_t readRegister(CpuReg reg) override;
 
     void displayRegisters() override;
 };
