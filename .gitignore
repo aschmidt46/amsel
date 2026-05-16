@@ -12,4 +12,5 @@ compile_commands.json
 roms/
 gbaroms/
 debug/
+deps/
 resources/tests
