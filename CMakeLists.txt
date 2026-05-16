@@ -32,12 +32,41 @@ include(FetchContent)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
+file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/deps")
+message("Fetching dependencies...")
+
 FetchContent_Declare(
     Corrosion
     GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
     GIT_TAG master
 )
 FetchContent_MakeAvailable(Corrosion)
+
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG        v1.92.5-docking # release-1.10.0
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/imgui"
+  )
+FetchContent_MakeAvailable(imgui)
+  
+set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
+FetchContent_Declare(
+  rtaudio
+  GIT_REPOSITORY  https://github.com/thestk/rtaudio.git
+  GIT_TAG         6.0.1
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/rtaudio"
+)
+FetchContent_MakeAvailable(rtaudio)
+
+set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
+FetchContent_Declare(
+  whereami
+  GIT_REPOSITORY  https://github.com/gpakosz/whereami.git
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/whereami"
+)
+FetchContent_MakeAvailable(whereami)
+
 
 find_program(CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
 if (CXXBRIDGE STREQUAL "CXXBRIDGE-NOTFOUND")
@@ -58,15 +87,14 @@ find_package(OpenGL REQUIRED)
 
 find_package(GLEW REQUIRED)
 
-set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
-add_subdirectory(deps/rtaudio)
+# add_subdirectory(deps/rtaudio)
 
 include_directories(PUBLIC .)
 include_directories(PUBLIC source)
 include_directories(PUBLIC deps/imgui)
 include_directories(PUBLIC deps/imgui/backends)
 include_directories(PUBLIC deps/rtaudio)
-include_directories(PUBLIC deps/whereami)
+include_directories(PUBLIC deps/whereami/src)
 
 
 add_library(imgui STATIC
@@ -81,7 +109,7 @@ add_library(imgui STATIC
 )
 
 add_library(whereami STATIC
-  deps/whereami/whereami.c
+  deps/whereami/src/whereami.c
 )
 
 # Rust

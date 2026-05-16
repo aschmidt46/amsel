@@ -40,7 +40,7 @@ void removeCharsFromString( std::string &str, const char* charsToRemove ) {
 }
 
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string() + "\\..\\roms", {"iNES Rom-Dateien (.nes)", "*.nes *.gbc"}, pfd::opt::none);
+  auto result = pfd::open_file("Rom auswählen", std::filesystem::current_path().string() + "\\..\\roms", {"Rom-Dateien (.nes, .gb, .gbc)", "*.nes *.gbc *.gb"}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};

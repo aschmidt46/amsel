@@ -1,7 +1,3 @@
-[submodule "deps/imgui"]
-	path = deps/imgui
-	url = https://github.com/ocornut/imgui.git
-	branch = docking
 [submodule "source/cgb"]
 	path = source/cgb
 	url = https://gitea.kassade.de/anton/antons-gbc-emu.git
