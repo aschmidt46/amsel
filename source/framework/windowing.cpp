@@ -22,7 +22,7 @@
 
 int width = 256, height = 240;
 
-std::string title = "Anton's MSE";
+std::string title = "AMSEL";
 
 bool wasFullscreen = false;
 
@@ -106,7 +106,7 @@ GLFWwindow* initWindow(){
   glfwSetWindowMaximizeCallback(window, maximizeCallback);
   glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
   glfwSetWindowPosCallback(window, positionCallback);
-  const GLFWimage glfwIcon = {200,200,icon};
+  const GLFWimage glfwIcon = {400,400,icon};
   glfwSetWindowIcon(window, 1, &glfwIcon);
 
   float xscale, yscale;
@@ -131,6 +131,7 @@ void postInit()
 }
 
 void cleanUp(GLFWwindow* window){
+  delete console;
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();

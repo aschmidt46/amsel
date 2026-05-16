@@ -26,7 +26,7 @@ SettingsConfig globalConfig;
 std::vector<int> connectedJoysticks;
 Gui* sharedGui;
 Screen* screen;
-std::shared_ptr<Console> console;
+Console* console;
 std::mutex consoleLock;
 GLFWwindow* window;
 // ---------------------------
@@ -38,7 +38,7 @@ int run()
   window  = initWindow();
   initInput();
   screen = new Screen();
-  console = std::make_shared<NesImplementation>();
+  console = new NesImplementation();
   AudioSystem audiosystem;
   SharedState state;
   postInit();

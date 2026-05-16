@@ -1,4 +1,4 @@
-# Antons MS-Emulator (AMSE)
+# Antons Multi-System-Emulator-Library (AMSEL)
 
 Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB)
 
@@ -12,7 +12,7 @@ Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB)
 -   Nintendo Gameboy Color (unterstützt auch originale Gameboy-Spiele)
 
 ## Features
-- Persistente Einstellungen (Lautstärke, Tastenbelegungen, Fenstergröße, etc.)
+- Persistente Einstellungen (Lautstärke, Tastenbelegungen, Sprache, etc.)
 - Persistente Speicherstände (aktuell nur NES)
 - Visueller Debugger / Disassembler
 - Lokaler Mehrspieler (NES)

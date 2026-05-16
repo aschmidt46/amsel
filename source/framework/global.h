@@ -73,6 +73,6 @@ extern SettingsConfig globalConfig;
 extern std::vector<int> connectedJoysticks;
 extern Gui* sharedGui;
 extern Screen* screen;
-extern std::shared_ptr<Console> console;
+extern Console* console;
 extern std::mutex consoleLock;
 extern GLFWwindow* window; // Haupt-Viewport

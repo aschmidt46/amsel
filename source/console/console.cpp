@@ -8,12 +8,13 @@ void createConsole(const char *path)
 {
     std::lock_guard lock{consoleLock};
     std::string filename(path);
+    delete console;
     if(filename.substr(filename.find_last_of(".") + 1) == "nes"){
-      new (&*console) NesImplementation();
-      console->load(filename.c_str());
+        console = new NesImplementation();
+        console->load(filename.c_str());
     }
     else if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
-      new (&*console) CgbImplementation(filename.c_str());
+        console = new CgbImplementation(filename.c_str());
     }
     else return;
 
