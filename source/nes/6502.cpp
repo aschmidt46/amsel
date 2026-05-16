@@ -178,8 +178,8 @@ void Cpu::unimplemented(const std::string &instruction)
 {
     MessageStruct m{
         .type = MT_ERROR,
-        .title = "Emulator-Fehler!",
-        .content = "Eine nicht-implementierte Instruktion wurde ausgeführt. ("+instruction+")"
+        .title = locale.getTranslation(EmulatorError),
+        .content = std::vformat(locale.getTranslation(UnimplementedInstruction), std::make_format_args(instruction))
     };
     messageQueue.enqueue(m);
 }
@@ -188,8 +188,8 @@ void Cpu::falseImplementation(const std::string &instruction)
 {
     MessageStruct m{
         .type = MT_WARNING,
-        .title = "Emulator-Fehler!",
-        .content = "Eine unsichere Instruktion wurde ausgeführt. ("+instruction+")"
+        .title = locale.getTranslation(EmulatorError),
+        .content = std::vformat(locale.getTranslation(UnsafeInstruction), std::make_format_args(instruction))
     };
     messageQueue.enqueue(m);
 }
@@ -557,8 +557,8 @@ uint8_t Cpu::BRK(uint8_t *mem)
 
     MessageStruct m{
         .type = MT_WARNING,
-        .title = "Achtung!",
-        .content = "BRK wurde ausgelöst."
+        .title = locale.getTranslation(EmulatorWarning),
+        .content = locale.getTranslation(BRKExecuted)
     };
     messageQueue.enqueue(m);
 

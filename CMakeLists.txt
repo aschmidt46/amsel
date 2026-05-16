@@ -59,7 +59,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(rtaudio)
 
-set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
 FetchContent_Declare(
   whereami
   GIT_REPOSITORY  https://github.com/gpakosz/whereami.git
@@ -154,6 +153,8 @@ source/console/console.h
 source/console/nes_implementation.h source/console/nes_implementation.cpp
 source/console/cgb_implementation.h source/console/cgb_implementation.cpp
 source/console/console.cpp
+source/framework/locale.h
+source/framework/locale.cpp
 )
 
 # add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)
@@ -171,3 +172,4 @@ target_link_libraries(nes-emu rusty_bridge)
 
 file(COPY "lib/glew32.dll" DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY "resources/nes/palette.pal" DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/source/framework/locales DESTINATION ${CMAKE_BINARY_DIR}/)

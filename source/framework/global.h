@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "../console/console.h"
+#include "locale.h"
 
 class NES;
 class Gui;
@@ -28,6 +29,7 @@ struct MessageStruct{
 struct SettingsConfig{
     //General
     std::string directory; // Suchverzeichnis für roms
+    std::string language = "en";
     // Display
     int posX = 0; // Wird automatisch bestimmt, dann von GLFW abgefragt und hier eingetragen
     int posY = 0;
@@ -62,6 +64,8 @@ enum Action{
 
 // Globaler Zustand:
 
+extern Locale locale;
+extern std::vector<Locale> availableLocales;
 extern std::mutex framebufferM;
 extern std::filesystem::path exeDir;
 extern moodycamel::BlockingConcurrentQueue<MessageStruct> messageQueue;

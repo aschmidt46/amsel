@@ -81,7 +81,7 @@ bool FileIO::createSave(std::string romName)
         std::ofstream ofs(saveDirectory / (romName + ".sav"));
         ofs.close();
         int stem = romName.find_last_of('.');
-        MessageStruct m = {.type = MT_SUCCESS, .title = romName.substr(0, stem), .content = "Ein Speicherstand wurde erstellt!"};
+        MessageStruct m = {.type = MT_SUCCESS, .title = romName.substr(0, stem), .content = locale.getTranslation(SaveFileCreated)};
         messageQueue.enqueue(m);
         return true;
     }
@@ -126,6 +126,7 @@ SettingsConfig FileIO::loadSettings(int posX, int posY)
 
     return SettingsConfig{
             .directory = ini["General"]["WorkDirectory"].as<std::string>(),
+            .language = ini["General"]["Language"].as<std::string>(),
             .posX = ini["Display"]["WindowPosX"].as<int>(),
             .posY = ini["Display"]["WindowPosY"].as<int>(),
             .sizeX = ini["Display"]["WindowSizeX"].as<int>(),
@@ -146,6 +147,7 @@ void FileIO::saveSettings(const SettingsConfig &config)
     ini::IniFile ini;
 
     ini["General"]["WorkDirectory"] = config.directory;
+    ini["General"]["Language"] = config.language;
     ini["Display"]["WindowPosX"] = config.posX;
     ini["Display"]["WindowPosY"] = config.posY;
     ini["Display"]["WindowSizeX"] = config.sizeX;

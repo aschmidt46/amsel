@@ -17,6 +17,8 @@
 
 // Globale Variablen
 // ---------------------------
+Locale locale;
+std::vector<Locale> availableLocales;
 std::mutex framebufferM;
 std::filesystem::path exeDir;
 moodycamel::BlockingConcurrentQueue<MessageStruct> messageQueue;

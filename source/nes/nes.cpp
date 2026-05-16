@@ -39,10 +39,11 @@ void NES::load(const char *path)
         loaded = true;
     }
     else{
+        const auto mapper = Slot->header.getMapper();
         MessageStruct m = {
             .type=MT_ERROR,
-            .title="Error",
-            .content="Dieses Spiel (iNES-Mapper "+std::to_string(Slot->header.getMapper())+") wird nicht unterstützt, weil der entsprechende Mapper nicht implementiert ist."
+            .title=locale.getTranslation(GameError),
+            .content=std::vformat(locale.getTranslation(MapperNotSupported), std::make_format_args(mapper))
         };
         messageQueue.enqueue(m);
     }

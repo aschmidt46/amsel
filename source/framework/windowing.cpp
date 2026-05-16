@@ -92,6 +92,14 @@ GLFWwindow* initWindow(){
   glfwSetWindowSize(window, globalConfig.sizeX, globalConfig.sizeY);
   if(globalConfig.maximize)
     glfwMaximizeWindow(window);
+
+  locale = Locale(exeDir / "locales" / (globalConfig.language+".json"));
+
+  for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(exeDir / "locales")){
+    if(dirEntry.is_regular_file() && dirEntry.path().extension() == ".json"){
+      availableLocales.push_back(Locale(dirEntry.path()));
+    }
+  }
   
 
 

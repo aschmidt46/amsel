@@ -40,7 +40,7 @@ void removeCharsFromString( std::string &str, const char* charsToRemove ) {
 }
 
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file("Rom auswählen", globalConfig.directory, {"Rom-Dateien (.nes, .gb, .gbc)", "*.nes *.gbc *.gb"}, pfd::opt::none);
+  auto result = pfd::open_file(locale.getTranslation(ChooseRom), globalConfig.directory, {locale.getTranslation(RomFilter), "*.nes *.gbc *.gb"}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};
@@ -81,7 +81,7 @@ const char* getVolumeIcon(float f, bool enabled){
   }
 }
 
-const char* translateGamepadCode(int c){
+std::string translateGamepadCode(int c){
   // Zuerst Achsen, dann Knöpfe
   int mc = c - 6;
   int tc = mc - 6;
@@ -108,22 +108,22 @@ const char* translateGamepadCode(int c){
     case GLFW_GAMEPAD_BUTTON_Y: return "Y";
     case GLFW_GAMEPAD_BUTTON_LEFT_BUMPER: return "Bumper-L";
     case GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER: return "Bumper-R";
-    case GLFW_GAMEPAD_BUTTON_BACK: return "Zurück";
+    case GLFW_GAMEPAD_BUTTON_BACK: return locale.getTranslation(GamepadKeyBack);
     case GLFW_GAMEPAD_BUTTON_START: return "Start";
     case GLFW_GAMEPAD_BUTTON_GUIDE: return "Guide";
     case GLFW_GAMEPAD_BUTTON_LEFT_THUMB: return "Stick-L";
     case GLFW_GAMEPAD_BUTTON_RIGHT_THUMB: return "Stick-R";
-    case GLFW_GAMEPAD_BUTTON_DPAD_UP: return "Hoch";
-    case GLFW_GAMEPAD_BUTTON_DPAD_RIGHT: return "Rechts";
-    case GLFW_GAMEPAD_BUTTON_DPAD_DOWN: return "Runter";
-    case GLFW_GAMEPAD_BUTTON_DPAD_LEFT: return "Links";
+    case GLFW_GAMEPAD_BUTTON_DPAD_UP: return locale.getTranslation(DpadUp);
+    case GLFW_GAMEPAD_BUTTON_DPAD_RIGHT: return locale.getTranslation(DpadRight);
+    case GLFW_GAMEPAD_BUTTON_DPAD_DOWN: return locale.getTranslation(DpadDown);
+    case GLFW_GAMEPAD_BUTTON_DPAD_LEFT: return locale.getTranslation(DpadLeft);
   }
-  return nullptr;
+  return "?";
 }
 
-const char* translateKeyCode(int c){
+std::string translateKeyCode(int c){
   switch(c){
-    case GLFW_KEY_SPACE: return "Space";
+    case GLFW_KEY_SPACE: return locale.getTranslation(KeySpace);
     case GLFW_KEY_APOSTROPHE: return "'";
     case GLFW_KEY_COMMA: return ",";
     case GLFW_KEY_MINUS: return "-";
@@ -137,27 +137,27 @@ const char* translateKeyCode(int c){
     case GLFW_KEY_GRAVE_ACCENT: return "Grave";
     case GLFW_KEY_WORLD_1: return "World1";
     case GLFW_KEY_WORLD_2: return "World2";
-    case GLFW_KEY_ESCAPE: return "Esc (Achtung vorbelegt)";
-    case GLFW_KEY_ENTER: return "Enter";
-    case GLFW_KEY_TAB: return "Tab";
-    case GLFW_KEY_BACKSPACE: return "Backspace";
-    case GLFW_KEY_INSERT: return "Einfg";
-    case GLFW_KEY_DELETE: return "Entf";
-    case GLFW_KEY_RIGHT: return "Pfeil Rechts";
-    case GLFW_KEY_LEFT: return "Pfeil Links";
-    case GLFW_KEY_DOWN: return "Pfeil Runter";
-    case GLFW_KEY_UP: return "Pfeil Hoch";
-    case GLFW_KEY_PAGE_UP: return "Bild Hoch";
-    case GLFW_KEY_PAGE_DOWN: return "Bild Runter";
-    case GLFW_KEY_HOME: return "Pos 1";
-    case GLFW_KEY_END: return "Ende";
-    case GLFW_KEY_CAPS_LOCK: return "Feststell";
-    case GLFW_KEY_SCROLL_LOCK: return "Rollen";
-    case GLFW_KEY_NUM_LOCK: return "Num";
-    case GLFW_KEY_PRINT_SCREEN: return "Druck";
-    case GLFW_KEY_PAUSE: return "Pause";
-    case GLFW_KEY_F1: return "F1 (Achtung vorbelegt)";
-    case GLFW_KEY_F2: return "F2 (Achtung vorbelegt)";
+    case GLFW_KEY_ESCAPE: return locale.getTranslation(KeyEsc);
+    case GLFW_KEY_ENTER: return locale.getTranslation(KeyEnter);
+    case GLFW_KEY_TAB: return locale.getTranslation(KeyTab);
+    case GLFW_KEY_BACKSPACE: return locale.getTranslation(KeyBackspace);
+    case GLFW_KEY_INSERT: return locale.getTranslation(KeyInsert);
+    case GLFW_KEY_DELETE: return locale.getTranslation(KeyDelete);
+    case GLFW_KEY_RIGHT: return locale.getTranslation(KeyRight);
+    case GLFW_KEY_LEFT: return locale.getTranslation(KeyLeft);
+    case GLFW_KEY_DOWN: return locale.getTranslation(KeyDown);
+    case GLFW_KEY_UP: return locale.getTranslation(KeyUp);
+    case GLFW_KEY_PAGE_UP: return locale.getTranslation(KeyPageUp);
+    case GLFW_KEY_PAGE_DOWN: return locale.getTranslation(KeyPageDown);
+    case GLFW_KEY_HOME: return locale.getTranslation(KeyHome);
+    case GLFW_KEY_END: return locale.getTranslation(KeyEnd);
+    case GLFW_KEY_CAPS_LOCK: return locale.getTranslation(KeyCapsLock);
+    case GLFW_KEY_SCROLL_LOCK: return locale.getTranslation(KeyScrollLock);
+    case GLFW_KEY_NUM_LOCK: return locale.getTranslation(KeyNumLock);
+    case GLFW_KEY_PRINT_SCREEN: locale.getTranslation(KeyPrint);
+    case GLFW_KEY_PAUSE: return locale.getTranslation(KeyPause);
+    case GLFW_KEY_F1: return locale.getTranslation(KeyF1);
+    case GLFW_KEY_F2: return locale.getTranslation(KeyF2);
     case GLFW_KEY_F3: return "F3";
     case GLFW_KEY_F4: return "F4";
     case GLFW_KEY_F5: return "F5";
@@ -166,7 +166,7 @@ const char* translateKeyCode(int c){
     case GLFW_KEY_F8: return "F8";
     case GLFW_KEY_F9: return "F9";
     case GLFW_KEY_F10: return "F10";
-    case GLFW_KEY_F11: return "F11 (Achtung vorbelegt)";
+    case GLFW_KEY_F11: return locale.getTranslation(KeyF11);
     case GLFW_KEY_F12: return "F12";
     case GLFW_KEY_F13: return "F13";
     case GLFW_KEY_F14: return "F14";
@@ -175,7 +175,7 @@ const char* translateKeyCode(int c){
     case GLFW_KEY_F17: return "F17";
     case GLFW_KEY_F18: return "F18";
     case GLFW_KEY_F19: return "F19";
-    case GLFW_KEY_F20: return "Space";
+    case GLFW_KEY_F20: return "F20";
     case GLFW_KEY_F21: return "F21";
     case GLFW_KEY_F22: return "F22";
     case GLFW_KEY_F23: return "F23";
@@ -196,17 +196,17 @@ const char* translateKeyCode(int c){
     case GLFW_KEY_KP_MULTIPLY: return "Num *";
     case GLFW_KEY_KP_SUBTRACT: return "Num -";
     case GLFW_KEY_KP_ADD: return "Num +";
-    case GLFW_KEY_KP_ENTER: return "Num Enter";
+    case GLFW_KEY_KP_ENTER: return locale.getTranslation(KeyNumEnter);
     case GLFW_KEY_KP_EQUAL: return "Num =";
-    case GLFW_KEY_LEFT_SHIFT: return "Umschalt Links";
-    case GLFW_KEY_LEFT_CONTROL: return "Strg Links";
-    case GLFW_KEY_LEFT_ALT: return "Alt Links";
-    case GLFW_KEY_LEFT_SUPER: return "Super Links";
-    case GLFW_KEY_RIGHT_SHIFT: return "Shift Rechts";
-    case GLFW_KEY_RIGHT_CONTROL: return "Strg Rechts";
-    case GLFW_KEY_RIGHT_ALT: return "AltGr";
-    case GLFW_KEY_RIGHT_SUPER : return "Super Rechts";
-    case GLFW_KEY_MENU: return "Menu";
+    case GLFW_KEY_LEFT_SHIFT: return locale.getTranslation(KeyLShift);
+    case GLFW_KEY_LEFT_CONTROL: return locale.getTranslation(KeyLCRTL);
+    case GLFW_KEY_LEFT_ALT: return locale.getTranslation(KeyLAlt);
+    case GLFW_KEY_LEFT_SUPER: return locale.getTranslation(KeyLSuper);
+    case GLFW_KEY_RIGHT_SHIFT: return locale.getTranslation(KeyRShift);
+    case GLFW_KEY_RIGHT_CONTROL: return locale.getTranslation(KeyRCRTL);
+    case GLFW_KEY_RIGHT_ALT: return locale.getTranslation(KeyRAlt);
+    case GLFW_KEY_RIGHT_SUPER : return locale.getTranslation(KeyRSuper);
+    case GLFW_KEY_MENU: return locale.getTranslation(KeyMenu);
   }
   return "?";
 }
@@ -218,12 +218,12 @@ std::string getBindingString(int controller, Action a, bool secondary){
     }
     if(secondary){
         // Falsch, andere Funktion für Gamepad
-        const char* name = translateGamepadCode((*v)[(int)a].second);
+        const char* name = translateGamepadCode((*v)[(int)a].second).c_str();
         return (name != nullptr) ? std::string(name) : std::string(1, (char)(*v)[(int)a].second);
     }
     else{
         const char* name = glfwGetKeyName((*v)[(int)a].first, glfwGetKeyScancode((*v)[(int)a].first));
-        return (name != nullptr) ? std::string(name) : std::string(translateKeyCode((*v)[(int)a].first));
+        return (name != nullptr) ? std::string(name) : translateKeyCode((*v)[(int)a].first);
     }
 }
 
@@ -287,7 +287,7 @@ void Gui::printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
     switch(e.second){
       case ASM_JUMP:
         ASMLine(e.first, id, 1.0f, 0.0f, 0.0f);
-        ImGui::SeparatorText("Sprung");
+        ImGui::SeparatorText(locale.getTranslation(DebuggerJump).c_str());
         break;
       case ASM_CURRENT:
         ASMLine(e.first, id, 1.0f, 1.0f, 0.0f);
@@ -324,12 +324,12 @@ void Gui::drawRegisters()
 
 void Gui::drawMemoryReader()
 {
-  ImGui::Text("Adresse:");
+  ImGui::Text(locale.getTranslation(DebuggerAddress).c_str());
   ImGui::SameLine();
   ImGui::PushID(runningID++);
   ImGui::InputText("", memInputBuf, 255);
   ImGui::PopID();
-  if(ImGui::Button("Lies 1 Byte")){
+  if(ImGui::Button(locale.getTranslation(DebuggerRead1Byte).c_str())){
     std::string s(memInputBuf);
     removeCharsFromString(s, "x$");
     lastReadLow = 0;
@@ -340,7 +340,7 @@ void Gui::drawMemoryReader()
     }
   }
   ImGui::SameLine();
-  if(ImGui::Button("Lies 2 Byte")){
+  if(ImGui::Button(locale.getTranslation(DebuggerRead2Byte).c_str())){
     std::string s(memInputBuf);
     removeCharsFromString(s, "x$");
     lastReadLow = 0;
@@ -352,15 +352,15 @@ void Gui::drawMemoryReader()
     }
   }
 
-  ImGui::Text(("Hex: "+ghexNorm(ghex(getLastRead()),4)).c_str());
+  ImGui::Text((locale.getTranslation(DebuggerHex)+ghexNorm(ghex(getLastRead()),4)).c_str());
   ImGui::SameLine();
-  ImGui::Text(("Opcode: "+(getLastRead() < 256 ? console->getOpcodeName(getLastRead()) : "???")).c_str());
-  ImGui::Text(("Bin: "+std::bitset<16>(getLastRead()).to_string()).c_str());
+  ImGui::Text((locale.getTranslation(DebuggerOpcode)+(getLastRead() < 256 ? console->getOpcodeName(getLastRead()) : "???")).c_str());
+  ImGui::Text((locale.getTranslation(DebuggerBin)+std::bitset<16>(getLastRead()).to_string()).c_str());
 }
 
 void Gui::drawBreakpoints()
 {
-  if(ImGui::Button("Hinzufügen:")){
+  if(ImGui::Button(locale.getTranslation(DebuggerAdd).c_str())){
     std::string s(bpInputBuf);
     removeCharsFromString(s, "x$");
     if(s.size()>0){
@@ -374,7 +374,7 @@ void Gui::drawBreakpoints()
   ImGui::PopID();
 
 
-  if(ImGui::Button("Hinzufügen Op:")){
+  if(ImGui::Button(locale.getTranslation(DebuggerAddOp).c_str())){
     std::string s(opInputBuf);
     if(s.size()>0){
       breakpointsOP = console->addBreakpointOP(s);
@@ -389,7 +389,7 @@ void Gui::drawBreakpoints()
   if(ImGui::BeginListBox("")){
     for(const auto &bp : breakpointsOP){
       ImGui::PushID(runningID++);
-      ImGui::Text(("Break: "+bp).c_str());
+      ImGui::Text((locale.getTranslation(DebuggerBreakOp)+bp).c_str());
       ImGui::SameLine();
       if(ImGui::Button("X")){
         breakpointsOP = console->removeBreakpointOP(bp);
@@ -398,7 +398,7 @@ void Gui::drawBreakpoints()
     }
     for(const auto &bp : breakpoints){
       ImGui::PushID(runningID++);
-      ImGui::Text(("Break: $"+ghexNorm(ghex(bp), 4)).c_str());
+      ImGui::Text((locale.getTranslation(DebuggerBreakAddr)+ghexNorm(ghex(bp), 4)).c_str());
       ImGui::SameLine();
       if(ImGui::Button("X")){
         breakpoints = console->removeBreakpoint(bp);
@@ -412,26 +412,26 @@ void Gui::drawBreakpoints()
 void Gui::drawDebugger()
 {
   // state->halt = console->halt;
-  ImGui::Begin("Debugger", &state->showDebugger, ImGuiWindowFlags_NoCollapse);
-    ImGui::BeginTable("Debugger", 2, ImGuiTableFlags_BordersInnerV);
+  ImGui::Begin(locale.getTranslation(DebuggerDebugger).c_str(), &state->showDebugger, ImGuiWindowFlags_NoCollapse);
+    ImGui::BeginTable(locale.getTranslation(DebuggerDebugger).c_str(), 2, ImGuiTableFlags_BordersInnerV);
       ImGui::TableNextColumn();
         assemblyRender();
       ImGui::TableNextColumn();
         bool h = state->halt;
-        if(ImGui::Checkbox("Break", &h)){
+        if(ImGui::Checkbox(locale.getTranslation(DebuggerBreakButton).c_str(), &h)){
           toggleHalt();
         }
         ImGui::SameLine();
-        if(ImGui::Button("Step")){
+        if(ImGui::Button(locale.getTranslation(DebuggerStep).c_str())){
           if(state->halt){
             // console->allowedClocks = 1;
           }
         }
-        ImGui::SeparatorText("Register");
+        ImGui::SeparatorText(locale.getTranslation(DebuggerRegister).c_str());
         drawRegisters();
-        ImGui::SeparatorText("Speicher");
+        ImGui::SeparatorText(locale.getTranslation(DebuggerRam).c_str());
         drawMemoryReader();
-        ImGui::SeparatorText("Breakpoints");
+        ImGui::SeparatorText(locale.getTranslation(DebuggerBreakpoints).c_str());
         drawBreakpoints();
     ImGui::EndTable();
   ImGui::End();
@@ -439,8 +439,8 @@ void Gui::drawDebugger()
 
 void Gui::drawOutput()
 {
-  ImGui::Begin("Test-ROM Ausgabe (falls vorhanden)", &state->showOutput, ImGuiWindowFlags_NoCollapse);
-    if(ImGui::Button("Startadresse:")){
+  ImGui::Begin(locale.getTranslation(TestOutput).c_str(), &state->showOutput, ImGuiWindowFlags_NoCollapse);
+    if(ImGui::Button(locale.getTranslation(TestOutputStartAddress).c_str())){
       std::string s(outInputBuf);
       removeCharsFromString(s, "x$");
       if(s.size()>0){
@@ -458,14 +458,14 @@ void Gui::drawOutput()
 
 void Gui::drawControlSettings()
 {
-    if(ImGui::BeginViewportSideBar("Steuerung", ImGui::GetMainViewport(), ImGuiDir_Down, ImGui::GetMainViewport()->Size.y / 2, ImGuiWindowFlags_None)){
+    if(ImGui::BeginViewportSideBar(locale.getTranslation(Controls).c_str(), ImGui::GetMainViewport(), ImGuiDir_Down, ImGui::GetMainViewport()->Size.y / 2, ImGuiWindowFlags_None)){
     bool cs = true;
     if(ImGui::BeginTabBar("TabBarInput##")){
-        if(ImGui::BeginTabItem("Controller 1", &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
+        if(ImGui::BeginTabItem(locale.getTranslation(Controller1).c_str(), &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
           drawControlSettingsPage(1);
           ImGui::EndTabItem();
         }
-        if(ImGui::BeginTabItem("Controller 2", &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
+        if(ImGui::BeginTabItem(locale.getTranslation(Controller2).c_str(), &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
           drawControlSettingsPage(2);
           ImGui::EndTabItem();
         }
@@ -478,21 +478,21 @@ void Gui::drawControlSettingsPage(int controller)
 {
   if(ImGui::BeginTable(("Controller"+std::to_string(controller)+"Table##").c_str(), 3, ImGuiTableFlags_BordersInner)){
 
-    ImGui::TableSetupColumn("Aktion");
-    ImGui::TableSetupColumn("Belegung Tastatur");
-    ImGui::TableSetupColumn("Belegung Gamepad");
+    ImGui::TableSetupColumn(locale.getTranslation(SAction).c_str());
+    ImGui::TableSetupColumn(locale.getTranslation(BindingKeyboard).c_str());
+    ImGui::TableSetupColumn(locale.getTranslation(BindingGamepad).c_str());
     ImGui::TableHeadersRow();
     
     ImGui::TableNextColumn();
 
-    ImGui::Text("Steuerkreuz Hoch");
-    ImGui::Text("Steuerkreuz Runter");
-    ImGui::Text("Steuerkreuz Links");
-    ImGui::Text("Steuerkreuz Rechts");
-    ImGui::Text("A-Taste");
-    ImGui::Text("B-Taste");
-    ImGui::Text("START-Taste");
-    ImGui::Text("SELECT-Taste");
+    ImGui::Text(locale.getTranslation(BindingDpadUp).c_str());
+    ImGui::Text(locale.getTranslation(BindingDpadDown).c_str());
+    ImGui::Text(locale.getTranslation(BindingDpadLeft).c_str());
+    ImGui::Text(locale.getTranslation(BindingDpadRight).c_str());
+    ImGui::Text(locale.getTranslation(BindingAButton).c_str());
+    ImGui::Text(locale.getTranslation(BindingBButton).c_str());
+    ImGui::Text(locale.getTranslation(BindingStartButton).c_str());
+    ImGui::Text(locale.getTranslation(BindingSelectButton).c_str());
 
     ImGui::TableNextColumn();
 
@@ -507,7 +507,7 @@ void Gui::drawControlSettingsPage(int controller)
     }
 
     ImGui::EndTable();
-    ImGui::Text("Gamepad:");
+    ImGui::Text(locale.getTranslation(GamepadColon).c_str());
     ImGui::SameLine();
     const char* name;
     int jid = 0;
@@ -540,7 +540,7 @@ void Gui::buttonChangePrompt(int i, int controller, bool secondary)
 {
   ImGui::PushID(runningID++);
   std::string bString = (state->waitOn.wait && state->waitOn.actionToSet == (Action)i && state->waitOn.controller == controller && state->waitOn.secondary == secondary)
-    ? "Drücke Taste..."
+    ? locale.getTranslation(PressButtonPrompt)
     : getBindingString(controller, (Action)i, secondary);
   if(ImGui::SmallButton(bString.c_str())){
     state->waitOn.wait = !state->waitOn.wait;
@@ -589,9 +589,9 @@ void Gui::render()
 
       ImGui::BeginMainMenuBar();
 
-      if (ImGui::BeginMenu("Datei"))
+      if (ImGui::BeginMenu(locale.getTranslation(MenuFile).c_str()))
         {
-            if(ImGui::MenuItem("Laden")){
+            if(ImGui::MenuItem(locale.getTranslation(FileLoad).c_str())){
               auto result = openFile();
               if(result.has_value()){
                 createConsole(result.value().c_str());
@@ -610,23 +610,32 @@ void Gui::render()
         //     // }
         //     ImGui::EndMenu();
         // }
-        if(ImGui::BeginMenu("Einstellungen")){
-          if(ImGui::MenuItemEx("Steuerung", ICON_FA_UP_RIGHT_FROM_SQUARE, "", state->showInput)){
+        if(ImGui::BeginMenu(locale.getTranslation(MenuSettings).c_str())){
+          if(ImGui::MenuItemEx(locale.getTranslation(SettingsControls).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", state->showInput)){
             state->showInput = !state->showInput;
           }
-          ImGui::MenuItem("Vollbild", "F11", &state->fullScreen);
-          if(ImGui::MenuItem("CRT Shader", "", &globalConfig.useCRTShader)){
+          ImGui::MenuItem(locale.getTranslation(SettingsFullscreen).c_str(), "F11", &state->fullScreen);
+          if(ImGui::MenuItem(locale.getTranslation(SettingsCRTShader).c_str(), "", &globalConfig.useCRTShader)){
             FileIO::getInstance().saveSettings(globalConfig);
           };
-          ImGui::MenuItem("Ton", "", &globalConfig.unmute);
+          ImGui::MenuItem(locale.getTranslation(SettingsSound).c_str(), "", &globalConfig.unmute);
+          if(ImGui::BeginMenuEx(locale.getTranslation(SettingsLanguage).c_str(), ICON_FA_GLOBE)){
+            for(const auto &lang : availableLocales){
+              bool selected = locale.getName()== lang.getName();
+              if(ImGui::MenuItem(lang.getName().c_str(), "", &selected)){
+                locale = lang;
+              }
+            }
+            ImGui::EndMenu();
+          }
           ImGui::EndMenu();
         }
-        if(ImGui::BeginMenu("Debug")){
-          if(ImGui::MenuItemEx("Debugger", ICON_FA_UP_RIGHT_FROM_SQUARE, "F1", state->showDebugger)){
+        if(ImGui::BeginMenu(locale.getTranslation(MenuDebugger).c_str())){
+          if(ImGui::MenuItemEx(locale.getTranslation(DebuggerDBItem).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "F1", state->showDebugger)){
             toggleDebugger();
           }
 
-          if(ImGui::MenuItemEx("Textausgabe", ICON_FA_UP_RIGHT_FROM_SQUARE, "F2", state->showOutput)){
+          if(ImGui::MenuItemEx(locale.getTranslation(DebuggerText).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "F2", state->showOutput)){
             toggleTestRomOutput();
           }
           ImGui::EndMenu();

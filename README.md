@@ -18,6 +18,7 @@ Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB)
 - Lokaler Mehrspieler (NES)
 - Gamepad-Unterstützung
 - CRT-Shader
+- Lokalisierung über JSON-Dateien (standardmäßig deutsch, englisch)
 
 ## Aufbau
 Das Projekt ist zum Großteil in C++ geschrieben. Die einzelnen Konsolen sind größtenteils von der Benutzeroberfläche entkoppelt, dadurch lässt sich das Programm auch zumindest theoretisch leicht erweitern, allerdings gehen einige Teile der Benutzeroberfläche noch strikt von einem NES / Gameboy aus (z.B. Tastenbelegungen).
