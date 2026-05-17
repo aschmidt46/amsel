@@ -115,6 +115,8 @@ pub struct SM83 {
 
     //debug
     pub (crate) remaining_steps: i32,
+    circular_index: usize,
+    circular: Vec<i32>,
 }
 
 enum ProcessorFlags{
@@ -194,6 +196,13 @@ impl SM83 {
                     }
                     if !self.poll_interrupts() {
                         // println!("Zyklus {}, PC: {:#x}", self.total_cycles, self.reg_pc);
+                        // Debugging
+                        self.circular[self.circular_index] = self.get_16(Register16::PC) as i32;
+                        self.increment_circular();
+
+
+
+
                         self.run_next_instruction();
                         b = true;
                     }
@@ -233,10 +242,18 @@ impl SM83 {
         }
         b
     }
-    fn print_operands(&mut self, ops: &Vec<Operand>) -> String{
-        let mut str = "".to_owned();
+    pub fn get_mnemonic(&mut self, mut opcode: u8) -> String{
+        let mut instruction = self.opcodes_unprefixed[opcode as usize].clone();
+        if opcode == 0xCB {
+            opcode = self.read(self.reg_pc + 1);
+            instruction = self.opcodes_prefixed[opcode as usize].clone();
+        }
+        instruction.mnemonic.1
+    }
+    fn print_operands(&mut self, op: &Opcode, pc: u16) -> String{
+        let mut str = format!("${:04x}:\t{}\t", pc, op.mnemonic.1);
         let mut pc_offset = 1;
-        for op in ops{
+        for op in &op.operands{
             str.push_str(" ");
             let valstr;
             match op.bytes{
@@ -244,9 +261,9 @@ impl SM83 {
                 Some(0) => valstr = format!("{:?}", op.name),
                 Some(n) => {
                     valstr = if n==1 {
-                        format!("{:#04x}", self.read(self.reg_pc + pc_offset))
+                        format!("{:#04x}", self.read(pc + pc_offset))
                     } else {
-                        format!("{:#06x}", self.read_16(self.reg_pc + pc_offset))
+                        format!("{:#06x}", self.read_16(pc + pc_offset))
                     };
                     pc_offset += n as u16;
                 }
@@ -257,24 +274,57 @@ impl SM83 {
         str.trim_end_matches(",").to_owned()
     }
 
-    pub fn get_instruction_print_at(&mut self, addr: u16) -> String{
-        let mut opcode = self.read(addr);
-        let mut instruction = self.opcodes_unprefixed[opcode as usize].clone();
-        if opcode == 0xCB {
-            opcode = self.read(addr + 1);
-            instruction = self.opcodes_prefixed[opcode as usize].clone();
+    fn increment_circular(&mut self){
+        self.circular_index = self.circular_index.wrapping_add(1);
+        self.circular_index %= 10;
+    }
+    pub fn get_prev_10_instructions(&mut self) -> (String, Vec<i32>){
+        let mut pc_list: Vec<u16> = Vec::new();
+        let mut it = self.circular_index;
+        for i in 0..10{
+            let instruction = self.circular[it];
+            if instruction >= 0 {
+                pc_list.push(instruction as u16);
+            }
+            if it >= 9 {
+                it = 0;
+            }
+            else{
+                it += 1;
+            }
         }
-        let oplen = instruction.operands.len();
-        let (op1, op2) = match oplen {
-            0 => (OperandType::Dummy, OperandType::Dummy),
-            1 => (instruction.operands[0].name.clone(), OperandType::Dummy),
-            2 => (instruction.operands[0].name.clone(), instruction.operands[1].name.clone()),
-            3 => (instruction.operands[1].name.clone(), instruction.operands[2].name.clone()), // NUR 0xF8 (LD  HL, SP+e8)
-            _ => panic!("Mehr als drei Operanden!"),
-        };
-        let m = instruction.mnemonic.1;
-        let operands = self.print_operands(&instruction.operands);
-        [m, operands].concat()
+
+        let mut res: String = "".to_string();
+        let mut length: Vec<i32> = Vec::new();
+        for pc in pc_list{
+            let mut opcode = self.read(pc);
+            let mut instruction = self.opcodes_unprefixed[opcode as usize].clone();
+            if opcode == 0xCB {
+                opcode = self.read(self.reg_pc + 1);
+                instruction = self.opcodes_prefixed[opcode as usize].clone();
+            }
+            res += &(self.print_operands(&instruction, pc) + "\n");
+            length.push(instruction.bytes);
+        }
+        (res, length)
+    }
+    pub fn get_next_n_instructions(&mut self, n: i32) -> (String, Vec<i32>){
+        let mut pc = self.get_16(Register16::PC).clone();
+        let mut res = "".to_string();
+        let mut length: Vec<i32> = Vec::new();
+        for _ in 0..n{
+            let mut opcode = self.read(pc);
+            let mut instruction = self.opcodes_unprefixed[opcode as usize].clone();
+            if opcode == 0xCB {
+                opcode = self.read(self.reg_pc + 1);
+                instruction = self.opcodes_prefixed[opcode as usize].clone();
+            }
+            res += &(self.print_operands(&instruction, pc) + "\n");
+            length.push(instruction.bytes);
+            pc = pc.wrapping_add_signed(instruction.bytes as i16);
+        }
+        // print!("{}", res);
+        (res, length)
     }
     pub fn run_next_instruction(&mut self){
         let mut opcode = self.read(self.reg_pc);
@@ -313,7 +363,7 @@ impl SM83 {
         }
         else if self.set_ime > 0 {self.set_ime -= 1}
     }
-    fn get_16(&self, reg: Register16) -> u16{
+    pub fn get_16(&self, reg: Register16) -> u16{
         match reg{
             Register16::PC => self.reg_pc,
             Register16::SP => self.reg_sp,
@@ -337,7 +387,7 @@ impl SM83 {
             }
         }
     }
-    fn get_8(&self, reg: Register8) -> u8{
+    pub fn get_8(&self, reg: Register8) -> u8{
         self.regs[reg as usize]
     }
     fn set_8(&mut self, reg: Register8, val: u8){
@@ -356,7 +406,7 @@ impl SM83 {
         let cpu = SM83 { regs: [0; 8], reg_sp: 0, reg_pc: 0,
             opcodes_unprefixed: unpref.try_into().unwrap(), opcodes_prefixed: pref.try_into().unwrap(), bus: Weak::new(), mode: CPUMode::Running,
             ime: false, set_ime: -1, remaining_cycles: 0, total_cycles: 0, total_operations: 1, ie_reg: 0, if_reg: 0, remaining_steps: 0,
-            speed_switch_armed: false, dual_speed_mode: false
+            speed_switch_armed: false, dual_speed_mode: false, circular_index: 0, circular: vec![-1; 10]
         };
         cpu
     }

@@ -1,6 +1,6 @@
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
-use crate::gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, SM83}};
+use crate::gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Register8, Register16, SM83}};
 
 #[derive(PartialEq)]
 enum DmaMode{
@@ -64,6 +64,9 @@ pub struct Bus{
     //debug
     pub (crate) br: bool,
     pub (crate) cpu_advanced: bool,
+    watch_breakpoints: bool,
+    breakpoints: Vec<u16>,
+    breakpoints_op: Vec<String>,
 }
 
 const TAC_TABLE: [u16; 4] = [256 * 4, 4 * 4, 16 * 4, 64 * 4];
@@ -76,7 +79,7 @@ impl Bus{
             oam_dma: 0, dma_next_clock: -1, rom_bank_lower: 0, rom_bank_upper: 1, rtc_s: 0, rtc_m: 0, rtc_h: 0, rtc_dl: 0, rtc_dh: 0, enable_ram_rtc: false, // sicher?
             cgb_mode: false, wram_bank: 1, hdma1: 0, hdma2: 0, hdma3: 0, hdma4: 0, hdma5: 0, vram_dma_active: DmaMode::Finished, vram_dma_bytes_remaining: 0,
             vram_dma_pointer: 0, br: false, palette_address: 0, palette_address_obj: 0, ff72: 0, ff73: 0, ff74: 0, ff75: 0, mbc1_bank_mode: false, mbc1_magic_register: 0,
-            sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false, apu: None
+            sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false, apu: None, watch_breakpoints: false, breakpoints: Vec::new(), breakpoints_op: Vec::new()
         }
     }
     pub fn new_init(path: &str) -> Self{
@@ -579,6 +582,19 @@ impl Bus{
         self.apu.as_ref().unwrap().get_sample_right()
     }
     pub fn clock(&mut self){
+
+        if self.watch_breakpoints && self.cpu.as_mut().unwrap().remaining_steps == 0{
+            let pc_val = self.cpu.as_mut().unwrap().reg_pc;
+            if self.breakpoints.contains(&pc_val){
+                self.br = true;
+            }
+            let memval = self.read_memory(pc_val);
+            let opcode = self.cpu.as_mut().unwrap().get_mnemonic(memval);
+            if self.breakpoints_op.contains(&opcode){
+                self.br = true;
+            }
+        }
+
         if (!self.br) || (self.cpu.as_mut().unwrap().remaining_steps > 0) {
             let dual_speed = self.cpu.as_mut().unwrap().dual_speed_mode;
 
@@ -692,12 +708,65 @@ impl Bus{
     pub fn break_exec(&mut self){
         self.br = !self.br;
     }
+    pub fn set_break(&mut self, val: bool){
+        self.br = val;
+    }
     pub fn step(&mut self){
         self.cpu.as_mut().unwrap().remaining_steps += 1;
     }
-    pub fn get_instruction_offset(&mut self, offset: i16) -> (String, u16) {
-        let pc = self.cpu.as_mut().unwrap().reg_pc.saturating_add_signed(offset);
-        (self.cpu.as_mut().unwrap().get_instruction_print_at(pc), pc)
+    pub fn get_next_n_instructions(&mut self, n: i32) -> (String, Vec<i32>){
+        self.cpu.as_mut().unwrap().get_next_n_instructions(n)
+    }
+    pub fn get_prev_10_instructions(&mut self) -> (String, Vec<i32>){
+        self.cpu.as_mut().unwrap().get_prev_10_instructions()
+    }
+    pub fn is_halted(&self) -> bool{
+        self.br
+    }
+    pub fn add_breakpoint(&mut self, bp: u16) -> Vec<u16>{
+        if !self.watch_breakpoints{
+            self.watch_breakpoints = true;
+        }
+        let exists = self.breakpoints.contains(&bp);
+        if !exists{
+            self.breakpoints.push(bp);
+        }
+        self.breakpoints.clone()
+    }
+    pub fn add_breakpoint_op(&mut self, bp: String) -> Vec<String>{
+        if !self.watch_breakpoints{
+            self.watch_breakpoints = true;
+        }
+        let exists = self.breakpoints_op.contains(&bp);
+        if !exists{
+            self.breakpoints_op.push(bp);
+        }
+        self.breakpoints_op.clone()
+    }
+    pub fn remove_breakpoint(&mut self, bp: u16) -> Vec<u16>{
+        self.breakpoints.retain(|x| *x != bp);
+
+        if self.watch_breakpoints && self.breakpoints.len() == 0 && self.breakpoints_op.len() == 0{
+            self.watch_breakpoints = false;
+        }
+        self.breakpoints.clone()
+    }
+    pub fn remove_breakpoint_op(&mut self, bp: String) -> Vec<String>{
+        self.breakpoints_op.retain(|x| *x != bp);
+
+        if self.watch_breakpoints && self.breakpoints.len() == 0 && self.breakpoints_op.len() == 0{
+            self.watch_breakpoints = false;
+        }
+        self.breakpoints_op.clone()
+    }
+    pub fn get_mnemonic(&mut self, index: usize) -> String{
+        self.cpu.as_mut().unwrap().get_mnemonic(index as u8)
+    }
+    pub fn read_register_8(&mut self, reg: Register8) -> u8{
+        self.cpu.as_mut().unwrap().get_8(reg)
+    }
+    pub fn read_register_16(&mut self, reg: Register16) -> u16{
+        self.cpu.as_mut().unwrap().get_16(reg)
     }
 }
 

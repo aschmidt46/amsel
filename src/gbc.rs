@@ -6,7 +6,7 @@ pub mod apu;
 
 pub(crate) mod gbc{
     use std::{cell::RefCell, rc::Rc, sync::atomic::AtomicU8};
-    use crate::gbc::{bus::Bus};
+    use crate::gbc::{bus::Bus, sm83::{Register8, Register16}};
 
     const CGB_CLOCK: f64 = 4194304.0;
     const SAMPLE_RATE: f64 = 20000.0;
@@ -102,7 +102,49 @@ pub(crate) mod gbc{
         pub fn clock_until_sample_ready(&mut self){
             while !self.audio_sample_ready(){
                 self.clock();
+                if self.bus.borrow().is_halted(){
+                    break;
+                }
             }
+        }
+        pub fn set_break(&mut self, val: bool){
+            self.bus.borrow_mut().set_break(val);
+        }
+        pub fn step(&mut self){
+            self.bus.borrow_mut().step();
+        }
+        pub fn read_cpu(&mut self, addr: u16) -> u8{
+            self.bus.borrow_mut().read_memory(addr)
+        }
+        pub fn get_next_n_instructions(&mut self, n: i32) -> (String, Vec<i32>){
+            self.bus.borrow_mut().get_next_n_instructions(n)
+        }
+        pub fn get_prev_10_instructions(&mut self) -> (String, Vec<i32>){
+            self.bus.borrow_mut().get_prev_10_instructions()
+        }
+        pub fn is_halted(&self) -> bool{
+            self.bus.borrow().is_halted()
+        }
+        pub fn add_breakpoint(&mut self, bp: u16) -> Vec<u16>{
+            self.bus.borrow_mut().add_breakpoint(bp)
+        }
+        pub fn remove_breakpoint(&mut self, bp: u16) -> Vec<u16>{
+            self.bus.borrow_mut().remove_breakpoint(bp)
+        }
+        pub fn add_breakpoint_op(&mut self, bp: String) -> Vec<String>{
+            self.bus.borrow_mut().add_breakpoint_op(bp)
+        }
+        pub fn remove_breakpoint_op(&mut self, bp: String) -> Vec<String>{
+            self.bus.borrow_mut().remove_breakpoint_op(bp)
+        }
+        pub fn get_mnemonic(&mut self, index: usize) -> String{
+            self.bus.borrow_mut().get_mnemonic(index)
+        }
+        pub fn read_register_8(&mut self, reg: Register8) -> u8{
+            self.bus.borrow_mut().read_register_8(reg)
+        }
+        pub fn read_register_16(&mut self, reg: Register16) -> u16{
+            self.bus.borrow_mut().read_register_16(reg)
         }
     }
     
