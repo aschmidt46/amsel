@@ -146,6 +146,15 @@ pub(crate) mod gbc{
         pub fn read_register_16(&mut self, reg: Register16) -> u16{
             self.bus.borrow_mut().read_register_16(reg)
         }
+        pub fn game_can_save(&mut self) -> bool{
+            self.bus.borrow_mut().game_can_save()
+        }
+        pub fn get_save_data(&mut self) -> Vec<u8>{
+            self.bus.borrow_mut().get_save_data()
+        }
+        pub fn load_save(&mut self, data: Vec<u8>){
+            self.bus.borrow_mut().load_save(data)
+        }
     }
     
     unsafe impl Send for CGB {}

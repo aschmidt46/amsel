@@ -768,6 +768,21 @@ impl Bus{
     pub fn read_register_16(&mut self, reg: Register16) -> u16{
         self.cpu.as_mut().unwrap().get_16(reg)
     }
+    pub fn game_can_save(&mut self) -> bool{
+        self.cart.as_ref().unwrap().battery_ram
+    }
+    pub fn get_save_data(&mut self) -> Vec<u8>{
+        let mut v = vec![0; 0x2000 * (self.cart.as_ref().unwrap().ram_size as usize)];
+        for i in 0.. v.len(){
+            v[i] = self.external_ram[i % 0x2000][i / 0x2000];
+        }
+        v
+    }
+    pub fn load_save(&mut self, data: Vec<u8>){
+        for i in 0..data.len(){
+            self.external_ram[i % 0x2000][i / 0x2000] = data[i];
+        }
+    }
 }
 
 #[cfg(test)]

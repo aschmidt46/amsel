@@ -84,6 +84,10 @@ pub mod ffi{
         fn get_mnemonic(cgb: &mut Box<CGB>, index: usize) -> String;
         fn cgb_read_register_8(cgb: &mut Box<CGB>, reg: CGBRegister8) -> u8;
         fn cgb_read_register_16(cgb: &mut Box<CGB>, reg: CGBRegister16) -> u16;
+
+        fn cgb_can_save(cgb: &mut Box<CGB>) -> bool;
+        fn cgb_get_save_data(cgb: &mut Box<CGB>) -> Vec<u8>;
+        fn cgb_load_save(cgb: &mut Box<CGB>, vec: &CxxVector<u8>);
     }
 }
 
@@ -205,4 +209,19 @@ fn cgb_read_register_8(cgb: &mut Box<CGB>, reg: CGBRegister8) -> u8{
 }
 fn cgb_read_register_16(cgb: &mut Box<CGB>, reg: CGBRegister16) -> u16{
     cgb.read_register_16(get_cgb_register16(reg))
+}
+
+fn cgb_can_save(cgb: &mut Box<CGB>) -> bool{
+    cgb.game_can_save()
+}
+fn cgb_get_save_data(cgb: &mut Box<CGB>) -> Vec<u8>{
+    cgb.get_save_data()
+}
+
+fn cgb_load_save(cgb: &mut Box<CGB>, vec: &cxx::CxxVector<u8>){
+    let mut v : Vec<u8> = Vec::new();
+    for el in vec{
+        v.push(el.clone());
+    }
+    cgb.load_save(v);
 }

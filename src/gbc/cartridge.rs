@@ -27,7 +27,8 @@ pub struct RomObject{
     pub (crate) sgb_flag: u8,
     pub (crate) cartridge_type: Mapper, // Muss noch geparsed werden
     pub (crate) rom_size_mask: u16, // in bitmask
-    pub (crate) ram_size: u8, // Muss noch geparsed werden
+    pub (crate) ram_size: u8, // Muss noch geparsed werden^
+    pub (crate) battery_ram: bool,
 }
 
 // Anzahl 8KiB Bänke
@@ -49,7 +50,7 @@ pub enum Mapper{
 impl RomObject{
     fn get_cartridge_type(t: u8) -> Mapper{
         match t{
-            0x0 => Mapper::NoMapper,
+            0x0  => Mapper::NoMapper,
             0x01 => Mapper::MBC1,
             0x02 => Mapper::MBC1,
             0x03 => Mapper::MBC1,
@@ -69,12 +70,36 @@ impl RomObject{
             _ => panic!("Unbekannter Mapper, nicht unterstützt: {}", t)
         }
     }
+    fn has_battery(t: u8) -> bool{
+        match t{
+            0x0  => false,
+            0x01 => false,
+            0x02 => false,
+            0x03 => true,
+            0x05 => false,
+            0x06 => true,
+            0x0F => true,
+            0x10 => true,
+            0x11 => false,
+            0x12 => false,
+            0x13 => true,
+            0x19 => false,
+            0x1A => false,
+            0x1B => true,
+            0x1C => false,
+            0x1D => false,
+            0x1E => true,
+            _ => false
+        }
+    }
     pub fn new(path: &str) -> Result<Self, std::io::Error> {
         let bytes = std::fs::read(path)?;
         println!("Mapper: {:?}", RomObject::get_cartridge_type(bytes[0x0147].clone()));
+        let t = bytes[0x0147].clone();
         Ok(RomObject {info: RomObject::get_rom_info(&bytes), cgb_flag: bytes[0x0143].clone()
-            , sgb_flag: bytes[0x0146].clone(), cartridge_type: RomObject::get_cartridge_type(bytes[0x0147].clone())
-            , rom_size_mask: ROM_BIT_MASK[bytes[0x0148].clone() as usize], ram_size: RAM_SIZE_TABLE[bytes[0x0149].clone() as usize], raw_data: bytes })
+            , sgb_flag: bytes[0x0146].clone(), cartridge_type: RomObject::get_cartridge_type(t)
+            , rom_size_mask: ROM_BIT_MASK[bytes[0x0148].clone() as usize], ram_size: RAM_SIZE_TABLE[bytes[0x0149].clone() as usize], raw_data: bytes
+            , battery_ram: RomObject::has_battery(t) })
     }
 
     fn get_rom_info(bytes: &Vec<u8>) -> RomInfo{
