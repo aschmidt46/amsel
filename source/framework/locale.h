@@ -130,9 +130,11 @@ class Locale{
     private:
     std::vector<std::string> stringMap;
     std::string name;
+    std::string code;
     public:
     Locale(std::filesystem::path path);
     Locale() = default;
     std::string getName() const;
+    std::string getCode() const;
     std::string getTranslation(LocalizedString id) const;
 };

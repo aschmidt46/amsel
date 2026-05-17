@@ -29,6 +29,7 @@ int waveFun( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
       if(!t->close && console->isLoaded()) {
         console->clockUntilSampleReady();
       }
+      if(t->close) return 0;
 
       auto sample = console->getSample();
       buffer[2*i + 0] = globalConfig.unmute * globalConfig.volume * sample.first;

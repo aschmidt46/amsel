@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.20)
 #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Release>:Release>")
 
-project(antons-nes-emu)
+project(antons-AMSEL)
 set(CMAKE_CXX_STANDARD 20)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -24,7 +24,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 #Kein Terminal:
+if(RELEASE)
+message("------------- Building Windows release build")
 add_link_options(-mwindows)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -115,7 +118,7 @@ add_library(whereami STATIC
 corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
 corrosion_add_cxxbridge(rusty_bridge CRATE antons-gbc-emu FILES bridge.rs)
 
-add_executable(nes-emu source/main.cpp
+add_executable(AMSEL source/main.cpp
 source/framework/file_io.cpp source/framework/file_io.h
 source/framework/input.cpp source/framework/input.h
 source/framework/windowing.cpp source/framework/windowing.h
@@ -160,17 +163,26 @@ source/console/dummy_implementation.h
 
 # add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)
 
-target_link_libraries(nes-emu whereami)
-target_link_libraries(nes-emu rtaudio)
-target_link_libraries(nes-emu OpenGL::GL)
-target_link_libraries(nes-emu imgui)
-target_link_libraries(nes-emu glfw)
-target_link_libraries(nes-emu GLEW::GLEW)
+target_link_libraries(AMSEL whereami)
+target_link_libraries(AMSEL rtaudio)
+target_link_libraries(AMSEL OpenGL::GL)
+target_link_libraries(AMSEL imgui)
+target_link_libraries(AMSEL glfw)
+target_link_libraries(AMSEL GLEW::GLEW)
 
-target_link_libraries(nes-emu cgbcore)
-target_link_libraries(nes-emu rusty_bridge)
+target_link_libraries(AMSEL cgbcore)
+target_link_libraries(AMSEL rusty_bridge)
 
 
 file(COPY "lib/glew32.dll" DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY "lib/glfw3.dll" DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY "resources/nes/palette.pal" DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/source/framework/locales DESTINATION ${CMAKE_BINARY_DIR}/)
+
+if(RELEASE)
+  add_custom_command(TARGET AMSEL POST_BUILD
+        COMMAND powershell.exe "${PROJECT_SOURCE_DIR}/scripts/build_release.ps1")
+  add_custom_command(TARGET AMSEL POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --cyan
+                   "Built Windows Release for x64 in ./release")
+endif()

@@ -645,6 +645,8 @@ void Gui::render()
               bool selected = locale.getName()== lang.getName();
               if(ImGui::MenuItem(lang.getName().c_str(), "", &selected)){
                 locale = lang;
+                globalConfig.language = locale.getCode();
+                FileIO::getInstance().saveSettings(globalConfig);
               }
             }
             ImGui::EndMenu();

@@ -11,6 +11,9 @@ Locale::Locale(std::filesystem::path path){
 
     this->stringMap = std::vector<std::string>();
 
+    std::filesystem::path qpath(path);
+    this->code = qpath.stem().string();
+
     this->name = js["displayName"].get<std::string>();
 
     const auto arr = js["strings"];
@@ -30,6 +33,11 @@ Locale::Locale(std::filesystem::path path){
 
 std::string Locale::getName() const{
     return this->name;
+}
+
+std::string Locale::getCode() const
+{
+    return this->code;
 }
 
 std::string Locale::getTranslation(LocalizedString id) const{
