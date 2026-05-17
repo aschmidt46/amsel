@@ -86,6 +86,8 @@ pub mod ffi{
         fn cgb_read_register_16(cgb: &mut Box<CGB>, reg: CGBRegister16) -> u16;
 
         fn cgb_can_save(cgb: &mut Box<CGB>) -> bool;
+        // in bytes
+        fn get_save_size(cgb: &mut Box<CGB>) -> usize;
         fn cgb_get_save_data(cgb: &mut Box<CGB>) -> Vec<u8>;
         fn cgb_load_save(cgb: &mut Box<CGB>, vec: &CxxVector<u8>);
     }
@@ -213,6 +215,9 @@ fn cgb_read_register_16(cgb: &mut Box<CGB>, reg: CGBRegister16) -> u16{
 
 fn cgb_can_save(cgb: &mut Box<CGB>) -> bool{
     cgb.game_can_save()
+}
+fn get_save_size(cgb: &mut Box<CGB>) -> usize{
+    cgb.get_save_size()
 }
 fn cgb_get_save_data(cgb: &mut Box<CGB>) -> Vec<u8>{
     cgb.get_save_data()

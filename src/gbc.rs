@@ -155,6 +155,9 @@ pub(crate) mod gbc{
         pub fn load_save(&mut self, data: Vec<u8>){
             self.bus.borrow_mut().load_save(data)
         }
+        pub fn get_save_size(&self) -> usize{
+            self.bus.borrow().get_save_size()
+        }
     }
     
     unsafe impl Send for CGB {}
