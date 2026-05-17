@@ -437,6 +437,19 @@ void Gui::drawDebugger()
   ImGui::End();
 }
 
+void Gui::drawAbout()
+{
+  ImGui::Begin(locale.getTranslation(AboutTitle).c_str(), &state->showAbout, ImGuiWindowFlags_NoCollapse);
+    ImGui::Text("Anton's Multi-System-Emulator-Library (AMSEL) v0.1a");
+    ImGui::Separator();
+    ImGui::Text(locale.getTranslation(AboutContent).c_str());
+    ImGui::Text(locale.getTranslation(AboutSystems).c_str());
+    ImGui::Text(locale.getTranslation(AboutSystem1).c_str());
+    ImGui::Text(locale.getTranslation(AboutSystem2).c_str());
+    ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://gitea.kassade.de/anton/antons-nes-emu.git");
+  ImGui::End();
+}
+
 void Gui::drawOutput()
 {
   ImGui::Begin(locale.getTranslation(TestOutput).c_str(), &state->showOutput, ImGuiWindowFlags_NoCollapse);
@@ -577,6 +590,10 @@ void Gui::render()
       drawDebugger();
     }
 
+    if(state->showAbout){
+      drawAbout();
+    }
+
     if(state->showOutput){
       drawOutput();
     }
@@ -641,6 +658,9 @@ void Gui::render()
 
           if(ImGui::MenuItemEx(locale.getTranslation(DebuggerText).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "F2", state->showOutput)){
             toggleTestRomOutput();
+          }
+          if(ImGui::MenuItemEx(locale.getTranslation(AboutTitle).c_str(), ICON_FA_INFO, "", state->showAbout)){
+            state->showAbout = !state->showAbout;
           }
           ImGui::EndMenu();
         }

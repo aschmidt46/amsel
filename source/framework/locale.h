@@ -115,9 +115,16 @@ enum LocalizedString{
     BRKExecuted = 92,
     SettingsLanguage = 93,
 
+    AboutTitle = 94,
+    AboutContent = 95,
+    AboutSystems= 96,
+    AboutSystem1 = 97,
+    AboutSystem2 = 98,
+    AboutSource = 99,
+
 };
 
-constexpr size_t NUM_STRINGS = 94;
+constexpr size_t NUM_STRINGS = 100;
 
 class Locale{
     private:

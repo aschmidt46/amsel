@@ -94,6 +94,12 @@
         "An unsafe instruction has been executed. ({})",
         "Attention!",
         "BRK was executed.",
-        "Language"
+        "Language",
+        "About",
+        "Multi-System-Emulator written in C++ and Rust.",
+        "Supported systems:",
+        "Nintendo Gameboy, Gameboy Color (DMG, CGB)",
+        "Nintendo Entertainment System (NES)",
+        "Source code"
     ]
 }

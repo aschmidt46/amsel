@@ -94,6 +94,12 @@
         "Eine unsichere Instruktion wurde ausgeführt. ({})",
         "Achtung!",
         "BRK wurde ausgelöst.",
-        "Sprache"
+        "Sprache",
+        "Über",
+        "Multi-System-Emulator geschrieben in C++ und Rust.",
+        "Unterstützte Systeme:",
+        "Nintendo Gameboy, Gameboy Color (DMG, CGB)",
+        "Nintendo Entertainment System (NES)",
+        "Quelltext"
     ]
 }

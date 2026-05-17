@@ -17,6 +17,7 @@ struct SharedState{
     bool halt = false;
     bool showOutput = false;
     bool showInput = false;
+    bool showAbout = false;
     int controllerContext = 1; // Controller Nummer
     InputWaitContext waitOn;
 };
@@ -62,6 +63,7 @@ class Gui{
     void drawMemoryReader();
     void drawBreakpoints();
     void drawDebugger();
+    void drawAbout();
     void drawOutput();
     void drawControlSettings();
     void drawControlSettingsPage(int controller);

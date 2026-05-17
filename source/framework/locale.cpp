@@ -16,7 +16,8 @@ Locale::Locale(std::filesystem::path path){
     const auto arr = js["strings"];
 
     if(arr.size() != NUM_STRINGS){
-        std::cout << "Translation File has invalid number of strings" << std::endl;
+        std::cout << this->name << ":" << std::endl;
+        std::cout << "Translation File has invalid number of strings: " << arr.size() << " instead of the needed " << NUM_STRINGS << std::endl;
         std::terminate();
     }
 
