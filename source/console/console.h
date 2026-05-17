@@ -4,6 +4,8 @@
 #include <cstdint>
 
 class Console{
+    protected:
+    std::string loadedGame = "";
     public:
 
     //Helfer
@@ -11,6 +13,7 @@ class Console{
     std::string ihexNorm(std::string s, int n);
 
     Console() = default;
+    Console(const char* path);
     virtual ~Console() = default;
 
     virtual void load(const char* path) = 0;

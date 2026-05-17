@@ -13,7 +13,7 @@ Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB)
 
 ## Features
 - Persistente Einstellungen (Lautstärke, Tastenbelegungen, Sprache, etc.)
-- Persistente Speicherstände (aktuell nur NES)
+- Persistente Speicherstände
 - Visueller Debugger / Disassembler
 - Lokaler Mehrspieler (NES)
 - Gamepad-Unterstützung

@@ -11,7 +11,7 @@ class CgbImplementation : public Console{
     public:
     CgbImplementation() = default;
     CgbImplementation(const char* path);
-    ~CgbImplementation() = default;
+    ~CgbImplementation();
     void load(const char* path) override;
     void clock() override;
     void clockUntilSampleReady() override;

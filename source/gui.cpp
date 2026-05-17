@@ -594,10 +594,11 @@ void Gui::render()
             if(ImGui::MenuItem(locale.getTranslation(FileLoad).c_str())){
               auto result = openFile();
               if(result.has_value()){
+                std::filesystem::path p(result.value());
+                gameTitle = p.filename().string();
+                changeTitle = true;
                 createConsole(result.value().c_str());
                 console->setHalt(this->state->halt);
-                gameTitle = result.value();
-                changeTitle = true;
               }
             }
             // if(ImGui::MenuItem("Auswerfen")){

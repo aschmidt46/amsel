@@ -207,9 +207,9 @@ void onWindowUpdate()
 }
 
 void updateTitle(GLFWwindow* window){
-  std::filesystem::path p(gameTitle);
-    auto fn = title + " - " + p.filename().string();
-    if(p.filename().string().size()==0){
+  
+    auto fn = title + " - " + gameTitle;
+    if(gameTitle.size()==0){
       fn = title;
     }
     glfwSetWindowTitle(window, fn.c_str());

@@ -37,3 +37,9 @@ std::string Console::ihexNorm(std::string s, int n)
         s = "0" + s;
     return s;
 }
+
+Console::Console(const char *path)
+{
+    std::filesystem::path p(path);
+    this->loadedGame = p.filename().string();
+}

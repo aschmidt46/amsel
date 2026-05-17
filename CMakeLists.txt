@@ -24,7 +24,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 #Kein Terminal:
-add_link_options(-mwindows)
+# add_link_options(-mwindows)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <imgui.h>
 #include <bitset>
+#include "../framework/file_io.h"
 
 void CgbImplementation::setAddressOf(int i, int to)
 {
@@ -108,13 +109,42 @@ void CgbImplementation::setAddressOf(int i, int to)
   }
 }
 
-CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path))
+CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Console(path)
 {
+  if(cgb_can_save(cgb)){
+    if(!FileIO::getInstance().createSave(this->loadedGame)){
+      size_t size = get_save_size(cgb);
+      std::vector<uint8_t> saveData(size);
+      FileIO::getInstance().loadSave(this->loadedGame, saveData.data(), size);
+      cgb_load_save(cgb, saveData);
+    }
+  }
+}
+
+CgbImplementation::~CgbImplementation()
+{
+  if(cgb_can_save(cgb)){
+    auto data = cgb_get_save_data(cgb);
+    std::vector<uint8_t> cxxData;
+    for(auto el : data){
+      cxxData.push_back(el);
+    }
+    FileIO::getInstance().saveData(this->loadedGame, cxxData.data(), cxxData.size());
+  }
 }
 
 void CgbImplementation::load(const char *path)
 {
   cgb = new_cgb(path);
+
+  if(cgb_can_save(cgb)){
+    if(!FileIO::getInstance().createSave(this->loadedGame)){
+      size_t size = get_save_size(cgb);
+      std::vector<uint8_t> saveData(size);
+      FileIO::getInstance().loadSave(this->loadedGame, saveData.data(), size);
+      cgb_load_save(cgb, saveData);
+    }
+  }
 }
 
 void CgbImplementation::clock()
