@@ -72,7 +72,7 @@ class Gui{
     
     
     public:
-    Gui(SharedState* state, bool debug);
+    Gui(SharedState* state);
     
     void render();
     void toggleDebugger();

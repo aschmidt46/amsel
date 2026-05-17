@@ -551,7 +551,7 @@ void Gui::buttonChangePrompt(int i, int controller, bool secondary)
   ImGui::PopID();
 }
 
-Gui::Gui(SharedState *state, bool debug)
+Gui::Gui(SharedState *state)
 {
   this->state = state;
   for(int i = 0; i < 255; i++){
@@ -560,10 +560,10 @@ Gui::Gui(SharedState *state, bool debug)
       opInputBuf[i] = 0;
       outInputBuf[i] = 0;
   }
-  if(debug)
-  breakpointsOP = console->addBreakpointOP("BRK");
-  opInputBuf[0] = 'B'; opInputBuf[1] = 'R'; opInputBuf[2] = 'K'; opInputBuf[3] = '\0';
-  outInputBuf[0] = '6'; outInputBuf[0] = '0'; outInputBuf[0] = '0'; outInputBuf[0] = '4'; outInputBuf[0] = '\0';
+  // if(debug)
+  // breakpointsOP = console->addBreakpointOP("BRK");
+  // opInputBuf[0] = 'B'; opInputBuf[1] = 'R'; opInputBuf[2] = 'K'; opInputBuf[3] = '\0';
+  // outInputBuf[0] = '6'; outInputBuf[0] = '0'; outInputBuf[0] = '0'; outInputBuf[0] = '4'; outInputBuf[0] = '\0';
 }
 
 void Gui::render()

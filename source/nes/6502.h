@@ -69,7 +69,7 @@ class Cpu{
     // (Setzen, Wert)
     std::pair<bool, bool> setInterruptNextInstruction = {false, false};
 
-    std::ofstream log;
+    // std::ofstream log;
 
     Cpu(){
         internalMemory = new uint8_t[0x0800];
@@ -79,7 +79,7 @@ class Cpu{
     };
     ~Cpu(){
         delete[] internalMemory;
-        log.close();
+        // log.close();
     };
 
     void init(int pc, std::shared_ptr<Mapper> m){
@@ -87,8 +87,8 @@ class Cpu{
         mapper = m;
         SP = 0x00;
         P = 0b00100100; // Interrupt und Anderes Bit
-        log = std::ofstream("cout.txt");
-        assert(log.is_open());
+        // log = std::ofstream("cout.txt");
+        // assert(log.is_open());
         A = 0;
         X = 0;
         Y = 0;

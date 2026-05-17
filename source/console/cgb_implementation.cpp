@@ -165,8 +165,6 @@ float CgbImplementation::getY()
 
 void CgbImplementation::setController1Key(bool gamepad, int key, int action)
 {
-  std::lock_guard lock(consoleLock);
-
   auto c = &globalConfig.controller1;
   if (gamepad)
   {

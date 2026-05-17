@@ -34,7 +34,7 @@ GLFWwindow* window;
 
 
 
-int run()
+int run(int argc, wchar_t** argv)
 {
   window  = initWindow();
   initInput();
@@ -43,12 +43,17 @@ int run()
   AudioSystem audiosystem;
   SharedState state;
   postInit();
-  
-#ifdef _DEBUG
-  Gui gui(&state, true);
-#else
-  Gui gui(&state, false);
-#endif
+
+  Gui gui(&state);
+
+  if(argc == 2){
+    gui.state->show = false;
+    gui.state->fullScreen = true;
+    // Achtung, nur ASCII!
+    std::wstring ws(argv[1]);
+    std::string path(ws.begin(), ws.end());
+    createConsole(path.c_str());
+  }
 
   sharedGui = &gui;
 
@@ -83,14 +88,28 @@ int run()
 
   int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
   {
-    return run();
+    auto v = GetCommandLineW();
+    int argc;
+    wchar_t** argv = CommandLineToArgvW(v, &argc);
+    return run(argc, argv);
   }
 
 #else
 
-  int main()
+  int main(int argc, char** argv)
   {
-    return run();
+    wchar_t** argw = new wchar_t*[argc];
+    for(int i = 0; i < argc; i++){
+      auto sLen = strlen(argv[i])+1;
+      argw[i] = new wchar_t[sLen];
+      mbstowcs(argw[i], argv[i], sLen);
+    }
+    auto code = run(argc, argw);
+    for(int i = 0; i < argc; i++){
+      delete[] argw[i];
+    }
+    delete[] argw;
+    return code;
   }
 
 #endif
