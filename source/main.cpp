@@ -6,8 +6,7 @@
 #include "framework/input.h"
 #include "framework/screen.h"
 #include "gui.h"
-#include "console/nes_implementation.h"
-#include "console/cgb_implementation.h"
+#include "console/dummy_implementation.h"
 
 #ifdef NES_ON_WINDOWS
   #include <Windows.h>
@@ -17,6 +16,8 @@
 
 // Globale Variablen
 // ---------------------------
+bool changeTitle = false;
+std::string gameTitle = "";
 Locale locale;
 std::vector<Locale> availableLocales;
 std::mutex framebufferM;
@@ -38,7 +39,7 @@ int run()
   window  = initWindow();
   initInput();
   screen = new Screen();
-  console = new NesImplementation();
+  console = new DummyImplementation();
   AudioSystem audiosystem;
   SharedState state;
   postInit();

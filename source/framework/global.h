@@ -64,6 +64,8 @@ enum Action{
 
 // Globaler Zustand:
 
+extern bool changeTitle;
+extern std::string gameTitle;
 extern Locale locale;
 extern std::vector<Locale> availableLocales;
 extern std::mutex framebufferM;

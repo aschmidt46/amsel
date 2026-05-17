@@ -6,6 +6,10 @@
 class Console{
     public:
 
+    //Helfer
+    std::string ihex(uintptr_t input);
+    std::string ihexNorm(std::string s, int n);
+
     Console() = default;
     virtual ~Console() = default;
 
@@ -15,9 +19,6 @@ class Console{
     virtual const float* accessFramebuffer() = 0;
     virtual bool frameIsReady() = 0;
     virtual bool audioSampleReady() = 0;
-    // True -> Neuer Titel, Fenster sollte neuen Titel anzeigen
-    virtual bool shouldChangeTitle() = 0;
-    virtual std::string getTitle() = 0;
     // Stereo sample
     virtual std::pair<double, double> getSample() = 0;
     virtual bool isLoaded() = 0;
@@ -31,6 +32,10 @@ class Console{
 
 
     //Debug
+    virtual void addClock() = 0;
+    virtual void setHalt(bool val) = 0;
+    virtual bool isHalted() = 0;
+    virtual void produceDisassembly(bool val) = 0;
     virtual std::pair<std::string, std::vector<int>> getCurrentDisassembly() = 0;
     virtual std::pair<std::string, std::vector<int>> getOldDisassembly() = 0;
     virtual std::vector<uint16_t> addBreakpoint(uint16_t bp) = 0;

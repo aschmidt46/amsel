@@ -2,18 +2,6 @@
 #include <imgui.h>
 #include <bitset>
 
-std::string ihex(uintptr_t input){
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
-}
-
-std::string ihexNorm(std::string s, int n){
-    while(s.size() < n)
-        s = "0"+s;
-    return s;
-}
-
 void NesImplementation::load(const char *path)
 {
     new (&this->console) NES();
@@ -27,8 +15,11 @@ void NesImplementation::clock()
 
 void NesImplementation::clockUntilSampleReady()
 {
-    while(!this->console.hasAudioSample()){
+    while (!this->console.hasAudioSample())
+    {
         this->console.clock();
+        if (console.halt)
+            break;
     }
 }
 
@@ -45,16 +36,6 @@ bool NesImplementation::frameIsReady()
 bool NesImplementation::audioSampleReady()
 {
     return this->console.hasAudioSample();
-}
-
-bool NesImplementation::shouldChangeTitle()
-{
-    return this->console.shouldChangeTitle();
-}
-
-std::string NesImplementation::getTitle()
-{
-    return this->console.getTitle();
 }
 
 std::pair<double, double> NesImplementation::getSample()
@@ -86,6 +67,26 @@ void NesImplementation::setController1Key(bool gamepad, int key, int action)
 void NesImplementation::setController2Key(bool gamepad, int key, int action)
 {
     this->console.setController2Key(gamepad, key, action);
+}
+
+void NesImplementation::addClock()
+{
+    this->console.allowedClocks = 1;
+}
+
+void NesImplementation::setHalt(bool val)
+{
+    this->console.halt = val;
+}
+
+bool NesImplementation::isHalted()
+{
+    return this->console.halt;
+}
+
+void NesImplementation::produceDisassembly(bool val)
+{
+    this->console.produceDisassembly = val;
 }
 
 std::pair<std::string, std::vector<int>> NesImplementation::getCurrentDisassembly()
@@ -136,13 +137,13 @@ uint8_t NesImplementation::readCpuBus(uint16_t addr)
 void NesImplementation::displayRegisters()
 {
     ImGui::BeginTable("Register", 2);
-  ImGui::TableNextColumn();
-    ImGui::Text(("P: "+std::bitset<8>(console.readRegister(CpuReg::RegP)).to_string()).c_str());
-    ImGui::Text(("PC: $"+ihexNorm(ihex(console.readRegister(CpuReg::RegPC)), 4)).c_str());
-    ImGui::Text(("SP: $"+ihexNorm(ihex(console.readRegister(CpuReg::RegSP)), 2)).c_str());
-  ImGui::TableNextColumn();
-    ImGui::Text(("A: $"+ihexNorm(ihex(console.readRegister(CpuReg::RegA)), 2)).c_str());
-    ImGui::Text(("X: $"+ihexNorm(ihex(console.readRegister(CpuReg::RegX)), 2)).c_str());
-    ImGui::Text(("Y: $"+ihexNorm(ihex(console.readRegister(CpuReg::RegY)), 2)).c_str());
-  ImGui::EndTable();
+    ImGui::TableNextColumn();
+    ImGui::Text(("P: " + std::bitset<8>(console.readRegister(CpuReg::RegP)).to_string()).c_str());
+    ImGui::Text(("PC: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegPC)), 4)).c_str());
+    ImGui::Text(("SP: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegSP)), 2)).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text(("A: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegA)), 2)).c_str());
+    ImGui::Text(("X: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegX)), 2)).c_str());
+    ImGui::Text(("Y: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegY)), 2)).c_str());
+    ImGui::EndTable();
 }

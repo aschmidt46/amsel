@@ -81,7 +81,6 @@ std::pair<std::string, std::vector<int>> Cpu::getPrev10Instructions()
     std::string res = "";
     std::vector<int> length;
     for(const auto &pc : pcList){
-        if(pc<0) continue;
         uint8_t opcode = read((uint8_t*)(uintptr_t)pc);
         uint8_t op1 = read((uint8_t*)(uintptr_t)pc+1);
         uint8_t op2 = read((uint8_t*)(uintptr_t)pc+2);

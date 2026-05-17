@@ -6,7 +6,7 @@
 
 class CgbImplementation : public Console{
     private:
-    rust::Box<CGB> console;
+    rust::Box<CGB> cgb;
     void setAddressOf(int i, int to);
     public:
     CgbImplementation() = default;
@@ -18,8 +18,6 @@ class CgbImplementation : public Console{
     const float* accessFramebuffer() override;
     bool frameIsReady() override;
     bool audioSampleReady() override;
-    bool shouldChangeTitle() override;
-    std::string getTitle() override;
     std::pair<double, double> getSample() override;
     bool isLoaded() override;
     float getX() override;
@@ -28,7 +26,10 @@ class CgbImplementation : public Console{
     void setController2Key(bool gamepad, int key, int action) override;
 
 
-
+    void addClock() override;
+    void setHalt(bool val) override;
+    bool isHalted() override;
+    void produceDisassembly(bool val) override;
     std::pair<std::string, std::vector<int>> getCurrentDisassembly() override;
     std::pair<std::string, std::vector<int>> getOldDisassembly() override;
     std::vector<uint16_t> addBreakpoint(uint16_t bp) override;

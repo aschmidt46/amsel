@@ -45,11 +45,11 @@ class Gui{
     void toggleHalt(){
         if(!state->halt){
             state->halt = true;
-            // console->halt = true;
+            console->setHalt(true);
         }
         else{
             state->halt = false;
-            // console->halt = false;
+            console->setHalt(false);
         }
     };
     

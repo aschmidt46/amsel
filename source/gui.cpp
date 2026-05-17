@@ -411,7 +411,7 @@ void Gui::drawBreakpoints()
 
 void Gui::drawDebugger()
 {
-  // state->halt = console->halt;
+  state->halt = console->isHalted();
   ImGui::Begin(locale.getTranslation(DebuggerDebugger).c_str(), &state->showDebugger, ImGuiWindowFlags_NoCollapse);
     ImGui::BeginTable(locale.getTranslation(DebuggerDebugger).c_str(), 2, ImGuiTableFlags_BordersInnerV);
       ImGui::TableNextColumn();
@@ -424,7 +424,7 @@ void Gui::drawDebugger()
         ImGui::SameLine();
         if(ImGui::Button(locale.getTranslation(DebuggerStep).c_str())){
           if(state->halt){
-            // console->allowedClocks = 1;
+            console->addClock();
           }
         }
         ImGui::SeparatorText(locale.getTranslation(DebuggerRegister).c_str());
@@ -595,6 +595,9 @@ void Gui::render()
               auto result = openFile();
               if(result.has_value()){
                 createConsole(result.value().c_str());
+                console->setHalt(this->state->halt);
+                gameTitle = result.value();
+                changeTitle = true;
               }
             }
             // if(ImGui::MenuItem("Auswerfen")){
@@ -678,11 +681,11 @@ void Gui::toggleDebugger()
 {
   if(!state->showDebugger){
     state->showDebugger = true;
-    // console->produceDisassembly = true;
+    console->produceDisassembly(true);
   }
   else{
     state->showDebugger = false;
-    // console->produceDisassembly = false;
+    console->produceDisassembly(false);
   }
 }
 

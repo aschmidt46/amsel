@@ -155,6 +155,7 @@ source/console/cgb_implementation.h source/console/cgb_implementation.cpp
 source/console/console.cpp
 source/framework/locale.h
 source/framework/locale.cpp
+source/console/dummy_implementation.h
 )
 
 # add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)

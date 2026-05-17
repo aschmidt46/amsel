@@ -182,6 +182,14 @@ void onToggleFullscreen(GLFWwindow* window){
     }
 }
 
+bool shouldChangeTitle(){
+  if(changeTitle){
+    changeTitle = false;
+    return true;
+  }
+  return false;
+}
+
 void onWindowUpdate()
 {
   glfwPollEvents();
@@ -191,15 +199,15 @@ void onWindowUpdate()
     onToggleFullscreen(window);
   }
   {
-    // std::lock_guard lock{consoleLock};
-    if(console->shouldChangeTitle()){
+    std::lock_guard lock{consoleLock};
+    if(shouldChangeTitle()){
       updateTitle(window);
     }
   }
 }
 
 void updateTitle(GLFWwindow* window){
-  std::filesystem::path p(console->getTitle());
+  std::filesystem::path p(gameTitle);
     auto fn = title + " - " + p.filename().string();
     if(p.filename().string().size()==0){
       fn = title;
