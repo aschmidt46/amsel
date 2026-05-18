@@ -6,7 +6,7 @@ jobs:
   Explore-Gitea-Actions:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - run: cd antons-nes-emu
       - run: apt-get update
       - run: apt-get install python3 --yes
       - run: apt-get install python3-jinja2 --yes
