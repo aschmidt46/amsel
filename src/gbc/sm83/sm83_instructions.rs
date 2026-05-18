@@ -5,7 +5,7 @@ mod sm83 {
     use crate::gbc::sm83::{self, CPUMode, OperandType, Register8, Register16, SM83};
 
     impl SM83 {
-        pub fn adc(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn adc(&mut self, _: &OperandType, op2: &OperandType) -> bool{
             let val = match op2{
                 OperandType::Reg8(reg, _) => self.get_8(*reg),
                 OperandType::N8 => self.read(self.reg_pc + 1),
@@ -88,7 +88,7 @@ mod sm83 {
             }
             false
         }
-        pub fn and(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn and(&mut self, _: &OperandType, op2: &OperandType) -> bool{
             let val: u8 = match op2{
                 OperandType::Reg8(reg, _) => self.get_8(*reg),
                 OperandType::Reg16(Register16::HL, false, 0) => self.read(self.get_16(Register16::HL)),
@@ -120,7 +120,7 @@ mod sm83 {
             }
             false
         }
-        pub fn call(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn call(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             let instr_after = self.reg_pc + 3;
             let mut cond = true;
             let goal = match op1{
@@ -139,13 +139,13 @@ mod sm83 {
                 false
             }
         }
-        pub fn ccf(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn ccf(&mut self, _: &OperandType, _: &OperandType) -> bool{
             self.set_status_flag(sm83::ProcessorFlags::SubtractionFlag, false);
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, !self.get_status_flag(sm83::ProcessorFlags::CarryFlag));
             false
         }
-        pub fn cp(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn cp(&mut self, _: &OperandType, op2: &OperandType) -> bool{
             let value = match op2{
                 OperandType::Reg8(reg, _) => self.get_8(*reg),
                 OperandType::Reg16(reg, _, _) => self.read(self.get_16(*reg)),
@@ -160,13 +160,13 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, value > a);
             false
         }
-        pub fn cpl(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn cpl(&mut self, _: &OperandType, _: &OperandType) -> bool{
             self.set_8(Register8::A, !self.get_8(Register8::A));
             self.set_status_flag(sm83::ProcessorFlags::SubtractionFlag, true);
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, true);
             false
         }
-        pub fn daa(&mut self, op1: &OperandType, op2: &OperandType) -> bool{ // Decimal modus
+        pub fn daa(&mut self, _: &OperandType, _: &OperandType) -> bool{ // Decimal modus
             let mut adjustment: u8 = 0;
             let result: u8;
             let a = self.get_8(Register8::A);
@@ -196,7 +196,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn dec(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn dec(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let reg_val = self.get_8(*reg);
@@ -221,24 +221,24 @@ mod sm83 {
             }
             false
         }
-        pub fn di(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn di(&mut self, _: &OperandType, _: &OperandType) -> bool{
             self.ime = false;
             self.set_ime = -1; // Falls di direkt nach ei
             false
         }
-        pub fn ei(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn ei(&mut self, _: &OperandType, _: &OperandType) -> bool{
             // println!("ei");
             self.set_ime = 1;
             false
         }
-        pub fn halt(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn halt(&mut self, _: &OperandType, _: &OperandType) -> bool{
             if !self.ime && (self.ie_reg & self.if_reg > 0){
                 self.mode = CPUMode::HaltBug;
             }
             else {self.mode = CPUMode::Halted;}
             false
         }
-        pub fn inc(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn inc(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let reg_val: u8 = self.get_8(*reg);
@@ -263,7 +263,7 @@ mod sm83 {
             }
             false
         }
-        pub fn jp(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn jp(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             let mut cond = true;
             let target = match op1{
                 OperandType::A16(true) => self.read_16(self.reg_pc + 1),
@@ -282,7 +282,7 @@ mod sm83 {
                 false
             }
         }
-        pub fn jr(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn jr(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             let cond = match op1{
                 OperandType::ConditionOp(c) => self.get_condition(c.clone()),
                 _ => true,
@@ -405,11 +405,11 @@ mod sm83 {
             }
             false
         }
-        pub fn nop(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn nop(&mut self, _: &OperandType, _: &OperandType) -> bool{
             //NOP
             false
         }
-        pub fn or(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn or(&mut self, _: &OperandType, op2: &OperandType) -> bool{
             let result: u8;
             match op2{
                 OperandType::Reg8(reg, true) => {
@@ -432,7 +432,7 @@ mod sm83 {
             self.set_8(Register8::A, result);
             false
         }
-        pub fn pop(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn pop(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg16(Register16::AF, _, _) => {
                     let popped = self.pop_stack_16();
@@ -447,7 +447,7 @@ mod sm83 {
             }
             false
         }
-        pub fn push(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn push(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg16(reg, _, _) => {
                     self.push_stack_16(self.get_16(*reg));
@@ -473,7 +473,7 @@ mod sm83 {
             }
             false
         }
-        pub fn ret(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn ret(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             let cond = match op1{
                 OperandType::ConditionOp(c) => self.get_condition(c.clone()),
                 _ => true,
@@ -488,13 +488,13 @@ mod sm83 {
                 false
             }
         }
-        pub fn reti(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn reti(&mut self, _: &OperandType, _: &OperandType) -> bool{
             let new_pc = self.pop_stack_16();
             self.set_16(Register16::PC, new_pc);
             self.ime = true;
             true
         }
-        pub fn rl(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rl(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg);
@@ -520,7 +520,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn rla(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rla(&mut self, _: &OperandType, _: &OperandType) -> bool{
             let val = self.get_8(Register8::A);
             let r = (val as u16) << 1;
             let carry = (r & 0x0100) != 0;
@@ -532,7 +532,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, carry);
             false
         }
-        pub fn rlc(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rlc(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg).rotate_left(1);
@@ -552,7 +552,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn rlca(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rlca(&mut self, _: &OperandType, _: &OperandType) -> bool{
             let val = self.get_8(Register8::A).rotate_left(1);
             self.set_8(Register8::A, val);
             self.set_status_flag(sm83::ProcessorFlags::ZeroFlag, false);
@@ -561,7 +561,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, (val & 1) != 0);
             false
         }
-        pub fn rr(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rr(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg);
@@ -587,7 +587,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn rra(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rra(&mut self, _: &OperandType, _: &OperandType) -> bool{
             let val = self.get_8(Register8::A);
             let r = (val as u16).rotate_right(1);
             let carry = (r & 0x8000) != 0;
@@ -599,7 +599,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, carry);
             false
         }
-        pub fn rrc(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rrc(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg).rotate_right(1);
@@ -619,7 +619,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn rrca(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rrca(&mut self, _: &OperandType, _: &OperandType) -> bool{
             let val = self.get_8(Register8::A).rotate_right(1);
             self.set_8(Register8::A, val);
             self.set_status_flag(sm83::ProcessorFlags::ZeroFlag, false);
@@ -628,7 +628,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, (val & 0x80) != 0);
             false
         }
-        pub fn rst(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn rst(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             let vec = match op1{
                 OperandType::ImplicitLiteral(n) => n,
                 _ => panic!("Unbekannter Aufruf von RST!"),
@@ -637,7 +637,7 @@ mod sm83 {
             self.reg_pc = *vec as u16;
             true
         }
-        pub fn sbc(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn sbc(&mut self, _: &OperandType, op2: &OperandType) -> bool{
             let a = self.get_8(Register8::A);
             let c = self.get_status_flag(sm83::ProcessorFlags::CarryFlag) as u8;
             let subtr = match op2{
@@ -654,7 +654,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, subtr as u16 + c as u16 > a as u16);
             false
         }
-        pub fn scf(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn scf(&mut self, _: &OperandType, _: &OperandType) -> bool{
             self.set_status_flag(sm83::ProcessorFlags::SubtractionFlag, false);
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, true);
@@ -678,7 +678,7 @@ mod sm83 {
             }
             false
         }
-        pub fn sla(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn sla(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg) as u16;
@@ -702,7 +702,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn sra(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn sra(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg) as u16;
@@ -730,7 +730,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn srl(&mut self, op1: &OperandType, op2: &OperandType) -> bool{ // Das gleiche wie SRA, nur ohne Bit 7
+        pub fn srl(&mut self, op1: &OperandType, _: &OperandType) -> bool{ // Das gleiche wie SRA, nur ohne Bit 7
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg) as u16;
@@ -756,7 +756,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::HalfCarryFlag, false);
             false
         }
-        pub fn stop(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn stop(&mut self, _: &OperandType, _: &OperandType) -> bool{
             self.mode = CPUMode::Stopped;
             match &self.bus.upgrade(){
                 None => (),
@@ -764,7 +764,7 @@ mod sm83 {
             }
             false
         }
-        pub fn sub(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn sub(&mut self, _: &OperandType, op2: &OperandType) -> bool{
             // A - B
             // H gesetzt, wenn lower nibble von B > lower nibble von A
             let a = self.get_8(Register8::A);
@@ -782,7 +782,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, subtr > a);
             false
         }
-        pub fn swap(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn swap(&mut self, op1: &OperandType, _: &OperandType) -> bool{
             match op1{
                 OperandType::Reg8(reg, _) => {
                     let val = self.get_8(*reg);
@@ -807,7 +807,7 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, false);
             false
         }
-        pub fn xor(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn xor(&mut self, _: &OperandType, op2: &OperandType) -> bool{
             let a = self.get_8(Register8::A);
             let val = match op2{
                 OperandType::Reg8(reg, _) => self.get_8(*reg),
@@ -824,12 +824,12 @@ mod sm83 {
             false
         }
         // Geschafft!!
-        pub fn prefix(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn prefix(&mut self, _: &OperandType, _: &OperandType) -> bool{
             // dummy Funktion
             panic!("Dummy-Funktion (Prefix) aufgerufen!");
             // false
         }
-        pub fn illegal(&mut self, op1: &OperandType, op2: &OperandType) -> bool{
+        pub fn illegal(&mut self, _: &OperandType, _: &OperandType) -> bool{
             panic!("Illegale Funktion")
         }
     }

@@ -1,4 +1,4 @@
-
+#![allow(warnings)]
 fn main() {
     cxx_build::bridge("src/bridge.rs")
         // .file("src/blobstore.cc")

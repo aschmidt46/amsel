@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod sm83;
 pub mod ppu;
 pub mod bus;
@@ -9,13 +11,13 @@ pub(crate) mod gbc{
     use crate::gbc::{bus::Bus, sm83::{Register8, Register16}};
 
     const CGB_CLOCK: f64 = 4194304.0;
-    const SAMPLE_RATE: f64 = 20000.0;
+    // const SAMPLE_RATE: f64 = 20000.0;
     
-    const AUDIO_TIME_PER_CLOCK: f64 = 1.0 / CGB_CLOCK;
-    const AUDIO_TIME_PER_SAMPLE: f64 = 1.0 / SAMPLE_RATE;
+    // const AUDIO_TIME_PER_CLOCK: f64 = 1.0 / CGB_CLOCK;
+    // const AUDIO_TIME_PER_SAMPLE: f64 = 1.0 / SAMPLE_RATE;
     
     pub struct CGB{
-        bus: Rc<RefCell<Bus>>,
+        pub bus: Rc<RefCell<Bus>>,
         has_frame: bool,
     
         audio_time: f64,

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
 use crate::gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Register8, Register16, SM83}};
@@ -67,6 +69,8 @@ pub struct Bus{
     watch_breakpoints: bool,
     breakpoints: Vec<u16>,
     breakpoints_op: Vec<String>,
+    test_mode: bool,
+    pub test_output: Option<Vec<u8>>,
 }
 
 const TAC_TABLE: [u16; 4] = [256 * 4, 4 * 4, 16 * 4, 64 * 4];
@@ -79,7 +83,8 @@ impl Bus{
             oam_dma: 0, dma_next_clock: -1, rom_bank_lower: 0, rom_bank_upper: 1, rtc_s: 0, rtc_m: 0, rtc_h: 0, rtc_dl: 0, rtc_dh: 0, enable_ram_rtc: false, // sicher?
             cgb_mode: false, wram_bank: 1, hdma1: 0, hdma2: 0, hdma3: 0, hdma4: 0, hdma5: 0, vram_dma_active: DmaMode::Finished, vram_dma_bytes_remaining: 0,
             vram_dma_pointer: 0, br: false, palette_address: 0, palette_address_obj: 0, ff72: 0, ff73: 0, ff74: 0, ff75: 0, mbc1_bank_mode: false, mbc1_magic_register: 0,
-            sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false, apu: None, watch_breakpoints: false, breakpoints: Vec::new(), breakpoints_op: Vec::new()
+            sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false, apu: None, watch_breakpoints: false, breakpoints: Vec::new(), breakpoints_op: Vec::new(),
+            test_mode: false, test_output: None
         }
     }
     pub fn new_init(path: &str) -> Self{
@@ -89,6 +94,10 @@ impl Bus{
             bus.cgb_mode = true;
         }
         bus
+    }
+    pub fn set_test_mode(&mut self){
+        self.test_mode = true;
+        self.test_output = Some(Vec::new())
     }
     pub fn create_components(&mut self, this: Rc<RefCell<Bus>>){
         let mut cpu = SM83::new_init(Rc::downgrade(&this));
@@ -423,10 +432,16 @@ impl Bus{
             },
             0xFF01 => self.sb = val,
             0xFF02 => {
-                let speed = if self.cgb_mode {val & 0b10} else {0};
-                let clock_select = val & 1;
-                let transfer_enable = val & 128;
-                self.sc = speed | clock_select | transfer_enable;
+                if self.test_mode && val == 0x81{
+                    // Nur Debug Ausgabe
+                    self.test_output.as_mut().unwrap().push(self.sb);
+                }
+                else{ // Normales Verhalten
+                    let speed = if self.cgb_mode {val & 0b10} else {0};
+                    let clock_select = val & 1;
+                    let transfer_enable = val & 128;
+                    self.sc = speed | clock_select | transfer_enable;
+                }
             },
             0xFF04 => self.div = 0,
             0xFF05 => self.tima = val,
@@ -528,7 +543,6 @@ impl Bus{
     }
 
     fn get_path(&mut self, addr: u16) -> Option<&mut u8>{
-        let cart = self.cart.as_mut().unwrap();
         let ppu = self.ppu.as_mut().unwrap();
         let cpu = self.cpu.as_mut().unwrap();
         match addr{
@@ -790,11 +804,14 @@ impl Bus{
 
 #[cfg(test)]
 mod test{
+    use std::{cell::RefCell, rc::Rc};
+
     #[test]
     fn read_write_test(){
-        let mut b = super::Bus::new();
-        assert_eq!(b.read_memory(0xFF30), 0);
-        b.write_memory(0xFF30, 0xAA);
-        assert_eq!(b.read_memory(0xFF30), 0xAA);
+        let b = Rc::new(RefCell::new(super::Bus::new()));
+        b.borrow_mut().create_components(b.clone());
+        assert_eq!(b.borrow_mut().read_memory(0xC000), 0);
+        b.borrow_mut().write_memory(0xC000, 0xAA);
+        assert_eq!(b.borrow_mut().read_memory(0xC000), 0xAA);
     }
 }

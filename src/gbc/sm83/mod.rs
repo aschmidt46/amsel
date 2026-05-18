@@ -7,6 +7,7 @@ mod sm83_instructions;
 mod rom_tests;
 mod register_tests;
 mod json_parser;
+#[allow(dead_code)]
 
 #[derive(Default, Clone, Debug)]
 pub struct Operand{
@@ -281,7 +282,7 @@ impl SM83 {
     pub fn get_prev_10_instructions(&mut self) -> (String, Vec<i32>){
         let mut pc_list: Vec<u16> = Vec::new();
         let mut it = self.circular_index;
-        for i in 0..10{
+        for _ in 0..10{
             let instruction = self.circular[it];
             if instruction >= 0 {
                 pc_list.push(instruction as u16);

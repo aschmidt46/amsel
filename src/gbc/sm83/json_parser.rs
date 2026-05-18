@@ -78,7 +78,7 @@ fn get_instruction_fun(mnemonic: &str) -> InstructionFn{
         "SWAP" => SM83::swap,
         "XOR" => SM83::xor,
         "PREFIX" => SM83::prefix,
-        err => SM83::illegal, // Illegale Ops führen zu hardlock normalerweise
+        _ => SM83::illegal, // Illegale Ops führen zu hardlock normalerweise
     }
 }
 
