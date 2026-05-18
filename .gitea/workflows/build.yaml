@@ -5,9 +5,9 @@ on: [push]
 jobs:
   Explore-Gitea-Actions:
     runs-on: ubuntu-latest
+    with:
+      persist-credentials: false
     steps:
-      with:
-          persist-credentials: false
       - uses: actions/checkout@v3
       - run: apt-get update
       - run: apt-get install python3 --yes
