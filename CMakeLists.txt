@@ -197,3 +197,37 @@ if(RELEASE)
                    COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --cyan
                    "Built Windows Release for x64 in ./release")
 endif()
+
+
+
+# TESTS
+
+message("Preparing files for testing...")
+FetchContent_Declare(
+  gb-test-roms
+  GIT_REPOSITORY https://github.com/retrio/gb-test-roms.git
+  GIT_TAG        master
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/source/cgb/resources/gb-test-roms-master"
+  )
+FetchContent_MakeAvailable(gb-test-roms)
+
+# FetchContent_Declare(
+#   gb-test-logs
+#   GIT_REPOSITORY https://github.com/wheremyfoodat/Gameboy-logs.git
+#   GIT_TAG        master
+#   SOURCE_DIR "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master"
+#   )
+# FetchContent_MakeAvailable(gb-test-logs)
+
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg1LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg1LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg3LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg3LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg4LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg4LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg5LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg5LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg6LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg6LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg7LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg7LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg8LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg8LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg9LYStubbed.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg9LYStubbed")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg10LYStubbed1.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg10LYStubbed1")
+# file(ARCHIVE_EXTRACT INPUT "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg11LYStubbed1.zip" DESTINATION "${PROJECT_SOURCE_DIR}/source/cgb/resources/Gameboy-logs-master/Blargg11LYStubbed1")
+
+
