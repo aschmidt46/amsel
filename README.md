@@ -42,3 +42,11 @@ python -m pip install jinja2
 cmake ..
 make
 ```
+## Bauen der Web-App
+
+Erfordert Emscripten.
+
+```
+emcmake cmake ..
+make
+```

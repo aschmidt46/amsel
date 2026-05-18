@@ -111,6 +111,7 @@ void CgbImplementation::setAddressOf(int i, int to)
 
 CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Console(path)
 {
+  #ifndef BUILD_WEB
   if(cgb_can_save(cgb)){
     if(!FileIO::getInstance().createSave(this->loadedGame)){
       size_t size = get_save_size(cgb);
@@ -119,10 +120,12 @@ CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Con
       cgb_load_save(cgb, saveData);
     }
   }
+  #endif
 }
 
 CgbImplementation::~CgbImplementation()
 {
+  #ifndef BUILD_WEB
   if(cgb_can_save(cgb)){
     auto data = cgb_get_save_data(cgb);
     std::vector<uint8_t> cxxData;
@@ -131,12 +134,14 @@ CgbImplementation::~CgbImplementation()
     }
     FileIO::getInstance().saveData(this->loadedGame, cxxData.data(), cxxData.size());
   }
+  #endif
 }
 
 void CgbImplementation::load(const char *path)
 {
   cgb = new_cgb(path);
 
+  #ifndef BUILD_WEB
   if(cgb_can_save(cgb)){
     if(!FileIO::getInstance().createSave(this->loadedGame)){
       size_t size = get_save_size(cgb);
@@ -145,6 +150,7 @@ void CgbImplementation::load(const char *path)
       cgb_load_save(cgb, saveData);
     }
   }
+  #endif
 }
 
 void CgbImplementation::clock()
@@ -344,6 +350,7 @@ uint8_t CgbImplementation::readCpuBus(uint16_t addr)
 
 void CgbImplementation::displayRegisters()
 {
+  #ifndef BUILD_WEB
   std::lock_guard lock(consoleLock);
   ImGui::BeginTable("Register", 2);
   ImGui::TableNextColumn();
@@ -359,4 +366,5 @@ void CgbImplementation::displayRegisters()
   ImGui::Text(("E: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::E)), 2)).c_str());
   ImGui::Text(("L: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::L)), 2)).c_str());
   ImGui::EndTable();
+  #endif
 }

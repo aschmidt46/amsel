@@ -136,6 +136,7 @@ uint8_t NesImplementation::readCpuBus(uint16_t addr)
 
 void NesImplementation::displayRegisters()
 {
+    #ifndef BUILD_WEB
     ImGui::BeginTable("Register", 2);
     ImGui::TableNextColumn();
     ImGui::Text(("P: " + std::bitset<8>(console.readRegister(CpuReg::RegP)).to_string()).c_str());
@@ -146,4 +147,5 @@ void NesImplementation::displayRegisters()
     ImGui::Text(("X: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegX)), 2)).c_str());
     ImGui::Text(("Y: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegY)), 2)).c_str());
     ImGui::EndTable();
+    #endif
 }

@@ -1,8 +1,12 @@
 #include "console.h"
 #include "nes_implementation.h"
-#include "cgb_implementation.h"
+#ifndef BUILD_WEB
+    #include "cgb_implementation.h"
+#endif
 #include "dummy_implementation.h"
-#include "../framework/screen.h"
+#ifndef BUILD_WEB
+    #include "../framework/screen.h"
+#endif
 #include "../framework/global.h"
 
 void createConsole(const char *path)
@@ -14,14 +18,18 @@ void createConsole(const char *path)
         console = new NesImplementation();
         console->load(filename.c_str());
     }
+    #ifndef BUILD_WEB
     else if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
         console = new CgbImplementation(filename.c_str());
     }
+    #endif
     else{
         console = new DummyImplementation();
     }
 
-    screen->onSwitchConsole();
+    #ifndef BUILD_WEB
+        screen->onSwitchConsole();
+    #endif
 }
 
 std::string Console::ihex(uintptr_t input)
