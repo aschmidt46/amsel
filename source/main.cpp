@@ -7,6 +7,7 @@
 #include "framework/screen.h"
 #include "gui.h"
 #include "console/dummy_implementation.h"
+#include <cstring>
 
 #ifdef NES_ON_WINDOWS
   #include <Windows.h>

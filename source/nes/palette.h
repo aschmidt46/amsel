@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 #include "../framework/glm_replacement.h"
 
 constexpr const uint8_t defPalette[192] = {
