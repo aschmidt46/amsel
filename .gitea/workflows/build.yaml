@@ -7,9 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: apt-get update
-      - run: apt-get install python3
-      - run: apt-get install python3-jinja2
-      - run: apt-get install cmake
+      - run: apt-get install python3 --yes
+      - run: apt-get install python3-jinja2 --yes
+      - run: apt-get install cmake --yes
       - run: mkdir -p build
       - run: cd build
       - run: cmake ..
