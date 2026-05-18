@@ -6,10 +6,12 @@ jobs:
   Explore-Gitea-Actions:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@master
       - run: apt-get update
       - run: apt-get install python3 --yes
       - run: apt-get install python3-jinja2 --yes
       - run: apt-get install cmake --yes
+      - run: apt-get install make --yes
       - run: mkdir -p build
       - run: cd build
       - run: cmake ..
