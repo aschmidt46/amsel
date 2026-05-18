@@ -3,8 +3,9 @@
 .vs/
 .vscode/
 /build/
+include_deps/
 resources/gbc/
-resources/nes/
+resources/nes/roms/
 cmake-build-*/
 prefix/
 .clangd

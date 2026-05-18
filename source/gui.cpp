@@ -11,9 +11,9 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "portable-file-dialogs.h"
+#define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
 #include "ImGuiNotify.hpp"
 #include "IconsFontAwesome6.h"
-#include "fa-solid-900.h"
 
 #include "framework/file_io.h"
 #include "framework/input.h"

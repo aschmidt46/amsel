@@ -8,6 +8,7 @@
 
 #include "icon.h"
 #include "styles.h"
+#define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
 #include "ImGuiNotify.hpp"
 #include "IconsFontAwesome6.h"
 #include "fa-solid-900.h"
