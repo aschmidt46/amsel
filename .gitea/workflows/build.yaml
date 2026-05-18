@@ -4,11 +4,11 @@ on: [push]
 
 jobs:
   Explore-Gitea-Actions:
-    runs-on: alpine-latest
+    runs-on: ubuntu-latest
     steps:
-      - run: apk add python3
-      - run: apk add py3-jinja2
-      - run: apk add cmake
+      - run: apt get python3
+      - run: apt get pyton3-jinja2
+      - run: apt get cmake
       - run: mkdir -p build
       - run: cd build
       - run: cmake ..
