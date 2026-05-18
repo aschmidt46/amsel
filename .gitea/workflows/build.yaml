@@ -6,9 +6,9 @@ jobs:
   Explore-Gitea-Actions:
     runs-on: ubuntu-latest
     steps:
-      - run: apt get python3
-      - run: apt get pyton3-jinja2
-      - run: apt get cmake
+      - run: apt-get install python3
+      - run: apt-get install pyton3-jinja2
+      - run: apt-get install cmake
       - run: mkdir -p build
       - run: cd build
       - run: cmake ..
