@@ -1,0 +1,15 @@
+name: Build and Test Script
+run-name: Push by @${{ github.actor }}
+on: [push]
+
+jobs:
+  Explore-Gitea-Actions:
+    runs-on: alpine-latest
+    steps:
+      - run: apk add python3
+      - run: apk add py3-jinja2
+      - run: apk add cmake
+      - run: mkdir -p build
+      - run: cd build
+      - run: cmake ..
+      - run: make
