@@ -70,7 +70,7 @@ void Ppu::clock()
 	}
 }
 
-void Ppu::setPixel(int x, int y, glm::vec3 c)
+void Ppu::setPixel(int x, int y, vec3 c)
 {
     int index = (x + 256 * y) * 4;//alter Index: (3*x) + (3*256*y);
 	if(x > 255 || y > 239 || x < 0 || y < 0){

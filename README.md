@@ -29,13 +29,16 @@ Den Gameboy-Emulator hatte ich zuerst in einem eigenständigen Projekt in Rust i
 # Build
 
 Erfordert CMake.
-Erfordert glew und glfw3. Für Windows MinGW sind bereits vorkompilierte Bibliotheken vorhanden.
+Erfordert Python 3 für das Bauen von glad.
 Erfordert Rust bzw. Cargo für den Gameboy-Teil.
 Vor dem Bauen müssen die git-Submodule geladen werden.
 
-Bauen unter MinGW und Linux:
+Bauen:
 ```
 cd build
+python -m venv .venv
+.venv/Scripts/activate.<ps1/bat/sh...>
+python -m pip install jinja2
 cmake ..
 make
 ```

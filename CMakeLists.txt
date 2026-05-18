@@ -12,6 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(WIN32)
+message("-------- Detected OS: Windows")
 add_compile_definitions(NES_ON_WINDOWS)
 endif()
 
@@ -28,8 +29,6 @@ if(RELEASE)
 message("------------- Building Windows release build")
 add_link_options(-mwindows)
 endif()
-
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 include(FetchContent)
 
@@ -69,6 +68,24 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(whereami)
 
+set(GLFW_LIBRARY_TYPE STATIC)
+FetchContent_Declare(
+  glfw
+  GIT_REPOSITORY  https://github.com/glfw/glfw
+  GIT_TAG         3.4
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/glfw"
+)
+FetchContent_MakeAvailable(glfw)
+
+FetchContent_Declare(
+  glad
+  GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+  GIT_TAG        v2.0.8
+  SOURCE_SUBDIR	 cmake
+)
+
+FetchContent_MakeAvailable(glad)
+
 
 find_program(CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
 if (CXXBRIDGE STREQUAL "CXXBRIDGE-NOTFOUND")
@@ -81,16 +98,8 @@ if (CXXBRIDGE STREQUAL "CXXBRIDGE-NOTFOUND")
     find_program(CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
 endif()
 
+
 include_directories(PUBLIC include)
-
-find_package(glfw3 REQUIRED)
-
-find_package(OpenGL REQUIRED)
-
-find_package(GLEW REQUIRED)
-
-# add_subdirectory(deps/rtaudio)
-
 include_directories(PUBLIC .)
 include_directories(PUBLIC source)
 include_directories(PUBLIC deps/imgui)
@@ -115,6 +124,7 @@ add_library(whereami STATIC
 )
 
 # Rust
+# set(RUSTFLAGS -Awarnings)
 corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
 corrosion_add_cxxbridge(rusty_bridge CRATE antons-gbc-emu FILES bridge.rs)
 
@@ -159,23 +169,24 @@ source/console/console.cpp
 source/framework/locale.h
 source/framework/locale.cpp
 source/console/dummy_implementation.h
+source/framework/glm_replacement.h
 )
 
 # add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)
 
 target_link_libraries(AMSEL whereami)
 target_link_libraries(AMSEL rtaudio)
-target_link_libraries(AMSEL OpenGL::GL)
 target_link_libraries(AMSEL imgui)
+
+set(BUILD_SHARED_LIBS FALSE)
+glad_add_library(glad_gl_core_46 STATIC API gl:core=4.6)
+target_link_libraries(AMSEL glad_gl_core_46)
 target_link_libraries(AMSEL glfw)
-target_link_libraries(AMSEL GLEW::GLEW)
 
 target_link_libraries(AMSEL cgbcore)
 target_link_libraries(AMSEL rusty_bridge)
 
 
-file(COPY "lib/glew32.dll" DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY "lib/glfw3.dll" DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY "resources/nes/palette.pal" DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/source/framework/locales DESTINATION ${CMAKE_BINARY_DIR}/)
 

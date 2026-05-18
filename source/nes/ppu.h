@@ -135,7 +135,7 @@ class Ppu{
 
     bool unevenFrame = true;
     void clock();
-    void setPixel(int x, int y, glm::vec3 c);
+    void setPixel(int x, int y, vec3 c);
     void swapBuffers();
 
     int toggleSpriteRenderIn = -1;

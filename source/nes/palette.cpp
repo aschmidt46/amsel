@@ -27,7 +27,7 @@ Palette::Palette()
     }
 }
 
-glm::vec3 Palette::getColor(uint8_t index)
+vec3 Palette::getColor(uint8_t index)
 {
     if(3*index + 2 > pSize) {
         std::cout << "Palette-Index außer Reichweite!" << std::endl;
@@ -37,5 +37,5 @@ glm::vec3 Palette::getColor(uint8_t index)
     r = colors[3*index];
     g = colors[3*index+1];
     b = colors[3*index+2];
-    return glm::vec3(r/255.0f,g/255.0f,b/255.0f);
+    return vec3(r/255.0f,g/255.0f,b/255.0f);
 }

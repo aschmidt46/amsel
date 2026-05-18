@@ -1,14 +1,12 @@
 # Benötigt strip und ResourceHacker in PATH
 
-New-Item -ItemType Directory -Force -Path "./release"
-New-Item -ItemType Directory -Force -Path "./release/locales"
-New-Item -ItemType Directory -Force -Path "./release/saves"
+New-Item -ItemType Directory -Force -Path "./release" | out-null
+New-Item -ItemType Directory -Force -Path "./release/locales" | out-null
+New-Item -ItemType Directory -Force -Path "./release/saves" | out-null
 
 $locales = "./locales/*"
 # Get-Item -Path $locales |
 Copy-Item  -Path $locales -Destination "./release/locales/" -Recurse -force
-Copy-Item  -Path "glfw3.dll" -Destination "./release/glfw3.dll" -Recurse -force
-Copy-Item  -Path "glew32.dll" -Destination "./release/glew32.dll" -Recurse -force
 Copy-Item  -Path "AMSEL.exe" -Destination "./release/AMSEL.exe" -Recurse -force
 Copy-Item  -Path "palette.pal" -Destination "./release/palette.pal" -Recurse -force
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "glm/glm.hpp"
+#include "../framework/glm_replacement.h"
 
 constexpr const uint8_t defPalette[192] = {
     98, 98, 98, 0, 28, 149, 25, 4, 172, 66, 0, 157, 97, 0, 107, 110,
@@ -26,5 +26,5 @@ struct Palette{
     Palette(const char* path);
     Palette();
     ~Palette(){ delete[] colors; };
-    glm::vec3 getColor(uint8_t index);
+    vec3 getColor(uint8_t index);
 };

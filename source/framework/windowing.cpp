@@ -35,14 +35,16 @@ GLFWwindow* initWindow(){
   glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
   GLFWwindow* window = glfwCreateWindow(2*width, 2*height, title.c_str(), NULL, NULL);
   glfwMakeContextCurrent(window);
+  
+  int version = gladLoadGL(glfwGetProcAddress);
+  if (version == 0) {
+    printf("Failed to initialize OpenGL context\n");
+    std::terminate();
+  }
+
   glViewport(0, 0, width, height);
   glfwSwapInterval(1);
-  
-  GLenum res = glewInit();
-  if (res != GLEW_OK) {
-    fprintf(stderr, "Error: '%s'\n", glewGetErrorString(res));
-  }
-  
+
   glDisable(GL_MULTISAMPLE);
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);

@@ -142,7 +142,7 @@ void Screen::present()
     glBindVertexArray(0);
 }
 
-void Screen::setPixelColor(int x, int y, glm::vec3 c)
+void Screen::setPixelColor(int x, int y, vec3 c)
 {
     glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGB, GL_FLOAT, &c);
 }
@@ -153,7 +153,7 @@ void Screen::copyBufferToScreen(const float *buffer)
 }
 
 // Abbildung des Konsolen-Seitenverhätnisses auf den Bildschirm
-glm::vec4 Screen::computeRect(int x, int y){
+vec4 Screen::computeRect(int x, int y){
     float consoleX = console->getX();
     float consoleY = console->getY();
     float consoleAspect = consoleX / consoleY;
@@ -189,7 +189,7 @@ glm::vec4 Screen::computeRect(int x, int y){
 
     // Skalierung auf NDC im Shader
 
-    return glm::vec4(x0,x1,y0,y1);
+    return vec4(x0,x1,y0,y1);
 }
 
 void Screen::onSwitchConsole()
@@ -203,7 +203,7 @@ void Screen::updateFramebufferSize(int w, int h)
 {
     width = w;
     height = h;
-    glm::vec4 xxyy = computeRect(w,h);
+    vec4 xxyy = computeRect(w,h);
     
     setQSize(xxyy.x, xxyy.y, xxyy.z, xxyy.w);
     glNamedBufferData(ssbo, qSize.size()*sizeof(float), qSize.data(), GL_STATIC_DRAW);

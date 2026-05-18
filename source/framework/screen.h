@@ -1,7 +1,7 @@
 #pragma once
-#include <GL/glew.h>
+#include <glad/gl.h>
 #include <vector>
-#include <glm/glm.hpp>
+#include "glm_replacement.h"
 
 constexpr const char* vs = 
     "#version 460\n"
@@ -216,10 +216,10 @@ class Screen{
 
     };
 
-    glm::vec4 computeRect(int x, int y);
+    vec4 computeRect(int x, int y);
     void onSwitchConsole();
     void present();
-    void setPixelColor(int x, int y, glm::vec3 c);
+    void setPixelColor(int x, int y, vec3 c);
     void copyBufferToScreen(const float* buffer);   //float array, jeder Wert ist eine Farbe zwischen 0 und 1
     void updateFramebufferSize(int w, int h);
 };
