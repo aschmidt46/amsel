@@ -12,7 +12,7 @@ jobs:
       - run: apt-get install python3-jinja2 --yes
       - run: apt-get install cmake --yes
       - run: apt-get install make --yes
-      - run: git clone https://gitea.kassade.de/anton/amsel.git
+      - run: git clone http://localhost:9080/anton/amsel.git
       - run: cd amsel
       - run: mkdir -p build
       - run: cd build
