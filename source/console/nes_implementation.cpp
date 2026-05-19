@@ -2,6 +2,12 @@
 #include <imgui.h>
 #include <bitset>
 
+NesImplementation::NesImplementation(std::vector<uint8_t> &rom)
+{
+    new (&this->console) NES();
+    this->console.load(rom);
+}
+
 void NesImplementation::load(const char *path)
 {
     new (&this->console) NES();

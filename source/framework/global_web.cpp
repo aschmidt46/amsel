@@ -29,10 +29,11 @@ int main(){
 
 using namespace emscripten;
 
-float lerp(float a, float b, float t) {
-    return (1 - t) * a + t * b;
+std::vector<float> lerp(float a, float b, float t) {
+    return {(1 - t) * a + t * b};
 }
 
-EMSCRIPTEN_BINDINGS(my_module) {
-    function("lerp", &lerp);
-}
+// EMSCRIPTEN_BINDINGS(test) {
+//     register_vector<float>("vector<float>");
+//     function("lerp", &lerp);
+// }

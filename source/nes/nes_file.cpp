@@ -140,3 +140,43 @@ NESFile::NESFile(const char *path)
     assert(chrRom != nullptr);
     assert(this->prgRom != nullptr);    
 }
+
+NESFile::NESFile(std::vector<uint8_t> &rom)
+{
+    auto rawData = rom.data();
+    header = NESHeader::createHeader(rawData);
+    unsigned int index = 16;
+
+    if(header.flags6.containsTrainer()){
+        trainer = rawData + index;
+        index += 512;
+    }
+    else trainer = nullptr;
+
+    int prgroms = (int)header.PRGROMSize * 16384;
+    if(prgroms == 0){
+        prgRom = nullptr;
+    }
+    else{
+        prgRom = rawData + index;
+        index += prgroms;
+    }
+
+    int chrroms = (int)header.CHRROMSize * 8192;
+    if(chrroms == 0){
+        chrRom = new uint8_t[0x2000];
+        for(int i = 0; i < 0x2000; i++){
+            chrRom[i] = 0;
+        }
+        index += 0x2000;
+    }
+    else{
+        chrRom = rawData + index;
+        index += chrroms;
+    }
+
+    // muss erstmal reichen...
+
+    assert(chrRom != nullptr);
+    assert(this->prgRom != nullptr); 
+}

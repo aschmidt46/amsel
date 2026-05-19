@@ -23,7 +23,7 @@ include(FetchContent)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
-# set(BUILD_WEB TRUE)
+set(BUILD_WEB TRUE)
 
 if(NOT BUILD_WEB)
 

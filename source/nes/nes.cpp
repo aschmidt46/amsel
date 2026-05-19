@@ -49,6 +49,28 @@ void NES::load(const char *path)
     }
 }
 
+void NES::load(std::vector<uint8_t> &rom)
+{
+    // std::lock_guard<std::mutex> lock(framebufferM);
+    auto Slot = std::make_shared<NESFile>(rom);
+    if(mapper->changeCart(Slot)){
+        apu->reset(mapper);
+        ppu->init(mapper);
+        cpu->init(0xC000, mapper);
+        changeTitle = true;
+        loaded = true;
+    }
+    else{
+        const auto mapper = Slot->header.getMapper();
+        MessageStruct m = {
+            .type=MT_ERROR,
+            .title=locale.getTranslation(GameError),
+            .content=std::vformat(locale.getTranslation(MapperNotSupported), std::make_format_args(mapper))
+        };
+        messageQueue.enqueue(m);
+    }
+}
+
 void NES::eject()
 {
     // if(!loaded) return;

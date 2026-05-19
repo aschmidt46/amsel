@@ -70,5 +70,6 @@ struct NESFile{
     std::string name = "";
 
     NESFile(const char* path);
+    NESFile(std::vector<uint8_t> &rom);
     ~NESFile(){delete[] rawData;};
 };

@@ -2,16 +2,22 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#ifdef BUILD_WEB    
+#include <memory>
+#include <emscripten.h>
+#include <emscripten/bind.h>
+using namespace emscripten;
+#endif
 
 class Console{
     protected:
     std::string loadedGame = "";
-    public:
-
+    
     //Helfer
     std::string ihex(uintptr_t input);
     std::string ihexNorm(std::string s, int n);
-
+    
+    public:
     Console() = default;
     Console(const char* path);
     virtual ~Console() = default;
@@ -50,7 +56,25 @@ class Console{
     virtual uint8_t readCpuBus(uint16_t addr) = 0;
 
     virtual void displayRegisters() = 0;
+
+    #ifdef BUILD_WEB
+      val accessFramebufferJS() {
+          return val( typed_memory_view(this->getX() * this->getY() * 4, this->accessFramebuffer()));
+      }
+    #endif
+
 };
 
+#ifndef BUILD_WEB
+
 void createConsole(const char* path);
+
+#else
+
+std::unique_ptr<Console> createConsole(std::string filename, std::vector<uint8_t> rom);
+
+
+
+
+#endif
 

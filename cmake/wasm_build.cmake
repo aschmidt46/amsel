@@ -21,7 +21,7 @@ FetchContent_MakeAvailable(Corrosion)
 # Rust
 # set(RUSTFLAGS -Awarnings)
 corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
-# corrosion_add_cxxbridge(rusty_bridge CRATE antons-gbc-emu FILES bridge.rs)
+corrosion_add_cxxbridge(rusty_bridge CRATE cgbcore FILES bridge.rs)
 
 
 add_executable(AMSEL-web
@@ -54,7 +54,7 @@ source/nes/mappers/mapper7.cpp source/nes/mappers/mapper7.h
 source/nes/mappers/mappers.cpp source/nes/mappers/mappers.h
 source/console/console.h
 source/console/nes_implementation.h source/console/nes_implementation.cpp
-# source/console/cgb_implementation.h source/console/cgb_implementation.cpp
+source/console/cgb_implementation.h source/console/cgb_implementation.cpp
 source/console/console.cpp
 source/framework/locale.h
 source/framework/locale.cpp
@@ -66,6 +66,6 @@ source/framework/global_web.cpp
 set_target_properties(AMSEL-web PROPERTIES LINK_FLAGS "--bind --emit-tsd tsd.ts -s EXPORT_ES6=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -s SINGLE_FILE=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -s WASM=1 -Wall -s MODULARIZE=1")
 
 target_link_libraries(AMSEL-web cgbcore)
-# target_link_libraries(AMSEL-web rusty_bridge)
+target_link_libraries(AMSEL-web rusty_bridge)
 
 

@@ -55,6 +55,7 @@ class NES{
     public:
     NES();
     ~NES();
+    void load(std::vector<uint8_t> &rom);
     void load(const char* path);
     void eject();
     void reset();

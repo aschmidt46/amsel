@@ -9,8 +9,9 @@ class CgbImplementation : public Console{
     rust::Box<CGB> cgb;
     void setAddressOf(int i, int to);
     public:
-    CgbImplementation() = default;
+    CgbImplementation() = delete;
     CgbImplementation(const char* path);
+    CgbImplementation(std::vector<uint8_t> &rom);
     ~CgbImplementation();
     void load(const char* path) override;
     void clock() override;

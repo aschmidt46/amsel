@@ -2,9 +2,11 @@
 #include "../framework/global.h"
 #include <cstring>
 #include <iostream>
-#include <imgui.h>
+#ifndef BUILD_WEB
+  #include <imgui.h>
+  #include "../framework/file_io.h"
+#endif
 #include <bitset>
-#include "../framework/file_io.h"
 
 void CgbImplementation::setAddressOf(int i, int to)
 {
@@ -110,6 +112,20 @@ void CgbImplementation::setAddressOf(int i, int to)
 }
 
 CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Console(path)
+{
+  #ifndef BUILD_WEB
+  if(cgb_can_save(cgb)){
+    if(!FileIO::getInstance().createSave(this->loadedGame)){
+      size_t size = get_save_size(cgb);
+      std::vector<uint8_t> saveData(size);
+      FileIO::getInstance().loadSave(this->loadedGame, saveData.data(), size);
+      cgb_load_save(cgb, saveData);
+    }
+  }
+  #endif
+}
+
+CgbImplementation::CgbImplementation(std::vector<uint8_t> &rom) : cgb(new_cgb_rom(rom))
 {
   #ifndef BUILD_WEB
   if(cgb_can_save(cgb)){

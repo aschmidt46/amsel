@@ -8,6 +8,7 @@ class NesImplementation : public Console{
     public:
     NesImplementation() = default;
     ~NesImplementation() = default;
+    NesImplementation(std::vector<uint8_t> &rom);
     void load(const char* path) override;
     void clock() override;
     void clockUntilSampleReady() override;
