@@ -101,7 +101,7 @@ impl RomObject{
             , rom_size_mask: ROM_BIT_MASK[bytes[0x0148].clone() as usize], ram_size: RAM_SIZE_TABLE[bytes[0x0149].clone() as usize], raw_data: bytes
             , battery_ram: RomObject::has_battery(t) })
     }
-    pub fn new_from_rom(bytes: &Vec<u8>) -> Self {
+    pub fn new_from_rom(bytes: Vec<u8>) -> Self {
         println!("Mapper: {:?}", RomObject::get_cartridge_type(bytes[0x0147].clone()));
         let t = bytes[0x0147].clone();
         RomObject {info: RomObject::get_rom_info(&bytes), cgb_flag: bytes[0x0143].clone()
