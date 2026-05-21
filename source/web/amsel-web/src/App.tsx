@@ -1,22 +1,38 @@
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+// import heroImg from './assets/hero.png'
 import './App.css'
 import Module from './emscripten/AMSEL-web.js'
+import { CommonEm } from './CommonEm.js'
 
-Module().then((instance) => {
-  console.log(instance.lerp(5,6,7)); // direct calling
-  // instance.ccall("hello_react", null, null, null); // ccall
-});
+// import { AudioContext } from 'react-native-audio-api'
+
+
+
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [emu, setEmu] = useState(null);
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(e.target.files)
+    Module().then((instance) => { files[0].bytes().then((bytes) => {
+      const vec = new instance.vec_u8;
+      bytes.forEach(element => {
+        vec.push_back(element)
+      });
+      setEmu(instance.createConsole(files[0].name, vec));
+      // const audioContext = new AudioContext();
+      // audioContext.sa
+    })})
+  }
 
   return (
     <>
       <section id="center">
-        <div className="hero">
+        <CommonEm emuObject={emu}></CommonEm>
+        {/* <AudioNodeSource></AudioNodeSource> */}
+        {/* <div className="hero">
           <img src={heroImg} className="base" width="170" height="179" alt="" />
           <img src={reactLogo} className="framework" alt="React logo" />
           <img src={viteLogo} className="vite" alt="Vite logo" />
@@ -26,14 +42,10 @@ function App() {
           <p>
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+        </div> */}
+        <input type="file" onChange={
+          handleFileSelected
+        }></input>
       </section>
 
       <div className="ticks"></div>
