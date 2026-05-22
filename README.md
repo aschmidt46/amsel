@@ -55,6 +55,7 @@ make
 ```
 Dann in source/web/amsel-web:
 ```
+npm install
 npm run dev         (startet Entwicklungsserver)
 npm run build       (Baut Webseite für Auslieferung)
 ```
