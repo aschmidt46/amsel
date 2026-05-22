@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+
+import processorUrl from "./audioWorklet.ts?worker&url";
+import type { CXXConsole } from './emscripten/AMSEL-web';
 
 
-export function GlCanvas({emuObject}) {
-    const myCanvas = useRef(null);
-    const [gl, setGL] : [WebGL2RenderingContext, React.Dispatch<WebGL2RenderingContext>] = useState(null);
+export function GlCanvas({emuObject} : {emuObject : CXXConsole}) {
+    const myCanvas = useRef<HTMLCanvasElement>(null);
+    // const [gl, setGL] = useState<WebGL2RenderingContext | null>(null);
     const [actx, setActx] = useState(new AudioContext({sampleRate: 20000}));
 
-    const [styleWidth, setStyleWidth] = useState("60vmin")
+    const [aspect, setAspect] = useState(1)
+    const [anode, setAnode] = useState<{audioNode: AudioWorkletNode | null}>({audioNode: null});
 
     const vertexCode = `#version 300 es
         in vec3 aPos;
@@ -26,7 +30,9 @@ export function GlCanvas({emuObject}) {
 
     // Setup
     useEffect(() => {
-        setGL(myCanvas.current.getContext("webgl2"));
+        let animationFrame = 0;
+        const cur = myCanvas.current!;
+        const gl = cur.getContext("webgl2")!;
         if(!gl) return;
 
         if (!gl.getExtension('EXT_color_buffer_float')){
@@ -35,7 +41,7 @@ export function GlCanvas({emuObject}) {
 
         if(emuObject){
             const ratio = emuObject.getX() / emuObject.getY();
-            setStyleWidth((ratio * 60).toString() + "vmin");
+            setAspect(ratio);
         }
 
         gl.clearColor(0,0,0,1);
@@ -43,8 +49,8 @@ export function GlCanvas({emuObject}) {
 
         const program = gl.createProgram();
 
-        const vertex = gl.createShader(gl.VERTEX_SHADER);
-        const fragment = gl.createShader(gl.FRAGMENT_SHADER);
+        const vertex = gl.createShader(gl.VERTEX_SHADER)!;
+        const fragment = gl.createShader(gl.FRAGMENT_SHADER)!;
         gl.shaderSource(vertex, vertexCode);
         gl.shaderSource(fragment, fragmentCode);
 
@@ -56,8 +62,8 @@ export function GlCanvas({emuObject}) {
             }
         });
 
-        gl.attachShader(program, vertex);
-        gl.attachShader(program, fragment);
+        gl.attachShader(program, vertex!);
+        gl.attachShader(program, fragment!);
 
         gl.linkProgram(program);
 
@@ -134,20 +140,37 @@ export function GlCanvas({emuObject}) {
 
         if(emuObject){
             let queueSize = 0;
-            actx.audioWorklet.addModule("worklet/audioWorklet.js").then(() => {
+            // Reset
+            if(anode.audioNode){
+                actx.close().then(() => {setActx(new AudioContext({sampleRate: 20000}))});
+                setAnode({audioNode: null});
+            }
+            actx.audioWorklet.addModule(processorUrl).then(() => {
           
-            const audioNode = new AudioWorkletNode(
+            anode.audioNode = new AudioWorkletNode(
               actx,
               "audioWorklet",
               {outputChannelCount: [2]}
             );
     
       
-            audioNode.port.onmessage = e => {
-                queueSize = e.data;
+            anode.audioNode.port.onmessage = e => {
+                if(emuObject && anode.audioNode && gl){
+                    queueSize = e.data;
+                    const q0 = [];
+                    const q1 = [];
+                    while(queueSize < 1024){
+                        emuObject.clockUntilSampleReady();
+                        const sample = emuObject.getSample();
+                        q0.push(sample.first);
+                        q1.push(sample.second);
+                        queueSize += 1;
+                    }
+                    anode.audioNode?.port.postMessage({left: q0, right: q1});
+                }
             };
           
-            audioNode.connect(actx.destination);
+            anode.audioNode?.connect(actx.destination);
     
             
             actx.resume();
@@ -155,47 +178,48 @@ export function GlCanvas({emuObject}) {
             function render () {
                 
                 if(emuObject){
-                    
-                    const q0 = [];
-                    const q1 = [];
-                    while(queueSize < 2048){
-                        emuObject.clockUntilSampleReady();
-                        const sample = emuObject.getSample();
-                        q0.push(sample.first);
-                        q1.push(sample.second);
-                        queueSize += 1;
-                    }
-                    audioNode.port.postMessage({left: q0, right: q1});
     
                     gl.bindTexture(gl.TEXTURE_2D, texture);
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, emuObject.getX(), emuObject.getY(), 0, gl.RGBA, gl.FLOAT,
                     emuObject.accessFramebufferJS());
                     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
-                    requestAnimationFrame(render);
+                    animationFrame = requestAnimationFrame(render);
                 }
             }
     
-    
-    
-            requestAnimationFrame(render);
+            animationFrame = requestAnimationFrame(render);
     
             });
         }
 
         
+        return () => {cancelAnimationFrame(animationFrame);}
+    }, [emuObject, fragmentCode, vertexCode, actx, anode]);
 
-    }, [emuObject, gl, fragmentCode, vertexCode, actx]);
+    const style : CSSProperties = {
+      imageRendering: 'pixelated',
+      overflow: 'hidden'
+    }
 
-    const style = {
-      width: styleWidth,
-      height: "60vmin",
-      imageRendering: "pixelated"
+    function getHeight(){
+        if(emuObject) return emuObject.getY();
+        else return 1;
+    }
+    function getWidth(){
+        if(emuObject) return emuObject.getX();
+        else return 1;
+    }
+
+    function getAspectRatio(){
+        return "aspect-["+aspect.toString()+"] flex";
     }
 
     return (
-
-        <canvas ref={myCanvas} style={style} ></canvas>
+        // Unschön, da bei Smartphones das Seitenverhältnis nicht ganz stimmt, ich finde keine andere funktionierende Lösung
+        <div className='flex grow justify-center h-screen w-screen max-h-dvw'>
+            <canvas ref={myCanvas} width={getWidth()} style={style} height={getHeight()} className={getAspectRatio()} ></canvas>
+        </div>
 
 
     )

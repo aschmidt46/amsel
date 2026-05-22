@@ -1,3 +1,6 @@
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
+
 if(WIN32)
 message("-------- Detected OS: Windows")
 add_compile_definitions(NES_ON_WINDOWS)
@@ -8,10 +11,6 @@ if(RELEASE)
 message("------------- Building Windows release build")
 add_link_options(-mwindows)
 endif()
-
-file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/deps")
-message("Fetching dependencies...")
-include(${CMAKE_SOURCE_DIR}/cmake/fetch_dependencies.cmake)
 
 
 include_directories(PUBLIC include)
@@ -45,6 +44,7 @@ corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
 corrosion_add_cxxbridge(rusty_bridge CRATE antons-gbc-emu FILES bridge.rs)
 
 add_executable(AMSEL source/main.cpp
+source/framework/common.cpp source/framework/common.h
 source/framework/file_io.cpp source/framework/file_io.h
 source/framework/input.cpp source/framework/input.h
 source/framework/windowing.cpp source/framework/windowing.h

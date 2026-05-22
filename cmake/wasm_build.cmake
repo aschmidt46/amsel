@@ -1,4 +1,5 @@
-
+set(CMAKE_CXX_FLAGS_DEBUG "-O2")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 include_directories(PUBLIC include)
 include_directories(PUBLIC include_deps)
@@ -20,11 +21,12 @@ FetchContent_MakeAvailable(Corrosion)
 
 # Rust
 # set(RUSTFLAGS -Awarnings)
-corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
+corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml PROFILE release)
 corrosion_add_cxxbridge(rusty_bridge CRATE cgbcore FILES bridge.rs)
 
 
 add_executable(AMSEL-web
+source/framework/common.cpp source/framework/common.h
 source/nes/6502.cpp source/nes/6502.h
 source/nes/ppu.cpp source/nes/ppu.h
 source/nes/nes_file.cpp source/nes/nes_file.h
@@ -63,9 +65,28 @@ source/framework/glm_replacement.h
 source/framework/global_web.cpp
 )
 
-set_target_properties(AMSEL-web PROPERTIES LINK_FLAGS "--bind --emit-tsd tsd.ts -s EXPORT_ES6=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -s SINGLE_FILE=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -s WASM=1 -Wall -s MODULARIZE=1")
+set_target_properties(AMSEL-web PROPERTIES LINK_FLAGS "--bind --emit-tsd AMSEL-web.d.ts -s TOTAL_STACK=512mb -s EXPORT_ES6=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -s SINGLE_FILE=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -s WASM=1 -Wall -s MODULARIZE=1")
 
 target_link_libraries(AMSEL-web cgbcore)
 target_link_libraries(AMSEL-web rusty_bridge)
+
+set(WEB_BASE "${PROJECT_SOURCE_DIR}/source/web/amsel-web")
+
+# file(COPY "${PROJECT_BINARY_DIR}/AMSEL-web.js" DESTINATION "${WEB_BASE}/src/emscripten/")
+# file(COPY "${PROJECT_BINARY_DIR}/AMSEL-web.d.ts" DESTINATION "${WEB_BASE}/src/emscripten/")
+
+add_custom_command(
+        TARGET AMSEL-web POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_BINARY_DIR}/AMSEL-web.js
+                ${WEB_BASE}/src/emscripten/)
+
+add_custom_command(
+        TARGET AMSEL-web POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_BINARY_DIR}/AMSEL-web.d.ts
+                ${WEB_BASE}/src/emscripten/)
+
+file(COPY "${CMAKE_SOURCE_DIR}/source/framework/locales" DESTINATION "${WEB_BASE}/src/assets")
 
 

@@ -189,6 +189,16 @@ float NES::getY()
     return this->y;
 }
 
+bool NES::canSave()
+{
+    return this->mapper->canSave();
+}
+
+std::vector<uint8_t> NES::getSaveData()
+{
+    return this->mapper->getSaveData();
+}
+
 void NES::setController1Key(bool gamepad, int key, int action)
 {
     controller1->setKey(gamepad, key, action);

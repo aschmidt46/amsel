@@ -1,6 +1,7 @@
 #include "file_io.h"
 #include <fstream>
 #include "inicpp.h"
+#include "common.h"
 
 FileIO::FileIO()
 {
@@ -14,45 +15,8 @@ FileIO::FileIO()
 }
 
 void initSettings(SettingsConfig &c){
-  c.controller1 = std::vector<std::pair<int, int>>(8, {0,0});
-  c.controller2 = std::vector<std::pair<int, int>>(8, {0,0});
-  // Standard Belegung Controller 1
-  c.controller1[0].first = 265;
-  c.controller1[1].first = 264;
-  c.controller1[2].first = 263;
-  c.controller1[3].first = 262;
-  c.controller1[4].first = 83;
-  c.controller1[5].first = 65;
-  c.controller1[6].first = 257;
-  c.controller1[7].first = 259;
-
-  c.controller1[0].second = 23;
-  c.controller1[1].second = 25;
-  c.controller1[2].second = 26;
-  c.controller1[3].second = 24;
-  c.controller1[4].second = 12;
-  c.controller1[5].second = 14;
-  c.controller1[6].second = 19;
-  c.controller1[7].second = 18;
-
-  // Standard Belegung Controller 2
-  c.controller2[0].first = 328;
-  c.controller2[1].first = 325;
-  c.controller2[2].first = 324;
-  c.controller2[3].first = 326;
-  c.controller2[4].first = 88;
-  c.controller2[5].first = 90;
-  c.controller2[6].first = 335;
-  c.controller2[7].first = 334;
-
-  c.controller2[0].second = 23;
-  c.controller2[1].second = 25;
-  c.controller2[2].second = 26;
-  c.controller2[3].second = 24;
-  c.controller2[4].second = 12;
-  c.controller2[5].second = 14;
-  c.controller2[6].second = 19;
-  c.controller2[7].second = 18;
+  
+  setDefaultBindings(c);
 
   c.directory = exeDir.generic_string();
 

@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import reactNativeWeb from "vite-plugin-react-native-web";
+import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), reactNativeWeb({})],
+  plugins: [react(), tailwindcss()],
 })

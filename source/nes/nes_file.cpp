@@ -143,7 +143,13 @@ NESFile::NESFile(const char *path)
 
 NESFile::NESFile(std::vector<uint8_t> &rom)
 {
-    auto rawData = rom.data();
+    auto contents = rom;
+
+    rawData = new uint8_t[contents.size()];
+    for(int i = 0; i < contents.size(); i++){
+        rawData[i] = contents[i];
+    }
+
     header = NESHeader::createHeader(rawData);
     unsigned int index = 16;
 

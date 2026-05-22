@@ -23,6 +23,9 @@ class DummyImplementation : public Console{
     void setController1Key(bool gamepad, int key, int action) override{};
     void setController2Key(bool gamepad, int key, int action) override{};
 
+    bool canSave() override {return false;};
+    std::vector<uint8_t> getSaveData() override {return std::vector<uint8_t>();};
+
 
     void addClock() override{};
     void setHalt(bool val) override{halt = val;};

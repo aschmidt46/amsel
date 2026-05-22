@@ -45,6 +45,7 @@ std::unique_ptr<Console> createConsole(std::string filename, std::vector<uint8_t
     else{
         c = std::make_unique<DummyImplementation>();
     }
+    c->setName(filename);
     return c;
 }
 
@@ -70,6 +71,21 @@ Console::Console(const char *path)
     this->loadedGame = p.filename().string();
 }
 
+std::string Console::getGameTitle()
+{
+    return this->loadedGame;
+}
+
+void Console::setName(std::string name)
+{
+    this->loadedGame = name;
+}
+
+void Console::setVolume(float v)
+{
+    this->volume = v;
+}
+
 #ifdef BUILD_WEB
 
 
@@ -91,6 +107,12 @@ EMSCRIPTEN_BINDINGS(ConsoleModule) {
     .function("isLoaded", &Console::isLoaded)
     .function("getX", &Console::getX)
     .function("getY", &Console::getY)
+    .function("setController1Key", &Console::setController1Key)
+    .function("setController2Key", &Console::setController2Key)
+    .function("getGameTitle", &Console::getGameTitle)
+    .function("canSave", &Console::canSave)
+    .function("getSaveData", &Console::getSaveData)
+    .function("setVolume", &Console::setVolume)
     ;
 
 //   smart_ptr<std::shared_ptr<Console>>("CXXConsole");

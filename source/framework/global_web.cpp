@@ -1,4 +1,5 @@
 #include "global.h"
+#include "common.h"
 #include <emscripten.h>
 #include <iostream>
 #include <emscripten/bind.h>
@@ -23,17 +24,7 @@ GLFWwindow* window;
 
 
 int main(){
-    std::cout << "Hallo Welt!" << std::endl;
+    setDefaultBindings(globalConfig);
+    std::cout << "AMSEL initialized." << std::endl;
     return 0;
 }
-
-using namespace emscripten;
-
-std::vector<float> lerp(float a, float b, float t) {
-    return {(1 - t) * a + t * b};
-}
-
-// EMSCRIPTEN_BINDINGS(test) {
-//     register_vector<float>("vector<float>");
-//     function("lerp", &lerp);
-// }

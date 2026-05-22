@@ -22,6 +22,9 @@ class NesImplementation : public Console{
     void setController1Key(bool gamepad, int key, int action) override;
     void setController2Key(bool gamepad, int key, int action) override;
 
+    bool canSave() override;
+    std::vector<uint8_t> getSaveData() override;
+
 
     void addClock() override;
     void setHalt(bool val) override;

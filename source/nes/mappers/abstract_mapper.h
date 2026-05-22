@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 enum Mirror{
     MIRROR_VERTICAL,
@@ -57,4 +58,6 @@ class AbstractMapper{
     AbstractMapper(std::shared_ptr<Mapper> m);
     virtual ~AbstractMapper();
     virtual void reset();
+    bool canSave();
+    std::vector<uint8_t> getSaveData();
 };

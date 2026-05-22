@@ -198,3 +198,13 @@ void Mapper::reset()
     if(mapperImplementation)
         mapperImplementation->reset();
 }
+
+bool Mapper::canSave()
+{
+    return this->mapperImplementation->canSave();
+}
+
+std::vector<uint8_t> Mapper::getSaveData()
+{
+    return this->mapperImplementation->getSaveData();
+}

@@ -197,7 +197,7 @@ bool CgbImplementation::audioSampleReady()
 std::pair<double, double> CgbImplementation::getSample()
 {
   auto res = get_stereo(cgb);
-  return {res.left, res.right};
+  return {this->volume * res.left, this->volume * res.right};
 }
 
 bool CgbImplementation::isLoaded()
@@ -245,6 +245,21 @@ void CgbImplementation::setController1Key(bool gamepad, int key, int action)
 void CgbImplementation::setController2Key(bool gamepad, int key, int action)
 {
   // this->setController1Key(gamepad, key, action);
+}
+
+bool CgbImplementation::canSave()
+{
+    return cgb_can_save(cgb);
+}
+
+std::vector<uint8_t> CgbImplementation::getSaveData()
+{
+    auto data = cgb_get_save_data(cgb);
+    std::vector<uint8_t> v;
+    for(const auto &el : data){
+      v.push_back(el);
+    }
+    return v;
 }
 
 void CgbImplementation::addClock()

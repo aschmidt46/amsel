@@ -67,4 +67,7 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     void pullIRQ();
     void riseA12();
     void reset();
+
+    bool canSave();
+    std::vector<uint8_t> getSaveData();
 };

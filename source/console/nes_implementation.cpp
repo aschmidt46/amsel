@@ -46,7 +46,7 @@ bool NesImplementation::audioSampleReady()
 
 std::pair<double, double> NesImplementation::getSample()
 {
-    double sample = this->console.getSample();
+    double sample = this->volume * this->console.getSample();
     return {sample, sample};
 }
 
@@ -73,6 +73,16 @@ void NesImplementation::setController1Key(bool gamepad, int key, int action)
 void NesImplementation::setController2Key(bool gamepad, int key, int action)
 {
     this->console.setController2Key(gamepad, key, action);
+}
+
+bool NesImplementation::canSave()
+{
+    return this->console.canSave();
+}
+
+std::vector<uint8_t> NesImplementation::getSaveData()
+{
+    return this->console.getSaveData();
 }
 
 void NesImplementation::addClock()

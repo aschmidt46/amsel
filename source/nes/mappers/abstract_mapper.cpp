@@ -122,3 +122,15 @@ AbstractMapper::~AbstractMapper()
 }
 
 void AbstractMapper::reset(){}
+
+bool AbstractMapper::canSave()
+{
+    return this->containsBatteryBackedPRGRAM;
+}
+
+std::vector<uint8_t> AbstractMapper::getSaveData()
+{
+    std::vector<uint8_t> sv(prgRamSize);
+    std::memcpy(sv.data(), prgRam, sv.size());
+    return sv;
+}

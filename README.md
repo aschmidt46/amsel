@@ -19,12 +19,15 @@ Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB)
 - Gamepad-Unterstützung
 - CRT-Shader
 - Lokalisierung über JSON-Dateien (standardmäßig deutsch, englisch)
+- React-Web-Oberfläche, ermöglicht Nutzung auf Smartphones
 
 ## Aufbau
 Das Projekt ist zum Großteil in C++ geschrieben. Die einzelnen Konsolen sind größtenteils von der Benutzeroberfläche entkoppelt, dadurch lässt sich das Programm auch zumindest theoretisch leicht erweitern, allerdings gehen einige Teile der Benutzeroberfläche noch strikt von einem NES / Gameboy aus (z.B. Tastenbelegungen).
 Die Benutzeroberfläche ist aktuell in Dear ImGui implementiert, das ganze Frontend läuft in einem OpenGL-Kontext. In der Zukunft könnte man noch ein Webfrontend in WebAssembly hinzufügen.
 
 Den Gameboy-Emulator hatte ich zuerst in einem eigenständigen Projekt in Rust implementiert, um die Sprache zu lernen. Anschließend habe ich in dem Projekt ein Foreign Function Interface zu C++ mit Rust CXX gebaut, um es in das NES-Projekt zu integrieren. Mit Corrosion lässt sich ein Rust-Paket mit CXX sehr leicht in ein vorhandenes CMake-Skript eingliedern.
+
+Für die Web-App definiert der Emulator eine Javascript-Schnittstelle und wird mit Emscripten kompiliert.
 
 # Build
 
@@ -44,9 +47,14 @@ make
 ```
 ## Bauen der Web-App
 
-Erfordert Emscripten.
+Erfordert Emscripten und npm.
 
 ```
-emcmake cmake ..
+emcmake cmake .. -DBUILD_WEB=ON
 make
+```
+Dann in source/web/amsel-web:
+```
+npm run dev         (startet Entwicklungsserver)
+npm run build       (Baut Webseite für Auslieferung)
 ```

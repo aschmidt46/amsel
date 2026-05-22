@@ -12,20 +12,25 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 #set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
 
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 
 
 include(FetchContent)
+file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/deps")
+message("Fetching headers...")
+include(${CMAKE_SOURCE_DIR}/cmake/fetch_headers.cmake)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
-set(BUILD_WEB TRUE)
+option(BUILD_WEB "Build WebAssembly for Web-App" OFF)
+
 
 if(NOT BUILD_WEB)
+
+message("Fetching dependencies...")
+include(${CMAKE_SOURCE_DIR}/cmake/fetch_dependencies.cmake)
 
 include(${CMAKE_SOURCE_DIR}/cmake/desktop_build.cmake)
 

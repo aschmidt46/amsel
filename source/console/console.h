@@ -16,6 +16,9 @@ class Console{
     //Helfer
     std::string ihex(uintptr_t input);
     std::string ihexNorm(std::string s, int n);
+
+    // Macht das ganze einfacher, weil ich einen Callback weniger in JS brauche
+    float volume = 1.0f;
     
     public:
     Console() = default;
@@ -37,6 +40,12 @@ class Console{
     virtual float getY() = 0;
     virtual void setController1Key(bool gamepad, int key, int action) = 0;
     virtual void setController2Key(bool gamepad, int key, int action) = 0;
+    std::string getGameTitle();
+    void setName(std::string name);
+    void setVolume(float v);
+
+    virtual bool canSave() = 0;
+    virtual std::vector<uint8_t> getSaveData() = 0;
 
 
 
