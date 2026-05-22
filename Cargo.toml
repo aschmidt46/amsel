@@ -13,7 +13,8 @@ path = "src/bridge.rs"
 # path = "src/main.rs"
 
 [profile.release]
-debug = true
+opt-level = 3
+# debug = true
 
 [profile.dev]
 opt-level = 3
