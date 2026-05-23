@@ -20,15 +20,15 @@ class Mapper;
 class AbstractMapper{
     private:
     uint8_t* translatePPUBus(uint8_t* addr);
-    // Paletten können nicht vom konkreten Mapper überschrieben werden
-    uint8_t** palletteMap;
+
     protected:
-    uint8_t* prgRam;
+    std::vector<uint8_t> prgRam;
     unsigned int prgRamSize = 0;
     bool chrRam = false;
 
     // Rad Racer 2
-    uint8_t* hardwiredVram;
+    // 2KiB + 2KiB intern in der PPU
+    uint8_t hardwiredVram[0x800];
 
     // Weil mapper->cart zum Destruktorzeitpunkt nicht mehr existiert
     std::string name = "";
@@ -40,7 +40,7 @@ class AbstractMapper{
 
 
     public:
-    Mapper* mapper;
+    std::weak_ptr<Mapper> mapper;
     Mirror mirror = MIRROR_VERTICAL;
 
     // Diese beiden Funktionen werden nur im Adressraum >= 0x6000 aufgerufen, Mappings darunter sind fest

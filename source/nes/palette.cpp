@@ -9,27 +9,30 @@ Palette::Palette(const char *path) : Palette()
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     
     if(contents.size()==0) return;
-    else delete[] colors;
 
-    colors = new uint8_t[contents.size()];
-    pSize = contents.size();
-    for(int i = 0; i < contents.size(); i++){
-        colors[i] = contents[i];
+    if(contents.size() == 192){
+        for(int i = 0; i < contents.size(); i++){
+            colors[i] = contents[i];
+        }
+    }
+    else{
+        for(int i = 0; i < 192; i++){
+            colors[i] = defPalette[i];
+        }
     }
     stream.close();
 }
 
 Palette::Palette()
 {
-    colors = new uint8_t[pSize];
-    for(int i = 0; i < pSize; i++){
+    for(int i = 0; i < 192; i++){
         colors[i] = defPalette[i];
     }
 }
 
 vec3 Palette::getColor(uint8_t index)
 {
-    if(3*index + 2 > pSize) {
+    if(3*index + 2 > 192) {
         std::cout << "Palette-Index außer Reichweite!" << std::endl;
         throw;
     }

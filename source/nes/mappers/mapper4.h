@@ -13,7 +13,7 @@ class Mapper4 : public AbstractMapper {
     
     void bankDataWriteSelect(uint8_t value);
 
-    uint8_t* bdwSelect = nullptr;
+    uint8_t bdwSelect = 0;
 
     // Kompatibilität mit MMC6: Ram immer schreibbar
     // bool prgRamEnable = true;
@@ -23,17 +23,8 @@ class Mapper4 : public AbstractMapper {
     uint8_t IRQCounter = 0;
     bool disableIRQ = false;
 
-    //CHR Bänke
-    uint8_t R0 = 0;
-    uint8_t R1 = 0;
-    uint8_t R2 = 0;
-    uint8_t R3 = 0;
-    uint8_t R4 = 0;
-    uint8_t R5 = 0;
-
-    // PRG Bänke
-    uint8_t R6 = 0;
-    uint8_t R7 = 0;
+    //CHR Bänke R0 bis R5 und PRG Bänke R6 bis R7
+    uint8_t registers[8];
 
 
     uint8_t* translatePPUBus(uint8_t* addr);

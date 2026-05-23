@@ -197,6 +197,7 @@ uint8_t Ppu::readRegister(uint8_t *reg)
 
 void Ppu::fillTimings()
 {
+	timings.clear();
 	int i = -1;
 	for(int scanline = -1; scanline <= 260; scanline++){
 		for(int cycle = 0; cycle <= 340; cycle++){

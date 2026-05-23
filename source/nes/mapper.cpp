@@ -12,10 +12,8 @@ std::string mhex(uintptr_t input){
 }
 
 
-Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
+Mapper::Mapper(std::weak_ptr<Cpu> cpu, std::weak_ptr<Ppu> ppu, std::weak_ptr<Apu> apu)
 {
-    // Nur unterer Adressbereich, weil der fest ist
-    memoryMap = new uint8_t*[0x6000];
     this->ppu = ppu;
     this->cpu = cpu;
     this->apu = apu;
@@ -24,48 +22,6 @@ Mapper::Mapper(Cpu* cpu, Ppu* ppu, Apu* apu)
     controller[1] = 0;
     controller_state[0] = 0;
     controller_state[1] = 0;
-
-    for(unsigned int i = 0; i < 0x6000; i++){
-        memoryMap[i] = nullptr;
-    }
-
-    int offset = 0;
-    // Interner Ram (2KiB) + 3 Mirrors vom internen Ram
-    for(int j = 0; j < 4; j++){
-        for(int i = 0; i < 0x0800; i++){
-            memoryMap[offset + i] = cpu->internalMemory + i;
-        }
-        offset += 0x0800;
-    }
-    // Je 8 PPU Register ab 0x2000 bis < 0x4000 aufwärts (Mirror)
-    for(int i = offset; i < 0x4000; i+=0x8){
-        memoryMap[i]   = (uint8_t*)&ppu->PPUCTRL;
-        memoryMap[i+1] = (uint8_t*)&ppu->PPUMASK;
-        memoryMap[i+2] = (uint8_t*)&ppu->PPUSTATUS;
-        memoryMap[i+3] = (uint8_t*)&ppu->OAMADDR;
-        memoryMap[i+4] = (uint8_t*)&ppu->OAMDATA;
-        memoryMap[i+5] = (uint8_t*)&ppu->PPUSCROLL;
-        memoryMap[i+6] = (uint8_t*)&ppu->PPUADDR;
-        memoryMap[i+7] = (uint8_t*)&ppu->PPUDATA;
-    }
-
-    // IO Register (nicht implementiert)
-    io = new uint8_t[0x18];
-    for(int i = 0; i < 0x18; i++){
-        io[i] = 0;
-    }
-
-    offset = 0x4000;
-    for(int i = 0; i < 0x18; i++){
-         memoryMap[i + offset] = io + i;
-    }
-    offset += 0x18;
-
-    //APU und I/O Teile, die normalerweise nicht an sind
-    offset += 0x8;
-
-    // PRG-Ram, etc...
-    // Übernimmt Mapper-Implementierung
 }
 
 bool Mapper::changeCart(std::shared_ptr<NESFile> cartridge)
@@ -82,35 +38,77 @@ bool Mapper::changeCart(std::shared_ptr<NESFile> cartridge)
 
 }
 
-void Mapper::connectController(Controller *controller1, Controller *controller2)
+void Mapper::connectController(std::weak_ptr<Controller> controller1, std::weak_ptr<Controller> controller2)
 {
     this->controller1 = controller1;
     this->controller2 = controller2;
-    controller1->init(shared_from_this());
-    controller2->init(shared_from_this());
+    controller1.lock()->init(shared_from_this());
+    controller2.lock()->init(shared_from_this());
+}
+
+uint8_t *Mapper::getMemoryMapping(uint8_t* addr)
+{
+    uint16_t add = (uintptr_t)addr;
+
+    // Interner Ram (2KiB) + 3 Mirrors vom internen Ram
+    if(add < 0x2000){
+        uint16_t offset = add % 0x0800;
+        return cpu.lock()->internalMemory + offset;
+    }
+
+    // Je 8 PPU Register ab 0x2000 bis < 0x4000 aufwärts (Mirror)
+    if(add < 0x4000){
+        uint16_t offset = add % 0x8;
+        switch(offset){
+            case 0:
+                return (uint8_t*)&ppu.lock()->PPUCTRL;
+            case 1:
+                return (uint8_t*)&ppu.lock()->PPUMASK;
+            case 2:
+                return (uint8_t*)&ppu.lock()->PPUSTATUS;
+            case 3:
+                return &ppu.lock()->OAMADDR;
+            case 4:
+                return &ppu.lock()->OAMDATA;
+            case 5:
+                return &ppu.lock()->PPUSCROLL;
+            case 6:
+                return &ppu.lock()->PPUADDR;
+            default:
+                return &ppu.lock()->PPUDATA;
+        }
+    }
+
+    // Wird nie benutzt, aber nötig, damit die Funktion nicht nullptr zurückgibt
+    if(add < 0x4018){
+        return &io[add - 0x4000];
+    }
+    
+    // PRG-Ram, etc...
+    // Übernimmt Mapper-Implementierung
+    return nullptr;
 }
 
 uint8_t Mapper::read(uint8_t *address)
 {
     //wrap round?
-    if((uintptr_t)address==0x10000) return *memoryMap[0];
-    
+    if((uintptr_t)address==0x10000) return *getMemoryMapping(0);
     if((uintptr_t)address>= 0x6000)
         return mapperImplementation->readRam(address);
     
-    [[unlikely]] if(memoryMap[(uintptr_t)address]==nullptr){
+    [[unlikely]] if(getMemoryMapping(address)==nullptr){
         return 0;
     }
     
     // Feste Register
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x3FFF){
-        return ppu->readRegister(memoryMap[(uintptr_t)address]);
+        return ppu.lock()->readRegister(getMemoryMapping(address));
     }
     if((uintptr_t)address == 0x4015){
-        return apu->read((uintptr_t)address);
+        return apu.lock()->read((uintptr_t)address);
     }
-    auto val = *memoryMap[(uintptr_t)address];
+    auto val = *getMemoryMapping(address);
     if((uintptr_t)address >= 0x4016 && (uintptr_t)address <= 0x4017){
         val = (controller_state[(uintptr_t)address & 0x0001] & 0x80) > 0;
         controller_state[(uintptr_t)address & 0x0001] <<= 1;
@@ -128,7 +126,7 @@ void Mapper::write(uint8_t *address, uint8_t value)
         return;
     }
 
-    [[unlikely]] if(memoryMap[(uintptr_t)address] == nullptr){
+    [[unlikely]] if(getMemoryMapping(address) == nullptr){
         return;
     }
 
@@ -137,7 +135,7 @@ void Mapper::write(uint8_t *address, uint8_t value)
 
     // PPU-Callback
     if((uintptr_t)address >= 0x2000 && (uintptr_t)address <= 0x3FFF){
-        ppu->writeRegister(memoryMap[(uintptr_t)address], value);
+        ppu.lock()->writeRegister(getMemoryMapping(address), value);
         return;
     }
 
@@ -150,7 +148,7 @@ void Mapper::write(uint8_t *address, uint8_t value)
 
     // APU
     if(((uintptr_t)address >= 0x4000 && (uintptr_t)address <= 0x4013) || ((uintptr_t)address == 0x4015) || ((uintptr_t)address == 0x4017)){
-        apu->write((uintptr_t)address, value);
+        apu.lock()->write((uintptr_t)address, value);
         return;
     }
 
@@ -161,11 +159,11 @@ void Mapper::write(uint8_t *address, uint8_t value)
         uint16_t cpuAddress = ((uint16_t) value) << 8;
         for(int i=0; i < 256; i++){
             uint8_t val = read((uint8_t*)(uintptr_t)cpuAddress + i);
-            ppu->pOAM[i] = val;
+            ppu.lock()->pOAM[i] = val;
         }
-        cpu->remainingCycles += 512; // Oder 514???
+        cpu.lock()->remainingCycles += 512; // Oder 514???
     }
-    *memoryMap[(uintptr_t)address] = value;
+    *getMemoryMapping(address) = value;
 }
 
 uint8_t Mapper::readVRAM(uint8_t *address)
@@ -180,12 +178,12 @@ void Mapper::writeVRAM(uint8_t *address, uint8_t value)
 
 void Mapper::pullNMI()
 {
-    cpu->pullNMI();
+    cpu.lock()->pullNMI();
 }
 
 void Mapper::pullIRQ()
 {
-    cpu->pullIRQ();
+    cpu.lock()->pullIRQ();
 }
 
 void Mapper::riseA12()

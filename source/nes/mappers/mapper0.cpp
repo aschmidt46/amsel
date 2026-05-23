@@ -12,12 +12,12 @@ uint8_t Mapper0::readRam(uint8_t *addr)
         return 0;
 
     
-    if(mapper->cart->header.PRGROMSize == 1){
+    if(mapper.lock()->cart->header.PRGROMSize == 1){
         // Gespiegelt
-        return mapper->cart->prgRom[((uintptr_t)addr - 0x8000) % 0x4000];
+        return mapper.lock()->cart->prgRom[((uintptr_t)addr - 0x8000) % 0x4000];
     }
     else{
         //32KiB
-        return mapper->cart->prgRom[(uintptr_t)addr - 0x8000];
+        return mapper.lock()->cart->prgRom[(uintptr_t)addr - 0x8000];
     }
 }

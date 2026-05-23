@@ -3,12 +3,11 @@
 #include "apu.h"
 
 
-FrameSequencer::FrameSequencer(Apu *apu)
+FrameSequencer::FrameSequencer()
 {
-    this->apu = apu;
 }
 
-void FrameSequencer::onWrite(uint8_t val)
+void FrameSequencer::onWrite(uint8_t val, Apu* apu)
 {
     if(divider.counter==1){ // Clock diesen Zyklus
         resetCounter = 3;
@@ -25,12 +24,12 @@ void FrameSequencer::onWrite(uint8_t val)
     inhibitFlag  = r;
     if(mode){ // https://github.com/100thCoin/AccuracyCoin/README.md
         sequencer1.clock();
-        clockLengthCountersAndSweepUnits();
-        clockEnvelopesAndTrianglesLinearCounter();
+        clockLengthCountersAndSweepUnits(apu);
+        clockEnvelopesAndTrianglesLinearCounter(apu);
     }
 }
 
-void FrameSequencer::clockLengthCountersAndSweepUnits()
+void FrameSequencer::clockLengthCountersAndSweepUnits(Apu* apu)
 {
     apu->pulse1.clockLengthCounter();
     apu->pulse1.clockSweep();
@@ -43,7 +42,7 @@ void FrameSequencer::clockLengthCountersAndSweepUnits()
     apu->noise.length.clock();
 }
 
-void FrameSequencer::clockEnvelopesAndTrianglesLinearCounter()
+void FrameSequencer::clockEnvelopesAndTrianglesLinearCounter(Apu* apu)
 {
     apu->pulse1.clockEnvelope();
     apu->pulse2.clockEnvelope();
@@ -53,24 +52,24 @@ void FrameSequencer::clockEnvelopesAndTrianglesLinearCounter()
     apu->noise.envelope.clock();
 }
 
-void FrameSequencer::clock()
+void FrameSequencer::clock(Apu* apu)
 {
     if(divider.clock()){
         if(mode) {
             switch(sequencer1.clock()){
                 case 1:
-                    clockLengthCountersAndSweepUnits();
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockLengthCountersAndSweepUnits(apu);
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     break;
                 case 2:
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     break;
                 case 3:
-                    clockLengthCountersAndSweepUnits();
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockLengthCountersAndSweepUnits(apu);
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     break;
                 case 4:
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     break;
                 default:
                     break;
@@ -79,18 +78,18 @@ void FrameSequencer::clock()
         else {
             switch(sequencer0.clock()){
                 case 1:
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     break;
                 case 2:
-                    clockLengthCountersAndSweepUnits();
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockLengthCountersAndSweepUnits(apu);
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     break;
                 case 3:
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     break;
                 default:
-                    clockLengthCountersAndSweepUnits();
-                    clockEnvelopesAndTrianglesLinearCounter();
+                    clockLengthCountersAndSweepUnits(apu);
+                    clockEnvelopesAndTrianglesLinearCounter(apu);
                     if(!inhibitFlag){
                         interruptFlag = true;
 

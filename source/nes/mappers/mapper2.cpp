@@ -13,9 +13,9 @@ uint8_t Mapper2::readRam(uint8_t *addr)
 
     
     if((uintptr_t)addr < 0xC000)
-        return mapper->cart->prgRom[((uintptr_t)addr - 0x8000) + bankSelect * 0x4000];
+        return mapper.lock()->cart->prgRom[((uintptr_t)addr - 0x8000) + bankSelect * 0x4000];
     else
-        return mapper->cart->prgRom[(((uintptr_t)addr - 0xC000) + mapper->cart->header.PRGROMSize * 0x4000 - 0x4000)];
+        return mapper.lock()->cart->prgRom[(((uintptr_t)addr - 0xC000) + mapper.lock()->cart->header.PRGROMSize * 0x4000 - 0x4000)];
 }
 
 Mapper2::Mapper2(std::shared_ptr<Mapper> m) : AbstractMapper(m) {}

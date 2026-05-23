@@ -12,8 +12,8 @@ class Mapper;
 
 class Apu{
 	private:
-	double* square_table;
-	double* tnd_table;
+	double square_table[31];
+	double tnd_table[203];
 	uint8_t status; // 0x4015
 	
     public:
@@ -31,7 +31,7 @@ class Apu{
 
 	double tnd_sample = 0.0;
 
-	FrameSequencer fseq = FrameSequencer(this);
+	FrameSequencer fseq = FrameSequencer();
 
 	SquareChannel pulse1 = SquareChannel(false);
 	SquareChannel pulse2 = SquareChannel(true);

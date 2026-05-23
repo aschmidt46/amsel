@@ -6,6 +6,7 @@
 #include <format>
 #include <algorithm>
 #include <filesystem>
+#include <cstring>
 
 NAMETABLE_ARRANGEMENT Flags6::getNametableArrangement()
 {
@@ -70,7 +71,7 @@ uint8_t NESHeader::getPRGRamSize()
     return flags8;
 }
 
-NESHeader NESHeader::createHeader(uint8_t *data)
+NESHeader NESHeader::createHeader(const uint8_t *data)
 {
     NESHeader header;
     for(int i = 0; i < 4; i++){
@@ -98,91 +99,53 @@ NESFile::NESFile(const char *path)
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     
 
-    rawData = new uint8_t[contents.size()];
+    std::vector<uint8_t> rawData = std::vector<uint8_t>(contents.size());
     for(int i = 0; i < contents.size(); i++){
         rawData[i] = contents[i];
     }
     stream.close();
     
-    header = NESHeader::createHeader(rawData);
-    unsigned int index = 16;
-
-    if(header.flags6.containsTrainer()){
-        trainer = rawData + index;
-        index += 512;
-    }
-    else trainer = nullptr;
-
-    int prgroms = (int)header.PRGROMSize * 16384;
-    if(prgroms == 0){
-        prgRom = nullptr;
-    }
-    else{
-        prgRom = rawData + index;
-        index += prgroms;
-    }
-
-    int chrroms = (int)header.CHRROMSize * 8192;
-    if(chrroms == 0){
-        chrRom = new uint8_t[0x2000];
-        for(int i = 0; i < 0x2000; i++){
-            chrRom[i] = 0;
-        }
-        index += 0x2000;
-    }
-    else{
-        chrRom = rawData + index;
-        index += chrroms;
-    }
-
-    // muss erstmal reichen...
-
-    assert(chrRom != nullptr);
-    assert(this->prgRom != nullptr);    
+    fillStructure(rawData);
 }
 
 NESFile::NESFile(std::vector<uint8_t> &rom)
 {
     auto contents = rom;
 
-    rawData = new uint8_t[contents.size()];
-    for(int i = 0; i < contents.size(); i++){
-        rawData[i] = contents[i];
-    }
+    fillStructure(contents);
+}
 
-    header = NESHeader::createHeader(rawData);
+void NESFile::fillStructure(const std::vector<uint8_t> &rawData)
+{
+    header = NESHeader::createHeader(rawData.data());
     unsigned int index = 16;
 
     if(header.flags6.containsTrainer()){
-        trainer = rawData + index;
+        trainer = std::vector<uint8_t>(512);
+        std::memcpy(trainer.data(), rawData.data() + index, 512);
         index += 512;
     }
-    else trainer = nullptr;
 
     int prgroms = (int)header.PRGROMSize * 16384;
-    if(prgroms == 0){
-        prgRom = nullptr;
-    }
-    else{
-        prgRom = rawData + index;
+    if(prgroms > 0){
+        prgRom = std::vector<uint8_t>(prgroms);
+        std::memcpy(prgRom.data(), rawData.data() + index, prgroms);
         index += prgroms;
     }
 
     int chrroms = (int)header.CHRROMSize * 8192;
     if(chrroms == 0){
-        chrRom = new uint8_t[0x2000];
+        chrRom = std::vector<uint8_t>(0x2000);
         for(int i = 0; i < 0x2000; i++){
             chrRom[i] = 0;
         }
         index += 0x2000;
     }
     else{
-        chrRom = rawData + index;
+        chrRom = std::vector<uint8_t>(chrroms);
+        std::memcpy(chrRom.data(), rawData.data() + index, chrroms);
         index += chrroms;
     }
 
-    // muss erstmal reichen...
-
-    assert(chrRom != nullptr);
-    assert(this->prgRom != nullptr); 
+    // muss erstmal reichen 
 }

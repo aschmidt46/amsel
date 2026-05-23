@@ -41,7 +41,7 @@ add_library(whereami STATIC
 # Rust
 # set(RUSTFLAGS -Awarnings)
 corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
-corrosion_add_cxxbridge(rusty_bridge CRATE antons-gbc-emu FILES bridge.rs)
+corrosion_add_cxxbridge(rusty_bridge CRATE cgbcore FILES bridge.rs)
 
 add_executable(AMSEL source/main.cpp
 source/framework/common.cpp source/framework/common.h

@@ -1,6 +1,7 @@
 #pragma once
 #include "apu_divider.h"
 #include "apu_sequencer.h"
+#include <memory>
 
 class Apu;
 
@@ -10,20 +11,19 @@ struct FrameSequencer{
     Sequencer sequencer0 = Sequencer({1, 2, 3, 4});
     Sequencer sequencer1 = Sequencer({1, 2, 3, 4, 5});
 
-    Apu* apu;
     int resetCounter = -1;
 
-    FrameSequencer(Apu* apu);
+    FrameSequencer();
 
     bool mode = false; // false 0, true 1
 
     bool interruptFlag = false; // BRAUCHT IMPLEMENTIERUNG IN APU
     bool inhibitFlag = false;
 
-    void onWrite(uint8_t val);  //0x4017
+    void onWrite(uint8_t val, Apu* apu);  //0x4017
 
-    void clockLengthCountersAndSweepUnits();
-    void clockEnvelopesAndTrianglesLinearCounter();
+    void clockLengthCountersAndSweepUnits(Apu* apu);
+    void clockEnvelopesAndTrianglesLinearCounter(Apu* apu);
 
-    void clock();
+    void clock(Apu* apu);
 };

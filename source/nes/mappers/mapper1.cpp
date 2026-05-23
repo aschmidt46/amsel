@@ -26,8 +26,8 @@ void Mapper1::changeBanks(uint16_t bank, uint8_t mode)
     else if(bank < 0xC000){ // 0xA000 - 0xBFFF: CHR Bank 0
         //Ram ist 2* 8KiB;
         int chrSize = 2;
-        if(mapper->cart->header.CHRROMSize>0)
-            chrSize = mapper->cart->header.CHRROMSize;
+        if(mapper.lock()->cart->header.CHRROMSize>0)
+            chrSize = mapper.lock()->cart->header.CHRROMSize;
         
         if(chrSize==2){
             chrBank0 = mode & 1; // Es gibt nur zwei Bänke, bit entscheidet, ob erste oder zweite
@@ -51,14 +51,14 @@ uint8_t *Mapper1::translatePPUBus(uint8_t *addr)
     // Pattern Table / CHR Speicher (0x0000 - 0x2000)
     if(chrRomBankMode){ // 4KiB Modus
         if((uintptr_t)addr < 0x1000){ // Bank 0
-            return mapper->cart->chrRom +       (uintptr_t)addr + (chrBank0 * 0x1000);
+            return mapper.lock()->cart->chrRom.data() +       (uintptr_t)addr + (chrBank0 * 0x1000);
         }
         else{ // Bank 1
-            return mapper->cart->chrRom +       (uintptr_t)addr - 0x1000 + (chrBank1 * 0x1000);
+            return mapper.lock()->cart->chrRom.data() +       (uintptr_t)addr - 0x1000 + (chrBank1 * 0x1000);
         }
     }
     else{ // 8KiB Modus
-        return mapper->cart->chrRom +           (uintptr_t)addr + ((chrBank0 & 0b11111110) * 0x1000); // Unterstes Bit ignoriert
+        return mapper.lock()->cart->chrRom.data() +           (uintptr_t)addr + ((chrBank0 & 0b11111110) * 0x1000); // Unterstes Bit ignoriert
     }
 }
 
@@ -94,10 +94,7 @@ Mapper1::Mapper1(std::shared_ptr<Mapper> m) : AbstractMapper(m)
 {
     // 32KiB PRG Ram
     prgRamSize = 0x8000;
-    prgRam = new uint8_t[prgRamSize];
-    for(int i = 0; i < prgRamSize; i++){
-        prgRam[i] = 0;
-    }
+    prgRam = std::vector<uint8_t>(prgRamSize, 0);
 
     AbstractMapper::loadSave();
 }
@@ -105,7 +102,6 @@ Mapper1::Mapper1(std::shared_ptr<Mapper> m) : AbstractMapper(m)
 Mapper1::~Mapper1()
 {
     AbstractMapper::saveFile();
-    delete[] prgRam;
 }
 
 void Mapper1::reset()
@@ -133,24 +129,24 @@ uint8_t Mapper1::readRam(uint8_t *addr)
         switch(prgRomBankMode){ //PRG-ROM
             case 2:{ // Bank bei 0x8000 fest auf erste Bank, hintere getauscht
                 if((uintptr_t) addr < 0xC000){
-                    return mapper->cart->prgRom[(uintptr_t)addr - 0x8000];
+                    return mapper.lock()->cart->prgRom[(uintptr_t)addr - 0x8000];
                 }
                 else{
-                    return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + (prgRomBankSelect * 0x4000)];
+                    return mapper.lock()->cart->prgRom[(uintptr_t)addr - 0xC000 + (prgRomBankSelect * 0x4000)];
                 }
                 break;
             }
             case 3:{ // Bank bei 0xC000 fest auf letzte Bank, vordere getauscht
                 if((uintptr_t) addr < 0xC000){
-                    return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + (prgRomBankSelect * 0x4000)];
+                    return mapper.lock()->cart->prgRom[(uintptr_t)addr - 0x8000 + (prgRomBankSelect * 0x4000)];
                 }
                 else{
-                    return mapper->cart->prgRom[(uintptr_t)addr - 0xC000 + ((mapper->cart->header.PRGROMSize-1) * 0x4000)];
+                    return mapper.lock()->cart->prgRom[(uintptr_t)addr - 0xC000 + ((mapper.lock()->cart->header.PRGROMSize-1) * 0x4000)];
                 }
                 break;
             }
             default:{ // 0,1 (32 KiB Mode), 32 KiB bei 0x8000 getauscht
-                return mapper->cart->prgRom[(uintptr_t)addr - 0x8000 + ((prgRomBankSelect & 0b11111110) * 0x4000)];
+                return mapper.lock()->cart->prgRom[(uintptr_t)addr - 0x8000 + ((prgRomBankSelect & 0b11111110) * 0x4000)];
                 break;
             }
         }

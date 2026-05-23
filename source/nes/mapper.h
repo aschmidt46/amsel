@@ -20,44 +20,33 @@ class Mapper : virtual public std::enable_shared_from_this<Mapper>{
     private:
     std::unique_ptr<AbstractMapper> mapperImplementation = nullptr;
     public:
-    uint8_t** memoryMap = nullptr;    // CPU-Adressraum (nur feste Mappings)
 
     
-    Cpu* cpu = nullptr;
-    Ppu* ppu = nullptr;
-    Apu* apu = nullptr;
-    Controller* controller1 = nullptr;
-    Controller* controller2 = nullptr;
+    std::weak_ptr<Cpu> cpu;
+    std::weak_ptr<Ppu> ppu;
+    std::weak_ptr<Apu> apu;
+    std::weak_ptr<Controller> controller1;
+    std::weak_ptr<Controller> controller2;
+
     std::shared_ptr<NESFile> cart = nullptr;
-    uint8_t* io = nullptr;
 
     
-    // Adressen der öffentlichen PPU-Register
-    uint8_t* PPUCTRL = nullptr;
-    uint8_t* PPUMASK = nullptr;
-    uint8_t* PPUSTATUS = nullptr;
-    uint8_t* OAMADDR = nullptr;
-    uint8_t* OAMDATA = nullptr;
-    uint8_t* PPUSCROLL = nullptr;
-    uint8_t* PPUADDR = nullptr;
-    uint8_t* PPUDATA = nullptr;
     
     uint8_t controller[2];
     uint8_t controller_state[2];
+    uint8_t io[0x18];
 
 
 
     bool chrRAM = false;
 
-    Mapper(Cpu* cpu, Ppu* ppu, Apu* apu);
-    ~Mapper(){
-        delete[] memoryMap;
-        delete[] io;
-    };
+    Mapper(std::weak_ptr<Cpu> cpu, std::weak_ptr<Ppu> ppu, std::weak_ptr<Apu> apu);
+    ~Mapper(){};
 
     bool changeCart(std::shared_ptr<NESFile> cartridge);
-    void connectController(Controller* controller1, Controller* controller2);
+    void connectController(std::weak_ptr<Controller> controller1, std::weak_ptr<Controller> controller2);
 
+    uint8_t* getMemoryMapping(uint8_t* addr);
 
     uint8_t read(uint8_t* address);
     void write(uint8_t* address, uint8_t value);

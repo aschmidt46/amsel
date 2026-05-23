@@ -22,10 +22,9 @@ constexpr const uint8_t defPalette[192] = {
 };
 
 struct Palette{
-    uint8_t* colors;
-    size_t pSize = 192;
+    uint8_t colors[192];
     Palette(const char* path);
     Palette();
-    ~Palette(){ delete[] colors; };
+    ~Palette(){};
     vec3 getColor(uint8_t index);
 };

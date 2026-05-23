@@ -27,11 +27,11 @@ enum CpuReg : unsigned int{
 
 class NES{
     private:
-    Ppu* ppu;
-    Cpu* cpu;
-    Apu* apu;
-    Controller* controller1;
-    Controller* controller2;
+    std::shared_ptr<Ppu> ppu;
+    std::shared_ptr<Cpu> cpu;
+    std::shared_ptr<Apu> apu;
+    std::shared_ptr<Controller> controller1;
+    std::shared_ptr<Controller> controller2;
     std::shared_ptr<Mapper> mapper = nullptr;
     
     std::chrono::time_point<std::chrono::high_resolution_clock> t1 = std::chrono::high_resolution_clock::now();

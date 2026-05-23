@@ -3,8 +3,6 @@
 
 Apu::Apu()
 {
-    square_table = new double[31];
-    tnd_table = new double[203];
     for(int i = 0; i < 31; i++){
         square_table[i] = 95.52 / (8128.0 / i + 100);
     }
@@ -15,8 +13,6 @@ Apu::Apu()
 
 Apu::~Apu()
 {
-    delete[] square_table;
-    delete[] tnd_table;
 }
 
 void Apu::write(uint16_t reg, uint8_t val)
@@ -94,7 +90,7 @@ void Apu::write(uint16_t reg, uint8_t val)
             dmc.setD(val & 0x10);
 		    break;
 	    case 0x4017:
-            fseq.onWrite(val);
+            fseq.onWrite(val, this);
 	    	break;
         default:
         break;
@@ -126,7 +122,7 @@ void Apu::clock()
     }
 
 
-    fseq.clock();
+    fseq.clock(this);
     pulse1.onCPUClock();
     pulse2.onCPUClock();
     triangle.clock();
@@ -146,7 +142,7 @@ void Apu::clock()
 void Apu::reset(std::shared_ptr<Mapper> m)
 {
     this->mapper = m;
-    fseq = FrameSequencer(this);
+    fseq = FrameSequencer();
 
 	pulse1 = SquareChannel(false);
 	pulse2 = SquareChannel(true);

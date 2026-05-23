@@ -51,8 +51,8 @@ class Ppu{
     uint8_t PPUDATA = 0;    //$2007
 
     // Intern
-    uint8_t* internalMemory; // 2KB
-    uint8_t* palletteIndexes; // 0x0020 Bytes
+    std::vector<uint8_t> internalMemory; // 2KB
+    uint8_t palletteIndexes[0x0020]; // 0x0020 Bytes
     OAMSprite OAM[64];
     OAMSprite secondaryOAM[8];
     uint8_t spriteCount = 0;
@@ -72,8 +72,8 @@ class Ppu{
     std::shared_ptr<Mapper> mapper = nullptr;
 
     // Output, nicht Teil der PPU
-    float* pixelBuffer;
-    float* backBuffer;
+    std::vector<float> pixelBuffer;
+    std::vector<float> backBuffer;
     Palette pal;
 
 
@@ -100,27 +100,15 @@ class Ppu{
             spriteShifterCHRHigh[i] = 0;
         }
         // rgba
-        backBuffer = new float[256*240*4];
-        pixelBuffer = new float[256*240*4];
-        for(int i = 0; i < 256*240*3; i++){
-            pixelBuffer[i] = 0;
-            backBuffer[i] = 0;
-        }
-        internalMemory = new uint8_t[0x0800];
-        for(int i = 0; i < 0x0800; i++){
-            internalMemory[i] = 0;
-        }
-        palletteIndexes = new uint8_t[0x0020];
+        backBuffer = std::vector<float>(256*240*4, 0);
+        pixelBuffer = std::vector<float>(256*240*4, 0);
+        internalMemory = std::vector<uint8_t>(0x0800, 0);
         for(int i = 0; i < 0x0020; i++){
             palletteIndexes[i] = 0;
         }
         fillTimings();
     };
     ~Ppu(){
-        delete[] pixelBuffer;
-        delete[] backBuffer;
-        delete[] internalMemory;
-        delete[] palletteIndexes;
     };
     void init(std::shared_ptr<Mapper> m){
         this->mapper = m;

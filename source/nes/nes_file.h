@@ -52,24 +52,24 @@ struct NESHeader{
 
     uint8_t getMapper();
     uint8_t getPRGRamSize();
-    static NESHeader createHeader(uint8_t* data);
+    static NESHeader createHeader(const uint8_t* data);
 };
 
 struct NESFile{
     NESHeader header;
-    uint8_t* trainer; // 0 oder 512
-    uint8_t* prgRom; // 16384 * x
-    uint8_t* chrRom; // 8192 * y
-    uint8_t* playchoiceInstRom; // 0 oder 8192
-    uint8_t* playchoicePRom; // 0 oder 32
-    uint8_t* footer;
-
-    uint8_t* rawData;
+    std::vector<uint8_t> trainer; // 0 oder 512
+    std::vector<uint8_t> prgRom; // 16384 * x
+    std::vector<uint8_t> chrRom; // 8192 * y
+    std::vector<uint8_t> playchoiceInstRom; // 0 oder 8192
+    std::vector<uint8_t> playchoicePRom; // 0 oder 32
+    std::vector<uint8_t> footer;
 
     // Nicht auf der Cartridge
     std::string name = "";
 
     NESFile(const char* path);
     NESFile(std::vector<uint8_t> &rom);
-    ~NESFile(){delete[] rawData;};
+
+    void fillStructure(const std::vector<uint8_t> &rawData);
+    ~NESFile(){};
 };

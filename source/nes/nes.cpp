@@ -9,22 +9,17 @@ using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
 NES::NES(){
-    cpu = new Cpu();
-    ppu = new Ppu();
-    apu = new Apu();
-    controller1 = new Controller(false);
-    controller2 = new Controller(true);
+    cpu = std::make_shared<Cpu>();
+    ppu = std::make_shared<Ppu>();
+    apu = std::make_shared<Apu>();
+    controller1 = std::make_shared<Controller>(false);
+    controller2 = std::make_shared<Controller>(true);
     mapper = std::make_shared<Mapper>(cpu, ppu, apu);
     mapper->connectController(controller1, controller2); 
 }
 
 NES::~NES()
 {
-    delete apu;
-    delete ppu;
-    delete cpu;
-    delete controller1;
-    delete controller2;
 }
 
 void NES::load(const char *path)
@@ -140,7 +135,7 @@ void NES::clock()
 
 float *NES::accessFramebuffer()
 {
-    return ppu->backBuffer;
+    return ppu->backBuffer.data();
 }
 
 bool NES::frameIsReady()
