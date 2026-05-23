@@ -191,9 +191,10 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
 
                     if(myCanvas2.current){
                         const cur = myCanvas2.current!;
+                        cur.width = myCanvas.current!.width;
+                        cur.height = myCanvas.current!.height;
                         const gl2 = cur.getContext("2d")!;
                         gl2.drawImage(myCanvas.current!, 0, 0);
-                        gl2.filter = 'blur(10px)';
                     }
                 }
             }
@@ -230,7 +231,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
         if(moodLighting){
             return (
                 <div className='hidden dark:block mask-radial-from-current grow fixed top-0 left-0' style={{zIndex: 0, pointerEvents: 'none'}}>
-                    <canvas ref={myCanvas2} width={getWidth()} style={{imageRendering: 'smooth'}} height={getHeight()} className="h-screen w-screen flex grow" ></canvas>
+                    <canvas ref={myCanvas2} width={getWidth()} style={{imageRendering: 'smooth'}} height={getHeight()} className="h-screen w-screen flex grow blur-3xl" ></canvas>
                 </div>
             )
         }
