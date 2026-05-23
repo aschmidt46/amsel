@@ -9,6 +9,7 @@ include_directories(PUBLIC deps/imgui)
 include_directories(PUBLIC deps/imgui/backends)
 include_directories(PUBLIC deps/rtaudio)
 include_directories(PUBLIC deps/whereami/src)
+include_directories(PUBLIC deps/cereal/include)
 
 set(Rust_CARGO_TARGET wasm32-unknown-emscripten)
 set(Rust_RUSTUP_INSTALL_MISSING_TARGET ON)

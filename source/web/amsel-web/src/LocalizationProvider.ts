@@ -102,7 +102,8 @@ const localStrings = [
     "AboutSystem2",
     "AboutSource",
     "Close",
-    "DownloadSave"
+    "DownloadSave",
+    "MoodLighting"
 ];
 
 import german from './assets/locales/de.json'

@@ -21,6 +21,7 @@ include_directories(PUBLIC deps/imgui)
 include_directories(PUBLIC deps/imgui/backends)
 include_directories(PUBLIC deps/rtaudio)
 include_directories(PUBLIC deps/whereami/src)
+include_directories(PUBLIC deps/cereal/include)
 
 
 add_library(imgui STATIC

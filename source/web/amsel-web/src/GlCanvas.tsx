@@ -4,8 +4,9 @@ import processorUrl from "./audioWorklet.ts?worker&url";
 import type { CXXConsole } from './emscripten/AMSEL-web';
 
 
-export function GlCanvas({emuObject} : {emuObject : CXXConsole}) {
+export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, moodLighting: boolean}) {
     const myCanvas = useRef<HTMLCanvasElement>(null);
+    const myCanvas2 = useRef<HTMLCanvasElement>(null);
     // const [gl, setGL] = useState<WebGL2RenderingContext | null>(null);
     const [actx, setActx] = useState(new AudioContext({sampleRate: 20000}));
 
@@ -30,9 +31,10 @@ export function GlCanvas({emuObject} : {emuObject : CXXConsole}) {
 
     // Setup
     useEffect(() => {
+        console.log("effect");
         let animationFrame = 0;
         const cur = myCanvas.current!;
-        const gl = cur.getContext("webgl2")!;
+        const gl = cur.getContext("webgl2", {preserveDrawingBuffer: true})!;
         if(!gl) return;
 
         if (!gl.getExtension('EXT_color_buffer_float')){
@@ -145,6 +147,7 @@ export function GlCanvas({emuObject} : {emuObject : CXXConsole}) {
                 actx.close().then(() => {setActx(new AudioContext({sampleRate: 20000}))});
                 setAnode({audioNode: null});
             }
+            if(actx.state == "closed"){ return;}
             actx.audioWorklet.addModule(processorUrl).then(() => {
           
             anode.audioNode = new AudioWorkletNode(
@@ -185,6 +188,13 @@ export function GlCanvas({emuObject} : {emuObject : CXXConsole}) {
                     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
                     animationFrame = requestAnimationFrame(render);
+
+                    if(myCanvas2.current){
+                        const cur = myCanvas2.current!;
+                        const gl2 = cur.getContext("2d")!;
+                        gl2.drawImage(myCanvas.current!, 0, 0);
+                        gl2.filter = 'blur(10px)';
+                    }
                 }
             }
     
@@ -199,7 +209,8 @@ export function GlCanvas({emuObject} : {emuObject : CXXConsole}) {
 
     const style : CSSProperties = {
       imageRendering: 'pixelated',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      zIndex: 1
     }
 
     function getHeight(){
@@ -215,10 +226,24 @@ export function GlCanvas({emuObject} : {emuObject : CXXConsole}) {
         return "aspect-["+aspect.toString()+"] flex";
     }
 
+    function maybeRenderMoody(){
+        if(moodLighting){
+            return (
+                <div className='hidden dark:block mask-radial-from-current grow fixed top-0 left-0' style={{zIndex: 0, pointerEvents: 'none'}}>
+                    <canvas ref={myCanvas2} width={getWidth()} style={{imageRendering: 'smooth'}} height={getHeight()} className="h-screen w-screen flex grow" ></canvas>
+                </div>
+            )
+        }
+        else{
+            return (<span></span>)
+        }
+    }
+
     return (
         // Unschön, da bei Smartphones das Seitenverhältnis nicht ganz stimmt, ich finde keine andere funktionierende Lösung
         <div className='flex grow justify-center h-screen w-screen max-h-dvw'>
             <canvas ref={myCanvas} width={getWidth()} style={style} height={getHeight()} className={getAspectRatio()} ></canvas>
+            {maybeRenderMoody()}
         </div>
 
 

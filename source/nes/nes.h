@@ -77,6 +77,12 @@ class NES{
     void setController1Key(bool gamepad, int key, int action);
     void setController2Key(bool gamepad, int key, int action);
 
+    // template<class Archive>
+    // void serialize(Archive & archive)
+    // {
+    //   archive( x, y, z ); // serialize things by passing them to the archive
+    // }
+
 
 
 
