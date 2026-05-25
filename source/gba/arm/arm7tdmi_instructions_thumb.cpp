@@ -230,14 +230,14 @@ bool gba::CPU::executeThumbLongBranchWithLink(Word instruction)
     bool H = instruction & (1u << 11);
 
     if(!H){
-        *registerMap[mode][R14] = *registerMap[mode][R15] + (offset << 12);
+        *registerMap[mode()][R14] = *registerMap[mode()][R15] + (offset << 12);
         return false;
     }
     else{
-        Word tmp = *registerMap[mode][R15] - 2;
-        *registerMap[mode][R14] += (offset << 1);
-        *registerMap[mode][R15] = *registerMap[mode][R14];
-        *registerMap[mode][R14] = tmp | 1;
+        Word tmp = *registerMap[mode()][R15] - 2;
+        *registerMap[mode()][R14] += (offset << 1);
+        *registerMap[mode()][R15] = *registerMap[mode()][R14];
+        *registerMap[mode()][R14] = tmp | 1;
         return true;
     }
 }

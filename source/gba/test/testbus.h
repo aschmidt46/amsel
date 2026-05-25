@@ -1,13 +1,15 @@
 #pragma once
-
-#include "ibus.h"
-#include "arm/arm7tdmi.h"
+#include "../ibus.h"
 
 namespace gba{
-    class Bus : public IBus{
-        Byte* accessMemory(Word addr);
+    class TestBus : public IBus{
+        private:
+        std::vector<Transaction> transactions;
         public:
-        // Adressen vorher noch alignen?
+        bool hadError = false;
+        void setTransactions(std::vector<Transaction> transactions);
+        TestBus(std::vector<Transaction> transactions);
+        TestBus() = default;
         void writeByte(Word addr, Byte val) override;
         Byte readByte(Word addr) override;
         void writeHalfWord(Word addr, HalfWord val) override;

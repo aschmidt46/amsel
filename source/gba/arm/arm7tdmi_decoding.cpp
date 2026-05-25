@@ -383,7 +383,7 @@ bool gba::CPU::executeInstruction()
     if(this->pipelineDecoded.has_value()){
         InstructionInfo info = this->pipelineDecoded.value();
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
-        if(this->state == ARM){
+        if(this->state() == ARM){
             if(this->checkCondition(cond)){
                 switch(info.type){
                     case TypeBranchAndExchange:
@@ -475,7 +475,7 @@ bool gba::CPU::executeInstruction()
 
 InstructionInfo gba::CPU::decodeInstruction(Word code)
 {
-    if(this->state == ARM){
+    if(this->state() == ARM){
         return decodeInstructionARM(code);
     }
     else{
@@ -614,36 +614,36 @@ gba::CPU::CPU()
 bool gba::CPU::checkCondition(Condition c) const
 {
     switch(c){
-        case EQ: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).Z == 1;
-        case NE: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).Z == 0;
-        case CS: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).C == 1;
-        case CC: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).C == 0;
-        case MI: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).N == 1;
-        case PL: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).N == 0;
-        case VS: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).V == 1;
-        case VC: return std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]).V == 0;
+        case EQ: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).Z == 1;
+        case NE: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).Z == 0;
+        case CS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).C == 1;
+        case CC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).C == 0;
+        case MI: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).N == 1;
+        case PL: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).N == 0;
+        case VS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).V == 1;
+        case VC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).V == 0;
         case HI: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]);
+                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
                 return status.C == 1 && status.Z == 0;
             }
         case LS: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]);
+                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
                 return status.C == 0 || status.Z == 1;
             }
         case GE: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]);
+                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
                 return status.N == status.V;
             }
         case LT: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]);
+                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
                 return status.N != status.V;
             }
         case GT: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]);
+                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
                 return status.Z == 0 && (status.N == status.V);
             }
         case LE: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode][CPSR]);
+                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
                 return status.Z == 1 || (status.N != status.V);
             }
         case AL: return true;

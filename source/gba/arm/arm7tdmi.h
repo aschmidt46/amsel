@@ -3,16 +3,41 @@
 #include <optional>
 #include <string>
 #include <memory>
-#include "../bus.h"
+#include "../ibus.h"
 #include <vector>
 
 namespace gba{
 
-    class Bus;
+    class IBus;
+
+    struct CpuRegisterState{
+        public:
+        uint32_t R[16];
+        uint32_t R_fiq[7];
+        uint32_t R_svc[2];
+        uint32_t R_abt[2];
+        uint32_t R_irq[2];
+        uint32_t R_und[2];
+        uint32_t CPSR;
+        uint32_t SPSR[5];
+        uint32_t Pipeline[2];
+
+        bool operator==(const CpuRegisterState&) const = default;
+    };
+
+    struct Transaction{
+        public:
+        uint32_t kind;
+        uint32_t size;
+        uint32_t addr;
+        uint32_t data;
+        size_t cycle;
+        uint32_t access;
+    };
 
     enum CpuState{
-        THUMB,
-        ARM,
+        ARM = 0,
+        THUMB = 1,
     };
     enum OperatingMode{
         SystemUser = 0,
@@ -229,13 +254,36 @@ namespace gba{
     };
 
     class CPU{
-        CpuState state = ARM;
-        OperatingMode mode = SystemUser;
         // Register
         Word _R0 = 0, _R1 = 0, _R2 = 0, _R3 = 0, _R4 = 0, _R5 = 0, _R6 = 0, _R7 = 0, _R8 = 0, _R9 = 0, _R10 = 0, _R11 = 0, _R12 = 0, _R13_SP = 0, _R14_L_R = 0, _R15_PC = 0,
         _R8_fiq = 0, _R9_fiq = 0, _R10_fiq = 0, _R11_fiq = 0, _R12_fiq = 0, _R13_fiq = 0, _R14_fiq = 0, _R13_SVC = 0, _R14_SVC = 0, _R13_abt = 0, _R14_abt = 0, _R13_irq = 0, _R14_irq = 0, _R13_und = 0, _R14_und = 0;
 
         StatusRegister _CPSR, _SPSR_fiq, _SPSR_SVC, _SPSR_abt, _SPSR_irq, _SPSR_und; // Init in Konstruktor
+
+        inline OperatingMode mode() const{
+            switch(_CPSR.mode_bits){
+                case 0: return SystemUser;      // ;\26bit Backward Compatibility modes
+                case 1: return FIQ;             // ; (supported only on ARMv3, except ARMv3G,
+                case 2: return IRQ;             // ; and on some non-T variants of ARMv4)
+                case 3: return Supervisor;      // ;/
+                case 16: return SystemUser;
+                case 17: return FIQ;
+                case 18: return IRQ;
+                case 19: return Supervisor;
+                case 23: return AbortMode;
+                case 27: return Undefined;
+                case 31: return SystemUser;
+                default: return SystemUser;
+            }
+        }
+
+        inline CpuState state() const{
+            switch(_CPSR.T){
+                case 0: return ARM;
+                case 1: return THUMB;
+                default: return ARM;
+            }
+        }
 
         Word* const registerMap[OP_MODES][18] = {{
                 &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
@@ -277,7 +325,9 @@ namespace gba{
         size_t remainingCycles = 0; // Extreme Vereinfachung, muss ich ändern
 
 
-        std::weak_ptr<gba::Bus> bus;
+        std::weak_ptr<gba::IBus> bus;
+
+        bool shouldFlush = false;
             
         public:
         std::vector<Byte> boardWRAM = std::vector<Byte>(0x40000, 0);// 02000000-0203FFFF   WRAM - On-board Work RAM  (256 KBytes) 2 Wait
@@ -287,7 +337,7 @@ namespace gba{
         static InstructionInfo decodeInstructionTHUMB(Word code);
         static std::string printInstructionType(InstructionType t);
         bool executeInstruction();
-
+        
         // ARM
         // return -> Sprung ja nein
         bool executeBranchExchange(Word instruction);
@@ -305,9 +355,9 @@ namespace gba{
         bool executeMultiplyLong(Word instruction);
         bool executeDataProc(Word instruction);
         bool executePSRTransfer(Word instruction);
-
+        
         // THUMB
-
+        
         bool executeThumbMoveShiftedRegister(Word instruction);
         bool executeThumbAddSubtract(Word instruction);
         bool executeThumbMoveCompareAddSubtractImmediate(Word instruction);
@@ -328,8 +378,28 @@ namespace gba{
         bool executeThumbSoftwareInterrupt(Word instruction);
         bool executeThumbUnconditionalBranch(Word instruction);
         bool executeThumbLongBranchWithLink(Word instruction);
+        
+        private: CPU();
+        public:
+        CPU(std::shared_ptr<IBus> bus) : CPU(){
+            this->bus = bus;
+        };
+        
+        // führt die nächste Instruktion aus, falls das möglich ist
+        void advanceCPU();
+        // Führt eine Instruktion aus und clockt die CPU so oft, bis sie erneut eine Instruktion ausführen kann
+        void advanceCPUToNextValidState();
+        bool pipelineIsSaturated();
+        void flushPipeline();
+        void advancePipeline();
 
-        CPU();
+
+        // Tests
+        CpuRegisterState getRegisterState() const;
+        void setRegisterState(CpuRegisterState state);
+        InstructionInfo getInstructionInPipeline();
+        std::string printCPSR();
+        std::string printMode();
 
     };
 };

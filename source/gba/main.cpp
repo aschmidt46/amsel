@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <memory>
 
 using namespace gba;
 
@@ -13,7 +14,8 @@ int main(){
 
     std::ifstream stream("../gbaroms/emerald.gba", std::ios::in | std::ios::binary);
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    CPU cpu;
+    auto tb = std::make_shared<Bus>();
+    CPU cpu(tb);
     
 
     uint8_t* rawData = new uint8_t[contents.size()];
