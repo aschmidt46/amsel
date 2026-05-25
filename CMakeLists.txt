@@ -26,6 +26,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 option(BUILD_WEB "Build WebAssembly for Web-App" OFF)
 
+option(BUILD_GBA "GBA Test-Version" ON)
+
+if(BUILD_GBA)
+
+include(${CMAKE_SOURCE_DIR}/cmake/gba_test.cmake)
+
+else()
 
 if(NOT BUILD_WEB)
 
@@ -39,5 +46,7 @@ else()
 add_compile_definitions(BUILD_WEB)
 
 include(${CMAKE_SOURCE_DIR}/cmake/wasm_build.cmake)
+
+endif()
 
 endif()

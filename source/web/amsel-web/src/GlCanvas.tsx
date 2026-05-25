@@ -230,7 +230,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
     function maybeRenderMoody(){
         if(moodLighting){
             return (
-                <div className='hidden dark:block mask-radial-from-current grow fixed top-0 left-0' style={{zIndex: 0, pointerEvents: 'none'}}>
+                <div className='hidden dark:block brightness-100 mask-x-to-170% mask-y-to-170% grow fixed top-0 left-0' style={{zIndex: 0, pointerEvents: 'none'}}>
                     <canvas ref={myCanvas2} width={getWidth()} style={{imageRendering: 'smooth'}} height={getHeight()} className="h-screen w-screen flex grow blur-3xl" ></canvas>
                 </div>
             )

@@ -189,6 +189,83 @@ static inline bool isPSRTransfer(Word code)
     return false;
 }
 
+static inline bool isThumbMoveShiftedRegister(HalfWord code){
+    auto masked = code & maskT_MoveShiftedRegister;
+    return (masked == formT_MoveShiftedRegister) && ((code & (0b11u << 11)) != (0b11u << 11)); // AddSub
+}
+static inline bool isThumbAddSubtract(HalfWord code){
+    auto masked = code & maskT_AddSubtract;
+    return masked == formT_AddSubtract;
+}
+static inline bool isThumbMoveCompareAddSubtractImmediate(HalfWord code){
+    auto masked = code & maskT_MovCmpAddSubImmediate;
+    return masked == formT_MovCmpAddSubImmediate;
+}
+static inline bool isThumbALUOperations(HalfWord code){
+    auto masked = code & maskT_ALUOperations;
+    return masked == formT_ALUOperations;
+}
+static inline bool isThumbHiRegisterOperationsBX(HalfWord code){
+    auto masked = code & maskT_HiRegisterOpBX;
+    return masked == formT_HiRegisterOpBX;
+}
+static inline bool isThumbPCRelativeLoad(HalfWord code){
+    auto masked = code & maskT_PCRelativeLoad;
+    return masked == formT_PCRelativeLoad;
+}
+static inline bool isThumbLoadStoreWithRegisterOff(HalfWord code){
+    auto masked = code & maskT_LoadStoreRegOff;
+    return masked == formT_LoadStoreRegOff;
+}
+static inline bool isThumbLoadStoreSignExtendedBHW(HalfWord code){
+    auto masked = code & maskT_LoadStoreSignEx;
+    return masked == formT_LoadStoreSignEx;
+}
+static inline bool isThumbLoadStoreWithImmOffset(HalfWord code){
+    auto masked = code & maskT_LoadStoreImmOff;
+    return masked == formT_LoadStoreImmOff;
+}
+static inline bool isThumbLoadStoreHalfWord(HalfWord code){
+    auto masked = code & maskT_LoadStoreHalfW;
+    return masked == formT_LoadStoreHalfW;
+}
+static inline bool isThumbSPRelativeLoadStore(HalfWord code){
+    auto masked = code & maskT_SPRelLoadStore;
+    return masked == formT_SPRelLoadStore;
+}
+static inline bool isThumbLoadAddress(HalfWord code){
+    auto masked = code & maskT_LoadAddress;
+    return masked == formT_LoadAddress;
+}
+static inline bool isThumbAddOffsetToSP(HalfWord code){
+    auto masked = code & maskT_AddOffsetToSP;
+    return masked == formT_AddOffsetToSP;
+}
+static inline bool isThumbPushPopRegisters(HalfWord code){
+    auto masked = code & maskT_PushPopRegisters;
+    return masked == formT_PushPopRegisters;
+}
+static inline bool isThumbMultipleLoadStore(HalfWord code){
+    auto masked = code & maskT_MultipleLoadStore;
+    return masked == formT_MultipleLoadStore;
+}
+static inline bool isThumbConditionalBranch(HalfWord code){
+    auto masked = code & maskT_ConditionalBranch;
+    return (masked == formT_ConditionalBranch) && ((code & 0x0F00) != 0x0F00); // SWI
+}
+static inline bool isThumbSoftwareInterrupt(HalfWord code){
+    auto masked = code & maskT_SoftwareInterrupt;
+    return masked == formT_SoftwareInterrupt;
+}
+static inline bool isThumbUnconditionalBranch(HalfWord code){
+    auto masked = code & maskT_UnconditionalBranch;
+    return masked == formT_UnconditionalBranch;
+}
+static inline bool isThumbLongBranchWithLink(HalfWord code){
+    auto masked = code & maskT_LongBranchWithLink;
+    return masked == formT_LongBranchWithLink;
+}
+
 std::string gba::CPU::printInstructionType(InstructionType t){
     std::string s = "";
     switch(t){
@@ -240,6 +317,63 @@ std::string gba::CPU::printInstructionType(InstructionType t){
         case UnimplementedInstruction:
             s = "Error: Unimplemented!";
             break;
+        case ThumbMoveShiftedRegister:
+            s = "ThumbMoveShiftedRegister";
+            break;
+        case ThumbAddSubtract:
+            s = "ThumbAddSubtract";
+            break;
+        case ThumbMoveCompareAddSubtractImmediate:
+            s = "ThumbMoveCompareAddSubtractImmediate";
+            break;
+        case ThumbALUOperations:
+            s = "ThumbALUOperations";
+            break;
+        case ThumbHiRegisterOperationsBX:
+            s = "ThumbHiRegisterOperationsBX";
+            break;
+        case ThumbPCRelativeLoad:
+            s = "ThumbPCRelativeLoad";
+            break;
+        case ThumbLoadStoreWithRegisterOff:
+            s = "ThumbLoadStoreWithRegisterOff";
+            break;
+        case ThumbLoadStoreSignExtendedBHW:
+            s = "ThumbLoadStoreSignExtendedBHW";
+            break;
+        case ThumbLoadStoreWithImmOffset:
+            s = "ThumbLoadStoreWithImmOffset";
+            break;
+        case ThumbLoadStoreHalfWord:
+            s = "ThumbLoadStoreHalfWord";
+            break;
+        case ThumbSPRelativeLoadStore:
+            s = "ThumbSPRelativeLoadStore";
+            break;
+        case ThumbLoadAddress:
+            s = "ThumbLoadAddress";
+            break;
+        case ThumbAddOffsetToSP:
+            s = "ThumbAddOffsetToSP";
+            break;
+        case ThumbPushPopRegisters:
+            s = "ThumbPushPopRegisters";
+            break;
+        case ThumbMultipleLoadStore:
+            s = "ThumbMultipleLoadStore";
+            break;
+        case ThumbConditionalBranch:
+            s = "ThumbConditionalBranch";
+            break;
+        case ThumbSoftwareInterrupt:
+            s = "ThumbSoftwareInterrupt";
+            break;
+        case ThumbUnconditionalBranch:
+            s = "ThumbUnconditionalBranch";
+            break;
+        case ThumbLongBranchWithLink:
+            s = "ThumbLongBranchWithLink";
+            break;
     }
     return s;
 }
@@ -249,50 +383,107 @@ bool gba::CPU::executeInstruction()
     if(this->pipelineDecoded.has_value()){
         InstructionInfo info = this->pipelineDecoded.value();
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
-        if(this->checkCondition(cond)){
+        if(this->state == ARM){
+            if(this->checkCondition(cond)){
+                switch(info.type){
+                    case TypeBranchAndExchange:
+                        return this->executeBranchExchange(info.code);
+                    case TypeSingleDataSwap:
+                        return this->executeSingleDataSwap(info.code);
+                    case TypeBranchLink:
+                        return this->executeBranchLink(info.code);
+                    case TypeUndefined:
+                        return this->executeUndefined(info.code);
+                        return false;
+                    case TypeBlockDataTransfer:
+                        return this->executeBlockDataTransfer(info.code);
+                    case TypeSofwareInterrupt:
+                        return this->executeSoftwareInterrupt(info.code);
+                    case TypeCoProcDataOperation:
+                        return this->executeCoProcDataOperation(info.code);
+                    case TypeCoProcDataTransfer:
+                        return this->executeCoProcDataTransfer(info.code);
+                    case TypeCoProcRegTransfer:
+                        return this->executeCoProcRegTransfer(info.code);
+                    case TypeSingleDataTransfer:
+                        return this->executeSingleDataTransfer(info.code);
+                    case TypeDataTransferSignHDW:
+                        return this->executeDataTransferSignHDW(info.code);
+                    case TypeMultiply:
+                        return this->executeMultiply(info.code);
+                    case TypeMultiplyL:
+                        return this->executeMultiplyLong(info.code);
+                    case TypeDataProc:
+                        return this->executeDataProc(info.code);
+                    case TypePSRTransfer:
+                        return this->executePSRTransfer(info.code);
+                    default:
+                        std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
+                        return false;
+                }
+            }
+            else return false;
+        }
+        else{ // THUMB
             switch(info.type){
-                case TypeBranchAndExchange:
-                    return this->executeBranchExchange(info.code);
-                case TypeSingleDataSwap:
-                    return this->executeSingleDataSwap(info.code);
-                case TypeBranchLink:
-                    return this->executeBranchLink(info.code);
-                case TypeUndefined:
-                    return this->executeUndefined(info.code);
-                    return false;
-                case TypeBlockDataTransfer:
-                    return this->executeBlockDataTransfer(info.code);
-                case TypeSofwareInterrupt:
-                    return this->executeSoftwareInterrupt(info.code);
-                case TypeCoProcDataOperation:
-                    return this->executeCoProcDataOperation(info.code);
-                case TypeCoProcDataTransfer:
-                    return this->executeCoProcDataTransfer(info.code);
-                case TypeCoProcRegTransfer:
-                    return this->executeCoProcRegTransfer(info.code);
-                case TypeSingleDataTransfer:
-                    return this->executeSingleDataTransfer(info.code);
-                case TypeDataTransferSignHDW:
-                    return this->executeDataTransferSignHDW(info.code);
-                case TypeMultiply:
-                    return this->executeMultiply(info.code);
-                case TypeMultiplyL:
-                    return this->executeMultiplyLong(info.code);
-                case TypeDataProc:
-                    return this->executeDataProc(info.code);
-                case TypePSRTransfer:
-                    return this->executePSRTransfer(info.code);
-                case UnimplementedInstruction:
+                case ThumbMoveShiftedRegister:
+                    return this->executeThumbMoveShiftedRegister(info.code);
+                case ThumbAddSubtract:
+                    return this->executeThumbAddSubtract(info.code);
+                case ThumbMoveCompareAddSubtractImmediate:
+                    return this->executeThumbMoveCompareAddSubtractImmediate(info.code);
+                case ThumbALUOperations:
+                    return this->executeThumbALUOperations(info.code);
+                case ThumbHiRegisterOperationsBX:
+                    return this->executeThumbHiRegisterOperationsBX(info.code);
+                case ThumbPCRelativeLoad:
+                    return this->executeThumbPCRelativeLoad(info.code);
+                case ThumbLoadStoreWithRegisterOff:
+                    return this->executeThumbLoadStoreWithRegisterOff(info.code);
+                case ThumbLoadStoreSignExtendedBHW:
+                    return this->executeThumbLoadStoreSignExtendedBHW(info.code);
+                case ThumbLoadStoreWithImmOffset:
+                    return this->executeThumbLoadStoreWithImmOffset(info.code);
+                case ThumbLoadStoreHalfWord:
+                    return this->executeThumbLoadStoreHalfWord(info.code);
+                case ThumbSPRelativeLoadStore:
+                    return this->executeThumbSPRelativeLoadStore(info.code);
+                case ThumbLoadAddress:
+                    return this->executeThumbLoadAddress(info.code);
+                case ThumbAddOffsetToSP:
+                    return this->executeThumbAddOffsetToSP(info.code);
+                case ThumbPushPopRegisters:
+                    return this->executeThumbPushPopRegisters(info.code);
+                case ThumbMultipleLoadStore:
+                    return this->executeThumbMultipleLoadStore(info.code);
+                case ThumbConditionalBranch:
+                    return this->executeThumbConditionalBranch(info.code);
+                case ThumbSoftwareInterrupt:
+                    return this->executeThumbSoftwareInterrupt(info.code);
+                case ThumbUnconditionalBranch:
+                    return this->executeThumbUnconditionalBranch(info.code);
+                case ThumbLongBranchWithLink:
+                    return this->executeThumbLongBranchWithLink(info.code);
+                default:
                     std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
                     return false;
             }
         }
-        else return false;
     }
-    else return false;
+    return false;
 }
 
 InstructionInfo gba::CPU::decodeInstruction(Word code)
+{
+    if(this->state == ARM){
+        return decodeInstructionARM(code);
+    }
+    else{
+        return decodeInstructionTHUMB(code);
+    }
+}
+
+InstructionInfo gba::CPU::decodeInstructionARM(Word code)
 {
 
     // Leicht zu dekodierende Instruktionen zuerst
@@ -343,6 +534,68 @@ InstructionInfo gba::CPU::decodeInstruction(Word code)
 
     if(isPSRTransfer(code))
         return InstructionInfo{.type = TypePSRTransfer, .code = code};
+
+    return InstructionInfo{.type = UnimplementedInstruction, .code = code};
+}
+
+InstructionInfo gba::CPU::decodeInstructionTHUMB(Word code)
+{
+    if(isThumbAddSubtract(code))
+        return InstructionInfo{.type = ThumbAddSubtract, .code = code};
+
+    if(isThumbMoveShiftedRegister(code))
+        return InstructionInfo{.type = ThumbMoveShiftedRegister, .code = code};
+        
+    if(isThumbMoveCompareAddSubtractImmediate(code))
+        return InstructionInfo{.type = ThumbMoveCompareAddSubtractImmediate, .code = code};
+
+    if(isThumbALUOperations(code))
+        return InstructionInfo{.type = ThumbALUOperations, .code = code};
+
+    if(isThumbHiRegisterOperationsBX(code))
+        return InstructionInfo{.type = ThumbHiRegisterOperationsBX, .code = code};
+
+    if(isThumbPCRelativeLoad(code))
+        return InstructionInfo{.type = ThumbPCRelativeLoad, .code = code};
+
+    if(isThumbLoadStoreWithRegisterOff(code))
+        return InstructionInfo{.type = ThumbLoadStoreWithRegisterOff, .code = code};
+
+    if(isThumbLoadStoreSignExtendedBHW(code))
+        return InstructionInfo{.type = ThumbLoadStoreSignExtendedBHW, .code = code};
+
+    if(isThumbLoadStoreWithImmOffset(code))
+        return InstructionInfo{.type = ThumbLoadStoreWithImmOffset, .code = code};
+
+    if(isThumbLoadStoreHalfWord(code))
+        return InstructionInfo{.type = ThumbLoadStoreHalfWord, .code = code};
+
+    if(isThumbSPRelativeLoadStore(code))
+        return InstructionInfo{.type = ThumbSPRelativeLoadStore, .code = code};
+
+    if(isThumbLoadAddress(code))
+        return InstructionInfo{.type = ThumbLoadAddress, .code = code};
+
+    if(isThumbAddOffsetToSP(code))
+        return InstructionInfo{.type = ThumbAddOffsetToSP, .code = code};
+
+    if(isThumbPushPopRegisters(code))
+        return InstructionInfo{.type = ThumbPushPopRegisters, .code = code};
+
+    if(isThumbMultipleLoadStore(code))
+        return InstructionInfo{.type = ThumbMultipleLoadStore, .code = code};
+        
+    if(isThumbSoftwareInterrupt(code))
+        return InstructionInfo{.type = ThumbSoftwareInterrupt, .code = code};
+
+    if(isThumbConditionalBranch(code))
+        return InstructionInfo{.type = ThumbConditionalBranch, .code = code};
+
+    if(isThumbUnconditionalBranch(code))
+        return InstructionInfo{.type = ThumbUnconditionalBranch, .code = code};
+
+    if(isThumbLongBranchWithLink(code))
+        return InstructionInfo{.type = ThumbLongBranchWithLink, .code = code};
 
     return InstructionInfo{.type = UnimplementedInstruction, .code = code};
 }

@@ -283,7 +283,7 @@ bool gba::CPU::executeDataProc(Word instruction)
                 std::cout << "Illegale Operation im Usermodus" << std::endl;
                 throw;
             }
-            *registerMap[mode][CPSR] = *registerMap[mode][CPSR_OTHER];
+            *registerMap[mode][CPSR] = *registerMap[mode][SPSR];
         }
         else{
             //(AND, EOR, TST, TEQ, ORR, MOV, BIC, MVN):
@@ -326,10 +326,10 @@ bool gba::CPU::executeDataProc(Word instruction)
 
 bool gba::CPU::executePSRTransfer(Word instruction)
 {
-    Word form_MSRBitsOnly = 0b0000'0001'0010'1000'1111'0000'0000'0000;
+    Word form_MSRBitsOnly = 0b0000'0001'0010'1000'1111'0000'0000'0000; // (Register oder imm nach PSR nur flag bits)
     Word mask_MSRBitsOnly = 0b0000'1101'1011'1111'1111'0000'0000'0000;
 
-    Word form_MSR =         0b0000'0001'0010'1001'1111'0000'0000'0000;
+    Word form_MSR =         0b0000'0001'0010'1001'1111'0000'0000'0000; // (Register nach PSR)
     Word mask_MSR =         0b0000'1111'1011'1111'1111'1111'1111'0000;
 
     auto masked = instruction & mask_MSRBitsOnly;
@@ -339,15 +339,396 @@ bool gba::CPU::executePSRTransfer(Word instruction)
     bool fits2 = masked2 == form_MSR;
 
     if(fits){ // MSR Bits only
+        bool destSPSRMode = instruction & (1u << 22);
+        bool I = instruction & (1u << 25);
+        Word val;
+        if(I){
+            val = instruction & 0xFF;
+            // Genau wie in DataProc?
+            Word rotate = (instruction & (0xFu << 8)) >> 8;
+            val = std::rotr(val, 2 * rotate);
+            val &= 0xFu << 28; // obere Bits maskieren
+        }
+        else{ // Registerinhalt
+            Word sourceReg = instruction & 0xF;
+            val = *registerMap[mode][sourceReg] & (0xFu << 28);
+        }
 
+        if(destSPSRMode){
+            *registerMap[mode][SPSR] =  (*registerMap[mode][SPSR] & ~(0xFu << 28)) | val;
+        }
+        else{
+            *registerMap[mode][CPSR] = (*registerMap[mode][CPSR] & ~(0xFu << 28)) | val;
+        }
     }
-    else if(fits2){ // MSR
-
+    else if(fits2){ // MSR (Unklar: Im Usermode kann MSR nicht die unteren Kontrollbits von CPSR ändern, läuft der GBA in User oder System? Ist das relevant? SPSR existiert auch nicht im Usermode.)
+        bool destSPSRMode = instruction & (1u << 22);
+        Word sourceReg = instruction & 0xFu;
+        Word val = *registerMap[mode][sourceReg];
+        if(destSPSRMode){
+            *registerMap[mode][SPSR] = val;
+        }
+        else{
+            *registerMap[mode][CPSR] = val;
+        }
     }
-    else{ //MRS
+    else{ //MRS (PSR nach Register)
+        bool sourceSPSRMode = instruction & (1u << 22);
+        Word destReg = (instruction & (0xFu << 12)) >> 12;
 
+        Word val;
+        if(sourceSPSRMode){
+            val = *registerMap[mode][SPSR];
+        }
+        else{
+            val = *registerMap[mode][CPSR];
+        }
+        *registerMap[mode][destReg] = val;
     }
 
     remainingCycles += 1; // 1S
+    return false;
+}
+
+bool gba::CPU::executeSingleDataTransfer(Word instruction)
+{
+    bool I = instruction & (1u << 25);
+    bool P = instruction & (1u << 24);
+    bool U = instruction & (1u << 23);
+    bool B = instruction & (1u << 22);
+    bool W = instruction & (1u << 21);
+    bool L = instruction & (1u << 20);
+    Word baseReg = (instruction & (0xFu << 16)) >> 16;
+    Word modifiedBase = *registerMap[mode][baseReg];
+    Word sourceDestReg = (instruction & (0xFu << 12)) >> 12;
+    Word offset;
+
+    // "In the case of post-indexed addressing, the write back bit is
+    // redundant and must be set to zero, since the old base value can be retained by setting
+    // the offset to zero. Therefore post-indexed data transfers always write back the modified base"
+    // https://iitd-plos.github.io/col718/ref/arm-instructionset.pdf S. 4-27
+    if(!P) W = true;
+
+    auto modifyOffset = [&](){
+        if(U){
+            modifiedBase += offset;
+        }
+        else{
+            modifiedBase -= offset;
+        }
+    };
+
+    if(!I){ // 12 bit immediate
+        offset = instruction & 0xFFF;
+    }
+    else{ // register mit Shift
+        Word reg = instruction & 0xF;
+        Word shift = (instruction & (0xFFu << 4)) >> 4;
+        ShiftType shiftType = (ShiftType) ((shift & 0b110) >> 1);
+        Word shiftAmount = (shift & 0b11111000) >> 3;
+        Word regVal = *registerMap[mode][reg];
+        switch(shiftType){
+            case LogicalLeft:{
+                offset = regVal << shiftAmount;
+                break;
+            }
+            case LogicalRight:{
+                offset = regVal >> shiftAmount;
+                break;
+            }
+            case ArithmeticRight:{
+                // !!!! wie oben bei DataProc
+                int32_t temp = std::bit_cast<int32_t>(regVal);
+                temp = temp >> shiftAmount;
+                offset = std::bit_cast<Word>(temp);
+                break;
+            }
+            case RotateRight:{
+                offset = std::rotr(regVal, shiftAmount);
+                break;
+            }
+        }
+    }
+
+    if(P){ // Pre-Inkrement
+        modifyOffset();
+    }
+
+    // Transfer... ANNAHME: GBA ist immer little Endian
+    if(L){ // LDR
+        Word val;
+        if(B){ // Byte
+            val = readByte(modifiedBase);
+        }
+        else{ // Wort
+            if(modifiedBase % 4 == 0){ // Wort alignt
+                val = readWord(modifiedBase);
+            }
+            else{ // Datasheet S. 4-28      (Verhalten verifizieren!!!!)
+                modifiedBase &= ~(0b1); // Halbwort align.
+                Word upper = readHalfWord(modifiedBase); // Ende erstes Wort
+                Word lower = readHalfWord(modifiedBase + 2); // Anfang zweites Wort
+                val = (upper << 16) | lower;
+            }
+        }
+        *registerMap[mode][sourceDestReg] = val;
+    }
+    else{ // STR
+        if(B){
+            writeByte(modifiedBase, *registerMap[mode][sourceDestReg]);
+        }
+        else{
+            modifiedBase &= ~(0b11); // Wort Alignment (Immer)
+        }
+    }
+
+    if(!P){ // Post-Inkrement
+        modifyOffset();
+    }
+
+    if(W){ // Write back
+        *registerMap[mode][baseReg] = modifiedBase;
+    }
+
+    if(L){ // LDR
+        if(sourceDestReg == 15){ // LDR PC
+            remainingCycles += 5; // 2S + 2N + 1I
+        }
+        else{
+            remainingCycles += 3; // 1S + 1N + 1I
+        }
+    }
+    else{ // STR
+        remainingCycles += 2; // 2N
+    }
+
+    return false;
+}
+
+bool gba::CPU::executeDataTransferSignHDW(Word instruction)
+{
+    bool S = instruction & (1u << 6); // Sign
+    bool H = instruction & (1u << 5); // Halbwort
+    Word Rd = (instruction & (0xFu << 12)) >> 12; // Source / Dest
+    Word Rn = (instruction & (0xFu << 16)) >> 16; // Base
+    Word modifiedBase = *registerMap[mode][Rn];
+    
+    bool L = instruction & (1u << 20);
+    bool W = instruction & (1u << 21);
+    bool U = instruction & (1u << 23);
+    bool P = instruction & (1u << 24);
+
+    bool immediate = (instruction & (0xFu << 8));
+    Word offsetValue;
+
+    if(immediate){
+        offsetValue = (instruction & 0xF) | ((instruction & (0xFu << 8)) >> 4);
+    }
+    else{
+        Word Rm = instruction & 0xF; // Offset Register
+        offsetValue = *registerMap[mode][Rm];
+    }
+
+    if(!P) W = true; // Wie in der anderen
+
+    auto modifyOffset = [&](){
+        if(U){
+            modifiedBase += offsetValue;
+        }
+        else{
+            modifiedBase -= offsetValue;
+        }
+    };
+
+    if(P) modifyOffset();
+
+    // Operation hier:
+    // S==0 und H==0 wird nicht beachtet, weil es sich dann um Single Data Swap handelt
+    if(S){ // Sign extend Halbwort oder Byte
+        Word val;
+        if(H){
+            val = readHalfWord(modifiedBase);
+            val &= 0xFFFFu;
+            Word mask = 1u << 15;
+            val = (val ^ mask) - mask;
+        }
+        else{
+            val = readByte(modifiedBase);
+            val &= 0xFFu;
+            Word mask = 1u << 7;
+            val = (val ^ mask) - mask;
+        }
+        // ist immer LDR
+        *registerMap[mode][Rd] = val;
+    }
+    else{ // Unsigned Halbwort
+        if(L){
+            Word val = readHalfWord(modifiedBase);
+            *registerMap[mode][Rd] = val;
+        }
+        else{
+            writeHalfWord(modifiedBase, *registerMap[mode][Rd]);
+        }
+    }
+
+    if(!P) modifyOffset();
+    
+    if(W){
+        *registerMap[mode][Rn] = modifiedBase;
+    }
+
+    if(L){
+        if(Rd == 15){ // LDR PC
+            remainingCycles += 5; // 2S + 2N + 1I
+        }
+        else{
+            remainingCycles += 3; // 1S + 1N + 1I
+        }
+    }
+    else{ // STRH
+        remainingCycles += 2; // 2N
+    }
+
+    return false;
+}
+
+bool gba::CPU::executeMultiply(Word instruction)
+{
+    bool A = instruction & (1u << 21);
+    bool S = instruction & (1u << 20);
+    Word Rm = instruction & 0xF;
+    Word Rs = (instruction & (0xFu << 8)) >> 8;
+    Word Rn = (instruction & (0xFu << 12)) >> 12;
+    Word Rd = (instruction & (0xFu << 16)) >> 16;
+
+    Word RsOp = *registerMap[mode][Rs];
+
+    Word result = (*registerMap[mode][Rm]) * (*registerMap[mode][Rs]); // Rd := Rm * Rs
+    if(A){ // Rd := Rm * Rs + Rn
+        result += *registerMap[mode][Rn];
+    }
+
+    *registerMap[mode][Rd] = result;
+
+    if(S){
+        StatusRegister cpsr = (StatusRegister)(*registerMap[mode][CPSR]);
+        cpsr.C = 0; // "Meaningless value"
+        cpsr.Z = result == 0;
+        cpsr.N = (result & (1u << 31)) > 0;
+        *registerMap[mode][CPSR] = cpsr.raw;
+    }
+
+    Word m; // Spezifiziert durch Rs
+    constexpr Word b_31_8 = (0xFFFFFF << 8);
+    constexpr Word b_31_16 = (0xFFFF << 16);
+    constexpr Word b_31_24 = (0xFF << 24);
+
+    if((RsOp & b_31_8 == 0 ) || (RsOp & b_31_8 == b_31_8)){
+        m = 1;
+    }
+    else if((RsOp & b_31_16 == 0 ) || (RsOp & b_31_16 == b_31_16)){
+        m = 2;
+    }
+    else if((RsOp & b_31_24 == 0 ) || (RsOp & b_31_24 == b_31_24)){
+        m = 3;
+    }
+    else m = 4;
+
+    remainingCycles += 1 + m; // 1S + mI
+    if(A) remainingCycles += 1; // 1S + (m+1)I
+
+    return false;
+}
+
+bool gba::CPU::executeMultiplyLong(Word instruction)
+{
+    Word Rm = instruction & 0xF;
+    Word Rs = (instruction & (0xFu << 8)) >> 8;
+    Word RsOp = *registerMap[mode][Rs];
+    Word RdLo = (instruction & (0xFu << 12)) >> 12;
+    Word RdHi = (instruction & (0xFu << 16)) >> 16;
+
+    bool S = instruction & (1u << 20);
+    bool A = instruction & (1u << 21);
+    bool U = instruction & (1u << 22);
+
+    uint64_t result;
+    if(A){
+        if(U){
+            uint64_t rd = ((uint64_t) *registerMap[mode][RdLo]) | (((uint64_t) *registerMap[mode][RdLo]) << 32);
+            result = ((uint64_t) *registerMap[mode][Rm]) * ((uint64_t) *registerMap[mode][Rs]) + rd;
+        }
+        else{
+            uint64_t wideRm = (uint64_t)*registerMap[mode][Rm];
+            uint64_t wideRs = (uint64_t)*registerMap[mode][Rs];
+            uint64_t rd = ((uint64_t) *registerMap[mode][RdLo]) | (((uint64_t) *registerMap[mode][RdLo]) << 32);
+            int64_t sresult = (std::bit_cast<int64_t>(wideRm)) * (std::bit_cast<int64_t>(wideRs)) + std::bit_cast<int64_t>(rd);
+            result = std::bit_cast<uint64_t>(sresult);
+        }
+    }
+    else{
+        if(U){
+            result = ((uint64_t) *registerMap[mode][Rm]) * ((uint64_t) *registerMap[mode][Rs]);
+        }
+        else{
+            uint64_t wideRm = (uint64_t)*registerMap[mode][Rm];
+            uint64_t wideRs = (uint64_t)*registerMap[mode][Rs];
+            int64_t sresult = (std::bit_cast<int64_t>(wideRm)) * (std::bit_cast<int64_t>(wideRs));
+            result = std::bit_cast<uint64_t>(sresult);
+        }
+    }
+
+    Word resHi = (result & (0xFFFFFFFFull << 32)) >> 32;
+    Word resLo = result & 0xFFFFFFFFull;
+
+    *registerMap[mode][RdLo] = resLo;
+    *registerMap[mode][RdHi] = resHi;
+
+
+
+    if(S){
+        StatusRegister cpsr = (StatusRegister)(*registerMap[mode][CPSR]);
+        cpsr.C = 0; // "Meaningless value"
+        cpsr.V = 0; // genau wie C
+        cpsr.Z = result == 0;
+        cpsr.N = (result & (1ull << 63)) > 0;
+        *registerMap[mode][CPSR] = cpsr.raw;
+    }
+
+
+    Word m; // Spezifiziert durch Rs
+    constexpr Word b_31_8 = (0xFFFFFF << 8);
+    constexpr Word b_31_16 = (0xFFFF << 16);
+    constexpr Word b_31_24 = (0xFF << 24);
+
+    if(U){
+        if((RsOp & b_31_8 == 0 ) || (RsOp & b_31_8 == b_31_8)){
+            m = 1;
+        }
+        else if((RsOp & b_31_16 == 0 ) || (RsOp & b_31_16 == b_31_16)){
+            m = 2;
+        }
+        else if((RsOp & b_31_24 == 0 ) || (RsOp & b_31_24 == b_31_24)){
+            m = 3;
+        }
+        else m = 4;
+    }
+    else{
+        if(RsOp & b_31_8 == 0 ){
+            m = 1;
+        }
+        else if(RsOp & b_31_16 == 0){
+            m = 2;
+        }
+        else if(RsOp & b_31_24 == 0){
+            m = 3;
+        }
+        else m = 4;
+    }
+
+
+    remainingCycles += 1 + m + 1; // 1S + (m+1)I
+    if(A) remainingCycles += 1; // 1S + (m+2)I
+
     return false;
 }

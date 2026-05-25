@@ -13,6 +13,7 @@ int main(){
 
     std::ifstream stream("../gbaroms/emerald.gba", std::ios::in | std::ios::binary);
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    CPU cpu;
     
 
     uint8_t* rawData = new uint8_t[contents.size()];
@@ -28,7 +29,7 @@ int main(){
         Word u3 = rawData[i+2];
         Word u4 = rawData[i+3];
         Word instruction = u1 | (u2 << 8) | (u3 << 16) | (u4 << 24);
-        auto decoded = CPU::decodeInstruction(instruction);
+        auto decoded = cpu.decodeInstruction(instruction);
         std::cout << CPU::printInstructionType(decoded.type) << std::endl;
         std::string a = "";
         std::cin >> a;
