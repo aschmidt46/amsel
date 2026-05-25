@@ -16,6 +16,7 @@ HalfWord gba::CPU::readHalfWord(Word addr)
 
 Word gba::CPU::readWord(Word addr)
 {
+    addr &= ~(0b11);
     return this->bus.lock()->readWord(addr);
 }
 
@@ -31,22 +32,19 @@ void gba::CPU::writeHalfWord(Word addr, HalfWord val)
 
 void gba::CPU::writeWord(Word addr, Word val)
 {
+    addr &= ~(0b11);
     this->bus.lock()->writeWord(addr, val);
 }
 
 
 void gba::CPU::advanceCPU()
 {
-    if(shouldFlush){
-        flushPipeline();
-        shouldFlush = false;
-    }
 
     // 3 Stage Pipeline
     // Beginne mit aktuellem Zustand
     bool jump = executeInstruction();
     if(jump){
-        shouldFlush = true;
+        flushPipeline();
     }
     else advancePipeline();
 }
@@ -60,7 +58,7 @@ void gba::CPU::advanceCPUToNextValidState()
 
 bool gba::CPU::pipelineIsSaturated()
 {
-    return pipelineDecoded.has_value() && pipelineRead.has_value() && !shouldFlush;
+    return pipelineDecoded.has_value() && pipelineRead.has_value();
 }
 
 void gba::CPU::flushPipeline()
@@ -73,6 +71,6 @@ void gba::CPU::advancePipeline()
 {
     Word pcOffset = this->state() == ARM ? 4 : 2;
     pipelineDecoded = pipelineRead.and_then([this](auto val) -> std::optional<InstructionInfo> {return {this->decodeInstruction(val)};});
-    pipelineRead = this->readWord(*registerMap[mode()][R15]);
+    pipelineRead = this->state() == ARM ? this->readWord(*registerMap[mode()][R15]) : this->readHalfWord(*registerMap[mode()][R15]);
     *registerMap[mode()][R15] += pcOffset;
 }

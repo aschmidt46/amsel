@@ -143,50 +143,50 @@ static inline bool isDataProc(Word code)
 {
     auto masked = code & mask_DataProcAndPSRTransfer;
     auto fits = masked == form_DataProcAndPSRTransfer;
-    if(fits){
-        bool I = code & (1u << 25);
-        Word opcode = ((0b1111u << 21) & code) >> 21;
-        bool S = code & (1u << 20);
-        Word Rn = code & (0b1111 << 16);
-        Word Rd = code & (0b1111 << 12);
-        if(opcode >= 0x8 && opcode <= 0xB){
-            if(!S) return false;
-            if(Rd != 0b0000 && Rd != 0b1111) return false;
-        }
-        if((opcode == 0xD || opcode == 0xF) && Rn != 0) return false;
-        if(!I){
-            bool R = code & (1u << 4);
-            if(R){
-                if(code & (1u << 7) > 0) return false;
-            }
-        }
-        return true;
-    }
-    return false;
+    // if(fits){
+    //     bool I = code & (1u << 25);
+    //     Word opcode = ((0b1111u << 21) & code) >> 21;
+    //     bool S = code & (1u << 20);
+    //     Word Rn = code & (0b1111 << 16);
+    //     Word Rd = code & (0b1111 << 12);
+    //     if(opcode >= 0x8 && opcode <= 0xB){
+    //         if(!S) return false;
+    //         if(Rd != 0b0000 && Rd != 0b1111) return false;
+    //     }
+    //     if((opcode == 0xD || opcode == 0xF) && Rn != 0) return false;
+    //     if(!I){
+    //         bool R = code & (1u << 4);
+    //         if(R){
+    //             if(code & (1u << 7) > 0) return false;
+    //         }
+    //     }
+    //     return true;
+    // }
+    return fits;
 }
 
 static inline bool isPSRTransfer(Word code)
 {
     auto masked = code & mask_DataProcAndPSRTransfer;
     auto fits = masked == form_DataProcAndPSRTransfer;
-    if(fits){
-        bool I = code & (1u << 25);
-        if((code & (0b11u << 23)) >> 23 != 0b10) return false; // muss 0b10 sein
-        bool opcode = (1u << 21) & code;
-        if((code & (1u << 20)) > 0) return false; // muss 0 sein
-        if(opcode){ // MSR
+    // if(fits){
+    //     bool I = code & (1u << 25);
+    //     if((code & (0b11u << 23)) >> 23 != 0b10) return false; // muss 0b10 sein
+    //     bool opcode = (1u << 21) & code;
+    //     if((code & (1u << 20)) > 0) return false; // muss 0 sein
+    //     if(opcode){ // MSR
 
-            if(!I){
-                if(code & (255u << 4) > 0) return false;
-            }
-        }
-        else{ // MRS
-            if((code & (0b1111 << 16)) >> 16 != 0b1111) return false; //mus 0b1111 sein
-            if(code & 0b11111111111 > 0) return false; // muss 0 sein
-        }
-        return true;
-    }
-    return false;
+    //         if(!I){
+    //             if(code & (255u << 4) > 0) return false;
+    //         }
+    //     }
+    //     else{ // MRS
+    //         if((code & (0b1111 << 16)) >> 16 != 0b1111) return false; //mus 0b1111 sein
+    //         if(code & 0b11111111111 > 0) return false; // muss 0 sein
+    //     }
+    //     return true;
+    // }
+    return fits;
 }
 
 static inline bool isThumbMoveShiftedRegister(HalfWord code){

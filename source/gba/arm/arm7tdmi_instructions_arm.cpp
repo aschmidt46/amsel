@@ -1,6 +1,7 @@
 #include "arm7tdmi.h"
 #include <iostream>
 #include <bit>
+#include <algorithm>
 
 // Source - https://stackoverflow.com/a/42536138
 // Posted by user555045, modified by community. See post 'Timeline' for change history
@@ -16,8 +17,9 @@ uint32_t sign_extend_26_32(uint32_t x) {
 bool gba::CPU::executeBranchExchange(Word instruction)
 {
     Word Rn = instruction & 0b1111;
-    CpuState nextState = (Rn & 1) > 0 ? THUMB : ARM;
-    Word jumpTarget = *registerMap[mode()][Rn];
+    // Der Inhalt des Registers?
+    CpuState nextState = (*registerMap[mode()][Rn] & 1) > 0 ? THUMB : ARM;
+    Word jumpTarget = *registerMap[mode()][Rn] & ~(1u);
 
     *registerMap[mode()][R15] = jumpTarget;
     this->_CPSR.T = nextState;
@@ -141,6 +143,55 @@ bool gba::CPU::executeUndefined(Word instruction) // Falsch implementiert
     return false;
 }
 
+namespace gba{
+    // (SUB, RSB, ADD, ADC, SBC, RSC, CMP, CMN)
+    inline bool setCFlag(Word opcode, Word operand1Value, Word operand2Value, uint64_t result, Word op3){
+        switch(opcode){
+            case 0b0010:
+                return operand1Value >= operand2Value;
+            case 0b0011:
+                return operand2Value >= operand1Value;
+            case 0b0100:
+                return (Word)result < operand1Value;
+            case 0b0101:
+                return result >> 32;
+            case 0b0110:
+                return (uint64_t)operand1Value >= (uint64_t)operand2Value + (uint64_t)op3;
+            case 0b0111:
+                return (uint64_t)operand2Value >= (uint64_t)operand1Value + (uint64_t)op3;
+            case 0b1010:
+                return operand1Value >= operand2Value;
+            case 0b1011:
+                return (Word)result < operand1Value;
+            default:
+                return false;
+        }
+    }
+    inline bool setVFlag(Word opcode, Word operand1Value, Word operand2Value, uint64_t result, Word op3){
+        switch(opcode){
+            case 0b0010:
+                return ((operand1Value ^ operand2Value) & (operand1Value ^ result)) >> 31;
+            case 0b0011:
+                return ((operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            case 0b0100:
+                return (~(operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            case 0b0101:
+                return (~(operand1Value ^ operand2Value) & (operand2Value ^ (Word)result)) >> 31;
+            case 0b0110:
+                return ((operand1Value ^ operand2Value) & (operand1Value ^ result)) >> 31;
+            case 0b0111:
+                return ((operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            case 0b1010:
+                return ((operand1Value ^ operand2Value) & (operand1Value ^ (Word)result)) >> 31;
+            case 0b1011:
+                return (~(operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            default:
+                return false;
+        }
+    }
+}
+
+
 enum ShiftType{
     LogicalLeft = 0b00,
     LogicalRight = 0b01,
@@ -166,53 +217,91 @@ bool gba::CPU::executeDataProc(Word instruction)
     Word operand2Value = 0;
     bool logicalCarry = false; // CPSR-C Wert, falls logische Operation
     const bool carryBefore = ((StatusRegister)(*registerMap[mode()][CPSR])).C;
+    bool keepOldCarry = false;
     bool registerSpecifiedShift = false;
+    Word op3 = 0;
 
     if(I){ // Immediate
         Word imm = operand2 & 0xFF;
         Word rotate = (operand2 & (0b1111u << 8)) >> 8;
-        operand2Value = std::rotr(imm, 2 * rotate);
+        if(rotate > 0){
+            logicalCarry = (imm >> ((2 * rotate) - 1)) & 1u;
+            operand2Value = std::rotr(imm, 2 * rotate);
+        }
+        else{
+            logicalCarry = carryBefore;
+            operand2Value = imm;
+        }
     }
     else{ // Register
-        Word op2RegValue = *registerMap[mode()][operand2 & 0b1111];
+        Word op2RegValue = *registerMap[mode()][operand2 & 0xF];
         ShiftType shift = (ShiftType)((operand2 & (0b11 << 5)) >> 5);
         Word amount = 0;
-        if(operand2 & 1){ // Shift Register
-            amount = (*registerMap[mode()][(operand2 & (0b1111 << 8)) >> 8]) & 0xFF; //Nur unterstes Byte
+        if(operand2 & (1u << 4)){ // Shift Register
+            Word RsValue = *registerMap[mode()][(operand2 & (0xFu << 8)) >> 8];
+            if(Rn == R15){// Bei Registershift Amount und R15 als Operand ist PC nochmals 4 Bytes voran, nicht für Rs! (aus Testfällen gelernt)
+                operand1Value += 4;
+            }
+            if((operand2 & 0xF) == R15){ // Op2
+                op2RegValue += 4;
+            }
+            amount = RsValue & 0xFF; //Nur unterstes Byte
             registerSpecifiedShift = true;
         }
         else{ // Shift Immediate
-            amount = operand2 & (0b11111u << 7); // 5 bit unsigned
+            amount = (operand2 & (0b11111u << 7)) >> 7; // 5 bit unsigned
         }
-        switch(shift){
-            case LogicalLeft:
-                logicalCarry = amount <= 32 ? op2RegValue & (1u << (32 - amount)) : false; // Unterstes rausgeshiftetes Bit
-                if(amount==0) logicalCarry = carryBefore; // In diesem Fall bleibt C erhalten
-                operand2Value = op2RegValue << amount;
-                break;
-            case LogicalRight:
-                if(amount == 0) amount = 32;
-                logicalCarry = op2RegValue & (1u << (amount - 1));
-                operand2Value = op2RegValue >> amount;
-                break;
-            case ArithmeticRight:{
-                if(amount == 0) amount = 32;
-                logicalCarry = op2RegValue & (1u << (amount - 1));
-                // In der Hoffnung, dass das funktioniert
-                int32_t temp = std::bit_cast<int32_t>(op2RegValue);
-                temp = temp >> amount;
-                operand2Value = std::bit_cast<Word>(temp);
-                break;}
-            case RotateRight:
-                if(amount > 0){ // RR
-                    logicalCarry = op2RegValue & (1u << (amount - 1));
-                    operand2Value = std::rotr(op2RegValue, amount);
-                }
-                else{//RRX
-                    logicalCarry = op2RegValue & 1u; // bit 0
-                    operand2Value = (op2RegValue >> 1) & (carryBefore << 31); // Carry bit wird links reingeshiftet
-                }
-                break;
+        if(!registerSpecifiedShift || amount > 0){
+            switch(shift){
+                case LogicalLeft:
+                    logicalCarry = amount <= 32 ? op2RegValue & (1u << (32 - amount)) : false; // Unterstes rausgeshiftetes Bit
+                    if(amount==0) logicalCarry = carryBefore; // In diesem Fall bleibt C erhalten
+                    if(amount >= 32){ // UB in C++
+                        operand2Value = 0;
+                    }
+                    else operand2Value = op2RegValue << amount;
+                    break;
+                case LogicalRight:
+                    if(amount == 0) amount = 32;
+                    if(amount >= 32){ // UB in C++
+                        logicalCarry = 0;
+                        if(amount == 32) logicalCarry = op2RegValue & (1u << 31);
+                        operand2Value = 0;
+                    }
+                    else{
+                        logicalCarry = op2RegValue & (1u << (amount - 1));
+                        operand2Value = op2RegValue >> amount;
+                    }
+                    break;
+                case ArithmeticRight:{
+                    if(amount == 0) amount = 32;
+                    if(amount < 32){
+                        logicalCarry = op2RegValue & (1u << (amount - 1));
+                    }
+                    else logicalCarry = op2RegValue & (1u << 31);
+                    operand2Value = op2RegValue;
+                    // Wie langsam ist das?
+                    for(int i = 0; i < amount; i++){
+                        Word lastbit = operand2Value & (1u << 31);
+                        operand2Value >>= 1;
+                        operand2Value = operand2Value | lastbit;
+                    }
+                    break;}
+                case RotateRight:
+                    if(amount > 0){ // RR
+                        logicalCarry = op2RegValue & (1u << (amount - 1));
+                        operand2Value = std::rotr(op2RegValue, amount);
+                    }
+                    else{//RRX
+                        logicalCarry = op2RegValue & 1u; // bit 0
+                        operand2Value = (op2RegValue >> 1) | (carryBefore << 31); // Carry bit wird links reingeshiftet
+                    }
+                    break;
+            }
+        }
+        else{
+            operand2Value = op2RegValue;
+            keepOldCarry = true;
         }
     }
 
@@ -235,13 +324,15 @@ bool gba::CPU::executeDataProc(Word instruction)
             result = operand1Value + operand2Value;
             break;
         case 0b0101: // ADC
-            result = operand1Value + operand2Value + (Word)carryBefore;
+            result = (uint64_t)operand1Value + (uint64_t)operand2Value + (uint64_t)carryBefore;
             break;
         case 0b0110: // SBC
-            result = operand1Value - operand2Value + (Word)carryBefore - 1;
+            op3 =(Word)carryBefore ^ 1;
+            result = operand1Value - operand2Value - op3;
             break;
         case 0b0111: // RSC
-            result = operand2Value - operand1Value + (Word)carryBefore - 1;
+            op3 =(Word)carryBefore ^ 1;
+            result = operand2Value - operand1Value - op3;
             break;
         case 0b1000: // TST
             result = operand1Value & operand2Value; // result wird nicht geschrieben
@@ -265,12 +356,14 @@ bool gba::CPU::executeDataProc(Word instruction)
             result = operand1Value & ~operand2Value;
             break;
         default:     // MVN
-            result = ~operand2;
+            result = ~operand2Value;
             break;
     }
     Word result32 = (Word)result;
     // carry out xor carry in
-    bool overflow = ((result & (1ull << 32)) > 0) != ((result & (1ull << 31)) > 0);
+    bool overflow = (~(operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+    // bool overflow = ((operand1Value & (1u << 31)) == (operand2Value & (1u << 31)))
+    //      &&((result & (1u << 31)) != (operand2Value & (1u << 31)));
 
     // Bei Testoperationen nicht Ergebnis schreiben
     if(opcode < 0b1000 || opcode > 0b1011){
@@ -278,11 +371,7 @@ bool gba::CPU::executeDataProc(Word instruction)
     }
 
     if(S){
-        if(Rd==15){
-            if(mode()==SystemUser){
-                std::cout << "Illegale Operation im Usermodus" << std::endl;
-                throw;
-            }
+        if(Rd==15 && mode() != SystemUser){
             *registerMap[mode()][CPSR] = *registerMap[mode()][SPSR];
         }
         else{
@@ -293,7 +382,7 @@ bool gba::CPU::executeDataProc(Word instruction)
             // N - Bit 31
             if(opcode <= 1 || opcode >= 0b1100 || opcode == 0b1000 || opcode == 0b1001){
                 StatusRegister cpsr = (StatusRegister)(*registerMap[mode()][CPSR]);
-                cpsr.C = logicalCarry;
+                cpsr.C = keepOldCarry ? carryBefore : logicalCarry;
                 cpsr.Z = result32 == 0;
                 cpsr.N = (result32 & (1u << 31)) > 0;
                 *registerMap[mode()][CPSR] = cpsr.raw;
@@ -306,8 +395,8 @@ bool gba::CPU::executeDataProc(Word instruction)
             // N - Bit 31
             else{
                 StatusRegister cpsr = (StatusRegister)(*registerMap[mode()][CPSR]);
-                cpsr.V = Rd!=R15 ? overflow : false; // Korrekt?
-                cpsr.C = (result & (1ull << 32)) > 0;
+                cpsr.V = setVFlag(opcode, operand1Value, operand2Value, result, op3);
+                cpsr.C = setCFlag(opcode, operand1Value, operand2Value, result, op3);
                 cpsr.Z = result32 == 0;
                 cpsr.N = (result32 & (1ull << 31)) > 0;
                 *registerMap[mode()][CPSR] = cpsr.raw;
@@ -321,7 +410,12 @@ bool gba::CPU::executeDataProc(Word instruction)
     remainingCycles += 1;
     if(registerSpecifiedShift) remainingCycles += 1;
     if(Rd == R15) remainingCycles += 2;
-    return false;
+    if(Rd == R15 && (opcode < 0b1000 || opcode > 0b1011)){ // PC geschrieben
+        return true;
+    }
+    // std::cout << operand1Value << std::endl;
+    // std::cout << operand2Value << std::endl;
+    else return false;
 }
 
 bool gba::CPU::executePSRTransfer(Word instruction)

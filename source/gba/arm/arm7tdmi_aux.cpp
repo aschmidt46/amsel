@@ -123,7 +123,7 @@ std::string gba::CPU::printCPSR()
 
 std::string gba::CPU::printMode()
 {
-    switch((OperatingMode)_CPSR.mode_bits){
+    switch(mode()){
         case SystemUser:
             return "SystemUser";
         case FIQ:

@@ -28,6 +28,39 @@ std::string getHex(size_t input, int length){
     return "0x"+thexNorm(thex(input), length);
 }
 
+std::string printState(gba::CpuRegisterState state){
+    std::string res;
+    for(int i = 0; i < 16; i++){
+        res += "R"+std::to_string(i)+":\t\t"+getHex(state.R[i],8)+"\n";
+    }
+    res +="\n";
+    for(int i = 0; i < 7; i++){
+        res += "R"+std::to_string(i+8)+"_fiq: \t"+getHex(state.R_fiq[i],8)+"\n";
+    }
+    for(int i = 0; i < 2; i++){
+        res += "R"+std::to_string(i+13)+"_svc:\t"+getHex(state.R_svc[i],8)+"\n";
+    }
+    for(int i = 0; i < 2; i++){
+        res += "R"+std::to_string(i+13)+"_abt:\t"+getHex(state.R_abt[i],8)+"\n";
+    }
+    for(int i = 0; i < 2; i++){
+        res += "R"+std::to_string(i+13)+"_irq:\t"+getHex(state.R_irq[i],8)+"\n";
+    }
+    for(int i = 0; i < 2; i++){
+        res += "R"+std::to_string(i+13)+"_und:\t"+getHex(state.R_und[i],8)+"\n";
+    }
+    res += "\n";
+    res += "SPSR_fiq:\t"+getHex(state.SPSR[0],8)+"\n";
+    res += "SPSR_svc:\t"+getHex(state.SPSR[1],8)+"\n";
+    res += "SPSR_abt:\t"+getHex(state.SPSR[2],8)+"\n";
+    res += "SPSR_irq:\t"+getHex(state.SPSR[3],8)+"\n";
+    res += "SPSR_und:\t"+getHex(state.SPSR[4],8)+"\n";
+
+    res += "Pipeline[0]:\t"+getHex(state.Pipeline[0],8)+"\n";
+    res += "Pipeline[1]:\t"+getHex(state.Pipeline[1],8)+"\n";
+    return res;
+}
+
 
 std::string printDiff(CpuRegisterState was, CpuRegisterState is, CpuRegisterState test){
     std::string res;
@@ -144,6 +177,32 @@ std::string printDiff(CpuRegisterState was, CpuRegisterState is, CpuRegisterStat
     }
 
     res += "----------------------------------------------------\n";
+
+    res += "Zustand Vorher:\n";
+    res += printState(was)+"\n\n";
+    res += "Zustand Nachher:\n";
+    res += printState(is);
+
+    res += "----------------------------------------------------\n";
     return res;
 }
 
+std::string printTransactions(const std::vector<gba::Transaction> &transactions)
+{
+    std::string res = "";
+    int count = 0;
+    for(const auto &t : transactions){
+        count++;
+        res += "Transaktion "+std::to_string(count)+":\n";
+        std::string kind;
+        if(t.kind == 0) kind = "Instruction Read";
+        else if(t.kind == 1) kind = "General Read";
+        else kind = "Write";
+        res += "Kind:\t"+kind+"\n";
+        res += "Size:\t"+std::to_string(t.size)+"\n";
+        res += "Addr:\t"+getHex(t.addr, 8)+"\n";
+        res += "Data:\t"+getHex(t.data, 8)+"\n\n";
+    }
+    res += "----------------------------------------------------\n";
+    return res;
+}
