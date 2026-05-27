@@ -19,13 +19,13 @@ int main(){
     
 
     uint8_t* rawData = new uint8_t[contents.size()];
-    for(int i = 0; i < contents.size(); i++){
+    for(unsigned int i = 0; i < contents.size(); i++){
         rawData[i] = contents[i];
     }
     stream.close();
 
 
-    for(int i= 0; i < contents.size(); i+=4){
+    for(unsigned int i= 0; i < contents.size(); i+=4){
         Word u1 = rawData[i];
         Word u2 = rawData[i+1];
         Word u3 = rawData[i+2];

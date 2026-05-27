@@ -107,24 +107,23 @@ static inline bool isDataTransferSignHDW(Word code)
 {
     auto masked = code & mask_DataTransferSignHDW;
     auto fits = masked == form_DataTransferSignHDW;
-    if(fits){
-        bool P = code & (1u << 24);
-        bool I = code & (1u << 22);
-        bool L = code & (1u << 20);
-        if(!P){
-            // Bit 21 MUSS 0 sein
-            bool check = code & (1u << 21);
-            if(check) return false;
-        }
-        if(!I){
-            // Bits 11-8 müssen 0 sein
-            if(code & (0b1111 << 8) != 0) return false;
-        }
-        if(code & (0b11 << 5) != 0){ // Opcode (bits 5-6) darf nicht 0 sein
-            return true;
-        }
-    }
-    return false;
+    // if(fits){
+    //     bool P = code & (1u << 24);
+    //     bool I = code & (1u << 22);
+    //     if(!P){
+    //         // Bit 21 MUSS 0 sein
+    //         bool check = code & (1u << 21);
+    //         if(check) return false;
+    //     }
+    //     if(!I){
+    //         // Bits 11-8 müssen 0 sein
+    //         if((code & (0b1111 << 8)) != 0) return false;
+    //     }
+    //     if((code & (0b11 << 5)) != 0){ // Opcode (bits 5-6) darf nicht 0 sein
+    //         return true;
+    //     }
+    // }
+    return fits;
 }
 
 static inline bool isMultiplyAccumulate(Word code)
@@ -504,14 +503,12 @@ InstructionInfo gba::CPU::decodeInstructionARM(Word code)
 
 
     // Brauche ich nicht?
-        if(isCoProcDataTransfer(code))
-            return InstructionInfo{.type = TypeCoProcDataTransfer, .code = code};
-
-        if(isCoProcDataOperation(code))
-            return InstructionInfo{.type = TypeCoProcDataOperation, .code = code};
-
-        if(isCoProcRegTransfer(code))
-            return InstructionInfo{.type = TypeCoProcRegTransfer, .code = code};
+    if(isCoProcDataTransfer(code))
+        return InstructionInfo{.type = TypeCoProcDataTransfer, .code = code};
+    if(isCoProcDataOperation(code))
+        return InstructionInfo{.type = TypeCoProcDataOperation, .code = code};
+    if(isCoProcRegTransfer(code))
+        return InstructionInfo{.type = TypeCoProcRegTransfer, .code = code};
     //...
 
     if(isSingleDataTransfer(code))
@@ -614,37 +611,37 @@ gba::CPU::CPU()
 bool gba::CPU::checkCondition(Condition c) const
 {
     switch(c){
-        case EQ: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).Z == 1;
-        case NE: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).Z == 0;
-        case CS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).C == 1;
-        case CC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).C == 0;
-        case MI: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).N == 1;
-        case PL: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).N == 0;
-        case VS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).V == 1;
-        case VC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).V == 0;
+        case EQ: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.Z == 1;
+        case NE: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.Z == 0;
+        case CS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.C == 1;
+        case CC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.C == 0;
+        case MI: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.N == 1;
+        case PL: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.N == 0;
+        case VS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.V == 1;
+        case VC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.V == 0;
         case HI: {
                 auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.C == 1 && status.Z == 0;
+                return status.state.C == 1 && status.state.Z == 0;
             }
         case LS: {
                 auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.C == 0 || status.Z == 1;
+                return status.state.C == 0 || status.state.Z == 1;
             }
         case GE: {
                 auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.N == status.V;
+                return status.state.N == status.state.V;
             }
         case LT: {
                 auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.N != status.V;
+                return status.state.N != status.state.V;
             }
         case GT: {
                 auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.Z == 0 && (status.N == status.V);
+                return status.state.Z == 0 && (status.state.N == status.state.V);
             }
         case LE: {
                 auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.Z == 1 || (status.N != status.V);
+                return status.state.Z == 1 || (status.state.N != status.state.V);
             }
         case AL: return true;
         case NV: return false;

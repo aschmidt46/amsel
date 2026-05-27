@@ -30,15 +30,19 @@ using namespace gba;
 
 Byte* gba::Bus::accessMemory(Word addr)
 {
+    (void)addr;
     return nullptr;
 }
 
 void gba::Bus::writeByte(Word addr, Byte val)
 {
+    (void)addr;
+    (void)val;
 }
 
 Byte gba::Bus::readByte(Word addr)
 {
+    (void)addr;
     return Byte();
 }
 

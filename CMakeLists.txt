@@ -12,8 +12,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-#set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 

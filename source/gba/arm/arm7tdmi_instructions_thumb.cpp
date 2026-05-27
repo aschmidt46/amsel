@@ -126,7 +126,7 @@ bool gba::CPU::executeThumbLoadStoreSignExtendedBHW(Word instruction)
     Word sh;
     if(L) sh = (S << 1) | H;
     else sh = 0b01;
-    return executeDataTransferSignHDW(  (1u << 24) | (1u << 23) | (L << 20) | (Rb << 12) | (Ro) | (Rb << 16) | (sh << 5)    );
+    return executeDataTransferSignHDW(  (1u << 24) | (1u << 23) | (L << 20) | (Rd << 12) | (Ro) | (Rb << 16) | (sh << 5)    );
 }
 
 bool gba::CPU::executeThumbLoadStoreWithImmOffset(Word instruction)

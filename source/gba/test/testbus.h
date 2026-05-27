@@ -5,7 +5,14 @@ namespace gba{
     class TestBus : public IBus{
         private:
         std::vector<Transaction> transactions;
-        public:
+        
+        void logErrorNotTransacted(int index);
+        void logErrorUnknownTransaction(Word size, Word addr, Word val, std::string kind);
+        void logErrorDuplicateTransaction(int index);
+
+      public:
+        std::vector<size_t> completed;
+        std::string logs = "";
         bool hadError = false;
         void setTransactions(std::vector<Transaction> transactions);
         TestBus(std::vector<Transaction> transactions);
@@ -16,5 +23,7 @@ namespace gba{
         HalfWord readHalfWord(Word addr) override;
         void writeWord(Word addr, Word val) override;
         Word readWord(Word addr) override;
+
+        void finalize();
     };
 }

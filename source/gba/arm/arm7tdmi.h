@@ -66,7 +66,7 @@ namespace gba{
             Word C : 1;
             Word Z : 1;
             Word N : 1; // msb
-        };
+        } state;
         Word raw;
     };
 
@@ -261,7 +261,7 @@ namespace gba{
         StatusRegister _CPSR, _SPSR_fiq, _SPSR_SVC, _SPSR_abt, _SPSR_irq, _SPSR_und; // Init in Konstruktor
 
         inline OperatingMode mode() const{
-            switch(_CPSR.mode_bits){
+            switch(_CPSR.state.mode_bits){
                 case 0: return SystemUser;      // ;\26bit Backward Compatibility modes
                 case 1: return FIQ;             // ; (supported only on ARMv3, except ARMv3G,
                 case 2: return IRQ;             // ; and on some non-T variants of ARMv4)
@@ -278,7 +278,7 @@ namespace gba{
         }
 
         inline CpuState state() const{
-            switch(_CPSR.T){
+            switch(_CPSR.state.T){
                 case 0: return ARM;
                 case 1: return THUMB;
                 default: return ARM;
@@ -311,9 +311,11 @@ namespace gba{
         // ACHTUNG LITTLE ENDIAN
         HalfWord readHalfWord(Word addr);
         Word readWord(Word addr);
+        Word readWordUnaligned(Word addr);
         void writeByte(Word addr, Byte val);
         void writeHalfWord(Word addr, HalfWord val);
         void writeWord(Word addr, Word val);
+        void writeWordUnaligned(Word addr, Word val);
         bool checkCondition(Condition c) const;
         
         

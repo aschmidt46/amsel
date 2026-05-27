@@ -33,6 +33,7 @@ source/gba/arm/arm7tdmi_instructions_thumb.cpp
 source/gba/arm/arm7tdmi_processing.cpp
 source/gba/arm/arm7tdmi_aux.cpp
 )
+target_compile_options(gba PUBLIC -Wall -Wextra -Werror -Wpedantic)
 
 add_executable(gba-test source/gba/main.cpp)
 target_link_libraries(gba-test gba)
@@ -47,6 +48,7 @@ add_executable(
   source/gba/test/testbus.h
   source/gba/test/cpustate.h
 )
+target_compile_options(gba_tests PUBLIC -Wall -Wextra -Werror -Wpedantic)
 target_link_libraries(
   gba_tests
   gba

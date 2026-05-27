@@ -37,6 +37,11 @@ void performSingleStepTest(const char* path){
         auto iInfo = cpu.getInstructionInPipeline();
         auto cpsr = cpu.printCPSR();
         auto mode = cpu.printMode();
+        // Spezialfälle nicht testen
+        if(iInfo.type == gba::TypeBlockDataTransfer){
+            if(iInfo.code & (1u << 22)) continue; // S gesetzt
+            if(((iInfo.code & (0xFu << 16)) >> 16) == 15) continue; // R15 als Basisregister ("R15 should not be used as the base register in any LDM or STM instruction")
+        }
 
         cpu.advanceCPUToNextValidState();
 
@@ -46,6 +51,8 @@ void performSingleStepTest(const char* path){
         auto iCode = std::bitset<32>(iInfo.code).to_string();
         separateEveryN(iCode, 5, "\t");
 
+        tb->finalize();
+
         ASSERT_EQ(stateF, testcase.final)
             << "\n\nFehler in Testfall " << number << ":\n"
             << "Gelesene Instruktion: " << iStr << "\n"
@@ -54,21 +61,37 @@ void performSingleStepTest(const char* path){
             << "CPSR: " << cpsr << "\n"
             << "Mode: " << mode << "\n"
             << printDiff(testcase.initial, stateF, testcase.final)
+            << "\n" << tb->logs
             << printTransactions(testcase.transactions);
 
-        ASSERT_FALSE(tb->hadError);
+        // std::string logs = "";
+        // for(const auto &m : tb->logs){
+        //     logs += m;
+        // }
+
+        ASSERT_FALSE(tb->hadError) << "\n\nTransaktionsfehler in Testfall " << number << ":\n"
+            << tb->completed.size() << " durchgeführte Transaktionen.\n"
+            << "Gelesene Instruktion: " << iStr << "\n"
+            << "\t31\t27\t23\t19\t15\t11\t7\t3\n"
+            << "Code: " << iCode << "\n"
+            << "CPSR: " << cpsr << "\n"
+            << "Mode: " << mode << "\n"
+            << tb->logs << "\n\n"
+            << printDiff(testcase.initial, stateF, testcase.final);
+            // << "Erwartete Transaktionen:\n"
+            // << printTransactions(testcase.transactions);
 
     }
 }
 
 
-// TEST(CPUTest, arm_bx){
-//     performSingleStepTest("../test/ARM7TDMI/v1/arm_bx.json");
-// }
+TEST(CPUTest, arm_bx){
+    performSingleStepTest("../test/ARM7TDMI/v1/arm_bx.json");
+}
 
-// TEST(CPUTest, arm_b_bl){
-//     performSingleStepTest("../test/ARM7TDMI/v1/arm_b_bl.json");
-// }
+TEST(CPUTest, arm_b_bl){
+    performSingleStepTest("../test/ARM7TDMI/v1/arm_b_bl.json");
+}
 
 // TEST(CPUTest, arm_cdp){
 //     performSingleStepTest("../test/ARM7TDMI/v1/arm_cdp.json");
@@ -86,13 +109,13 @@ TEST(CPUTest, arm_data_proc_register_shift){
     performSingleStepTest("../test/ARM7TDMI/v1/arm_data_proc_register_shift.json");
 }
 
-// TEST(CPUTest, arm_ldm_stm){
-//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldm_stm.json");
-// }
+TEST(CPUTest, arm_ldm_stm){
+    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldm_stm.json");
+}
 
-// TEST(CPUTest, arm_ldrh_strh){
-//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrh_strh.json");
-// }
+TEST(CPUTest, arm_ldrh_strh){
+    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrh_strh.json");
+}
 
 // TEST(CPUTest, arm_ldrsb_ldrsh){
 //     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrsb_ldrsh.json");

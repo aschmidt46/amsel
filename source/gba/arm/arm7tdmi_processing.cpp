@@ -20,6 +20,11 @@ Word gba::CPU::readWord(Word addr)
     return this->bus.lock()->readWord(addr);
 }
 
+Word gba::CPU::readWordUnaligned(Word addr)
+{
+    return this->bus.lock()->readWord(addr);
+}
+
 void gba::CPU::writeByte(Word addr, Byte val)
 {
     this->bus.lock()->writeByte(addr, val);
@@ -33,6 +38,11 @@ void gba::CPU::writeHalfWord(Word addr, HalfWord val)
 void gba::CPU::writeWord(Word addr, Word val)
 {
     addr &= ~(0b11);
+    this->bus.lock()->writeWord(addr, val);
+}
+
+void gba::CPU::writeWordUnaligned(Word addr, Word val)
+{
     this->bus.lock()->writeWord(addr, val);
 }
 

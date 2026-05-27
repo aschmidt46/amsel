@@ -117,7 +117,7 @@ std::string gba::CPU::printCPSR()
 {
     std::string res = "";
     auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-    res += "Z: " + std::to_string(status.Z) + "\tC:" + std::to_string(status.C) + "\tN:" + std::to_string(status.N) + "\tV:" + std::to_string(status.V);
+    res += "Z: " + std::to_string(status.state.Z) + "\tC:" + std::to_string(status.state.C) + "\tN:" + std::to_string(status.state.N) + "\tV:" + std::to_string(status.state.V);
     return res;
 }
 

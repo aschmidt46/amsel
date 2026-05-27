@@ -22,7 +22,7 @@ bool gba::CPU::executeBranchExchange(Word instruction)
     Word jumpTarget = *registerMap[mode()][Rn] & ~(1u);
 
     *registerMap[mode()][R15] = jumpTarget;
-    this->_CPSR.T = nextState;
+    this->_CPSR.state.T = nextState;
     this->remainingCycles += 3; //2S + 1N
     return true;
 }
@@ -62,47 +62,81 @@ bool gba::CPU::executeBranchLink(Word instruction)
     return true;
 }
 
+
+// Verhalten mit S gesetzt unklar, mögliche Fehlerquelle
+// Verhalten mit R15 als Basis unklar, mögliche Fehlerquelle, sollte aber eigentlich nicht benutzt werden
 bool gba::CPU::executeBlockDataTransfer(Word instruction)
 {
     Word Rn = (instruction & (0b1111u << 16)) >> 16;
     const bool L = instruction & (1u << 20);
     const bool W = instruction & (1u << 21);
-    const bool S = instruction & (1u << 22); // Ignoriere ich hier aus Einfachheit, nicht implementiert
+    const bool S = instruction & (1u << 22);
     const bool U = instruction & (1u << 23);
     const bool P = instruction & (1u << 24);
-    const int incr = U ? +4 : -4;
-    Word addr = *registerMap[mode()][Rn] & ~0b11u; // Alignment
+    const int incr = 4;
     bool firstRegister = true;
-    int n = 0;
+    int numberOfRegs = std::popcount(instruction & 0xFFFF);
+    int downOffset = !U ? (numberOfRegs+1) * 4 : 0; // Wortgröße 4
+    downOffset -= !U && !P ? 8 : 0; // Magie, empirisch bestimmt
+    
+    bool baseInRegisterList = instruction & (1u << Rn);
+    bool R15InTransferList = instruction & (1u << 15);
+    int actualMode = (S && !L && R15InTransferList) || (!R15InTransferList && S) ? SystemUser : mode();
+    bool transferCPSR = L && S && R15InTransferList;
+    Word origAddr = *registerMap[actualMode][Rn];
+    Word addr = origAddr;
+    
     for(int i=0; i < 16; i++){
         bool useRegister = instruction & (1u << i);
         if(useRegister){
-            n++;
+            if((unsigned int)i<Rn) firstRegister = false; 
+        }
+    }
+
+    if(W){ // Aufpassen, überprüfen
+        if(!baseInRegisterList || (!L || !firstRegister))
+            *registerMap[actualMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+    }
+
+    for(unsigned int i=0; i < 16; i++){
+        bool useRegister = instruction & (1u << i);
+        if(useRegister){
             if(P) addr += incr;
             
             if(L){ // Aus Speicher laden LDM
-                *registerMap[mode()][i] = readWord(addr);
+                *registerMap[actualMode][i] = readWordUnaligned(addr - downOffset);
             }
             else{ // In Speicher schreiben STM
-                if(i!=15)
-                    writeWord(addr, *registerMap[mode()][i]);
-                else writeWord(addr, *registerMap[mode()][i] + 10); // Adresse der Anweisung + 12
+                if(i==Rn && baseInRegisterList && firstRegister){
+                    writeWordUnaligned(addr - downOffset, origAddr);
+                }
+                else{
+                    if(i!=15) writeWordUnaligned(addr - downOffset, *registerMap[actualMode][i]);
+                    else writeWordUnaligned(addr - downOffset, *registerMap[actualMode][i] + 4); // Adresse der Anweisung + 12
+                }
             }
             
             if(!P) addr += incr;
-            if(!firstRegister && W && !L){
-                *registerMap[mode()][Rn] = addr;
+
+            if(transferCPSR && i==15){
+                if(actualMode != SystemUser){
+                    *registerMap[actualMode][CPSR] = *registerMap[actualMode][SPSR];
+                } // else?
             }
-            firstRegister = false;
         }
     }
+    bool pcAsBase = false;
+    if(Rn==15){
+        pcAsBase = true;
+    }
+
     if(L){
-        remainingCycles += n + 2; // LDM: n*S + 1N + 1I
+        remainingCycles += numberOfRegs + 2; // LDM: n*S + 1N + 1I
     }
     else{
-        remainingCycles += (n-1) + 2; //STM: (n-1)*S + 2N
+        remainingCycles += (numberOfRegs-1) + 2; //STM: (n-1)*S + 2N
     }
-    if(!L && (instruction & (1u << 15))){ // LDM PC
+    if((L && (instruction & (1u << 15))) || pcAsBase){ // LDM PC
         return true;
     }
     return false;
@@ -110,36 +144,37 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
 
 bool gba::CPU::executeSoftwareInterrupt(Word instruction)
 {
+    (void)instruction;
     _R14_SVC = *registerMap[mode()][R15] + 4;
     *registerMap[mode()][R15] = 0x08;
     _SPSR_SVC.raw = *registerMap[mode()][CPSR];
-    _CPSR.mode_bits = Supervisor;
+    _CPSR.state.mode_bits = Supervisor;
     remainingCycles += 3; // 2S + 1N
     return true;
 }
 
 bool gba::CPU::executeCoProcDataOperation(Word instruction)
 {
-    std::cout << "Coprozessor-Datenoperation aufgerufen!" << std::endl;
+    std::cout << "Coprozessor-Datenoperation aufgerufen!" << instruction << std::endl;
     return false;
 }
 
 bool gba::CPU::executeCoProcDataTransfer(Word instruction)
 {
-    std::cout << "Coprozessor-Datentransfer aufgerufen!" << std::endl;
+    std::cout << "Coprozessor-Datentransfer aufgerufen!" << instruction << std::endl;
     return false;
 }
 
 bool gba::CPU::executeCoProcRegTransfer(Word instruction)
 {
-    std::cout << "Coprozessor-Registertransfer aufgerufen!" << std::endl;
+    std::cout << "Coprozessor-Registertransfer aufgerufen!" << instruction << std::endl;
     return false;
 }
 
 bool gba::CPU::executeUndefined(Word instruction) // Falsch implementiert
 {
-    std::cout << "Undefinierte Instruktion aufgerufen!" << std::endl;
-    _CPSR.mode_bits = Undefined;
+    std::cout << "Undefinierte Instruktion aufgerufen!" << instruction << std::endl;
+    _CPSR.state.mode_bits = Undefined;
     return false;
 }
 
@@ -167,7 +202,7 @@ namespace gba{
                 return false;
         }
     }
-    inline bool setVFlag(Word opcode, Word operand1Value, Word operand2Value, uint64_t result, Word op3){
+    inline bool setVFlag(Word opcode, Word operand1Value, Word operand2Value, uint64_t result){
         switch(opcode){
             case 0b0010:
                 return ((operand1Value ^ operand2Value) & (operand1Value ^ result)) >> 31;
@@ -216,7 +251,7 @@ bool gba::CPU::executeDataProc(Word instruction)
     Word operand2 = instruction & 0xFFF;
     Word operand2Value = 0;
     bool logicalCarry = false; // CPSR-C Wert, falls logische Operation
-    const bool carryBefore = ((StatusRegister)(*registerMap[mode()][CPSR])).C;
+    const bool carryBefore = (std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR])).state.C;
     bool keepOldCarry = false;
     bool registerSpecifiedShift = false;
     Word op3 = 0;
@@ -281,7 +316,7 @@ bool gba::CPU::executeDataProc(Word instruction)
                     else logicalCarry = op2RegValue & (1u << 31);
                     operand2Value = op2RegValue;
                     // Wie langsam ist das?
-                    for(int i = 0; i < amount; i++){
+                    for(unsigned int i = 0; i < amount; i++){
                         Word lastbit = operand2Value & (1u << 31);
                         operand2Value >>= 1;
                         operand2Value = operand2Value | lastbit;
@@ -360,10 +395,6 @@ bool gba::CPU::executeDataProc(Word instruction)
             break;
     }
     Word result32 = (Word)result;
-    // carry out xor carry in
-    bool overflow = (~(operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
-    // bool overflow = ((operand1Value & (1u << 31)) == (operand2Value & (1u << 31)))
-    //      &&((result & (1u << 31)) != (operand2Value & (1u << 31)));
 
     // Bei Testoperationen nicht Ergebnis schreiben
     if(opcode < 0b1000 || opcode > 0b1011){
@@ -381,10 +412,10 @@ bool gba::CPU::executeDataProc(Word instruction)
             // Z - gesetzt, wenn Ergebnis 0
             // N - Bit 31
             if(opcode <= 1 || opcode >= 0b1100 || opcode == 0b1000 || opcode == 0b1001){
-                StatusRegister cpsr = (StatusRegister)(*registerMap[mode()][CPSR]);
-                cpsr.C = keepOldCarry ? carryBefore : logicalCarry;
-                cpsr.Z = result32 == 0;
-                cpsr.N = (result32 & (1u << 31)) > 0;
+                StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+                cpsr.state.C = keepOldCarry ? carryBefore : logicalCarry;
+                cpsr.state.Z = result32 == 0;
+                cpsr.state.N = (result32 & (1u << 31)) > 0;
                 *registerMap[mode()][CPSR] = cpsr.raw;
             }
     
@@ -394,11 +425,11 @@ bool gba::CPU::executeDataProc(Word instruction)
             // Z - gesetzt, wenn Ergebnis 0
             // N - Bit 31
             else{
-                StatusRegister cpsr = (StatusRegister)(*registerMap[mode()][CPSR]);
-                cpsr.V = setVFlag(opcode, operand1Value, operand2Value, result, op3);
-                cpsr.C = setCFlag(opcode, operand1Value, operand2Value, result, op3);
-                cpsr.Z = result32 == 0;
-                cpsr.N = (result32 & (1ull << 31)) > 0;
+                StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+                cpsr.state.V = setVFlag(opcode, operand1Value, operand2Value, result);
+                cpsr.state.C = setCFlag(opcode, operand1Value, operand2Value, result, op3);
+                cpsr.state.Z = result32 == 0;
+                cpsr.state.N = (result32 & (1ull << 31)) > 0;
                 *registerMap[mode()][CPSR] = cpsr.raw;
             }
         }
@@ -705,10 +736,10 @@ bool gba::CPU::executeMultiply(Word instruction)
     *registerMap[mode()][Rd] = result;
 
     if(S){
-        StatusRegister cpsr = (StatusRegister)(*registerMap[mode()][CPSR]);
-        cpsr.C = 0; // "Meaningless value"
-        cpsr.Z = result == 0;
-        cpsr.N = (result & (1u << 31)) > 0;
+        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+        cpsr.state.C = 0; // "Meaningless value"
+        cpsr.state.Z = result == 0;
+        cpsr.state.N = (result & (1u << 31)) > 0;
         *registerMap[mode()][CPSR] = cpsr.raw;
     }
 
@@ -717,13 +748,13 @@ bool gba::CPU::executeMultiply(Word instruction)
     constexpr Word b_31_16 = (0xFFFF << 16);
     constexpr Word b_31_24 = (0xFF << 24);
 
-    if((RsOp & b_31_8 == 0 ) || (RsOp & b_31_8 == b_31_8)){
+    if(((RsOp & b_31_8) == 0 ) || ((RsOp & b_31_8) == b_31_8)){
         m = 1;
     }
-    else if((RsOp & b_31_16 == 0 ) || (RsOp & b_31_16 == b_31_16)){
+    else if(((RsOp & b_31_16) == 0 ) || ((RsOp & b_31_16) == b_31_16)){
         m = 2;
     }
-    else if((RsOp & b_31_24 == 0 ) || (RsOp & b_31_24 == b_31_24)){
+    else if(((RsOp & b_31_24) == 0 ) || ((RsOp & b_31_24) == b_31_24)){
         m = 3;
     }
     else m = 4;
@@ -781,11 +812,11 @@ bool gba::CPU::executeMultiplyLong(Word instruction)
 
 
     if(S){
-        StatusRegister cpsr = (StatusRegister)(*registerMap[mode()][CPSR]);
-        cpsr.C = 0; // "Meaningless value"
-        cpsr.V = 0; // genau wie C
-        cpsr.Z = result == 0;
-        cpsr.N = (result & (1ull << 63)) > 0;
+        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+        cpsr.state.C = 0; // "Meaningless value"
+        cpsr.state.V = 0; // genau wie C
+        cpsr.state.Z = result == 0;
+        cpsr.state.N = (result & (1ull << 63)) > 0;
         *registerMap[mode()][CPSR] = cpsr.raw;
     }
 
@@ -796,25 +827,25 @@ bool gba::CPU::executeMultiplyLong(Word instruction)
     constexpr Word b_31_24 = (0xFF << 24);
 
     if(U){
-        if((RsOp & b_31_8 == 0 ) || (RsOp & b_31_8 == b_31_8)){
+        if(((RsOp & b_31_8) == 0 ) || ((RsOp & b_31_8) == b_31_8)){
             m = 1;
         }
-        else if((RsOp & b_31_16 == 0 ) || (RsOp & b_31_16 == b_31_16)){
+        else if(((RsOp & b_31_16) == 0 ) || ((RsOp & b_31_16) == b_31_16)){
             m = 2;
         }
-        else if((RsOp & b_31_24 == 0 ) || (RsOp & b_31_24 == b_31_24)){
+        else if(((RsOp & b_31_24) == 0 ) || ((RsOp & b_31_24) == b_31_24)){
             m = 3;
         }
         else m = 4;
     }
     else{
-        if(RsOp & b_31_8 == 0 ){
+        if((RsOp & b_31_8) == 0 ){
             m = 1;
         }
-        else if(RsOp & b_31_16 == 0){
+        else if((RsOp & b_31_16) == 0){
             m = 2;
         }
-        else if(RsOp & b_31_24 == 0){
+        else if((RsOp & b_31_24) == 0){
             m = 3;
         }
         else m = 4;

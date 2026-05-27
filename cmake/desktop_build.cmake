@@ -89,6 +89,8 @@ source/console/dummy_implementation.h
 source/framework/glm_replacement.h
 )
 
+target_compile_options(AMSEL PUBLIC -Wall -Wextra -Werror -Wpedantic)
+
 # add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)
 
 target_link_libraries(AMSEL whereami)

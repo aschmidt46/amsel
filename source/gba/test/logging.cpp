@@ -6,7 +6,7 @@ using namespace gba;
 
 void separateEveryN(std::string& str, int interval, const char* sep)
 {
-    for (int i = 0; i < str.size(); i += interval)
+    for (unsigned int i = 0; i < str.size(); i += interval)
         str.insert(i, sep);
 }
 
@@ -19,7 +19,7 @@ std::string thex(uintptr_t input)
 
 std::string thexNorm(std::string s, int n)
 {
-    while (s.size() < n)
+    while ((int)s.size() < n)
         s = "0" + s;
     return s;
 }
