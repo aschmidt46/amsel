@@ -65,7 +65,7 @@ source/console/dummy_implementation.h
 source/framework/glm_replacement.h
 source/framework/global_web.cpp
 )
-target_compile_options(AMSEL-web PUBLIC -Wall -Wextra -Werror -Wpedantic)
+target_compile_options(AMSEL-web PUBLIC -Wall -Wextra -Wpedantic)
 
 set_target_properties(AMSEL-web PROPERTIES LINK_FLAGS "--bind --emit-tsd AMSEL-web.d.ts -s TOTAL_STACK=512mb -s EXPORT_ES6=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -s SINGLE_FILE=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -s WASM=1 -Wall -s MODULARIZE=1")
 

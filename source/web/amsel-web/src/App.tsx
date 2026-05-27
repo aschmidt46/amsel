@@ -120,7 +120,7 @@ function App() {
             <span>{showTitle()}</span>
           </div>
           <div className="flex-1 navbar-center">
-            <a className="hidden md:block text-xl tooltip tooltip-bottom navbar-center" data-tip="Anton's Multi-System-Emulator-Library">AMSEL</a>
+            <a className="hidden md:block text-xl tooltip tooltip-bottom navbar-center" data-tip="Anton's Multi-System-Emulator">AMSEL</a>
           </div>
           <div className="flex-1 navbar-end">
             <div>

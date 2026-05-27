@@ -1,4 +1,4 @@
-# Antons Multi-System-Emulator-Library (AMSEL)
+# Antons Multi-System-Emulator (AMSEL)
 
 Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB)
 
