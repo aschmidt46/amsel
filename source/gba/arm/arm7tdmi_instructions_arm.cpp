@@ -1,4 +1,5 @@
 #include "arm7tdmi.h"
+#include <bitset>
 #include <iostream>
 #include <bit>
 #include <algorithm>
@@ -636,16 +637,18 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
     bool H = instruction & (1u << 5); // Halbwort
     Word Rd = (instruction & (0xFu << 12)) >> 12; // Source / Dest
     Word Rn = (instruction & (0xFu << 16)) >> 16; // Base
-    Word modifiedBase = *registerMap[mode()][Rn];
     
     bool L = instruction & (1u << 20);
     bool W = instruction & (1u << 21);
     bool U = instruction & (1u << 23);
     bool P = instruction & (1u << 24);
-
-    bool immediate = (instruction & (0xFu << 8));
+    
+    bool immediate = (instruction & (1u << 22));
     Word offsetValue;
+    bool isJump = L && Rd == R15;
 
+    
+    Word modifiedBase = *registerMap[mode()][Rn];
     if(immediate){
         offsetValue = (instruction & 0xF) | ((instruction & (0xFu << 8)) >> 4);
     }
@@ -673,8 +676,13 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
         Word val;
         if(H){
             val = readHalfWord(modifiedBase);
+            Word signBit = 15;
+            if (modifiedBase & 1) {
+                val = (val >> 8) | (val << 24);
+                signBit = 7;
+            }
             val &= 0xFFFFu;
-            Word mask = 1u << 15;
+            Word mask = 1u << signBit;
             val = (val ^ mask) - mask;
         }
         else{
@@ -689,18 +697,40 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
     else{ // Unsigned Halbwort
         if(L){
             Word val = readHalfWord(modifiedBase);
+            // Siehe Nanoboyadvance
+            if (modifiedBase & 1) {
+              val = (val >> 8) | (val << 24);
+            }
             *registerMap[mode()][Rd] = val;
         }
         else{
-            writeHalfWord(modifiedBase, *registerMap[mode()][Rd]);
+            Word R15Offset = Rd == R15 ? 4 : 0;
+            writeHalfWord(modifiedBase, *registerMap[mode()][Rd] + R15Offset);
         }
     }
 
-    if(!P) modifyOffset();
     
-    if(W){
-        *registerMap[mode()][Rn] = modifiedBase;
+    if(!P){
+        if(modifiedBase != *registerMap[mode()][Rn])
+            modifiedBase = *registerMap[mode()][Rn];
+        else modifyOffset();
     }
+
+    if(W){
+        if(Rn == R15){
+            modifiedBase += 4;
+            isJump = true;
+        }
+        if(!(L && P) || Rd != Rn)
+            *registerMap[mode()][Rn] = modifiedBase;
+    }
+
+    // Sehr seltsamer Spezialfall, empirisch bestimmt
+    if(W && Rd == R15 && Rn == R15 && 
+        L && !P){
+        *registerMap[mode()][R15] -= 4;
+    }
+    
 
     if(L){
         if(Rd == 15){ // LDR PC
@@ -714,7 +744,7 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
         remainingCycles += 2; // 2N
     }
 
-    return false;
+    return isJump;
 }
 
 bool gba::CPU::executeMultiply(Word instruction)

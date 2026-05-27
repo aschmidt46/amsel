@@ -53,6 +53,10 @@ void performSingleStepTest(const char* path){
 
         tb->finalize();
 
+        std::string logs = tb->logs;
+
+        if(logs.size() == 0) logs += "\n----------------------------------------------------\nAlle Transaktionen korrekt\n----------------------------------------------------\n";
+
         ASSERT_EQ(stateF, testcase.final)
             << "\n\nFehler in Testfall " << number << ":\n"
             << "Gelesene Instruktion: " << iStr << "\n"
@@ -60,8 +64,8 @@ void performSingleStepTest(const char* path){
             << "Code: " << iCode << "\n"
             << "CPSR: " << cpsr << "\n"
             << "Mode: " << mode << "\n"
+            << "\n" << logs
             << printDiff(testcase.initial, stateF, testcase.final)
-            << "\n" << tb->logs
             << printTransactions(testcase.transactions);
 
         // std::string logs = "";
@@ -76,7 +80,7 @@ void performSingleStepTest(const char* path){
             << "Code: " << iCode << "\n"
             << "CPSR: " << cpsr << "\n"
             << "Mode: " << mode << "\n"
-            << tb->logs << "\n\n"
+            << logs << "\n\n"
             << printDiff(testcase.initial, stateF, testcase.final);
             // << "Erwartete Transaktionen:\n"
             // << printTransactions(testcase.transactions);
@@ -117,13 +121,13 @@ TEST(CPUTest, arm_ldrh_strh){
     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrh_strh.json");
 }
 
-// TEST(CPUTest, arm_ldrsb_ldrsh){
-//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrsb_ldrsh.json");
-// }
+TEST(CPUTest, arm_ldrsb_ldrsh){
+    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrsb_ldrsh.json");
+}
 
-// TEST(CPUTest, arm_ldr_str_immediate_offset){
-//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldr_str_immediate_offset.json");
-// }
+TEST(CPUTest, arm_ldr_str_immediate_offset){
+    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldr_str_immediate_offset.json");
+}
 
 // TEST(CPUTest, arm_ldr_str_register_offset){
 //     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldr_str_register_offset.json");
