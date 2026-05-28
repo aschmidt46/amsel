@@ -1,4 +1,4 @@
-// Große Aufgabe, Großes Projekt, viel Erfolg und auf gutes Gelingen ;)
+
 mod sm83 {
     use core::panic;
 
@@ -823,7 +823,6 @@ mod sm83 {
             self.set_status_flag(sm83::ProcessorFlags::CarryFlag, false);
             false
         }
-        // Geschafft!!
         pub fn prefix(&mut self, _: &OperandType, _: &OperandType) -> bool{
             // dummy Funktion
             panic!("Dummy-Funktion (Prefix) aufgerufen!");
