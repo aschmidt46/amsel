@@ -16,6 +16,7 @@ jobs:
       - run: apk add make
       - run: apk add cmake
       - run: mkdir -p build
-      - run: cd build
-      - run: cmake ..
-      - run: make
+      - run: |
+        cd build
+        cmake ..
+        make
