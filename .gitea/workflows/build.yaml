@@ -4,17 +4,22 @@ on: [push]
 
 jobs:
   Explore-Gitea-Actions:
-    runs-on: ubuntu-latest
+    runs-on: node
+    defaults:
+      run:
+        shell: sh
     steps:
-      - run: apt-get update
-      - run: apt-get install git --yes
-      - run: apt-get install python3 --yes
-      - run: apt-get install python3-jinja2 --yes
-      - run: apt-get install cmake --yes
-      - run: apt-get install make --yes
-      - run: git clone http://localhost:9080/anton/amsel.git
-      - run: cd amsel
+      - uses: actions/checkout@v4
+      - run: apk add git
+      - run: apk add python3
+      - run: apk add py3-jinja2
+      - run: apk add g++
+      - run: apk add make
+      - run: apk add cmake
       - run: mkdir -p build
-      - run: cd build
-      - run: cmake ..
-      - run: make
+      - name: Configure
+        working-directory: ./build
+        run: cmake ..
+      - name: Build
+        working-directory: ./build
+        run: make
