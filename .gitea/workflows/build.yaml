@@ -16,6 +16,9 @@ jobs:
       - run: apk add make
       - run: apk add cmake
       - run: mkdir -p build
-      - working-directory: ./build
-      - run: cmake ..
-      - run: make
+      - name: Configure
+        working-directory: ./build
+        run: cmake ..
+      - name: Build
+        working-directory: ./build
+        run: make
