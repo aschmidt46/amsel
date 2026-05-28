@@ -10,6 +10,7 @@ jobs:
         shell: sh
     steps:
       - uses: actions/checkout@v4
+      - run: apk add git
       - run: apk add python3
       - run: apk add py3-jinja2
       - run: apk add g++
