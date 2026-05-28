@@ -6,13 +6,13 @@ jobs:
   Explore-Gitea-Actions:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - run: apt-get update
       - run: apt-get install git --yes
       - run: apt-get install python3 --yes
       - run: apt-get install python3-jinja2 --yes
       - run: apt-get install cmake --yes
       - run: apt-get install make --yes
-      - run: git clone http://localhost:9080/anton/amsel.git
       - run: cd amsel
       - run: mkdir -p build
       - run: cd build
