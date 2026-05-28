@@ -16,6 +16,7 @@ roms/
 gbaroms/
 debug/
 deps/
+test/
 resources/tests
 README-deploy.md
 .cache/
