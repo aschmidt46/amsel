@@ -95,7 +95,9 @@ impl APU {
         if self.channel_audible(false, 1) {current_sample_left += self.pulse2_sample as f64 * (self.pulse2.volume as f64 / 15.0)};
         if self.channel_audible(false, 2) {current_sample_left += self.wave_sample as f64 / 15.0};
         if self.channel_audible(false, 3) {current_sample_left += self.noise_sample as f64 * (self.noise.volume as f64 / 15.0)};
-        current_sample_left * (scaling as f64 / 8.0)
+        current_sample_left *= 0.15 * (scaling as f64 / 8.0);
+        current_sample_left
+    
     }
     pub fn get_sample_right(&self) -> f64{
         if (self.master_control & 128) == 0 /*|| (self.master_volume_panning & 8) == 0*/ { return 0.0; }
@@ -105,7 +107,9 @@ impl APU {
         if self.channel_audible(true, 1) {current_sample_right += self.pulse2_sample as f64 * (self.pulse2.volume as f64 / 15.0)};
         if self.channel_audible(true, 2) {current_sample_right += self.wave_sample as f64 / 15.0};
         if self.channel_audible(true, 3) {current_sample_right += self.noise_sample as f64 * (self.noise.volume as f64 / 15.0)};
-        current_sample_right * (scaling as f64 / 8.0)
+        // println!("{}",current_sample_right * (scaling as f64 / 8.0));
+        current_sample_right *= 0.15 * (scaling as f64 / 8.0);
+        current_sample_right
     }
     pub fn maybe_write(&mut self, addr: u16, val: u8){
         if (self.master_control & 128) > 0{

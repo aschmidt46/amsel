@@ -50,6 +50,8 @@ pub mod ffi{
 
         fn new_cgb(path: &str) -> Box<CGB>;
 
+        fn new_cgb_rom(rom: &CxxVector<u8>) -> Box<CGB>;
+
         fn has_frame(cgb: &mut Box<CGB>) -> bool;
 
         fn press_button(cgb: &mut Box<CGB>, b: usize);
@@ -229,4 +231,12 @@ fn cgb_load_save(cgb: &mut Box<CGB>, vec: &cxx::CxxVector<u8>){
         v.push(el.clone());
     }
     cgb.load_save(v);
+}
+
+fn new_cgb_rom(rom: &cxx::CxxVector<u8>) -> Box<CGB>{
+    let mut v : Vec<u8> = Vec::new();
+    for el in rom{
+        v.push(el.clone());
+    }
+    return Box::new(CGB::new_rom(&v))
 }

@@ -37,6 +37,13 @@ pub(crate) mod gbc{
             CGB { bus, has_frame: false, audio_time: 0.0, audio_sample_ready: false, audio_sample_left: 0.0, audio_sample_right: 0.0
                 , sample_rate: 20000.0, audio_time_per_clock: 1.0 / CGB_CLOCK, audio_time_per_sample: 1.0 / 20000.0 }
         }
+
+        pub fn new_rom(rom: &Vec<u8>) -> Self{
+            let bus: Rc<RefCell<Bus>> = Rc::new(RefCell::new(Bus::new_init_rom(rom)));
+            bus.borrow_mut().create_components(bus.clone());
+            CGB { bus, has_frame: false, audio_time: 0.0, audio_sample_ready: false, audio_sample_left: 0.0, audio_sample_right: 0.0
+                , sample_rate: 20000.0, audio_time_per_clock: 1.0 / CGB_CLOCK, audio_time_per_sample: 1.0 / 20000.0 }
+        }
     
         pub fn has_frame(&mut self) -> bool{
             let tmp = self.has_frame;

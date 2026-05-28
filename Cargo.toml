@@ -13,7 +13,8 @@ path = "src/bridge.rs"
 # path = "src/main.rs"
 
 [profile.release]
-debug = true
+opt-level = 3
+# debug = true
 
 [profile.dev]
 opt-level = 3
@@ -22,15 +23,11 @@ overflow-checks = false
 [dependencies]
 arr_macro = "0.2.1"
 bytes = "1.11.1"
-cpal = "0.17.3"
 cxx = "1.0.194"
-eframe = "0.33.3"
-egui = "0.33.3"
-egui_extras = "0.33.3"
 env_logger = "0.11.10"
 # iced = {version="0.14.0", features=["image", "advanced"]}
 lazy_static = "1.5.0"
-rfd = "0.17.2"
+# rfd = "0.17.2"
 serde = "1.0.228"
 serde_json = "1.0.149"
 smol_str = "0.3.6"

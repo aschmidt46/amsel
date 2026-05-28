@@ -95,6 +95,14 @@ impl Bus{
         }
         bus
     }
+    pub fn new_init_rom(rom: &Vec<u8>) -> Self{
+        let mut bus = Bus::new();
+        bus.cart = Some(RomObject::new_from_rom(rom.clone()));
+        if bus.cart.as_mut().unwrap().cgb_flag & 0xC0 > 0 {
+            bus.cgb_mode = true;
+        }
+        bus
+    }
     pub fn set_test_mode(&mut self){
         self.test_mode = true;
         self.test_output = Some(Vec::new())
