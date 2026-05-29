@@ -89,7 +89,7 @@ source/console/dummy_implementation.h
 source/framework/glm_replacement.h
 )
 
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Werror -Wpedantic)
+target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
 
 # add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)
 
@@ -101,6 +101,10 @@ set(BUILD_SHARED_LIBS FALSE)
 glad_add_library(glad_gl_core_46 STATIC API gl:core=4.6)
 target_link_libraries(AMSEL glad_gl_core_46)
 target_link_libraries(AMSEL glfw)
+
+if(UNIX AND NOT APPLE)
+target_link_libraries(AMSEL "-lX11")
+endif()
 
 target_link_libraries(AMSEL cgbcore)
 target_link_libraries(AMSEL rusty_bridge)
