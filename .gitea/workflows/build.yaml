@@ -3,7 +3,49 @@ run-name: Push by @${{ github.actor }}
 on: [push]
 
 jobs:
-  Explore-Gitea-Actions:
+  Build Desktop:
+    runs-on: node
+    defaults:
+      run:
+        shell: sh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: https://github.com/actions-rust-lang/setup-rust-toolchain@v1.16
+      - run: apk add git
+      - run: apk add python3
+      - run: apk add py3-jinja2
+      - run: apk add g++
+      - run: apk add make
+      - run: apk add cmake
+      - run: mkdir -p build
+      - name: Configure
+        working-directory: ./build
+        run: cmake .. -DBUILD_WEB=OFF -DBUILD_GBA=OFF
+      - name: Build
+        working-directory: ./build
+        run: make
+  Build Web-App:
+    runs-on: node
+    defaults:
+      run:
+        shell: sh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: https://github.com/actions-rust-lang/setup-rust-toolchain@v1.16
+      - run: apk add git
+      - run: apk add python3
+      - run: apk add py3-jinja2
+      - run: apk add g++
+      - run: apk add make
+      - run: apk add cmake
+      - run: mkdir -p build
+      - name: Configure
+        working-directory: ./build
+        run: cmake .. -DBUILD_WEB=ON -DBUILD_GBA=OFF
+      - name: Build
+        working-directory: ./build
+        run: make
+  Build GBA-Test:
     runs-on: node
     defaults:
       run:
@@ -19,7 +61,7 @@ jobs:
       - run: mkdir -p build
       - name: Configure
         working-directory: ./build
-        run: cmake ..
+        run: cmake .. -DBUILD_WEB=OFF -DBUILD_GBA=ON
       - name: Build
         working-directory: ./build
         run: make
