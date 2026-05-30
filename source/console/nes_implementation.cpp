@@ -1,6 +1,7 @@
 #include "nes_implementation.h"
+#ifndef BUILD_WEB
 #include <imgui.h>
-#include <bitset>
+#endif
 
 NesImplementation::NesImplementation(std::vector<uint8_t> &rom)
 {

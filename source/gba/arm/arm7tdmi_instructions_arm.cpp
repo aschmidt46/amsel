@@ -524,16 +524,23 @@ bool gba::CPU::executeSingleDataTransfer(Word instruction)
     bool B = instruction & (1u << 22);
     bool W = instruction & (1u << 21);
     bool L = instruction & (1u << 20);
+    bool isJump = false;
     Word baseReg = (instruction & (0xFu << 16)) >> 16;
-    Word modifiedBase = *registerMap[mode()][baseReg];
     Word sourceDestReg = (instruction & (0xFu << 12)) >> 12;
-    Word offset;
-
     // "In the case of post-indexed addressing, the write back bit is
     // redundant and must be set to zero, since the old base value can be retained by setting
     // the offset to zero. Therefore post-indexed data transfers always write back the modified base"
     // https://iitd-plos.github.io/col718/ref/arm-instructionset.pdf S. 4-27
     if(!P) W = true;
+    if(baseReg == R15 && W){
+        isJump = true;
+    }
+    // else if(sourceDestReg == R15) *registerMap[mode()][R15] += 4;
+    Word modifiedBase = *registerMap[mode()][baseReg];// + (baseReg == R15 && W ? 4 : 0);
+    const bool carryBefore = (std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR])).state.C;
+
+    Word offset;
+
 
     auto modifyOffset = [&](){
         if(U){
@@ -551,28 +558,41 @@ bool gba::CPU::executeSingleDataTransfer(Word instruction)
         Word reg = instruction & 0xF;
         Word shift = (instruction & (0xFFu << 4)) >> 4;
         ShiftType shiftType = (ShiftType) ((shift & 0b110) >> 1);
-        Word shiftAmount = (shift & 0b11111000) >> 3;
+        Word amount = (shift & 0b11111000) >> 3;
         Word regVal = *registerMap[mode()][reg];
         switch(shiftType){
-            case LogicalLeft:{
-                offset = regVal << shiftAmount;
+            case LogicalLeft:
+                if(amount >= 32){ // UB in C++
+                    offset = 0;
+                }
+                else offset = regVal << amount;
                 break;
-            }
-            case LogicalRight:{
-                offset = regVal >> shiftAmount;
+            case LogicalRight:
+                if(amount == 0) amount = 32;
+                if(amount >= 32){ // UB in C++
+                    offset = 0;
+                }
+                else{
+                    offset = regVal >> amount;
+                }
                 break;
-            }
             case ArithmeticRight:{
-                // !!!! wie oben bei DataProc
-                int32_t temp = std::bit_cast<int32_t>(regVal);
-                temp = temp >> shiftAmount;
-                offset = std::bit_cast<Word>(temp);
+                if(amount == 0) amount = 32;
+                offset = regVal;
+                for(unsigned int i = 0; i < amount; i++){
+                    Word lastbit = offset & (1u << 31);
+                    offset >>= 1;
+                    offset = offset | lastbit;
+                }
+                break;}
+            case RotateRight:
+                if(amount > 0){ // RR
+                    offset = std::rotr(regVal, amount);
+                }
+                else{//RRX
+                    offset = (regVal >> 1) | (carryBefore << 31); // Carry bit wird links reingeshiftet
+                }
                 break;
-            }
-            case RotateRight:{
-                offset = std::rotr(regVal, shiftAmount);
-                break;
-            }
         }
     }
 
@@ -590,34 +610,53 @@ bool gba::CPU::executeSingleDataTransfer(Word instruction)
             if(modifiedBase % 4 == 0){ // Wort alignt
                 val = readWord(modifiedBase);
             }
-            else{ // Datasheet S. 4-28      (Verhalten verifizieren!!!!)
-                modifiedBase &= ~(0b1); // Halbwort align.
-                Word upper = readHalfWord(modifiedBase); // Ende erstes Wort
-                Word lower = readHalfWord(modifiedBase + 2); // Anfang zweites Wort
-                val = (upper << 16) | lower;
+            else if((modifiedBase & 0b11) == 0b11){ // Datasheet S. 4-28      (Verhalten verifizieren!!!!)
+                // val = readWordUnaligned(modifiedBase);
+                Word w = readWordUnaligned(modifiedBase);
+                val = (w << 8) | (w >> 24);
+            }
+            else if((modifiedBase & 0b11) == 0b10){
+                Word w = readWordUnaligned(modifiedBase);
+                val = (w << 16) | (w >> 16);
+            }
+            else{
+                // modifiedBase &= ~(0b1); // Halbwort align.
+                Word upper = readWordUnaligned(modifiedBase); // Ende erstes Wort
+                val = (upper >> 8) | (upper << 24);
             }
         }
         *registerMap[mode()][sourceDestReg] = val;
     }
     else{ // STR
         if(B){
-            writeByte(modifiedBase, *registerMap[mode()][sourceDestReg]);
+            writeByte(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
         else{
-            modifiedBase &= ~(0b11); // Wort Alignment (Immer)
+            // modifiedBase &= ~(0b11); // Wort Alignment (Immer)
+            writeWordUnaligned(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
     }
 
     if(!P){ // Post-Inkrement
-        modifyOffset();
+        if(modifiedBase != *registerMap[mode()][baseReg])
+            modifiedBase = *registerMap[mode()][baseReg];
+        else modifyOffset();
     }
 
     if(W){ // Write back
-        *registerMap[mode()][baseReg] = modifiedBase;
+        if(baseReg == sourceDestReg && P && L) modifiedBase = *registerMap[mode()][sourceDestReg];
+        *registerMap[mode()][baseReg] = modifiedBase + (baseReg == R15 ? 4 : 0);
+    }
+
+    // Sehr seltsamer Spezialfall, empirisch bestimmt
+    if(W && sourceDestReg == R15 && baseReg == R15 && 
+        L){
+        *registerMap[mode()][R15] -= 4;
     }
 
     if(L){ // LDR
-        if(sourceDestReg == 15){ // LDR PC
+        if(sourceDestReg == R15){ // LDR PC
+            isJump = true;
             remainingCycles += 5; // 2S + 2N + 1I
         }
         else{
@@ -628,7 +667,7 @@ bool gba::CPU::executeSingleDataTransfer(Word instruction)
         remainingCycles += 2; // 2N
     }
 
-    return false;
+    return isJump;
 }
 
 bool gba::CPU::executeDataTransferSignHDW(Word instruction)
