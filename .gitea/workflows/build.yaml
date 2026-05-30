@@ -38,29 +38,17 @@ jobs:
         working-directory: ./build
         run: make
   Build Web-App:
-    runs-on: node
+    runs-on: node-debian
     defaults:
       run:
-        shell: sh
+        shell: bash
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - run: apk add bash
-      - run: apk add curl
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
-      - run: apk add rustup
       - run: ~/.cargo/bin/rustup target add wasm32-unknown-emscripten
-      - run: apk add git
-      - run: apk add python3
-      - run: apk add py3-jinja2
-      - run: apk add g++
-      - run: apk add make
-      - run: apk add cmake
-      - run: apk add alsa-lib-dev
+      - run: apt-get install cmake --yes
       - run: mkdir -p build
-      - run: apk add gcompat
-      - run: apk add libstdc++
-      - run: apk add zlib
       - uses: https://github.com/emscripten-core/setup-emsdk@v16
       - name: Configure
         working-directory: ./build
