@@ -168,23 +168,23 @@ static inline bool isPSRTransfer(Word code)
 {
     auto masked = code & mask_DataProcAndPSRTransfer;
     auto fits = masked == form_DataProcAndPSRTransfer;
-    // if(fits){
-    //     bool I = code & (1u << 25);
-    //     if((code & (0b11u << 23)) >> 23 != 0b10) return false; // muss 0b10 sein
-    //     bool opcode = (1u << 21) & code;
-    //     if((code & (1u << 20)) > 0) return false; // muss 0 sein
-    //     if(opcode){ // MSR
+    if(fits){
+        bool I = code & (1u << 25);
+        if((code & (0b11u << 23)) >> 23 != 0b10) return false; // muss 0b10 sein
+        bool opcode = (1u << 21) & code;
+        if((code & (1u << 20)) > 0) return false; // muss 0 sein
+        if(opcode){ // MSR
 
-    //         if(!I){
-    //             if(code & (255u << 4) > 0) return false;
-    //         }
-    //     }
-    //     else{ // MRS
-    //         if((code & (0b1111 << 16)) >> 16 != 0b1111) return false; //mus 0b1111 sein
-    //         if(code & 0b11111111111 > 0) return false; // muss 0 sein
-    //     }
-    //     return true;
-    // }
+            if(!I){
+                if((code & (255u << 4)) > 0) return false;
+            }
+        }
+        else{ // MRS
+            if((code & (0b1111 << 16)) >> 16 != 0b1111) return false; //mus 0b1111 sein
+            if((code & 0b11111111111) > 0) return false; // muss 0 sein
+        }
+        return true;
+    }
     return fits;
 }
 
@@ -517,20 +517,22 @@ InstructionInfo gba::CPU::decodeInstructionARM(Word code)
     if(isUndefined(code))
         return InstructionInfo{.type = TypeUndefined, .code = code};
     
-    if(isDataTransferSignHDW(code))
-        return InstructionInfo{.type = TypeDataTransferSignHDW, .code = code};
-    
     if(isMultiplyAccumulate(code))
         return InstructionInfo{.type = TypeMultiply, .code = code};
-
     if(isMultiplyAccumulateL(code))
         return InstructionInfo{.type = TypeMultiplyL, .code = code};
     
+    if(isDataTransferSignHDW(code))
+        return InstructionInfo{.type = TypeDataTransferSignHDW, .code = code};
+    
+
+    
+    if(isPSRTransfer(code))
+        return InstructionInfo{.type = TypePSRTransfer, .code = code};
+
     if(isDataProc(code))
         return InstructionInfo{.type = TypeDataProc, .code = code};
 
-    if(isPSRTransfer(code))
-        return InstructionInfo{.type = TypePSRTransfer, .code = code};
 
     return InstructionInfo{.type = UnimplementedInstruction, .code = code};
 }

@@ -50,6 +50,7 @@ std::string printState(gba::CpuRegisterState state){
         res += "R"+std::to_string(i+13)+"_und:\t"+getHex(state.R_und[i],8)+"\n";
     }
     res += "\n";
+    res += "CPSR: \t\t"+getHex(state.CPSR, 8)+"\n";
     res += "SPSR_fiq:\t"+getHex(state.SPSR[0],8)+"\n";
     res += "SPSR_svc:\t"+getHex(state.SPSR[1],8)+"\n";
     res += "SPSR_abt:\t"+getHex(state.SPSR[2],8)+"\n";

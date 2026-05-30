@@ -22,7 +22,41 @@ namespace gba{
         uint32_t SPSR[5];
         uint32_t Pipeline[2];
 
-        bool operator==(const CpuRegisterState&) const = default;
+        // Carry Flag ignorieren wegen Multiply Ungereimtheiten (https://bmchtech.github.io/post/multiply/)
+        bool operator==(const CpuRegisterState& b) const{
+            bool result = true;
+
+            for(size_t i = 0; i < 16; i++){
+                result &= this->R[i] == b.R[i];
+            }
+            for(size_t i = 0; i < 7; i++){
+                result &= this->R_fiq[i] == b.R_fiq[i];
+            }
+            for(size_t i = 0; i < 2; i++){
+                result &= this->R_svc[i] == b.R_svc[i];
+            }
+            for(size_t i = 0; i < 2; i++){
+                result &= this->R_abt[i] == b.R_abt[i];
+            }
+            for(size_t i = 0; i < 2; i++){
+                result &= this->R_irq[i] == b.R_irq[i];
+            }
+            for(size_t i = 0; i < 2; i++){
+                result &= this->R_und[i] == b.R_und[i];
+            }
+
+            // Carry Flag und V ignorieren, V auch komisch bei MULL und MLAL
+            result &= (this->CPSR & ~(0b11u << 28)) == (b.CPSR & ~(0b11u << 28));
+
+            for(size_t i = 0; i < 5; i++){
+                result &= this->SPSR[i] == b.SPSR[i];
+            }
+            for(size_t i = 0; i < 2; i++){
+                result &= this->Pipeline[i] == b.Pipeline[i];
+            }
+
+            return result;
+        };
     };
 
     struct Transaction{

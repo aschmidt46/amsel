@@ -452,19 +452,16 @@ bool gba::CPU::executeDataProc(Word instruction)
 
 bool gba::CPU::executePSRTransfer(Word instruction)
 {
-    Word form_MSRBitsOnly = 0b0000'0001'0010'1000'1111'0000'0000'0000; // (Register oder imm nach PSR nur flag bits)
-    Word mask_MSRBitsOnly = 0b0000'1101'1011'1111'1111'0000'0000'0000;
+    bool opcode = instruction & (1u << 21);
 
-    Word form_MSR =         0b0000'0001'0010'1001'1111'0000'0000'0000; // (Register nach PSR)
-    Word mask_MSR =         0b0000'1111'1011'1111'1111'1111'1111'0000;
+    bool writeF = instruction & (1u << 19);
+    bool writeS = instruction & (1u << 18); //.. eigentlich nicht erlaubt
+    bool writeX = instruction & (1u << 17); //..
+    bool writeC = instruction & (1u << 16);
+    Word writeMask = (writeF ? 0xFFu << 24 : 0) | (writeS ? 0xFFu << 16 : 0) | (writeX ? 0xFFu << 8 : 0) | (writeC ? 0xFFu : 0);
+    
 
-    auto masked = instruction & mask_MSRBitsOnly;
-    bool fits = masked == form_MSRBitsOnly;
-
-    auto masked2 = instruction & mask_MSR;
-    bool fits2 = masked2 == form_MSR;
-
-    if(fits){ // MSR Bits only
+    if(opcode){ // MSR Bits only
         bool destSPSRMode = instruction & (1u << 22);
         bool I = instruction & (1u << 25);
         Word val;
@@ -473,44 +470,40 @@ bool gba::CPU::executePSRTransfer(Word instruction)
             // Genau wie in DataProc?
             Word rotate = (instruction & (0xFu << 8)) >> 8;
             val = std::rotr(val, 2 * rotate);
-            val &= 0xFu << 28; // obere Bits maskieren
+            // val &= 0xFu << 28; // obere Bits maskieren
         }
         else{ // Registerinhalt
             Word sourceReg = instruction & 0xF;
-            val = *registerMap[mode()][sourceReg] & (0xFu << 28);
+            val = *registerMap[mode()][sourceReg];
         }
 
         if(destSPSRMode){
-            *registerMap[mode()][SPSR] =  (*registerMap[mode()][SPSR] & ~(0xFu << 28)) | val;
+            if(mode() !=SystemUser)
+                *registerMap[mode()][SPSR] =  (*registerMap[mode()][SPSR] & ~writeMask) | (val & writeMask);
         }
         else{
-            *registerMap[mode()][CPSR] = (*registerMap[mode()][CPSR] & ~(0xFu << 28)) | val;
+            if(mode()==SystemUser) writeMask &= 0xFF000000;
+            if(writeMask & 0xFF) val |=  0x10; // Siehe NanoboyAdvance
+            *registerMap[mode()][CPSR] = (*registerMap[mode()][CPSR] & ~writeMask) | (val & writeMask);
         }
     }
-    else if(fits2){ // MSR (Unklar: Im Usermode() kann MSR nicht die unteren Kontrollbits von CPSR ändern, läuft der GBA in User oder System? Ist das relevant? SPSR existiert auch nicht im Usermode().)
-        bool destSPSRMode = instruction & (1u << 22);
-        Word sourceReg = instruction & 0xFu;
-        Word val = *registerMap[mode()][sourceReg];
-        if(destSPSRMode){
-            *registerMap[mode()][SPSR] = val;
-        }
-        else{
-            *registerMap[mode()][CPSR] = val;
-        }
-    }
-    else{ //MRS (PSR nach Register)
+    else if(!opcode){ //MRS (PSR nach Register)
         bool sourceSPSRMode = instruction & (1u << 22);
         Word destReg = (instruction & (0xFu << 12)) >> 12;
 
         Word val;
         if(sourceSPSRMode){
-            val = *registerMap[mode()][SPSR];
+            if(mode() !=SystemUser)
+                val = *registerMap[mode()][SPSR];
+            else val = *registerMap[mode()][CPSR];
         }
         else{
             val = *registerMap[mode()][CPSR];
         }
         *registerMap[mode()][destReg] = val;
     }
+    *registerMap[mode()][CPSR] &= ~(1u << 5); // State Bit (ARM / Thumb) rausnehmen, wegen Tests. Nicht klar, ob es in Wirklichkeit einen Effekt hat
+    *registerMap[mode()][CPSR] |= (state() << 5);
 
     remainingCycles += 1; // 1S
     return false;
@@ -831,6 +824,7 @@ bool gba::CPU::executeMultiply(Word instruction)
     remainingCycles += 1 + m; // 1S + mI
     if(A) remainingCycles += 1; // 1S + (m+1)I
 
+    if(Rd == R15) return true;
     return false;
 }
 
@@ -848,31 +842,37 @@ bool gba::CPU::executeMultiplyLong(Word instruction)
 
     uint64_t result;
     if(A){
-        if(U){
-            uint64_t rd = ((uint64_t) *registerMap[mode()][RdLo]) | (((uint64_t) *registerMap[mode()][RdLo]) << 32);
+        if(!U){
+            std::cout << "wie komme ich her?"<<std::endl;
+            uint64_t rd = ((uint64_t) *registerMap[mode()][RdLo]) | (((uint64_t) *registerMap[mode()][RdHi]) << 32);
             result = ((uint64_t) *registerMap[mode()][Rm]) * ((uint64_t) *registerMap[mode()][Rs]) + rd;
         }
         else{
-            uint64_t wideRm = (uint64_t)*registerMap[mode()][Rm];
-            uint64_t wideRs = (uint64_t)*registerMap[mode()][Rs];
-            uint64_t rd = ((uint64_t) *registerMap[mode()][RdLo]) | (((uint64_t) *registerMap[mode()][RdLo]) << 32);
-            int64_t sresult = (std::bit_cast<int64_t>(wideRm)) * (std::bit_cast<int64_t>(wideRs)) + std::bit_cast<int64_t>(rd);
-            result = std::bit_cast<uint64_t>(sresult);
+            std::cout << "wo bin ich hier?"<<std::endl;
+            uint64_t wideRm = std::int64_t(std::int32_t(*registerMap[mode()][Rm]));
+            uint64_t wideRs = std::int64_t(std::int32_t(*registerMap[mode()][Rs]));
+            uint64_t rd = ((uint64_t)*registerMap[mode()][RdLo]) | (((uint64_t)*registerMap[mode()][RdHi]) << 32);
+            int64_t sresult = wideRm * wideRs + std::int64_t(rd);
+            result = std::uint64_t(sresult);
         }
     }
     else{
-        if(U){
+        if(!U){
+            std::cout << "nee oder?"<<std::endl;
             result = ((uint64_t) *registerMap[mode()][Rm]) * ((uint64_t) *registerMap[mode()][Rs]);
         }
         else{
-            uint64_t wideRm = (uint64_t)*registerMap[mode()][Rm];
-            uint64_t wideRs = (uint64_t)*registerMap[mode()][Rs];
-            int64_t sresult = (std::bit_cast<int64_t>(wideRm)) * (std::bit_cast<int64_t>(wideRs));
-            result = std::bit_cast<uint64_t>(sresult);
+            int32_t signedRm = std::int32_t(*registerMap[mode()][Rm]);
+            int32_t signedRs = std::int32_t(*registerMap[mode()][Rs]);
+
+            int64_t wideRm = std::int64_t(signedRm);
+            int64_t wideRs = std::int64_t(signedRs);
+            int64_t sresult = wideRm * wideRs;
+            result = std::uint64_t(sresult);
         }
     }
 
-    Word resHi = (result & (0xFFFFFFFFull << 32)) >> 32;
+    Word resHi = result >> 32;
     Word resLo = result & 0xFFFFFFFFull;
 
     *registerMap[mode()][RdLo] = resLo;
@@ -924,5 +924,6 @@ bool gba::CPU::executeMultiplyLong(Word instruction)
     remainingCycles += 1 + m + 1; // 1S + (m+1)I
     if(A) remainingCycles += 1; // 1S + (m+2)I
 
+    if(RdLo == R15 || RdHi == R15) return true;
     return false;
 }

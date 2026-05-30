@@ -2,6 +2,7 @@
 #ifndef BUILD_WEB
 #include <imgui.h>
 #endif
+#include <bitset>
 
 NesImplementation::NesImplementation(std::vector<uint8_t> &rom)
 {
