@@ -58,17 +58,23 @@ jobs:
       - run: apk add cmake
       - run: apk add alsa-lib-dev
       - run: mkdir -p build
-      - run: wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
-      - run: wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk
-      - run: apk add glibc-2.35-r1.apk
+      - run: apk add gcompat
+      - run: apk add libstdc++
+      - run: apk add zlib
       - uses: https://github.com/emscripten-core/setup-emsdk@v16
       - name: Configure
         working-directory: ./build
         run: emcmake cmake .. -DBUILD_WEB=ON -DBUILD_GBA=OFF
-      - name: Build
+      - name: Build WASM
         working-directory: ./build
         run: make
-  Build GBA-Test:
+      - name: Npm dependencies
+        working-directory: ./source/web/amsel-web
+        run: npm i
+      - name: Build Web App
+        working-directory: ./source/web/amsel-web
+        run: npm run build
+  GBA-Test-Suite:
     runs-on: node
     defaults:
       run:
