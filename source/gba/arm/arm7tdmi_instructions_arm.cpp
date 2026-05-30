@@ -41,8 +41,10 @@ bool gba::CPU::executeSingleDataSwap(Word instruction)
         *registerMap[mode()][Rd] = contents;
     }
     else{
-        Word contents = readWord(address);
-        writeWord(address, *registerMap[mode()][Rm]);
+        Word contents = readWordUnaligned(address);
+        Word shift = 8 * (address & 3);
+        contents = (contents >> shift) | (contents << (32 - shift));
+        writeWordUnaligned(address, *registerMap[mode()][Rm]);
         *registerMap[mode()][Rd] = contents;
     }
     remainingCycles += 4; // 1S + 2N + 1I
@@ -146,10 +148,10 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
 bool gba::CPU::executeSoftwareInterrupt(Word instruction)
 {
     (void)instruction;
-    _R14_SVC = *registerMap[mode()][R15] + 4;
+    _R14_SVC = *registerMap[mode()][R15] - 4;
     *registerMap[mode()][R15] = 0x08;
     _SPSR_SVC.raw = *registerMap[mode()][CPSR];
-    _CPSR.state.mode_bits = Supervisor;
+    _CPSR.state.mode_bits = 19; // Supervisor
     remainingCycles += 3; // 2S + 1N
     return true;
 }
@@ -175,7 +177,7 @@ bool gba::CPU::executeCoProcRegTransfer(Word instruction)
 bool gba::CPU::executeUndefined(Word instruction) // Falsch implementiert
 {
     std::cout << "Undefinierte Instruktion aufgerufen!" << instruction << std::endl;
-    _CPSR.state.mode_bits = Undefined;
+    _CPSR.state.mode_bits = 27; // Undefined
     return false;
 }
 
