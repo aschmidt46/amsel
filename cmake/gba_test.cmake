@@ -26,7 +26,7 @@ FetchContent_MakeAvailable(googletest)
 
 add_library(gba
 source/gba/bus.h source/gba/bus.cpp source/gba/ibus.h
-source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h
+source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_types.h
 source/gba/arm/arm7tdmi_decoding.cpp
 source/gba/arm/arm7tdmi_instructions_arm.cpp
 source/gba/arm/arm7tdmi_instructions_thumb.cpp

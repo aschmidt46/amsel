@@ -1,5 +1,6 @@
 #pragma once
 #include "../ibus.h"
+#include "gba/arm/arm7tdmi.h"
 
 namespace gba{
     class TestBus : public IBus{

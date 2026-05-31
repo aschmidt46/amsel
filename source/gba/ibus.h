@@ -1,6 +1,6 @@
 #pragma once
 
-#include "arm/arm7tdmi.h"
+#include "arm/bus_types.h"
 
 namespace gba{
     class IBus{
