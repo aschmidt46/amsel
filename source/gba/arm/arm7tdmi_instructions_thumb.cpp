@@ -4,12 +4,12 @@ using namespace gba;
 
 bool gba::CPU::executeThumbMoveShiftedRegister(Word instruction)
 {
-    Word tshift = instruction & (0b11u << 11);
-    Word offset = instruction & (0b11111u << 6);
+    Word tshift = (instruction & (0b11u << 11)) >> 11;
+    Word offset = (instruction & (0b11111u << 6)) >> 6;
     Word Rd = instruction & 0b111;
     Word Rs = (instruction & (0b111u << 3)) >> 3;
     //                                               ---S----
-    Word arm = (offset << 7) | (tshift << 5) | Rs | (1u << 20) | (Rd << 12);
+    Word arm = (offset << 7) | (tshift << 5) | Rs | (1u << 20) | (Rd << 12) | (0b1101u << 21);
     return executeDataProc(arm);
 }
 
@@ -74,7 +74,7 @@ bool gba::CPU::executeThumbALUOperations(Word instruction)
         }
     }
     else{
-        Word arm = (1u << 20) | (Rd << 16) | (Rd << 12) | (Rs) | (1u << 20);
+        Word arm = (opcode << 21) | (Rd << 16) | (Rd << 12) | (Rs) | (1u << 20);
         return executeDataProc(arm);
 
     }
@@ -85,31 +85,42 @@ bool gba::CPU::executeThumbHiRegisterOperationsBX(Word instruction)
 {
     Word Rd = (instruction & 0b111) | ((instruction & 0b10000000) >> 4);
     Word Rs = (instruction & (0b1111u << 3)) >> 3;
-    Word opcode = (instruction & (0b11 << 8)) >> 8;
+    Word opcode = (instruction & (0b11u << 8)) >> 8;
+    bool ret;
     switch(opcode){
         case 0:
-            return executeDataProc(     (Rd << 12) | (Rd << 16) | Rs | (0b0100u << 21)    );
+            ret =  executeDataProc(     (Rd << 12) | (Rd << 16) | Rs | (0b0100u << 21)    );
+            break;
         case 1:
-            return executeDataProc(     (Rd << 12) | (Rd << 16) | Rs | (0b1010u << 21) | (1u << 20)    );
-        case 2:
-            return executeDataProc(     (Rd << 12) | (Rd << 16) | Rs | (0b1101u << 21)    );
+            ret =  executeDataProc(     (Rd << 12) | (Rd << 16) | Rs | (0b1010u << 21) | (1u << 20)    );
+            break;
+        case 2:    
+            ret =  executeDataProc(     (Rd << 12) | (Rd << 16) | Rs | (0b1101u << 21)    );
+            break;
         default:
-            return executeBranchExchange(   Rs    );
+            ret =  executeBranchExchange(   Rs    );
+            break;
     }
+    _R15_PC &= ~1u;
+    return ret;
 }
 
 bool gba::CPU::executeThumbPCRelativeLoad(Word instruction)
 {
     Word imm = instruction & 0xFF;
     Word Rd = (instruction & (0b111u << 8)) >> 8;
-    return executeSingleDataTransfer(   (imm) | (Rd << 12) | (R15 << 16) | (1u << 20) | (1u << 23) | (1u << 24)    );
+    Word base = *registerMap[mode()][R15] + (imm << 2);
+    *registerMap[mode()][Rd] = readWord(base);
+    remainingCycles += 3;
+    return false;
+    // return executeSingleDataTransfer(   (imm << 2) | (Rd << 12) | (R15 << 16) | (1u << 20) | (1u << 23) | (1u << 24)    );
 }
 
 bool gba::CPU::executeThumbLoadStoreWithRegisterOff(Word instruction)
 {
     Word Rd = instruction & 0b111;
-    Word Rb = (instruction & (0b111u << 3)) << 3;
-    Word Ro = (instruction & (0b111u << 6)) << 6;
+    Word Rb = (instruction & (0b111u << 3)) >> 3;
+    Word Ro = (instruction & (0b111u << 6)) >> 6;
     bool B = instruction & (1u << 10);
     bool L = instruction & (1u << 11);
     return executeSingleDataTransfer(   Ro | (Rb << 16) | (Rd << 12) | (L << 20) | (B << 22) | (1u << 23) | (1u << 24) | (1u << 25)    );
@@ -137,7 +148,7 @@ bool gba::CPU::executeThumbLoadStoreWithImmOffset(Word instruction)
     bool L = instruction & (1u << 11);
     bool B = instruction & (1u << 12);
 
-    return executeSingleDataTransfer(   offset | (Rb << 16) | (Rd << 12) | (L << 20) | (B << 22) | (1u << 23) | (1u << 24)   );
+    return executeSingleDataTransfer(   (offset << (B ? 0 : 2)) | (Rb << 16) | (Rd << 12) | (L << 20) | (B << 22) | (1u << 23) | (1u << 24)   );
 }
 
 bool gba::CPU::executeThumbLoadStoreHalfWord(Word instruction)
@@ -145,10 +156,10 @@ bool gba::CPU::executeThumbLoadStoreHalfWord(Word instruction)
     Word Rd = instruction & 0b111;
     Word Rb = (instruction & (0b111u << 3)) >> 3;
     Word offset = (instruction & (0b11111u << 6)) >> 6;
-    Word offsetHi = (offset & 0b10000) >> 4;
+    Word offsetHi = (offset & 0b11000) >> 3;
     bool L = instruction & (1u << 11);
 
-    return executeDataTransferSignHDW(  (1u << 24) | (1u << 23) | (L << 20) | (Rd << 12) | (Rb << 16) | (offset & 0xF) | (offsetHi << 8) | (1u << 5)   );
+    return executeDataTransferSignHDW(  (1u << 22) | (1u << 24) | (1u << 23) | (L << 20) | (Rd << 12) | (Rb << 16) | ((offset << 1) & 0xF) | (offsetHi << 8) | (1u << 5)   );
 }
 
 bool gba::CPU::executeThumbSPRelativeLoadStore(Word instruction)
@@ -156,7 +167,7 @@ bool gba::CPU::executeThumbSPRelativeLoadStore(Word instruction)
     Word imm = instruction & 0xFF;
     Word Rd = (instruction & (0b111u << 8)) >> 8;
     bool L = instruction & (1u << 11);
-    executeSingleDataTransfer(   imm | (R13 << 16) | (Rd << 12) | (L << 20) | (1u << 23) | (1u << 24)   );
+    executeSingleDataTransfer(   (imm << 2) | (R13 << 16) | (Rd << 12) | (L << 20) | (1u << 23) | (1u << 24)   );
     return false;
 }
 
@@ -168,8 +179,11 @@ bool gba::CPU::executeThumbLoadAddress(Word instruction)
     Word source = SP ? R13 : R15;
     // Rotieren nach rechts um 30? Entspricht << 2
     // Datasheet sagt, das ist ein 10 bit Wert
-    //                                                                                              rotate
-    return executeDataProc(   imm | (Rd << 12) | (source << 16) | (0b0100u << 21) | (1u << 25) | (0xFu << 8)  );
+
+    Word immediate = imm << 2;
+    *registerMap[mode()][Rd] = (*registerMap[mode()][source] & (source == R15 ? ~2u : ~0u)) + immediate;
+    remainingCycles += 1; // Überprüfen!
+    return false;
 }
 
 bool gba::CPU::executeThumbAddOffsetToSP(Word instruction)
@@ -187,10 +201,27 @@ bool gba::CPU::executeThumbPushPopRegisters(Word instruction)
     bool L = instruction & (1u << 11);
     bool U = L ? true : false;
     bool P = L ? false : true;
+    if(Rlist == 0 && !R){ // Spezialfall, siehe Nanoboyadvance
+        bool isJump = false;
+        if(L){
+            *registerMap[mode()][R15] = readWordUnaligned(*registerMap[mode()][R13]);
+            isJump = true;
+            *registerMap[mode()][R13] += 0x40;
+        }
+        else{
+            *registerMap[mode()][R13] -= 0x40;
+            writeWordUnaligned(*registerMap[mode()][R13], *registerMap[mode()][R15] + 2);
+        }
+        // Stimmt das?
+        remainingCycles += 3;
+        return isJump;
+    }
     if(R && L) Rlist |= (1u << R15);
     else if(R && !L) Rlist |= (1u << R14);
     
-    return executeBlockDataTransfer(    Rlist | (R13 << 16) | (L << 20) | (1u << 21) | (U << 23) | (P << 24)    );
+    bool ret = executeBlockDataTransfer(    Rlist | (R13 << 16) | (L << 20) | (1u << 21) | (U << 23) | (P << 24)    );
+    _R15_PC &= ~1u;
+    return ret;
 }
 
 bool gba::CPU::executeThumbMultipleLoadStore(Word instruction)
@@ -198,17 +229,31 @@ bool gba::CPU::executeThumbMultipleLoadStore(Word instruction)
     Word Rlist = instruction & 0xFF;
     Word Rb = (instruction & (0b111u << 8)) >> 8;
     bool L = instruction & (1u << 11);
+    bool returnJump = false;
+    if(Rlist == 0){ // Spezialfall, siehe Nanoboyadvance
+        if(L){
+            *registerMap[mode()][R15] = readWordUnaligned(*registerMap[mode()][Rb]);
+            returnJump = true;
+        }
+        else{
+            writeWordUnaligned(*registerMap[mode()][Rb], *registerMap[mode()][R15] + 2);
+        }
+        *registerMap[mode()][Rb] += 0x40;
+        remainingCycles += 3; // überprüfen!
+        return returnJump;
+    }
     return executeBlockDataTransfer(    Rlist | (Rb << 16) | (L << 20) | (1u << 21) | (1u << 23)   );
 }
 
 bool gba::CPU::executeThumbConditionalBranch(Word instruction)
 {
-    Word offset = instruction & 0xFF;
+    Word offset = (instruction & 0xFF) << 1;
     Word cond = (instruction & (0xFu << 8)) >> 8;
 
     if(this->checkCondition((Condition)cond)){
-        // Bemerkung im Datasheet: Der Offset ist ein 9-bit Wert! B/BL selbst shiftet nochmal um zwei, also insgesamt 11 bit?
-        return executeBranchLink(offset << 1);
+        // Bemerkung im Datasheet: Der Offset ist ein 9-bit Wert!
+        Word sOffset = sign_extend_n_32(offset, 9);
+        return executeBranchLink(sOffset & 0x00FFFFFF);
     }
     else return false;
 }
@@ -220,23 +265,27 @@ bool gba::CPU::executeThumbSoftwareInterrupt(Word instruction)
 
 bool gba::CPU::executeThumbUnconditionalBranch(Word instruction)
 {
-    Word offset = instruction & 0b11111111111;
-    return executeBranchLink(   (1u << 24) | (offset << 1)    );
+    Word offset = (instruction & 0b11111111111) << 1;
+    Word extendedOffset = sign_extend_n_32(offset, 12);
+    // 24 bit
+    return executeBranchLink(   (extendedOffset & 0x00FFFFFF)    );
 }
 
+// Zyklen fehlen!
 bool gba::CPU::executeThumbLongBranchWithLink(Word instruction)
 {
     Word offset = instruction & 0b11111111111;
+    Word sOffset = sign_extend_n_32(offset, 11);
     bool H = instruction & (1u << 11);
 
     if(!H){
-        *registerMap[mode()][R14] = *registerMap[mode()][R15] + (offset << 12);
+        *registerMap[mode()][R14] = *registerMap[mode()][R15] + (sOffset << 12);
         return false;
     }
     else{
         Word tmp = *registerMap[mode()][R15] - 2;
         *registerMap[mode()][R14] += (offset << 1);
-        *registerMap[mode()][R15] = *registerMap[mode()][R14];
+        *registerMap[mode()][R15] = (*registerMap[mode()][R14] & ~1u);
         *registerMap[mode()][R14] = tmp | 1;
         return true;
     }

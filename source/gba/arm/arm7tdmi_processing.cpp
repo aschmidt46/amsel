@@ -11,6 +11,12 @@ Byte gba::CPU::readByte(Word addr)
 
 HalfWord gba::CPU::readHalfWord(Word addr)
 {
+    addr &= ~1u;
+    return this->bus.lock()->readHalfWord(addr);
+}
+
+HalfWord gba::CPU::readHalfWordUnaligned(Word addr)
+{
     return this->bus.lock()->readHalfWord(addr);
 }
 

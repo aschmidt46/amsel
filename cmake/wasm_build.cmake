@@ -77,6 +77,8 @@ set(WEB_BASE "${PROJECT_SOURCE_DIR}/source/web/amsel-web")
 # file(COPY "${PROJECT_BINARY_DIR}/AMSEL-web.js" DESTINATION "${WEB_BASE}/src/emscripten/")
 # file(COPY "${PROJECT_BINARY_DIR}/AMSEL-web.d.ts" DESTINATION "${WEB_BASE}/src/emscripten/")
 
+make_directory(${WEB_BASE}/src/emscripten)
+
 add_custom_command(
         TARGET AMSEL-web POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy

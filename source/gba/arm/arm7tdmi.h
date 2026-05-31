@@ -287,6 +287,11 @@ namespace gba{
         Word code;
     };
 
+    inline uint32_t sign_extend_n_32(uint32_t x, uint32_t bits) {
+        uint32_t m = 1u << (bits - 1);
+        return (x ^ m) - m;
+    }
+
     class CPU{
         // Register
         Word _R0 = 0, _R1 = 0, _R2 = 0, _R3 = 0, _R4 = 0, _R5 = 0, _R6 = 0, _R7 = 0, _R8 = 0, _R9 = 0, _R10 = 0, _R11 = 0, _R12 = 0, _R13_SP = 0, _R14_L_R = 0, _R15_PC = 0,
@@ -318,6 +323,9 @@ namespace gba{
                 default: return ARM;
             }
         }
+        inline Word pcInterval() const{
+            return (this->state() == ARM ? 4 : 2);
+        }
 
         Word* const registerMap[OP_MODES][18] = {{
                 &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
@@ -344,6 +352,7 @@ namespace gba{
         Byte readByte(Word addr); // So machen, dass jedes readByte in ein readWord umgewandelt wird und dann zusammengesteckt wird? ist glaube ich korrekt
         // ACHTUNG LITTLE ENDIAN
         HalfWord readHalfWord(Word addr);
+        HalfWord readHalfWordUnaligned(Word addr);
         Word readWord(Word addr);
         Word readWordUnaligned(Word addr);
         void writeByte(Word addr, Byte val);

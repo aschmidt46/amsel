@@ -4,16 +4,6 @@
 #include <bit>
 #include <algorithm>
 
-// Source - https://stackoverflow.com/a/42536138
-// Posted by user555045, modified by community. See post 'Timeline' for change history
-// Retrieved 2026-04-03, License - CC BY-SA 3.0
-
-uint32_t sign_extend_26_32(uint32_t x) {
-    const int bits = 26;
-    uint32_t m = 1u << (bits - 1);
-    return (x ^ m) - m;
-}
-
 
 bool gba::CPU::executeBranchExchange(Word instruction)
 {
@@ -54,8 +44,10 @@ bool gba::CPU::executeSingleDataSwap(Word instruction)
 bool gba::CPU::executeBranchLink(Word instruction)
 {
     bool L = instruction & (1u << 24);
-    Word jumpRaw = (instruction & 0x00FFFFFF) << 2;
-    int32_t relJump = std::bit_cast<int32_t>(sign_extend_26_32(jumpRaw));
+    Word jumpRaw = (instruction & 0x00FFFFFF) << (state() == ARM ? 2 : 0);
+    int32_t relJump;
+    if(state()==ARM) relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 26));
+    else relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 24));
 
     if(L){
         *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus)
@@ -148,10 +140,12 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
 bool gba::CPU::executeSoftwareInterrupt(Word instruction)
 {
     (void)instruction;
-    _R14_SVC = *registerMap[mode()][R15] - 4;
+    _R14_SVC = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
     *registerMap[mode()][R15] = 0x08;
     _SPSR_SVC.raw = *registerMap[mode()][CPSR];
     _CPSR.state.mode_bits = 19; // Supervisor
+    _CPSR.state.I = 1; // IRQs ausschalten
+    _CPSR.state.T = 0; // Zurück zu ARM Modus
     remainingCycles += 3; // 2S + 1N
     return true;
 }
@@ -278,10 +272,10 @@ bool gba::CPU::executeDataProc(Word instruction)
         if(operand2 & (1u << 4)){ // Shift Register
             Word RsValue = *registerMap[mode()][(operand2 & (0xFu << 8)) >> 8];
             if(Rn == R15){// Bei Registershift Amount und R15 als Operand ist PC nochmals 4 Bytes voran, nicht für Rs! (aus Testfällen gelernt)
-                operand1Value += 4;
+                operand1Value += pcInterval();
             }
             if((operand2 & 0xF) == R15){ // Op2
-                op2RegValue += 4;
+                op2RegValue += pcInterval();
             }
             amount = RsValue & 0xFF; //Nur unterstes Byte
             registerSpecifiedShift = true;
@@ -405,7 +399,7 @@ bool gba::CPU::executeDataProc(Word instruction)
     }
 
     if(S){
-        if(Rd==15 && mode() != SystemUser){
+        if(Rd==15 && mode() != SystemUser && state() == ARM){ // state==ARM experimentell bestimmt (Warum?)
             *registerMap[mode()][CPSR] = *registerMap[mode()][SPSR];
         }
         else{
@@ -709,7 +703,7 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
     if(S){ // Sign extend Halbwort oder Byte
         Word val;
         if(H){
-            val = readHalfWord(modifiedBase);
+            val = readHalfWordUnaligned(modifiedBase);
             Word signBit = 15;
             if (modifiedBase & 1) {
                 val = (val >> 8) | (val << 24);
@@ -730,7 +724,7 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
     }
     else{ // Unsigned Halbwort
         if(L){
-            Word val = readHalfWord(modifiedBase);
+            Word val = readHalfWordUnaligned(modifiedBase);
             // Siehe Nanoboyadvance
             if (modifiedBase & 1) {
               val = (val >> 8) | (val << 24);
