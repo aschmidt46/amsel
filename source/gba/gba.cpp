@@ -85,3 +85,7 @@ gba::CpuRegisterState gba::GBA::getRegs() {
 std::vector<std::string> gba::GBA::getStack() {
     return bus->getStack();
 }
+
+std::string gba::GBA::getMode() {
+    return bus->getMode();
+}

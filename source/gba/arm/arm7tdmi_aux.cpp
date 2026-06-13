@@ -124,8 +124,10 @@ std::string gba::CPU::printCPSR()
 std::string gba::CPU::printMode()
 {
     switch(mode()){
-        case SystemUser:
-            return "SystemUser";
+        case System:
+            return "System";
+        case User:
+            return "User";
         case FIQ:
             return "FIQ";
         case Supervisor:

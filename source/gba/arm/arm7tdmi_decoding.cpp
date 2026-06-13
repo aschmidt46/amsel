@@ -621,7 +621,7 @@ gba::CPU::CPU()
     _SPSR_irq.raw = 0;
     _SPSR_und.raw = 0;
 
-    _CPSR.state.mode_bits = 16;
+    _CPSR.state.mode_bits = 31;
 
     _R13_SP = 0x03007F00;
     _R13_SVC = 0x03007FE0;

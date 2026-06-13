@@ -2,6 +2,10 @@
 #include <format>
 #include <algorithm>
 
+extern "C"{
+    #include <armdisasm.h>
+}
+
 using namespace gba;
 
 void separateEveryN(std::string& str, int interval, const char* sep)
@@ -206,4 +210,20 @@ std::string printTransactions(const std::vector<gba::Transaction> &transactions)
     }
     res += "----------------------------------------------------\n";
     return res;
+}
+
+std::string disassemble_code(gba::CpuRegisterState state, uint32_t code) {
+    ARMSTATE s;
+    disasm_init(&s, 0);
+    int mode = ((state.CPSR >> 5) & 1u) ? 0 : 1;
+    s.arm_mode = mode;
+    if(mode == 1){
+        disasm_arm(&s, code);
+    }
+    else{
+        disasm_thumb(&s, uint16_t(code), uint16_t(code >> 16));
+    }
+    std::string text = s.text;
+    disasm_cleanup(&s);
+    return text+"\n";
 }

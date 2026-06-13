@@ -325,13 +325,17 @@ std::vector<std::string> gba::Bus::getStack() {
     if(cpu.mode() == Supervisor) sp = state.R_svc[0];
     else if(cpu.mode() == IRQ) sp = state.R_irq[0];
 
-    // Stack wächst nach unten
+    // Stack wächst nach oben(!?)
     std::vector<std::string> stack;
 
     for(Word i = 0; i < stackSize; i++){
-        Word val = readWord(sp - (4 * i));
+        Word val = readWord(sp + (4 * i));
         stack.push_back(getHex(val, 8));
     }
 
     return stack;
+}
+
+std::string gba::Bus::getMode() {
+    return cpu.printMode();
 }

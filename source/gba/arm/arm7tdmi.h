@@ -25,18 +25,18 @@ namespace gba{
         public:
         inline OperatingMode mode() const{
             switch(_CPSR.state.mode_bits){
-                case 0: return SystemUser;      // ;\26bit Backward Compatibility modes
+                case 0: return User;      // ;\26bit Backward Compatibility modes
                 case 1: return FIQ;             // ; (supported only on ARMv3, except ARMv3G,
                 case 2: return IRQ;             // ; and on some non-T variants of ARMv4)
                 case 3: return Supervisor;      // ;/
-                case 16: return SystemUser;
+                case 16: return User;
                 case 17: return FIQ;
                 case 18: return IRQ;
                 case 19: return Supervisor;
                 case 23: return AbortMode;
                 case 27: return Undefined;
-                case 31: return SystemUser;
-                default: return SystemUser;
+                case 31: return System;
+                default: return User;
             }
         }
 
@@ -47,12 +47,20 @@ namespace gba{
                 default: return ARM;
             }
         }
+
         private:
         inline Word pcInterval() const{
             return (this->state() == ARM ? 4 : 2);
         }
+        inline bool systemUser() const{
+            return mode() == System || mode() == User;
+        }
 
         Word* const registerMap[OP_MODES][18] = {{
+                &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
+                &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_SP, &_R14_L_R, &_R15_PC, &_CPSR.raw, nullptr
+            },
+            {
                 &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
                 &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_SP, &_R14_L_R, &_R15_PC, &_CPSR.raw, nullptr
             },{

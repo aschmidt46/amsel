@@ -97,6 +97,7 @@ void performSingleStepTest(const char* path){
         ASSERT_EQ(stateF, testcase.final)
             << "\n\nFehler in Testfall " << number << ":\n"
             << "Gelesene Instruktion: " << iStr << "\n"
+            << "Disassembly: " << disassemble_code(testcase.initial, iInfo.code)
             << "\t31\t27\t23\t19\t15\t11\t7\t3\n"
             << "Code: " << iCode << "\n"
             << "CPSR: " << cpsr << "\n"

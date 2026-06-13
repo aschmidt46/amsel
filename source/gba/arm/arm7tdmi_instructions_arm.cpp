@@ -77,7 +77,7 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
     
     bool baseInRegisterList = instruction & (1u << Rn);
     bool R15InTransferList = instruction & (1u << 15);
-    int actualMode = (S && !L && R15InTransferList) || (!R15InTransferList && S) ? SystemUser : mode();
+    int actualMode = (S && !L && R15InTransferList) || (!R15InTransferList && S) ? User : mode();
     bool transferCPSR = L && S && R15InTransferList;
     Word origAddr = *registerMap[actualMode][Rn];
     Word addr = origAddr;
@@ -115,7 +115,7 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
             if(!P) addr += incr;
 
             if(transferCPSR && i==15){
-                if(actualMode != SystemUser){
+                if(actualMode != User && actualMode != System){
                     *registerMap[actualMode][CPSR] = *registerMap[actualMode][SPSR];
                 } // else?
             }
@@ -409,7 +409,7 @@ bool gba::CPU::executeDataProc(Word instruction)
     }
 
     if(S){
-        if(Rd==15 && mode() != SystemUser && state() == ARM){ // state==ARM experimentell bestimmt (Warum?)
+        if(Rd==15 && mode() != System && mode() != User && state() == ARM){ // state==ARM experimentell bestimmt (Warum?)
             *registerMap[mode()][CPSR] = *registerMap[mode()][SPSR];
         }
         else{
@@ -467,7 +467,7 @@ bool gba::CPU::executePSRTransfer(Word instruction)
     Word writeMask = (writeF ? 0xFFu << 24 : 0) | (writeS ? 0xFFu << 16 : 0) | (writeX ? 0xFFu << 8 : 0) | (writeC ? 0xFFu : 0);
     
 
-    if(opcode){ // MSR Bits only
+    if(opcode){ // MSR
         bool destSPSRMode = instruction & (1u << 22);
         bool I = instruction & (1u << 25);
         Word val;
@@ -484,14 +484,16 @@ bool gba::CPU::executePSRTransfer(Word instruction)
         }
 
         if(destSPSRMode){
-            if(mode() !=SystemUser)
+            if(mode() != System && mode() != User)
                 *registerMap[mode()][SPSR] =  (*registerMap[mode()][SPSR] & ~writeMask) | (val & writeMask);
         }
         else{
-            if(mode()==SystemUser) writeMask &= 0xFF000000;
+            if(mode()==User) writeMask &= 0xFF000000;
             if(writeMask & 0xFF) val |=  0x10; // Siehe NanoboyAdvance
             *registerMap[mode()][CPSR] = (*registerMap[mode()][CPSR] & ~writeMask) | (val & writeMask);
         }
+        *registerMap[mode()][CPSR] &= ~(1u << 5); // State Bit (ARM / Thumb) rausnehmen, wegen Tests. Nicht klar, ob es in Wirklichkeit einen Effekt hat
+        *registerMap[mode()][CPSR] |= (state() << 5);
     }
     else if(!opcode){ //MRS (PSR nach Register)
         bool sourceSPSRMode = instruction & (1u << 22);
@@ -499,7 +501,7 @@ bool gba::CPU::executePSRTransfer(Word instruction)
 
         Word val;
         if(sourceSPSRMode){
-            if(mode() !=SystemUser)
+            if(mode() != System && mode() != User)
                 val = *registerMap[mode()][SPSR];
             else val = *registerMap[mode()][CPSR];
         }
@@ -508,8 +510,6 @@ bool gba::CPU::executePSRTransfer(Word instruction)
         }
         *registerMap[mode()][destReg] = val;
     }
-    *registerMap[mode()][CPSR] &= ~(1u << 5); // State Bit (ARM / Thumb) rausnehmen, wegen Tests. Nicht klar, ob es in Wirklichkeit einen Effekt hat
-    *registerMap[mode()][CPSR] |= (state() << 5);
 
     remainingCycles += 1; // 1S
     return false;

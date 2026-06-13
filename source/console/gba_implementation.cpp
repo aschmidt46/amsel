@@ -169,6 +169,9 @@ void GbaImplementation::displayRegisters() {
     for(int i = 0; i < 16; i++){
         ImGui::Text(("R"+std::to_string(i)+":\t\t"+getHex(state.R[i],8)).c_str());
     }
+    ImGui::Text("");
+    ImGui::Text("");
+    ImGui::Text((std::string("Mode: ")+gba->getMode()).c_str());
     ImGui::TableNextColumn();
 
     for(int i = 0; i < 7; i++){

@@ -59,5 +59,6 @@ namespace gba{
         std::vector<std::string> addBreakpointOP(std::string bp);
         CpuRegisterState getRegs();
         std::vector<std::string> getStack();
+        std::string getMode();
     };
 }

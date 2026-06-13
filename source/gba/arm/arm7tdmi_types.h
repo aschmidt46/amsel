@@ -68,14 +68,15 @@ namespace gba{
             THUMB = 1,
         };
         enum OperatingMode{
-            SystemUser = 0,
-            FIQ = 1,
-            Supervisor = 2,
-            AbortMode = 3,
-            IRQ = 4,
-            Undefined = 5,
+            System = 0,
+            User = 1,
+            FIQ = 2,
+            Supervisor = 3,
+            AbortMode = 4,
+            IRQ = 5,
+            Undefined = 6,
         };
-        static constexpr const int OP_MODES = 6;
+        static constexpr const int OP_MODES = 7;
     
         enum Condition{
             EQ = 0, NE = 1, CS = 2, CC = 3, MI = 4, PL = 5, VS = 6, VC = 7, HI = 8, LS = 9, GE = 10, LT = 11, GT = 12, LE = 13, AL = 14, NV = 15,
