@@ -34,6 +34,7 @@ class CgbImplementation : public Console{
     void setHalt(bool val) override;
     bool isHalted() override;
     void produceDisassembly(bool val) override;
+    int addressBytes() override;
     std::pair<std::string, std::vector<int>> getCurrentDisassembly() override;
     std::pair<std::string, std::vector<int>> getOldDisassembly() override;
     std::vector<uint16_t> addBreakpoint(uint16_t bp) override;

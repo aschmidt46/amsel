@@ -98,7 +98,6 @@ namespace gba{
         bool shouldFlush = false;
             
         public:
-        std::vector<Byte> boardWRAM = std::vector<Byte>(0x40000, 0);// 02000000-0203FFFF   WRAM - On-board Work RAM  (256 KBytes) 2 Wait
 
         InstructionInfo decodeInstruction(Word code);
         static InstructionInfo decodeInstructionARM(Word code);
@@ -146,9 +145,14 @@ namespace gba{
         bool executeThumbSoftwareInterrupt(Word instruction);
         bool executeThumbUnconditionalBranch(Word instruction);
         bool executeThumbLongBranchWithLink(Word instruction);
+        void executeHardwareInterrupt();
+
+        // Debug
+        bool advanced = false;
         
-        private: CPU();
+        
         public:
+        CPU();
         CPU(std::shared_ptr<IBus> bus) : CPU(){
             this->bus = bus;
         };
@@ -157,9 +161,23 @@ namespace gba{
         void advanceCPU();
         // Führt eine Instruktion aus und clockt die CPU so oft, bis sie erneut eine Instruktion ausführen kann
         void advanceCPUToNextValidState();
+
+        void clock();
+        bool pollInterrupts();
+
         bool pipelineIsSaturated();
         void flushPipeline();
         void advancePipeline();
+
+
+        // Debug
+        bool advancedThisClock();
+        std::pair<std::string, std::vector<int>> getNextNInstructions(int n);
+        std::pair<std::string, std::vector<int>> getPrev10Instructions();
+        void incrementCircular();
+        std::vector<std::pair<int64_t, CpuState>> circular{std::vector<std::pair<int64_t, CpuState>>(10,{-1, ARM})};
+        unsigned int circularIndex = 0;
+
 
 
         // Tests

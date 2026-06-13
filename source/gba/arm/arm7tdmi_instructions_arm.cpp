@@ -1,4 +1,5 @@
 #include "arm7tdmi.h"
+#include "gba/test/logging.h"
 #include <bitset>
 #include <iostream>
 #include <bit>
@@ -148,6 +149,15 @@ bool gba::CPU::executeSoftwareInterrupt(Word instruction)
     _CPSR.state.T = 0; // Zurück zu ARM Modus
     remainingCycles += 3; // 2S + 1N
     return true;
+}
+
+void gba::CPU::executeHardwareInterrupt(){
+    _SPSR_irq.raw = *registerMap[mode()][CPSR];
+    _CPSR.state.I = 1; // IRQs ausschalten
+    _CPSR.state.mode_bits = 18; // IRQ
+    _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
+    _CPSR.state.T = 0; // Zurück zu ARM Modus
+    _R15_PC = 0x18; // BIOS Interrupt Vector
 }
 
 bool gba::CPU::executeCoProcDataOperation(Word instruction)
@@ -839,12 +849,10 @@ bool gba::CPU::executeMultiplyLong(Word instruction)
     uint64_t result;
     if(A){
         if(!U){
-            std::cout << "wie komme ich her?"<<std::endl;
             uint64_t rd = ((uint64_t) *registerMap[mode()][RdLo]) | (((uint64_t) *registerMap[mode()][RdHi]) << 32);
             result = ((uint64_t) *registerMap[mode()][Rm]) * ((uint64_t) *registerMap[mode()][Rs]) + rd;
         }
         else{
-            std::cout << "wo bin ich hier?"<<std::endl;
             uint64_t wideRm = std::int64_t(std::int32_t(*registerMap[mode()][Rm]));
             uint64_t wideRs = std::int64_t(std::int32_t(*registerMap[mode()][Rs]));
             uint64_t rd = ((uint64_t)*registerMap[mode()][RdLo]) | (((uint64_t)*registerMap[mode()][RdHi]) << 32);
@@ -854,7 +862,6 @@ bool gba::CPU::executeMultiplyLong(Word instruction)
     }
     else{
         if(!U){
-            std::cout << "nee oder?"<<std::endl;
             result = ((uint64_t) *registerMap[mode()][Rm]) * ((uint64_t) *registerMap[mode()][Rs]);
         }
         else{

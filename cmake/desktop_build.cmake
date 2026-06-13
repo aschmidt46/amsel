@@ -18,6 +18,7 @@ include_directories(PUBLIC include_deps)
 include_directories(PUBLIC .)
 include_directories(PUBLIC source)
 include_directories(PUBLIC deps/imgui)
+include_directories(PUBLIC deps/arm_disassembler)
 include_directories(PUBLIC deps/imgui/backends)
 include_directories(PUBLIC deps/rtaudio)
 include_directories(PUBLIC deps/whereami/src)
@@ -43,6 +44,29 @@ add_library(whereami STATIC
 # set(RUSTFLAGS -Awarnings)
 corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
 corrosion_add_cxxbridge(rusty_bridge CRATE cgbcore FILES bridge.rs)
+
+# add_library(arm_disassembler
+
+# )
+
+add_library(gba
+deps/arm_disassembler/armdisasm.h deps/arm_disassembler/armdisasm.c
+source/gba/bus.h source/gba/bus.cpp source/gba/ibus.h
+source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_types.h
+source/gba/arm/arm7tdmi_decoding.cpp
+source/gba/arm/arm7tdmi_instructions_arm.cpp
+source/gba/arm/arm7tdmi_instructions_thumb.cpp
+source/gba/arm/arm7tdmi_processing.cpp
+source/gba/arm/arm7tdmi_aux.cpp
+source/gba/ppu.h source/gba/ppu_registers.h source/gba/ppu.cpp
+source/gba/timer.h
+source/gba/timer.cpp
+source/gba/gba.h source/gba/gba.cpp
+source/gba/test/logging.h source/gba/test/logging.cpp
+)
+
+# target_link_libraries(gba arm_disassembler)
+
 
 add_executable(AMSEL source/main.cpp
 source/framework/common.cpp source/framework/common.h
@@ -82,6 +106,7 @@ source/nes/mappers/mappers.cpp source/nes/mappers/mappers.h
 source/console/console.h
 source/console/nes_implementation.h source/console/nes_implementation.cpp
 source/console/cgb_implementation.h source/console/cgb_implementation.cpp
+source/console/gba_implementation.h source/console/gba_implementation.cpp
 source/console/console.cpp
 source/framework/locale.h
 source/framework/locale.cpp
@@ -92,6 +117,8 @@ source/framework/glm_replacement.h
 target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
 
 # add_executable(gba-test source/gba/main.cpp source/gba/bus.h source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_decoding.cpp source/gba/arm/arm7tdmi_instructions.cpp)
+
+target_link_libraries(AMSEL gba)
 
 target_link_libraries(AMSEL whereami)
 target_link_libraries(AMSEL rtaudio)

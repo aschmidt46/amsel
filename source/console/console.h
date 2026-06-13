@@ -54,6 +54,7 @@ class Console{
     virtual void setHalt(bool val) = 0;
     virtual bool isHalted() = 0;
     virtual void produceDisassembly(bool val) = 0;
+    virtual int addressBytes() = 0;
     virtual std::pair<std::string, std::vector<int>> getCurrentDisassembly() = 0;
     virtual std::pair<std::string, std::vector<int>> getOldDisassembly() = 0;
     virtual std::vector<uint16_t> addBreakpoint(uint16_t bp) = 0;

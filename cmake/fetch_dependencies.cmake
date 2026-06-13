@@ -42,6 +42,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glfw)
 
+FetchContent_Declare(
+  arm_disassembler
+  GIT_REPOSITORY  https://github.com/compuphase/ARM-disassembler
+  GIT_TAG         main
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/arm_disassembler"
+)
+FetchContent_MakeAvailable(arm_disassembler)
+
 
 FetchContent_Declare(
   glad

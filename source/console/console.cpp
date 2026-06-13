@@ -1,4 +1,5 @@
 #include "console.h"
+#include "gba_implementation.h"
 #include "nes_implementation.h"
 #include "cgb_implementation.h"
 #include "dummy_implementation.h"
@@ -22,6 +23,9 @@ void createConsole(const char *path)
         console = new CgbImplementation(filename.c_str());
     }
     #endif
+    else if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
+        console = new GbaImplementation(filename.c_str());
+    }
     else{
         console = new DummyImplementation();
     }
@@ -41,6 +45,9 @@ std::unique_ptr<Console> createConsole(std::string filename, std::vector<uint8_t
     }
     else if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
         c = std::make_unique<CgbImplementation>(rom);
+    }
+    else if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
+        c = std::make_unique<GbaImplementation>(rom);
     }
     else{
         c = std::make_unique<DummyImplementation>();

@@ -1,0 +1,175 @@
+#include "ppu.h"
+#include "bus.h"
+
+float *gba::PPU::accessFramebuffer()
+{
+    return framebuffer.data();
+}
+
+void gba::PPU::clock() {
+    currentCycle++;
+    if(currentCycle == 1004){
+        // Hblank
+        LCDSTATUS.state.hBlankFlag = 1;
+        if(LCDSTATUS.state.hBlankIE){
+            bus.lock()->setIF(1, true);
+        }
+    }
+    else if(currentCycle >= 1232){
+        currentCycle = 0;
+        currentScanline++;
+        LCDSTATUS.state.hBlankFlag = 0;
+        if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
+            bus.lock()->setIF(2, true);
+            LCDSTATUS.state.vCounterFlag = 1;
+        }
+    }
+    if(currentScanline == 160 && currentCycle == 0){
+        // Vblank
+        LCDSTATUS.state.vBlankFlag = 1;
+        if(LCDSTATUS.state.vBlankIE){
+            bus.lock()->setIF(0, true);
+        }
+        hasframe = true;
+    }
+    else if(currentScanline >= 228){
+        currentScanline = 0;
+        LCDSTATUS.state.vCounterFlag = 0;
+        LCDSTATUS.state.vBlankFlag = 0;
+    }
+
+    if(currentCycle < 240 && currentScanline < 160){ // Bis jetzt k.A. wie das Timing wirklich ist
+        switch(LCDCONTROL.state.bgMode){
+            case 0:
+                drawPixelMode0();
+                break;
+            case 1:
+                drawPixelMode1();
+                break;
+            case 2:
+                drawPixelMode2();
+                break;
+            case 3:
+                drawPixelMode3();
+                break;
+            case 4:
+                drawPixelMode4();
+                break;
+            case 5:
+                drawPixelMode5();
+                break;
+        }
+    }
+}
+
+bool gba::PPU::hasFrame() {
+    bool tmp = hasframe;
+    hasframe = false;
+    return tmp;
+}
+
+void gba::PPU::setPixel(int x, int y, float cr, float cg, float cb)
+{
+    int index = (x + 240 * y) * 4;
+    framebuffer[index] = cr;
+    framebuffer[index + 1] = cg;
+    framebuffer[index + 2] = cb;
+	framebuffer[index + 3] = 1.0f;
+}
+
+void gba::PPU::drawPixelMode0() {
+    setPixel(currentCycle, currentScanline, 1.0, 0.0, 0.0);
+}
+
+void gba::PPU::drawPixelMode1() {
+    setPixel(currentCycle, currentScanline, 0.0, 0.0, 1.0);
+}
+
+void gba::PPU::drawPixelMode2() {
+    setPixel(currentCycle, currentScanline, 1.0, 1.0, 1.0);
+}
+
+void gba::PPU::drawPixelMode3() {
+    int index = currentCycle + 240 * currentScanline;
+    HalfWord pixel = HalfWord(vRam[2 * index]) | (HalfWord(vRam[2 * index + 1]) << 8);
+    HalfWord red = pixel & 0b11111;
+    HalfWord green = (pixel >> 5) & 0b11111;
+    HalfWord blue = (pixel >> 10) & 0b11111;
+    setPixel(currentCycle, currentScanline, float(red) / 31.0f, float(green) / 31.0f, float(blue) / 31.0f);
+}
+
+void gba::PPU::drawPixelMode4() {
+    int index = currentCycle + 240 * currentScanline;
+    size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
+    Byte paletteIndex = vRam[index + page];
+    HalfWord pixel = HalfWord(paletteRam[2 * paletteIndex]) | (HalfWord(paletteRam[2 * paletteIndex + 1]) << 8);
+    HalfWord red = pixel & 0b11111;
+    HalfWord green = (pixel >> 5) & 0b11111;
+    HalfWord blue = (pixel >> 10) & 0b11111;
+    setPixel(currentCycle, currentScanline, float(red) / 31.0f, float(green) / 31.0f, float(blue) / 31.0f);
+}
+
+void gba::PPU::drawPixelMode5() {
+    setPixel(currentCycle, currentScanline, 0.0f, 1.0f, 0.0f);
+}
+
+void gba::PPU::writePPURegister(Word addr, Byte val) {
+    switch(addr){
+        case 0x04000000:
+            LCDCONTROL.raw = (LCDCONTROL.raw & 0xFF00) | val;
+            LCDCONTROL.state.cgbMode = 0;
+            break;
+        case 0x04000001:
+            LCDCONTROL.raw = (LCDCONTROL.raw & 0x00FF) | (HalfWord(val) << 8);
+            break;
+        case 0x04000004:
+            LCDSTATUS.raw = (LCDSTATUS.raw & 0xFF00) | val;
+            break;
+        case 0x04000005:
+            LCDSTATUS.raw = (LCDSTATUS.raw & 0x00FF) | (HalfWord(val) << 8);
+            break;
+    }
+}
+
+gba::Byte gba::PPU::readPPURegister(Word addr)
+{
+    switch(addr){
+        case 0x04000000:
+            return LCDCONTROL.raw;
+        case 0x04000001:
+            return LCDCONTROL.raw >> 8;
+        case 0x04000004:
+            return LCDSTATUS.raw;
+        case 0x04000005:
+            return LCDSTATUS.raw >> 8;
+        case 0x04000006:
+            return currentScanline;
+    }
+    return 0;
+}
+
+void gba::PPU::writePPUMemory(Word addr, Byte value) {
+    if(addr >= 0x05000000 && addr < 0x05000400){
+        paletteRam[addr - 0x05000000] = value;
+    }
+    else if(addr >= 0x06000000 && addr < 0x06018000){
+        vRam[addr - 0x06000000] = value;
+    }
+    else if(addr >= 0x07000000 && addr < 0x07000400){
+        oamAttribs[addr - 0x07000000] = value;
+    }
+}
+
+gba::Byte gba::PPU::readPPUMemory(Word addr)
+{
+    if(addr >= 0x05000000 && addr < 0x05000400){
+        return paletteRam[addr - 0x05000000];
+    }
+    else if(addr >= 0x06000000 && addr < 0x06018000){
+        return vRam[addr - 0x06000000];
+    }
+    else if(addr >= 0x07000000 && addr < 0x07000400){
+        return oamAttribs[addr - 0x07000000];
+    }
+    else return 0;
+}

@@ -25,7 +25,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 option(BUILD_WEB "Build WebAssembly for Web-App" OFF)
 
-option(BUILD_GBA "GBA Test-Version" ON)
+option(BUILD_GBA "GBA Test-Version" OFF)
 
 if(BUILD_GBA)
 

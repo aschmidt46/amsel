@@ -284,6 +284,10 @@ void CgbImplementation::produceDisassembly(bool val)
 {
 }
 
+int CgbImplementation::addressBytes() {
+  return 2;
+}
+
 std::pair<std::string, std::vector<int>> CgbImplementation::getCurrentDisassembly()
 {
   std::lock_guard lock(consoleLock);

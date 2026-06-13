@@ -1,0 +1,71 @@
+#include "gba.h"
+
+gba::GBA::GBA(const char *path)
+{
+    bus = std::make_shared<Bus>(path);
+    bus->init();
+}
+
+gba::GBA::GBA(const std::vector<uint8_t> &bytes)
+{
+    bus = std::make_shared<Bus>(bytes);
+    bus->init();
+}
+
+float *gba::GBA::accessFramebuffer()
+{
+    return bus->accessFramebuffer();
+}
+
+void gba::GBA::clock() {
+    bus->clock();
+
+    audioTime += audioTimePerGBAClock;
+    if(audioTime >= audioTimePerSystemSample){
+        audioTime -= audioTimePerSystemSample;
+        audioSampleL = 0;//apu->getSample(true);
+        audioSampleR = 0;//apu->getSample(true);
+        audioSampleReady = true;
+    }
+
+}
+
+void gba::GBA::clockUntilSampleReady() {
+    while(!hasSample()){
+        clock();
+    }
+}
+
+bool gba::GBA::hasFrame(){
+    return bus->hasFrame();
+}
+
+bool gba::GBA::hasSample(){
+    bool tmp = audioSampleReady;
+    audioSampleReady = false;
+    return tmp;
+}
+
+std::pair<float, float> gba::GBA::getSample(){
+    return {0,0};
+}
+
+void gba::GBA::setHalt(bool to) {
+    bus->setHalt(to);
+}
+
+bool gba::GBA::isHalted() {
+    return bus->isHalted();
+}
+
+void gba::GBA::addClock() {
+    this->bus->addStep();
+}
+
+std::pair<std::string, std::vector<int>> gba::GBA::getNextInstructions() {
+  return bus->getNextInstructions();
+}
+
+std::pair<std::string, std::vector<int>> gba::GBA::getPrevInstructions() {
+  return bus->getPrevInstructions();
+}

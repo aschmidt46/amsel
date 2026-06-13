@@ -1,14 +1,16 @@
 #pragma once
 #include "console.h"
-#include "../nes/nes.h"
+#include "../gba/gba.h"
 
-class NesImplementation : public Console{
+class GbaImplementation : public Console{
     private:
-    NES console;
+    std::shared_ptr<gba::GBA> gba;
+    // void setAddressOf(int i, int to);
     public:
-    NesImplementation() = default;
-    ~NesImplementation() = default;
-    NesImplementation(std::vector<uint8_t> &rom);
+    GbaImplementation() = delete;
+    GbaImplementation(const char* path);
+    GbaImplementation(std::vector<uint8_t> &rom);
+    ~GbaImplementation() = default;
     void load(const char* path) override;
     void clock() override;
     void clockUntilSampleReady() override;
@@ -43,4 +45,3 @@ class NesImplementation : public Console{
 
     void displayRegisters() override;
 };
-

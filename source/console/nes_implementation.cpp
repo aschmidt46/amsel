@@ -107,6 +107,10 @@ void NesImplementation::produceDisassembly(bool val)
     this->console.produceDisassembly = val;
 }
 
+int NesImplementation::addressBytes() {
+    return 2;
+}
+
 std::pair<std::string, std::vector<int>> NesImplementation::getCurrentDisassembly()
 {
     return this->console.getCurrentDisassembly();

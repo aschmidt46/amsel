@@ -1,7 +1,12 @@
 #include "arm7tdmi.h"
+#include "gba/test/logging.h"
 #include <bit>
 #include <string>
 #include <iostream>
+#include "../test/logging.h"
+extern "C" {
+#include <armdisasm.h>
+}
 
 using namespace gba;
 /*
@@ -383,6 +388,13 @@ bool gba::CPU::executeInstruction()
         InstructionInfo info = this->pipelineDecoded.value();
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
         if(this->state() == ARM){
+            // ARMSTATE s;
+            // disasm_init(&s, DISASM_ADDRESS | DISASM_INSTR);
+            // s.address = _R15_PC;
+            // disasm_arm(&s, info.code);
+            // std::cout << getHex(_R15_PC-8, 8) << "\n";
+            // std::cout << s.text << "\n";
+            // disasm_cleanup(&s);
             if(this->checkCondition(cond)){
                 switch(info.type){
                     case TypeBranchAndExchange:
@@ -608,6 +620,14 @@ gba::CPU::CPU()
     _SPSR_abt.raw = 0;
     _SPSR_irq.raw = 0;
     _SPSR_und.raw = 0;
+
+    _CPSR.state.mode_bits = 16;
+
+    _R13_SP = 0x03007F00;
+    _R13_SVC = 0x03007FE0;
+    _R13_irq = 0x03007FA0;
+    _R14_L_R = 0x08000000; 
+    _R15_PC = 0x08000000;
 }
 
 bool gba::CPU::checkCondition(Condition c) const

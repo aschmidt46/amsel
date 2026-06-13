@@ -31,6 +31,7 @@ class DummyImplementation : public Console{
     void setHalt(bool val) override{halt = val;};
     bool isHalted() override{return halt;};
     void produceDisassembly(bool val) override{};
+    int addressBytes() override{return 0;};
     std::pair<std::string, std::vector<int>> getCurrentDisassembly() override{return {};};
     std::pair<std::string, std::vector<int>> getOldDisassembly() override{return {};};
     std::vector<uint16_t> addBreakpoint(uint16_t bp) override{return {};};

@@ -40,7 +40,7 @@ void removeCharsFromString( std::string &str, const char* charsToRemove ) {
 }
 
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file(locale.getTranslation(ChooseRom), globalConfig.directory, {locale.getTranslation(RomFilter), "*.nes *.gbc *.gb"}, pfd::opt::none);
+  auto result = pfd::open_file(locale.getTranslation(ChooseRom), globalConfig.directory, {locale.getTranslation(RomFilter), "*.nes *.gbc *.gb *.gba"}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};
@@ -235,8 +235,9 @@ std::vector<std::pair<std::string, ASMtype>> detectJumps(const std::pair<std::ve
   auto prevLine = lines.first[0];
   auto prevLength = lines.second[0];
   for(int i = 1; i < lines.first.size(); i++){
-    auto oldpc = stoi(prevLine.first.substr(1, 4), 0, 16);
-    auto newpc = stoi(lines.first[i].first.substr(1, 4), 0, 16);
+    // console->adressBytes : Adressbusbreite in Bytes
+    auto oldpc = stoi(prevLine.first.substr(1, 2 * console->addressBytes()), 0, 16);
+    auto newpc = stoi(lines.first[i].first.substr(1, 2 * console->addressBytes()), 0, 16);
     if(oldpc + prevLength != newpc){
       result.push_back({prevLine.first, ASM_JUMP});
     }
@@ -270,14 +271,14 @@ std::vector<std::pair<std::string, ASMtype>> splitLines(const std::string &lines
 void Gui::ASMLine(std::string l, int id, float r, float g, float b){
   ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(r, g, b, 1.0f));
   ImGui::PushID(runningID++);
-  if(ImGui::TextLink(l.substr(0,5).c_str())){
-    int pc = std::stoi(l.substr(1,5).c_str(), 0, 16);
+  if(ImGui::TextLink(l.substr(0, 2 * console->addressBytes() + 1).c_str())){
+    int pc = std::stoi(l.substr(1,2 * console->addressBytes() + 1).c_str(), 0, 16);
     breakpoints = console->addBreakpoint(pc);
   }
   ImGui::PopID();
   ImGui::PopStyleColor();
   ImGui::SameLine();
-  ImGui::TextColored(ImVec4(r, g, b, 1.0f), l.substr(5, l.size()-5).c_str());
+  ImGui::TextColored(ImVec4(r, g, b, 1.0f), l.substr(2 * console->addressBytes() + 1, l.size()- (2 * console->addressBytes() + 1)).c_str());
 }
 
 void Gui::printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
@@ -398,7 +399,7 @@ void Gui::drawBreakpoints()
     }
     for(const auto &bp : breakpoints){
       ImGui::PushID(runningID++);
-      ImGui::Text((locale.getTranslation(DebuggerBreakAddr)+ghexNorm(ghex(bp), 4)).c_str());
+      ImGui::Text((locale.getTranslation(DebuggerBreakAddr)+ghexNorm(ghex(bp), 2 * console->addressBytes())).c_str());
       ImGui::SameLine();
       if(ImGui::Button("X")){
         breakpoints = console->removeBreakpoint(bp);
