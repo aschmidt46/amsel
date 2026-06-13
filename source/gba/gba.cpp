@@ -63,9 +63,25 @@ void gba::GBA::addClock() {
 }
 
 std::pair<std::string, std::vector<int>> gba::GBA::getNextInstructions() {
-  return bus->getNextInstructions();
+    return bus->getNextInstructions();
 }
 
 std::pair<std::string, std::vector<int>> gba::GBA::getPrevInstructions() {
-  return bus->getPrevInstructions();
+    return bus->getPrevInstructions();
+}
+
+std::vector<std::string> gba::GBA::removeBreakpointOP(std::string bp) {
+    return bus->removeBreakpointOP(bp);
+}
+
+std::vector<std::string> gba::GBA::addBreakpointOP(std::string bp) {
+    return bus->addBreakpointOP(bp);
+}
+
+gba::CpuRegisterState gba::GBA::getRegs() {
+    return bus->getRegs();
+}
+
+std::vector<std::string> gba::GBA::getStack() {
+    return bus->getStack();
 }

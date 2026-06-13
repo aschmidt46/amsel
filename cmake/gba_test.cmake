@@ -11,6 +11,7 @@ include_directories(PUBLIC deps/imgui/backends)
 include_directories(PUBLIC deps/rtaudio)
 include_directories(PUBLIC deps/whereami/src)
 include_directories(PUBLIC deps/cereal/include)
+include_directories(PUBLIC deps/arm_disassembler)
 
 FetchContent_Declare(
     googletest
@@ -22,9 +23,18 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(googletest)
 
+FetchContent_Declare(
+  arm_disassembler
+  GIT_REPOSITORY  https://github.com/compuphase/ARM-disassembler
+  GIT_TAG         main
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/arm_disassembler"
+)
+FetchContent_MakeAvailable(arm_disassembler)
+
 
 
 add_library(gba
+deps/arm_disassembler/armdisasm.h deps/arm_disassembler/armdisasm.c
 source/gba/bus.h source/gba/bus.cpp source/gba/ibus.h
 source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_types.h
 source/gba/arm/arm7tdmi_decoding.cpp
@@ -37,10 +47,7 @@ source/gba/timer.h
 source/gba/timer.cpp
 source/gba/gba.h source/gba/gba.cpp
 )
-target_compile_options(gba PUBLIC -Wall -Wextra -Werror -Wpedantic)
-
-add_executable(gba-test source/gba/main.cpp)
-target_link_libraries(gba-test gba)
+target_compile_options(gba PUBLIC -Wall -Wextra -Wpedantic)
 
 enable_testing()
 

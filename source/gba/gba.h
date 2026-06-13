@@ -1,4 +1,5 @@
 #pragma once
+#include "arm/arm7tdmi_types.h"
 #include "bus.h"
 
 namespace gba{
@@ -30,5 +31,10 @@ namespace gba{
         void addClock();
         std::pair<std::string, std::vector<int>> getNextInstructions();
         std::pair<std::string, std::vector<int>> getPrevInstructions();
+
+        std::vector<std::string> removeBreakpointOP(std::string bp);
+        std::vector<std::string> addBreakpointOP(std::string bp);
+        CpuRegisterState getRegs();
+        std::vector<std::string> getStack();
     };
 }

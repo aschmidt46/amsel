@@ -236,8 +236,8 @@ std::vector<std::pair<std::string, ASMtype>> detectJumps(const std::pair<std::ve
   auto prevLength = lines.second[0];
   for(int i = 1; i < lines.first.size(); i++){
     // console->adressBytes : Adressbusbreite in Bytes
-    auto oldpc = stoi(prevLine.first.substr(1, 2 * console->addressBytes()), 0, 16);
-    auto newpc = stoi(lines.first[i].first.substr(1, 2 * console->addressBytes()), 0, 16);
+    auto oldpc = stoll(prevLine.first.substr(1, 2 * console->addressBytes()), 0, 16);
+    auto newpc = stoll(lines.first[i].first.substr(1, 2 * console->addressBytes()), 0, 16);
     if(oldpc + prevLength != newpc){
       result.push_back({prevLine.first, ASM_JUMP});
     }
@@ -272,7 +272,7 @@ void Gui::ASMLine(std::string l, int id, float r, float g, float b){
   ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(r, g, b, 1.0f));
   ImGui::PushID(runningID++);
   if(ImGui::TextLink(l.substr(0, 2 * console->addressBytes() + 1).c_str())){
-    int pc = std::stoi(l.substr(1,2 * console->addressBytes() + 1).c_str(), 0, 16);
+    auto pc = std::stoll(l.substr(1,2 * console->addressBytes() + 1).c_str(), 0, 16);
     breakpoints = console->addBreakpoint(pc);
   }
   ImGui::PopID();
@@ -336,7 +336,7 @@ void Gui::drawMemoryReader()
     lastReadLow = 0;
     lastReadHigh = 0;
     if(s.size()>0){
-      uint16_t addr = std::stoi(s, 0, 16);
+      auto addr = std::stoll(s, 0, 16);
       lastReadLow = console->readCpuBus(addr);
     }
   }
@@ -347,7 +347,7 @@ void Gui::drawMemoryReader()
     lastReadLow = 0;
     lastReadHigh = 0;
     if(s.size()>0){
-      uint16_t addr = std::stoi(s, 0, 16);
+      auto addr = std::stoll(s, 0, 16);
       lastReadLow = console->readCpuBus(addr);
       lastReadHigh = console->readCpuBus(addr+1);
     }
@@ -365,7 +365,7 @@ void Gui::drawBreakpoints()
     std::string s(bpInputBuf);
     removeCharsFromString(s, "x$");
     if(s.size()>0){
-      uint16_t addr = std::stoi(s, 0, 16);
+      auto addr = std::stoll(s, 0, 16);
       breakpoints = console->addBreakpoint(addr);
     }
   }
@@ -447,7 +447,7 @@ void Gui::drawAbout()
     ImGui::Text(locale.getTranslation(AboutSystems).c_str());
     ImGui::Text(locale.getTranslation(AboutSystem1).c_str());
     ImGui::Text(locale.getTranslation(AboutSystem2).c_str());
-    ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://gitea.kassade.de/anton/antons-nes-emu.git");
+    ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://forgejo.kassade.de/anton/amsel.git");
   ImGui::End();
 }
 
@@ -458,7 +458,7 @@ void Gui::drawOutput()
       std::string s(outInputBuf);
       removeCharsFromString(s, "x$");
       if(s.size()>0){
-        uint16_t addr = std::stoi(s, 0, 16);
+        auto addr = std::stoll(s, 0, 16);
         outputStartsAt = addr;
       }
     }

@@ -226,3 +226,17 @@ void gba::CPU::incrementCircular() {
     circularIndex += 1;
     circularIndex %= 10;
 }
+
+std::string gba::CPU::getCurrentOpcode() {
+    ARMSTATE s;
+    disasm_init(&s, 0);
+    if(state()==ARM){
+        disasm_arm(&s, pipelineDecoded.value_or(InstructionInfo{ InstructionType::UnimplementedInstruction, 0}).code);
+    }
+    else{
+        auto code = pipelineDecoded.value_or(InstructionInfo{ InstructionType::UnimplementedInstruction, 0}).code;
+        disasm_thumb(&s, HalfWord(code), HalfWord(code >> 16));
+    }
+    std::string text = s.text;
+    return text.substr(0, text.find(' '));
+}

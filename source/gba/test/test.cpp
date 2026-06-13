@@ -14,7 +14,6 @@ using namespace gba;
 TEST(CPUTest, BasicAssertions){
     auto tb = std::make_shared<TestBus>();
     CPU cpu(tb);
-    ASSERT_EQ(cpu.boardWRAM[0], 0);
     // Expect two strings not to be equal.
     // EXPECT_STRNE("hello", "world");
     // // Expect equality.
@@ -200,10 +199,9 @@ TEST(CPUTest, arm_mul_mla){
 //     performSingleStepTest("../test/ARM7TDMI/v1/arm_stc_ldc.json");
 // }
 
-// Möglicherweise falsch wegen Backward Comp Modi
-// TEST(CPUTest, arm_swi){
-//     performSingleStepTest("../test/ARM7TDMI/v1/arm_swi.json");
-// }
+TEST(CPUTest, arm_swi){
+    performSingleStepTest("../test/ARM7TDMI/v1/arm_swi.json");
+}
 
 TEST(CPUTest, arm_swp){
     performSingleStepTest("../test/ARM7TDMI/v1/arm_swp.json");

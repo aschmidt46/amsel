@@ -219,6 +219,17 @@ gba::Bus::Bus(const std::vector<Byte> &bytes)  : Bus(){
 
 
 void gba::Bus::clock() {
+
+    if(watchBreakpoints){
+        if(std::find(breakpoints.begin(), breakpoints.end(), cpu.getRegisterState().R[15] - (cpu.state() == ARM ? 8 : 4)) != breakpoints.end()){
+            halted = true;
+        }
+        if(std::find(breakpointsOP.begin(), breakpointsOP.end(), cpu.getCurrentOpcode()) != breakpointsOP.end()){
+            halted = true;
+        }
+    }
+
+
     if(!halted || steps > 0){
         // Timers
         for(int i = 0; i < 4; i++){
@@ -264,9 +275,63 @@ void gba::Bus::addStep() {
 }
 
 std::pair<std::string, std::vector<int>> gba::Bus::getNextInstructions() {
-  return cpu.getNextNInstructions(10);
+    return cpu.getNextNInstructions(10);
 }
 
 std::pair<std::string, std::vector<int>> gba::Bus::getPrevInstructions() {
-  return cpu.getPrev10Instructions();
+    return cpu.getPrev10Instructions();
+}
+
+std::vector<std::string> gba::Bus::removeBreakpointOP(std::string bp) {
+    breakpointsOP.erase(std::remove_if(breakpointsOP.begin(), breakpointsOP.end(), 
+                       [&](std::string i) { return i == bp; }), breakpointsOP.end());
+
+
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpointsOP;
+}
+
+std::vector<std::string> gba::Bus::addBreakpointOP(std::string bp) {
+    if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpointsOP){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpointsOP.push_back(bp);
+    }
+
+    return breakpointsOP;
+}
+
+CpuRegisterState gba::Bus::getRegs() {
+    return cpu.getRegisterState();
+}
+
+std::vector<std::string> gba::Bus::getStack() {
+    constexpr Word stackSize = 40; // Genug?
+
+    Word sp = 0;
+    auto state = cpu.getRegisterState();
+    sp = state.R[13];
+    if(cpu.mode() == Supervisor) sp = state.R_svc[0];
+    else if(cpu.mode() == IRQ) sp = state.R_irq[0];
+
+    // Stack wächst nach unten
+    std::vector<std::string> stack;
+
+    for(Word i = 0; i < stackSize; i++){
+        Word val = readWord(sp - (4 * i));
+        stack.push_back(getHex(val, 8));
+    }
+
+    return stack;
 }

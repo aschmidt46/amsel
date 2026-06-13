@@ -22,6 +22,7 @@ namespace gba{
 
         StatusRegister _CPSR, _SPSR_fiq, _SPSR_SVC, _SPSR_abt, _SPSR_irq, _SPSR_und; // Init in Konstruktor
 
+        public:
         inline OperatingMode mode() const{
             switch(_CPSR.state.mode_bits){
                 case 0: return SystemUser;      // ;\26bit Backward Compatibility modes
@@ -46,6 +47,7 @@ namespace gba{
                 default: return ARM;
             }
         }
+        private:
         inline Word pcInterval() const{
             return (this->state() == ARM ? 4 : 2);
         }
@@ -177,7 +179,7 @@ namespace gba{
         void incrementCircular();
         std::vector<std::pair<int64_t, CpuState>> circular{std::vector<std::pair<int64_t, CpuState>>(10,{-1, ARM})};
         unsigned int circularIndex = 0;
-
+        std::string getCurrentOpcode();
 
 
         // Tests

@@ -40,7 +40,7 @@ class Gui{
     std::vector<std::string> breakpointsOP;
     int runningID = 1;
 
-    uint16_t outputStartsAt = 0x6004;
+    long long outputStartsAt = 0x6004;
     char outInputBuf[255];
 
     void toggleHalt(){

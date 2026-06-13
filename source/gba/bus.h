@@ -27,6 +27,11 @@ namespace gba{
         Bus();
         bool halted = false;
         int steps = 0;
+        bool watchBreakpoints = false;
+        std::vector<std::string> breakpointsOP;
+        std::vector<Word> breakpoints;
+
+
         public:
         void init();
         Bus(const char *path);
@@ -50,5 +55,9 @@ namespace gba{
         void addStep();
         std::pair<std::string, std::vector<int>> getNextInstructions();
         std::pair<std::string, std::vector<int>> getPrevInstructions();
+        std::vector<std::string> removeBreakpointOP(std::string bp);
+        std::vector<std::string> addBreakpointOP(std::string bp);
+        CpuRegisterState getRegs();
+        std::vector<std::string> getStack();
     };
 }
