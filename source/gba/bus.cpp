@@ -339,3 +339,33 @@ std::vector<std::string> gba::Bus::getStack() {
 std::string gba::Bus::getMode() {
     return cpu.printMode();
 }
+
+std::vector<uint64_t> gba::Bus::addBreakpoint(uint64_t bp) {
+  if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpoints){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpoints.push_back(bp);
+    }
+
+    return breakpoints;
+}
+
+std::vector<uint64_t> gba::Bus::removeBreakpoint(uint64_t bp) {
+  breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), 
+                       [&](uint16_t i) { return i == bp; }), breakpoints.end());
+
+
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpoints;
+}

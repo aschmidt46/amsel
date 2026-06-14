@@ -32,10 +32,10 @@ bool gba::CPU::executeSingleDataSwap(Word instruction)
         *registerMap[mode()][Rd] = contents;
     }
     else{
-        Word contents = readWordUnaligned(address);
+        Word contents = readWord(address);
         Word shift = 8 * (address & 3);
         contents = (contents >> shift) | (contents << (32 - shift));
-        writeWordUnaligned(address, *registerMap[mode()][Rm]);
+        writeWord(address, *registerMap[mode()][Rm]);
         *registerMap[mode()][Rd] = contents;
     }
     remainingCycles += 4; // 1S + 2N + 1I
@@ -74,6 +74,15 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
     int numberOfRegs = std::popcount(instruction & 0xFFFF);
     int downOffset = !U ? (numberOfRegs+1) * 4 : 0; // Wortgröße 4
     downOffset -= !U && !P ? 8 : 0; // Magie, empirisch bestimmt
+    bool emptyRegList = false;
+
+    if(W){
+        if((instruction & 0xFFFF) == 0){ // Leere Registerliste
+            instruction |= 1u << 15;
+            numberOfRegs = 16;
+            emptyRegList = true;
+        }
+    }
     
     bool baseInRegisterList = instruction & (1u << Rn);
     bool R15InTransferList = instruction & (1u << 15);
@@ -103,6 +112,9 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
                 *registerMap[actualMode][i] = readWordUnaligned(addr - downOffset);
             }
             else{ // In Speicher schreiben STM
+                // Spezialfall für leere Registerliste
+                if(emptyRegList && i==15 && !U) addr -= incr * 16;
+
                 if(i==Rn && baseInRegisterList && firstRegister){
                     writeWordUnaligned(addr - downOffset, origAddr);
                 }
@@ -611,16 +623,16 @@ bool gba::CPU::executeSingleDataTransfer(Word instruction)
             }
             else if((modifiedBase & 0b11) == 0b11){ // Datasheet S. 4-28      (Verhalten verifizieren!!!!)
                 // val = readWordUnaligned(modifiedBase);
-                Word w = readWordUnaligned(modifiedBase);
+                Word w = readWord(modifiedBase);
                 val = (w << 8) | (w >> 24);
             }
             else if((modifiedBase & 0b11) == 0b10){
-                Word w = readWordUnaligned(modifiedBase);
+                Word w = readWord(modifiedBase);
                 val = (w << 16) | (w >> 16);
             }
             else{
                 // modifiedBase &= ~(0b1); // Halbwort align.
-                Word upper = readWordUnaligned(modifiedBase); // Ende erstes Wort
+                Word upper = readWord(modifiedBase); // Ende erstes Wort
                 val = (upper >> 8) | (upper << 24);
             }
         }
@@ -631,7 +643,7 @@ bool gba::CPU::executeSingleDataTransfer(Word instruction)
             writeByte(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
         else{
-            // modifiedBase &= ~(0b11); // Wort Alignment (Immer)
+            modifiedBase &= ~(0b11); // Wort Alignment (Immer)
             writeWordUnaligned(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
     }
@@ -713,7 +725,7 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
     if(S){ // Sign extend Halbwort oder Byte
         Word val;
         if(H){
-            val = readHalfWordUnaligned(modifiedBase);
+            val = readHalfWord(modifiedBase);
             Word signBit = 15;
             if (modifiedBase & 1) {
                 val = (val >> 8) | (val << 24);
@@ -734,7 +746,7 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
     }
     else{ // Unsigned Halbwort
         if(L){
-            Word val = readHalfWordUnaligned(modifiedBase);
+            Word val = readHalfWord(modifiedBase);
             // Siehe Nanoboyadvance
             if (modifiedBase & 1) {
               val = (val >> 8) | (val << 24);

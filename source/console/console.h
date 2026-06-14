@@ -57,13 +57,13 @@ class Console{
     virtual int addressBytes() = 0;
     virtual std::pair<std::string, std::vector<int>> getCurrentDisassembly() = 0;
     virtual std::pair<std::string, std::vector<int>> getOldDisassembly() = 0;
-    virtual std::vector<uint16_t> addBreakpoint(uint16_t bp) = 0;
-    virtual std::vector<uint16_t> removeBreakpoint(uint16_t bp) = 0;
+    virtual std::vector<uint64_t> addBreakpoint(uint64_t bp) = 0;
+    virtual std::vector<uint64_t> removeBreakpoint(uint64_t bp) = 0;
     virtual std::vector<std::string> addBreakpointOP(std::string bp) = 0;
     virtual std::vector<std::string> removeBreakpointOP(std::string bp) = 0;
-    virtual std::string getText(uint16_t addr) = 0;
+    virtual std::string getText(uint64_t addr) = 0;
     virtual std::string getOpcodeName(size_t index) = 0;
-    virtual uint8_t readCpuBus(uint16_t addr) = 0;
+    virtual uint8_t readCpuBus(uint64_t addr) = 0;
 
     virtual void displayRegisters() = 0;
 

@@ -121,12 +121,12 @@ std::pair<std::string, std::vector<int>> NesImplementation::getOldDisassembly()
     return this->console.getOldDisassembly();
 }
 
-std::vector<uint16_t> NesImplementation::addBreakpoint(uint16_t bp)
+std::vector<uint64_t> NesImplementation::addBreakpoint(uint64_t bp)
 {
     return this->console.addBreakpoint(bp);
 }
 
-std::vector<uint16_t> NesImplementation::removeBreakpoint(uint16_t bp)
+std::vector<uint64_t> NesImplementation::removeBreakpoint(uint64_t bp)
 {
     return this->console.removeBreakpoint(bp);
 }
@@ -141,7 +141,7 @@ std::vector<std::string> NesImplementation::removeBreakpointOP(std::string bp)
     return this->console.removeBreakpointOP(bp);
 }
 
-std::string NesImplementation::getText(uint16_t addr)
+std::string NesImplementation::getText(uint64_t addr)
 {
     return this->console.getText(addr);
 }
@@ -151,7 +151,7 @@ std::string NesImplementation::getOpcodeName(size_t index)
     return this->console.getOpcodeName(index);
 }
 
-uint8_t NesImplementation::readCpuBus(uint16_t addr)
+uint8_t NesImplementation::readCpuBus(uint64_t addr)
 {
     return this->console.readCpuBus(addr);
 }

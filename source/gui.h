@@ -36,7 +36,7 @@ class Gui{
     char memInputBuf[255];
     char bpInputBuf[255];
     char opInputBuf[255];
-    std::vector<uint16_t> breakpoints;
+    std::vector<uint64_t> breakpoints;
     std::vector<std::string> breakpointsOP;
     int runningID = 1;
 

@@ -29,7 +29,7 @@ namespace gba{
         int steps = 0;
         bool watchBreakpoints = false;
         std::vector<std::string> breakpointsOP;
-        std::vector<Word> breakpoints;
+        std::vector<uint64_t> breakpoints;
 
 
         public:
@@ -60,5 +60,7 @@ namespace gba{
         CpuRegisterState getRegs();
         std::vector<std::string> getStack();
         std::string getMode();
+        std::vector<uint64_t> addBreakpoint(uint64_t bp);
+        std::vector<uint64_t> removeBreakpoint(uint64_t bp);
     };
 }

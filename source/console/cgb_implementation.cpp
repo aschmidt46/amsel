@@ -322,22 +322,22 @@ std::pair<std::string, std::vector<int>> CgbImplementation::getOldDisassembly()
   return {s, v};
 }
 
-std::vector<uint16_t> CgbImplementation::addBreakpoint(uint16_t bp)
+std::vector<uint64_t> CgbImplementation::addBreakpoint(uint64_t bp)
 {
   std::lock_guard lock(consoleLock);
   auto bps = add_breakpoint(cgb, bp);
-  auto res = std::vector<uint16_t>();
+  auto res = std::vector<uint64_t>();
   for(const auto &el : bps){
     res.push_back(el);
   }
   return res;
 }
 
-std::vector<uint16_t> CgbImplementation::removeBreakpoint(uint16_t bp)
+std::vector<uint64_t> CgbImplementation::removeBreakpoint(uint64_t bp)
 {
   std::lock_guard lock(consoleLock);
   auto bps = remove_breakpoint(cgb, bp);
-  auto res = std::vector<uint16_t>();
+  auto res = std::vector<uint64_t>();
   for(const auto &el : bps){
     res.push_back(el);
   }
@@ -366,7 +366,7 @@ std::vector<std::string> CgbImplementation::removeBreakpointOP(std::string bp)
   return res;
 }
 
-std::string CgbImplementation::getText(uint16_t addr)
+std::string CgbImplementation::getText(uint64_t addr)
 {
   return std::string();
 }
@@ -377,7 +377,7 @@ std::string CgbImplementation::getOpcodeName(size_t index)
   return std::string(get_mnemonic(cgb, index));
 }
 
-uint8_t CgbImplementation::readCpuBus(uint16_t addr)
+uint8_t CgbImplementation::readCpuBus(uint64_t addr)
 {
   std::lock_guard lock(consoleLock);
   return cgb_read_cpu(cgb, addr);

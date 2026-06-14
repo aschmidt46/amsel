@@ -43,6 +43,7 @@ void gba::CPU::writeByte(Word addr, Byte val)
 
 void gba::CPU::writeHalfWord(Word addr, HalfWord val)
 {
+    addr &= ~1u;
     this->bus.lock()->writeHalfWord(addr, val);
 }
 

@@ -37,13 +37,13 @@ class CgbImplementation : public Console{
     int addressBytes() override;
     std::pair<std::string, std::vector<int>> getCurrentDisassembly() override;
     std::pair<std::string, std::vector<int>> getOldDisassembly() override;
-    std::vector<uint16_t> addBreakpoint(uint16_t bp) override;
-    std::vector<uint16_t> removeBreakpoint(uint16_t bp) override;
+    std::vector<uint64_t> addBreakpoint(uint64_t bp) override;
+    std::vector<uint64_t> removeBreakpoint(uint64_t bp) override;
     std::vector<std::string> addBreakpointOP(std::string bp) override;
     std::vector<std::string> removeBreakpointOP(std::string bp) override;
-    std::string getText(uint16_t addr) override;
+    std::string getText(uint64_t addr) override;
     std::string getOpcodeName(size_t index) override;
-    uint8_t readCpuBus(uint16_t addr) override;
+    uint8_t readCpuBus(uint64_t addr) override;
 
     void displayRegisters() override;
 };

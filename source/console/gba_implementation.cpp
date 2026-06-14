@@ -106,14 +106,14 @@ std::pair<std::string, std::vector<int>> GbaImplementation::getOldDisassembly()
     return gba->getPrevInstructions();
 }
 
-std::vector<uint16_t> GbaImplementation::addBreakpoint(uint16_t bp)
+std::vector<uint64_t> GbaImplementation::addBreakpoint(uint64_t bp)
 {
-    return std::vector<uint16_t>();
+    return gba->addBreakpoint(bp);
 }
 
-std::vector<uint16_t> GbaImplementation::removeBreakpoint(uint16_t bp)
+std::vector<uint64_t> GbaImplementation::removeBreakpoint(uint64_t bp)
 {
-    return std::vector<uint16_t>();
+        return gba->removeBreakpoint(bp);
 }
 
 std::vector<std::string> GbaImplementation::addBreakpointOP(std::string bp)
@@ -126,7 +126,7 @@ std::vector<std::string> GbaImplementation::removeBreakpointOP(std::string bp)
     return gba->removeBreakpointOP(bp);
 }
 
-std::string GbaImplementation::getText(uint16_t addr)
+std::string GbaImplementation::getText(uint64_t addr)
 {
     return std::string();
 }
@@ -136,7 +136,7 @@ std::string GbaImplementation::getOpcodeName(size_t index)
     return std::string();
 }
 
-uint8_t GbaImplementation::readCpuBus(uint16_t addr)
+uint8_t GbaImplementation::readCpuBus(uint64_t addr)
 {
     return 0;
 }

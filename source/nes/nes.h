@@ -99,8 +99,8 @@ class NES{
     int allowedClocks = 0;
     std::pair<std::string, std::vector<int>> getCurrentDisassembly();
     std::pair<std::string, std::vector<int>> getOldDisassembly();
-    std::vector<uint16_t> addBreakpoint(uint16_t bp);
-    std::vector<uint16_t> removeBreakpoint(uint16_t bp);
+    std::vector<uint64_t> addBreakpoint(uint64_t bp);
+    std::vector<uint64_t> removeBreakpoint(uint64_t bp);
     std::vector<std::string> addBreakpointOP(std::string bp);
     std::vector<std::string> removeBreakpointOP(std::string bp);
     std::string getText(uint16_t addr);
@@ -112,6 +112,6 @@ class NES{
     std::mutex debugM;
 
     bool watchBreakpoints = false;
-    std::vector<uint16_t> breakpoints;
+    std::vector<uint64_t> breakpoints;
     std::vector<std::string> breakpointsOP;
 };

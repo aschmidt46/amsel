@@ -222,7 +222,7 @@ std::pair<std::string, std::vector<int>> NES::getOldDisassembly()
     return cpu->getPrev10Instructions();
 }
 
-std::vector<uint16_t> NES::addBreakpoint(uint16_t bp)
+std::vector<uint64_t> NES::addBreakpoint(uint64_t bp)
 {
     if(!watchBreakpoints){
         watchBreakpoints = true;
@@ -242,7 +242,7 @@ std::vector<uint16_t> NES::addBreakpoint(uint16_t bp)
     return breakpoints;
 }
 
-std::vector<uint16_t> NES::removeBreakpoint(uint16_t bp)
+std::vector<uint64_t> NES::removeBreakpoint(uint64_t bp)
 {
     breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), 
                        [&](uint16_t i) { return i == bp; }), breakpoints.end());

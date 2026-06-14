@@ -34,13 +34,13 @@ class DummyImplementation : public Console{
     int addressBytes() override{return 0;};
     std::pair<std::string, std::vector<int>> getCurrentDisassembly() override{return {};};
     std::pair<std::string, std::vector<int>> getOldDisassembly() override{return {};};
-    std::vector<uint16_t> addBreakpoint(uint16_t bp) override{return {};};
-    std::vector<uint16_t> removeBreakpoint(uint16_t bp) override{return {};};
+    std::vector<uint64_t> addBreakpoint(uint64_t bp) override{return {};};
+    std::vector<uint64_t> removeBreakpoint(uint64_t bp) override{return {};};
     std::vector<std::string> addBreakpointOP(std::string bp) override{return {};};
     std::vector<std::string> removeBreakpointOP(std::string bp) override{return {};};
-    std::string getText(uint16_t addr) override{return "";};
+    std::string getText(uint64_t addr) override{return "";};
     std::string getOpcodeName(size_t index) override{return "";};
-    uint8_t readCpuBus(uint16_t addr) override{return 0;};
+    uint8_t readCpuBus(uint64_t addr) override{return 0;};
 
     void displayRegisters() override{};
 };

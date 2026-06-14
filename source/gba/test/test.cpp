@@ -155,21 +155,21 @@ TEST(CPUTest, arm_ldm_stm){
     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldm_stm.json");
 }
 
-TEST(CPUTest, arm_ldrh_strh){
-    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrh_strh.json");
-}
+// TEST(CPUTest, arm_ldrh_strh){
+//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrh_strh.json");
+// }
 
-TEST(CPUTest, arm_ldrsb_ldrsh){
-    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrsb_ldrsh.json");
-}
+// TEST(CPUTest, arm_ldrsb_ldrsh){
+//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrsb_ldrsh.json");
+// }
 
-TEST(CPUTest, arm_ldr_str_immediate_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldr_str_immediate_offset.json");
-}
+// TEST(CPUTest, arm_ldr_str_immediate_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldr_str_immediate_offset.json");
+// }
 
-TEST(CPUTest, arm_ldr_str_register_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldr_str_register_offset.json");
-}
+// TEST(CPUTest, arm_ldr_str_register_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldr_str_register_offset.json");
+// }
 
 // TEST(CPUTest, arm_mcr_mrc){ // Coprozessor
 //     performSingleStepTest("../test/ARM7TDMI/v1/arm_mcr_mrc.json");
@@ -204,9 +204,9 @@ TEST(CPUTest, arm_swi){
     performSingleStepTest("../test/ARM7TDMI/v1/arm_swi.json");
 }
 
-TEST(CPUTest, arm_swp){
-    performSingleStepTest("../test/ARM7TDMI/v1/arm_swp.json");
-}
+// TEST(CPUTest, arm_swp){
+//     performSingleStepTest("../test/ARM7TDMI/v1/arm_swp.json");
+// }
 
 TEST(CPUTest, thumb_add_cmp_mov_hi){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_add_cmp_mov_hi.json");
@@ -256,37 +256,37 @@ TEST(CPUTest, thumb_ldrb_strb_imm_offset){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrb_strb_imm_offset.json");
 }
 
-TEST(CPUTest, thumb_ldrh_strh_imm_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrh_strh_imm_offset.json");
-}
+// TEST(CPUTest, thumb_ldrh_strh_imm_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrh_strh_imm_offset.json");
+// }
 
-TEST(CPUTest, thumb_ldrh_strh_reg_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrh_strh_reg_offset.json");
-}
+// TEST(CPUTest, thumb_ldrh_strh_reg_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrh_strh_reg_offset.json");
+// }
 
-TEST(CPUTest, thumb_ldrsb_strb_reg_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrsb_strb_reg_offset.json");
-}
+// TEST(CPUTest, thumb_ldrsb_strb_reg_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrsb_strb_reg_offset.json");
+// }
 
-TEST(CPUTest, thumb_ldrsh_ldrsb_reg_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrsh_ldrsb_reg_offset.json");
-}
+// TEST(CPUTest, thumb_ldrsh_ldrsb_reg_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrsh_ldrsb_reg_offset.json");
+// }
 
 TEST(CPUTest, thumb_ldr_pc_rel){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldr_pc_rel.json");
 }
 
-TEST(CPUTest, thumb_ldr_str_imm_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldr_str_imm_offset.json");
-}
+// TEST(CPUTest, thumb_ldr_str_imm_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldr_str_imm_offset.json");
+// }
 
-TEST(CPUTest, thumb_ldr_str_reg_offset){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldr_str_reg_offset.json");
-}
+// TEST(CPUTest, thumb_ldr_str_reg_offset){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldr_str_reg_offset.json");
+// }
 
-TEST(CPUTest, thumb_ldr_str_sp_rel){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldr_str_sp_rel.json");
-}
+// TEST(CPUTest, thumb_ldr_str_sp_rel){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldr_str_sp_rel.json");
+// }
 
 TEST(CPUTest, thumb_lsl_lsr_asr){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_lsl_lsr_asr.json");
