@@ -11,51 +11,83 @@ using namespace gba;
 
 Byte gba::CPU::readByte(Word addr)
 {
-    return this->bus.lock()->readByte(addr);
+    Byte res = this->bus.lock()->readByte(addr);
+    lastTransactionWasRead = true;
+    lastTransactionData = res;
+    lastTransactionAddress = addr;
+    return res;
 }
 
 HalfWord gba::CPU::readHalfWord(Word addr)
 {
     addr &= ~1u;
-    return this->bus.lock()->readHalfWord(addr);
+    HalfWord res = this->bus.lock()->readHalfWord(addr);
+    lastTransactionWasRead = true;
+    lastTransactionData = res;
+    lastTransactionAddress = addr;
+    return res;
 }
 
 HalfWord gba::CPU::readHalfWordUnaligned(Word addr)
 {
-    return this->bus.lock()->readHalfWord(addr);
+    HalfWord res = this->bus.lock()->readHalfWord(addr);
+    lastTransactionWasRead = true;
+    lastTransactionData = res;
+    lastTransactionAddress = addr;
+    return res;
 }
 
 Word gba::CPU::readWord(Word addr)
 {
     addr &= ~(0b11);
-    return this->bus.lock()->readWord(addr);
+    Word res = this->bus.lock()->readWord(addr);
+    lastTransactionWasRead = true;
+    lastTransactionData = res;
+    lastTransactionAddress = addr;
+    return res;
 }
 
 Word gba::CPU::readWordUnaligned(Word addr)
 {
-    return this->bus.lock()->readWord(addr);
+    Word res = this->bus.lock()->readWord(addr);
+    lastTransactionWasRead = true;
+    lastTransactionData = res;
+    lastTransactionAddress = addr;
+    return res;
 }
 
 void gba::CPU::writeByte(Word addr, Byte val)
 {
     this->bus.lock()->writeByte(addr, val);
+    lastTransactionWasRead = false;
+    lastTransactionData = val;
+    lastTransactionAddress = addr;
 }
 
 void gba::CPU::writeHalfWord(Word addr, HalfWord val)
 {
     addr &= ~1u;
     this->bus.lock()->writeHalfWord(addr, val);
+    lastTransactionWasRead = false;
+    lastTransactionData = val;
+    lastTransactionAddress = addr;
 }
 
 void gba::CPU::writeWord(Word addr, Word val)
 {
     addr &= ~(0b11);
     this->bus.lock()->writeWord(addr, val);
+    lastTransactionWasRead = false;
+    lastTransactionData = val;
+    lastTransactionAddress = addr;
 }
 
 void gba::CPU::writeWordUnaligned(Word addr, Word val)
 {
     this->bus.lock()->writeWord(addr, val);
+    lastTransactionWasRead = false;
+    lastTransactionData = val;
+    lastTransactionAddress = addr;
 }
 
 
@@ -157,7 +189,7 @@ std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
     disasm_arm(&s, 0);
     
     for(int i = 0; i < n; i++){
-        Word opcode = readWord(pc);
+        Word opcode = this->bus.lock()->readWord(pc & ~0b11);
         s.address = pc;
         if(state() == ARM){
             s.arm_mode = 1;
@@ -206,7 +238,7 @@ std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
     for(const auto &pc : pcList){
         std::string str = "";
         s.address = pc.first;
-        Word opcode = readWord(pc.first);
+        Word opcode = this->bus.lock()->readWord(pc.first & ~0b11);
         if(pc.second == ARM){
             s.arm_mode = 1;
             disasm_arm(&s, opcode);

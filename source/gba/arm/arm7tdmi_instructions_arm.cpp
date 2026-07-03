@@ -164,12 +164,15 @@ bool gba::CPU::executeSoftwareInterrupt(Word instruction)
 }
 
 void gba::CPU::executeHardwareInterrupt(){
-    _SPSR_irq.raw = *registerMap[mode()][CPSR];
-    _CPSR.state.I = 1; // IRQs ausschalten
-    _CPSR.state.mode_bits = 18; // IRQ
-    _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
-    _CPSR.state.T = 0; // Zurück zu ARM Modus
+    // bus.lock()->setHalt();
+    // std::cout << "IRQ" << std::endl;
+    _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 0);
+    // std::cout << getHex(_R14_irq, 8) << std::endl;
     _R15_PC = 0x18; // BIOS Interrupt Vector
+    _SPSR_irq.raw = *registerMap[mode()][CPSR];
+    _CPSR.state.mode_bits = 18; // IRQ
+    _CPSR.state.I = 1; // IRQs ausschalten
+    _CPSR.state.T = 0; // Zurück zu ARM Modus
 }
 
 bool gba::CPU::executeCoProcDataOperation(Word instruction)

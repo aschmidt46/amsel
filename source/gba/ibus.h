@@ -11,5 +11,7 @@ namespace gba{
         virtual HalfWord readHalfWord(Word addr) = 0;
         virtual void writeWord(Word addr, Word val) = 0;
         virtual Word readWord(Word addr) = 0;
+
+        virtual void setHalt(){};
     };
 }

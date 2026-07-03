@@ -1,4 +1,5 @@
 #include "gba_implementation.h"
+#include "framework/global.h"
 #ifndef BUILD_WEB
 #include <imgui.h>
 #endif
@@ -133,12 +134,12 @@ std::string GbaImplementation::getText(uint64_t addr)
 
 std::string GbaImplementation::getOpcodeName(size_t index)
 {
-    return std::string();
+    return gba->getDisassembly(index);
 }
 
 uint8_t GbaImplementation::readCpuBus(uint64_t addr)
 {
-    return 0;
+    return gba->readBus(addr);
 }
 
 std::string thex(uintptr_t input)
@@ -172,6 +173,12 @@ void GbaImplementation::displayRegisters() {
     ImGui::Text("");
     ImGui::Text("");
     ImGui::Text((std::string("Mode: ")+gba->getMode()).c_str());
+
+    auto transaction = gba->getLastTransaction();
+
+    ImGui::Text((locale.getTranslation(LastMemoryTransaction) + " " + std::get<0>(transaction)).c_str());
+    ImGui::Text(("Addr: " + std::get<1>(transaction)).c_str());
+    ImGui::Text(("Data: " + std::get<2>(transaction)).c_str());
     ImGui::TableNextColumn();
 
     for(int i = 0; i < 7; i++){

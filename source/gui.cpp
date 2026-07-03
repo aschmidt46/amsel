@@ -335,6 +335,8 @@ void Gui::drawMemoryReader()
     removeCharsFromString(s, "x$");
     lastReadLow = 0;
     lastReadHigh = 0;
+    lastHighLow = 0;
+    lastHighHigh = 0;
     if(s.size()>0){
       auto addr = std::stoll(s, 0, 16);
       lastReadLow = console->readCpuBus(addr);
@@ -346,17 +348,42 @@ void Gui::drawMemoryReader()
     removeCharsFromString(s, "x$");
     lastReadLow = 0;
     lastReadHigh = 0;
+    lastHighLow = 0;
+    lastHighHigh = 0;
     if(s.size()>0){
       auto addr = std::stoll(s, 0, 16);
       lastReadLow = console->readCpuBus(addr);
       lastReadHigh = console->readCpuBus(addr+1);
     }
   }
+  if(console->addressBytes() > 2){
+    ImGui::SameLine();
+    if(ImGui::Button(locale.getTranslation(DebuggerRead4Byte).c_str())){
+      std::string s(memInputBuf);
+      removeCharsFromString(s, "x$");
+      lastReadLow = 0;
+      lastReadHigh = 0;
+      lastHighLow = 0;
+      lastHighHigh = 0;
+      if(s.size()>0){
+        auto addr = std::stoll(s, 0, 16);
+        lastReadLow = console->readCpuBus(addr);
+        lastReadHigh = console->readCpuBus(addr+1);
+        lastHighLow = console->readCpuBus(addr+2);
+        lastHighHigh = console->readCpuBus(addr+3);
+      }
+    }
+  }
 
-  ImGui::Text((locale.getTranslation(DebuggerHex)+ghexNorm(ghex(getLastRead()),4)).c_str());
+  ImGui::Text((locale.getTranslation(DebuggerHex)+ghexNorm(ghex(getLastRead()),console->addressBytes() * 2)).c_str());
   ImGui::SameLine();
-  ImGui::Text((locale.getTranslation(DebuggerOpcode)+(getLastRead() < 256 ? console->getOpcodeName(getLastRead()) : "???")).c_str());
-  ImGui::Text((locale.getTranslation(DebuggerBin)+std::bitset<16>(getLastRead()).to_string()).c_str());
+  ImGui::Text((locale.getTranslation(DebuggerOpcode)+(console->getOpcodeName(getLastRead()))).c_str());
+  if(console->addressBytes() <= 2){
+    ImGui::Text((locale.getTranslation(DebuggerBin)+std::bitset<16>(getLastRead()).to_string()).c_str());
+  }
+  else{
+    ImGui::Text((locale.getTranslation(DebuggerBin)+std::bitset<32>(getLastRead()).to_string()).c_str());
+  }
 }
 
 void Gui::drawBreakpoints()

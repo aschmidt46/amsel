@@ -22,6 +22,7 @@ namespace gba{
         std::vector<Byte> wramBoard;
         std::vector<Byte> wramChip;
         std::vector<Byte> gamePak;
+        std::vector<Byte> cartRam;
         Byte null = 0;
         Byte* accessMemory(Word addr);
         Bus();
@@ -62,5 +63,8 @@ namespace gba{
         std::string getMode();
         std::vector<uint64_t> addBreakpoint(uint64_t bp);
         std::vector<uint64_t> removeBreakpoint(uint64_t bp);
+        void setHalt() override;
+        std::string getDisassembly(uint64_t code);
+        std::tuple<std::string, std::string, std::string> getLastTransaction();
     };
 }

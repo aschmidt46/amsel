@@ -97,3 +97,18 @@ std::vector<uint64_t> gba::GBA::addBreakpoint(uint64_t bp) {
 std::vector<uint64_t> gba::GBA::removeBreakpoint(uint64_t bp) {
   return bus->removeBreakpoint(bp);
 }
+
+std::string gba::GBA::getDisassembly(uint64_t code)
+{
+    return bus->getDisassembly(code);
+}
+
+uint64_t gba::GBA::readBus(uint64_t addr)
+{
+    return bus->readByte(addr);
+}
+
+std::tuple<std::string, std::string, std::string> gba::GBA::getLastTransaction()
+{
+    return bus->getLastTransaction();
+}

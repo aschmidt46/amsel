@@ -33,6 +33,8 @@ class Gui{
 
     uint8_t lastReadLow = 0;
     uint8_t lastReadHigh = 0;
+    uint8_t lastHighLow = 0;
+    uint8_t lastHighHigh = 0;
     char memInputBuf[255];
     char bpInputBuf[255];
     char opInputBuf[255];
@@ -54,8 +56,8 @@ class Gui{
         }
     };
     
-    uint16_t getLastRead(){
-        return (uint16_t)lastReadLow | ((uint16_t)lastReadHigh << 8);
+    uint64_t getLastRead(){
+        return (uint64_t)lastReadLow | ((uint64_t)lastReadHigh << 8) | ((uint64_t)lastHighLow << 16) | ((uint64_t)lastHighHigh << 24);
     };
     
     void assemblyRender();

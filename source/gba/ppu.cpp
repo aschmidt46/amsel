@@ -1,5 +1,6 @@
 #include "ppu.h"
 #include "bus.h"
+#include <iostream>
 
 float *gba::PPU::accessFramebuffer()
 {
@@ -28,6 +29,7 @@ void gba::PPU::clock() {
         // Vblank
         LCDSTATUS.state.vBlankFlag = 1;
         if(LCDSTATUS.state.vBlankIE){
+            // std::cout << "Vblank IRQ" << std::endl;
             bus.lock()->setIF(0, true);
         }
         hasframe = true;
@@ -149,27 +151,37 @@ gba::Byte gba::PPU::readPPURegister(Word addr)
 }
 
 void gba::PPU::writePPUMemory(Word addr, Byte value) {
-    if(addr >= 0x05000000 && addr < 0x05000400){
-        paletteRam[addr - 0x05000000] = value;
+    if(addr >= 0x05000000 && addr < 0x06000000){
+        auto mod = (addr - 0x05000000) % 0x400;
+        paletteRam[mod] = value;
     }
-    else if(addr >= 0x06000000 && addr < 0x06018000){
-        vRam[addr - 0x06000000] = value;
+    else if(addr >= 0x06000000 && addr < 0x07000000){
+        auto relAddr = (addr - 0x06000000);
+        auto mod = addr % 0x20000;
+        if(mod >= 0x18000) mod -= 0x8000;
+        vRam[mod] = value;
     }
-    else if(addr >= 0x07000000 && addr < 0x07000400){
-        oamAttribs[addr - 0x07000000] = value;
+    else if(addr >= 0x07000000 && addr < 0x08000000){
+        auto mod = (addr - 0x07000000) % 0x400;
+        oamAttribs[mod] = value;
     }
 }
 
 gba::Byte gba::PPU::readPPUMemory(Word addr)
 {
-    if(addr >= 0x05000000 && addr < 0x05000400){
-        return paletteRam[addr - 0x05000000];
+    if(addr >= 0x05000000 && addr < 0x06000000){
+        auto mod = (addr - 0x05000000) % 0x400;
+        return paletteRam[mod];
     }
-    else if(addr >= 0x06000000 && addr < 0x06018000){
-        return vRam[addr - 0x06000000];
+    else if(addr >= 0x06000000 && addr < 0x07000000){
+        auto relAddr = (addr - 0x06000000);
+        auto mod = addr % 0x20000;
+        if(mod >= 0x18000) mod -= 0x8000;
+        return vRam[mod];
     }
-    else if(addr >= 0x07000000 && addr < 0x07000400){
-        return oamAttribs[addr - 0x07000000];
+    else if(addr >= 0x07000000 && addr < 0x08000000){
+        auto mod = (addr - 0x07000000) % 0x400;
+        return oamAttribs[mod];
     }
     else return 0;
 }

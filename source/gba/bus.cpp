@@ -3,6 +3,9 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+extern "C"{
+    #include <armdisasm.h>
+}
 
 using namespace gba;
 
@@ -51,14 +54,16 @@ void gba::Bus::writeByte(Word addr, Byte val)
     (void)addr;
     (void)val;
 
-    if(addr >= 0x02000000 && addr < 0x2040000){
-        // WRAM (board)
-        wramBoard[addr - 0x02000000] = val;
+    if(addr >= 0x02000000 && addr < 0x03000000){
+        // WRAM (board) + Mirror
+        auto mod = (addr - 0x02000000) % 0x40000;
+        wramBoard[mod] = val;
         return;
     }
-    if(addr >= 0x03000000 && addr < 0x03008000){
-        // WRAM (chip)
-        wramChip[addr - 0x03000000] = val;
+    if(addr >= 0x03000000 && addr < 0x04000000){
+        // WRAM (chip) + Mirror
+        auto mod = (addr - 0x03000000) % 0x8000;
+        wramChip[mod] = val;
         return;
     }
 
@@ -94,7 +99,17 @@ void gba::Bus::writeByte(Word addr, Byte val)
         return;
     }
 
-    // std::cout << "unbekannter write" << std::endl;
+    // Cart Ram
+    if(addr >= 0x0E000000 && addr < 0x0E010000){
+        cartRam[addr - 0x0E000000] = val;
+        return;
+    }
+    if(addr >= 0x0F000000 && addr < 0x0F010000){
+        cartRam[addr - 0x0F000000] = val;
+        return;
+    }
+
+    // std::cout << "Unbekannter Write: " << getHex(addr, 8) << std::endl;
 }
 
 Byte gba::Bus::readByte(Word addr)
@@ -104,13 +119,15 @@ Byte gba::Bus::readByte(Word addr)
     if(addr < 0x4000){
         return bios[addr];
     }
-    if(addr >= 0x02000000 && addr < 0x02040000){
-        // WRAM (board)
-        return wramBoard[addr - 0x02000000];
+    if(addr >= 0x02000000 && addr < 0x03000000){
+        // WRAM (board) + Mirror
+        auto mod = (addr - 0x02000000) % 0x40000;
+        return wramBoard[mod];
     }
-    if(addr >= 0x03000000 && addr < 0x03008000){
-        // WRAM (chip)
-        return wramChip[addr - 0x03000000];
+    if(addr >= 0x03000000 && addr < 0x04000000){
+        // WRAM (chip) + Mirror
+        auto mod = (addr - 0x03000000) % 0x8000;
+        return wramChip[mod];
     }
 
 
@@ -140,10 +157,30 @@ Byte gba::Bus::readByte(Word addr)
         return ppu.readPPUMemory(addr);
     }
 
-    // Rom
+    // Rom Waitstate 0
     if(addr >= 0x08000000 && addr - 0x08000000 < gamePak.size()){
         return gamePak[addr - 0x08000000];
     }
+
+    // Rom Waitstate 1
+    if(addr >= 0x0A000000 && addr - 0x0A000000 < gamePak.size()){
+        return gamePak[addr - 0x0A000000];
+    }
+
+    // Rom Waitstate 2
+    if(addr >= 0x0C000000 && addr - 0x0C000000 < gamePak.size()){
+        return gamePak[addr - 0x0C000000];
+    }
+
+    // Cart Ram
+    if(addr >= 0x0E000000 && addr < 0x0E010000){
+        return cartRam[addr - 0x0E000000];
+    }
+    if(addr >= 0x0F000000 && addr < 0x0F010000){
+        return cartRam[addr - 0x0F000000];
+    }
+
+    // std::cout << "Unbekannter Read: " << getHex(addr, 8) << std::endl;
 
     return 0;
 }
@@ -192,6 +229,7 @@ gba::Bus::Bus(){
   stream.close();
   this->wramBoard = std::vector<Byte>(0x40000, 0);
   this->wramChip = std::vector<Byte>(0x8000, 0);
+  this->cartRam = std::vector<Byte>(0x10000, 0);
 }
 
 void gba::Bus::init() {
@@ -368,4 +406,38 @@ std::vector<uint64_t> gba::Bus::removeBreakpoint(uint64_t bp) {
         watchBreakpoints = false;
     }
     return breakpoints;
+}
+
+void gba::Bus::setHalt() {
+    halted = true;
+}
+
+std::string gba::Bus::getDisassembly(uint64_t code)
+{
+    ARMSTATE s;
+    auto state = cpu.getRegisterState();
+    disasm_init(&s, 0);
+    int mode = ((state.CPSR >> 5) & 1u) ? 0 : 1;
+    s.arm_mode = mode;
+    if(mode == 1){
+        disasm_arm(&s, code);
+    }
+    else{
+        disasm_thumb(&s, uint16_t(code), uint16_t(code >> 16));
+    }
+    std::string text = s.text;
+    disasm_cleanup(&s);
+    return text;
+}
+
+std::tuple<std::string, std::string, std::string> gba::Bus::getLastTransaction()
+{
+    std::string action = "";
+    if(cpu.lastTransactionWasRead){
+        action = "R";
+    }
+    else action = "W";
+    std::string addr = getHex(cpu.lastTransactionAddress, 8);
+    std::string data = getHex(cpu.lastTransactionData, 8);
+    return std::tuple<std::string, std::string, std::string>{action, addr, data};
 }

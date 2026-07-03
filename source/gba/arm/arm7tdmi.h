@@ -109,6 +109,10 @@ namespace gba{
             
         public:
 
+        bool lastTransactionWasRead = true;
+        Word lastTransactionAddress = 0;
+        Word lastTransactionData = 0;
+
         InstructionInfo decodeInstruction(Word code);
         static InstructionInfo decodeInstructionARM(Word code);
         static InstructionInfo decodeInstructionTHUMB(Word code);

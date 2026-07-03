@@ -103,7 +103,8 @@ const localStrings = [
     "AboutSource",
     "Close",
     "DownloadSave",
-    "MoodLighting"
+    "MoodLighting",
+    "Read4Bytes"
 ];
 
 import german from './assets/locales/de.json'

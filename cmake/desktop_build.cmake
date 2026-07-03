@@ -138,7 +138,13 @@ target_link_libraries(AMSEL rusty_bridge)
 
 
 file(COPY "resources/nes/palette.pal" DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/source/framework/locales DESTINATION ${CMAKE_BINARY_DIR}/)
+# file(COPY ${CMAKE_SOURCE_DIR}/source/framework/locales DESTINATION ${CMAKE_BINARY_DIR}/)
+
+add_custom_command(
+        TARGET AMSEL POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_SOURCE_DIR}/source/framework/locales/*.json
+                ${CMAKE_BINARY_DIR}/locales/)
 
 if(RELEASE)
   add_custom_command(TARGET AMSEL POST_BUILD

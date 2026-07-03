@@ -124,10 +124,12 @@ enum LocalizedString{
     Close = 100,
     DownloadSave = 101,
     MoodLighting = 102,
+    DebuggerRead4Byte = 103,
+    LastMemoryTransaction = 104,
 
 };
 
-constexpr size_t NUM_STRINGS = 103;
+constexpr size_t NUM_STRINGS = 105;
 
 class Locale{
     private:

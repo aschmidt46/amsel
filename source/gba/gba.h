@@ -39,5 +39,9 @@ namespace gba{
         std::string getMode();
         std::vector<uint64_t> addBreakpoint(uint64_t bp);
         std::vector<uint64_t> removeBreakpoint(uint64_t bp);
+
+        std::string getDisassembly(uint64_t code);
+        uint64_t readBus(uint64_t addr);
+        std::tuple<std::string, std::string, std::string> getLastTransaction();
     };
 }
