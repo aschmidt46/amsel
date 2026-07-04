@@ -3,6 +3,7 @@
 .vs/
 .vscode/
 /build/
+msvc_build/
 include_deps/
 resources/gbc/
 resources/nes/roms/

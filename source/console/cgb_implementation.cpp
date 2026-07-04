@@ -2,7 +2,7 @@
 #include "../framework/global.h"
 #include <cstring>
 #include <iostream>
-#ifndef BUILD_WEB
+#ifdef BUILD_DESKTOP
   #include <imgui.h>
   #include "../framework/file_io.h"
 #endif
@@ -113,7 +113,7 @@ void CgbImplementation::setAddressOf(int i, int to)
 
 CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Console(path)
 {
-  #ifndef BUILD_WEB
+  #ifdef BUILD_DESKTOP
   if(cgb_can_save(cgb)){
     if(!FileIO::getInstance().createSave(this->loadedGame)){
       size_t size = get_save_size(cgb);
@@ -127,7 +127,7 @@ CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Con
 
 CgbImplementation::CgbImplementation(std::vector<uint8_t> &rom) : cgb(new_cgb_rom(rom))
 {
-  #ifndef BUILD_WEB
+  #ifdef BUILD_DESKTOP
   if(cgb_can_save(cgb)){
     if(!FileIO::getInstance().createSave(this->loadedGame)){
       size_t size = get_save_size(cgb);
@@ -141,7 +141,7 @@ CgbImplementation::CgbImplementation(std::vector<uint8_t> &rom) : cgb(new_cgb_ro
 
 CgbImplementation::~CgbImplementation()
 {
-  #ifndef BUILD_WEB
+  #ifdef BUILD_DESKTOP
   if(cgb_can_save(cgb)){
     auto data = cgb_get_save_data(cgb);
     std::vector<uint8_t> cxxData;
@@ -157,7 +157,7 @@ void CgbImplementation::load(const char *path)
 {
   cgb = new_cgb(path);
 
-  #ifndef BUILD_WEB
+  #ifdef BUILD_DESKTOP
   if(cgb_can_save(cgb)){
     if(!FileIO::getInstance().createSave(this->loadedGame)){
       size_t size = get_save_size(cgb);
@@ -385,7 +385,7 @@ uint8_t CgbImplementation::readCpuBus(uint64_t addr)
 
 void CgbImplementation::displayRegisters()
 {
-  #ifndef BUILD_WEB
+  #ifdef BUILD_DESKTOP
   std::lock_guard lock(consoleLock);
   ImGui::BeginTable("Register", 2);
   ImGui::TableNextColumn();

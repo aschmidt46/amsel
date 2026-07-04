@@ -61,7 +61,7 @@ void AbstractMapper::loadSave()
     name = mapper.lock()->cart->name;
 
     if(containsBatteryBackedPRGRAM){
-        #ifndef BUILD_WEB
+        #ifdef BUILD_DESKTOP
         if(!FileIO::getInstance().createSave(name)){
             FileIO::getInstance().loadSave(name, prgRam.data(), prgRamSize);
         }
@@ -72,7 +72,7 @@ void AbstractMapper::loadSave()
 void AbstractMapper::saveFile()
 {
     if(containsBatteryBackedPRGRAM){
-        #ifndef BUILD_WEB
+        #ifdef BUILD_DESKTOP
         FileIO::getInstance().saveData(name, prgRam.data(), prgRamSize);
         #endif
     }

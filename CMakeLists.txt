@@ -17,6 +17,8 @@ endif()
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 
+add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
+
 
 include(FetchContent)
 
@@ -69,6 +71,8 @@ if(FEATURE_TEST_SUITE)
 else()
 
   if(FEATURE_DESKTOP)
+
+    add_compile_definitions(BUILD_DESKTOP)
 
     include(${CMAKE_SOURCE_DIR}/cmake/features/desktop.cmake)
 

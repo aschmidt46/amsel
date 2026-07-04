@@ -1,5 +1,5 @@
 #include "nes_implementation.h"
-#ifndef BUILD_WEB
+#ifdef BUILD_DESKTOP
 #include <imgui.h>
 #endif
 #include <bitset>
@@ -158,7 +158,7 @@ uint8_t NesImplementation::readCpuBus(uint64_t addr)
 
 void NesImplementation::displayRegisters()
 {
-    #ifndef BUILD_WEB
+    #ifdef BUILD_DESKTOP
     ImGui::BeginTable("Register", 2);
     ImGui::TableNextColumn();
     ImGui::Text(("P: " + std::bitset<8>(console.readRegister(CpuReg::RegP)).to_string()).c_str());

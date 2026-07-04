@@ -1,8 +1,10 @@
 #include "global.h"
 #include "common.h"
-#include <emscripten.h>
 #include <iostream>
+#ifdef BUILD_WEB
+#include <emscripten.h>
 #include <emscripten/bind.h>
+#endif
 
 // Globale Variablen
 // ---------------------------

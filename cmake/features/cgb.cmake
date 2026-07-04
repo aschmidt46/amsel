@@ -39,6 +39,12 @@ add_library(cgb_implementation source/console/console.h
 source/console/cgb_implementation.h source/console/cgb_implementation.cpp
 )
 
+set_property(TARGET rusty_bridge PROPERTY
+  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+
+set_property(TARGET cgb_implementation PROPERTY
+  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+
 target_link_libraries(cgb_implementation cgbcore rusty_bridge)
 
 

@@ -35,12 +35,14 @@ void NES::load(const char *path)
     }
     else{
         const auto mapper = Slot->header.getMapper();
+        #ifdef BUILD_DESKTOP
         MessageStruct m = {
             .type=MT_ERROR,
             .title=locale.getTranslation(GameError),
             .content=std::vformat(locale.getTranslation(MapperNotSupported), std::make_format_args(mapper))
         };
         messageQueue.enqueue(m);
+        #endif
     }
 }
 
@@ -57,12 +59,14 @@ void NES::load(std::vector<uint8_t> &rom)
     }
     else{
         const auto mapper = Slot->header.getMapper();
+        #ifdef BUILD_DESKTOP
         MessageStruct m = {
             .type=MT_ERROR,
             .title=locale.getTranslation(GameError),
             .content=std::vformat(locale.getTranslation(MapperNotSupported), std::make_format_args(mapper))
         };
         messageQueue.enqueue(m);
+        #endif
     }
 }
 

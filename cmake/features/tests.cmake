@@ -47,7 +47,7 @@ source/gba/timer.h
 source/gba/timer.cpp
 source/gba/gba.h source/gba/gba.cpp
 )
-target_compile_options(gba PUBLIC -Wall -Wextra -Wpedantic)
+target_compile_options(gba PUBLIC -Wall)
 
 enable_testing()
 
@@ -59,7 +59,7 @@ add_executable(
   source/gba/test/testbus.h
   source/gba/test/cpustate.h
 )
-target_compile_options(gba_tests PUBLIC -Wall -Wextra -Werror -Wpedantic)
+target_compile_options(gba_tests PUBLIC -Wall)
 target_link_libraries(
   gba_tests
   gba

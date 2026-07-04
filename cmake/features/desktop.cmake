@@ -103,7 +103,10 @@ source/console/dummy_implementation.h
 source/framework/glm_replacement.h
 )
 
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
+set_property(TARGET AMSEL PROPERTY
+  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+
+target_compile_options(AMSEL PUBLIC -Wall)
 
 # target_compile_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 # target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)

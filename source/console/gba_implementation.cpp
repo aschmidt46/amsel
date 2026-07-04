@@ -1,6 +1,6 @@
 #include "gba_implementation.h"
 #include "framework/global.h"
-#ifndef BUILD_WEB
+#ifdef BUILD_DESKTOP
 #include <imgui.h>
 #endif
 #include <format>
@@ -161,7 +161,7 @@ std::string getiHex(size_t input, int length){
 }
 
 void GbaImplementation::displayRegisters() {
-    #ifndef BUILD_WEB
+    #ifdef BUILD_DESKTOP
     gba::CpuRegisterState state = gba->getRegs();
 
     ImGui::BeginTable("Register", 2);

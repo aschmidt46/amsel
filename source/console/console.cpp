@@ -9,7 +9,7 @@
 #include "cgb_implementation.h"
 #endif
 #include "dummy_implementation.h"
-#ifndef BUILD_WEB
+#ifdef BUILD_DESKTOP
     #include "../framework/screen.h"
 #endif
 #include "../framework/global.h"
@@ -40,7 +40,7 @@ void createConsole(const char *path)
         console = new DummyImplementation();
     }
 
-    #ifndef BUILD_WEB
+    #ifdef BUILD_DESKTOP
         screen->onSwitchConsole();
     #endif
 }

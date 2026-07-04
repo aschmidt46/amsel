@@ -175,22 +175,26 @@ std::pair<std::string, int> Cpu::formatInstruction(AddressMode m, uint8_t op1, u
 
 void Cpu::unimplemented(const std::string &instruction)
 {
+    #ifdef BUILD_DESKTOP
     MessageStruct m{
         .type = MT_ERROR,
         .title = locale.getTranslation(EmulatorError),
         .content = std::vformat(locale.getTranslation(UnimplementedInstruction), std::make_format_args(instruction))
     };
     messageQueue.enqueue(m);
+    #endif
 }
 
 void Cpu::falseImplementation(const std::string &instruction)
 {
+    #ifdef BUILD_DESKTOP
     MessageStruct m{
         .type = MT_WARNING,
         .title = locale.getTranslation(EmulatorError),
         .content = std::vformat(locale.getTranslation(UnsafeInstruction), std::make_format_args(instruction))
     };
     messageQueue.enqueue(m);
+    #endif
 }
 
 uint8_t *Cpu::getMemoryAddress(AddressMode mode, uint8_t &cycles)
@@ -554,12 +558,14 @@ uint8_t Cpu::BRK(uint8_t *mem)
     setStatus(STATUS_INTERRUPT_DISABLE, true);
 
 
+    #ifdef BUILD_DESKTOP
     MessageStruct m{
         .type = MT_WARNING,
         .title = locale.getTranslation(EmulatorWarning),
         .content = locale.getTranslation(BRKExecuted)
     };
     messageQueue.enqueue(m);
+    #endif
 
     return 0;
 }

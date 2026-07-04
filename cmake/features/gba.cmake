@@ -28,7 +28,10 @@ source/console/console.h
 source/console/gba_implementation.h source/console/gba_implementation.cpp
 )
 
-target_compile_options(gba PUBLIC -Wall -Wextra -Wpedantic)
+target_compile_options(gba PUBLIC -Wall)
+
+set_property(TARGET gba PROPERTY
+  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 
 target_link_libraries(AMSEL gba)
