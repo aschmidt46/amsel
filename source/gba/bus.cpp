@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 extern "C"{
     #include <armdisasm.h>
 }
@@ -321,8 +322,7 @@ std::pair<std::string, std::vector<int>> gba::Bus::getPrevInstructions() {
 }
 
 std::vector<std::string> gba::Bus::removeBreakpointOP(std::string bp) {
-    breakpointsOP.erase(std::remove_if(breakpointsOP.begin(), breakpointsOP.end(), 
-                       [&](std::string i) { return i == bp; }), breakpointsOP.end());
+    std::erase_if(breakpointsOP, [&](std::string i) { return i == bp; });
 
 
     if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
@@ -398,8 +398,7 @@ std::vector<uint64_t> gba::Bus::addBreakpoint(uint64_t bp) {
 }
 
 std::vector<uint64_t> gba::Bus::removeBreakpoint(uint64_t bp) {
-  breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), 
-                       [&](uint16_t i) { return i == bp; }), breakpoints.end());
+  std::erase_if(breakpoints, [&](uint64_t i) { return i == bp; });
 
 
     if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
