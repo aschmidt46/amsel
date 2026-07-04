@@ -33,7 +33,7 @@ jobs:
       - run: mkdir -p build
       - name: Configure
         working-directory: ./build
-        run: cmake .. -DBUILD_WEB=OFF -DBUILD_GBA=OFF
+        run: cmake .. -DFEATURE_DESKTOP=ON
       - name: Build
         working-directory: ./build
         run: make
@@ -53,7 +53,7 @@ jobs:
       - uses: https://github.com/emscripten-core/setup-emsdk@v16
       - name: Configure
         working-directory: ./build
-        run: emcmake cmake .. -DBUILD_WEB=ON -DBUILD_GBA=OFF
+        run: emcmake cmake .. -DFEATURE_WEB=ON
       - name: Build WASM
         working-directory: ./build
         run: make
@@ -86,7 +86,7 @@ jobs:
         run: python transcode_json.py
       - name: Configure
         working-directory: ./build
-        run: cmake .. -DBUILD_WEB=OFF -DBUILD_GBA=ON
+        run: cmake .. -DFEATURE_TEST_SUITE=ON
       - name: Build
         working-directory: ./build
         run: make

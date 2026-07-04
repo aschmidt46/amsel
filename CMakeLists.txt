@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.22)
 
 # C++ Laufzeitbibliothek statisch verlinken auf MSVC
 #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -19,6 +19,10 @@ endif()
 
 
 include(FetchContent)
+
+# Schnellere Konfiguration
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
 file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/deps")
 message("Fetching headers...")
 include(${CMAKE_SOURCE_DIR}/cmake/fetch_headers.cmake)
@@ -37,6 +41,20 @@ option(FEATURE_GBA "GBA-Core" ON)
 include(CMakeDependentOption)
 
 cmake_dependent_option(FEATURE_DEBUGGER "Add Debugger to Desktop-App" ON FEATURE_DESKTOP OFF)
+cmake_dependent_option(FEATURE_CONSOLE "Add Console to Desktop App" ON FEATURE_DESKTOP OFF)
+
+cmake_dependent_option(FEATURE_GAMEBOY_CGB_SUPPORT "Gameboy supports CGB Games" ON FEATURE_CGB OFF)
+
+cmake_dependent_option(FEATURE_NES_NTSC "NTSC Region" ON FEATURE_NES OFF)
+cmake_dependent_option(FEATURE_LOCAL_MULTIPLAYER "Add local Multiplayer support" ON FEATURE_NES OFF)
+
+if(FEATURE_NES_NTSC)
+  add_compile_definitions(FEATURE_NTSC)
+endif()
+
+if(FEATURE_LOCAL_MULTIPLAYER)
+  add_compile_definitions(FEATURE_LOCAL_MULTIPLAYER)
+endif()
 
 if(FEATURE_DEBUGGER)
   add_compile_definitions(FEATURE_DEBUGGER)
@@ -45,14 +63,11 @@ endif()
 
 if(FEATURE_TEST_SUITE)
 
-  include(${CMAKE_SOURCE_DIR}/cmake/gba_test.cmake)
+  include(${CMAKE_SOURCE_DIR}/cmake/features/tests.cmake)
 
 else()
 
   if(FEATURE_DESKTOP)
-
-    message("Fetching dependencies...")
-    include(${CMAKE_SOURCE_DIR}/cmake/fetch_dependencies.cmake)
 
     include(${CMAKE_SOURCE_DIR}/cmake/features/desktop.cmake)
 

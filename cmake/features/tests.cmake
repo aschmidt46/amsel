@@ -70,3 +70,7 @@ include(GoogleTest)
 # set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
 gtest_discover_tests(gba_tests)
 
+if(FEATURE_CGB)
+  include(${CMAKE_SOURCE_DIR}/cmake/features/cgb.cmake)
+endif()
+

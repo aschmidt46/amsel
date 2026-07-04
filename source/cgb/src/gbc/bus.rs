@@ -87,20 +87,29 @@ impl Bus{
             test_mode: false, test_output: None
         }
     }
+
+    fn detect_cgb_capability(&mut self){
+        #[cfg(feature = "cgb")]
+        let feature_cfg = true;
+
+        #[cfg(not(feature = "cgb"))]
+        let feature_cfg = false;
+
+        if self.cart.as_mut().unwrap().cgb_flag & 0xC0 > 0 && feature_cfg {
+            self.cgb_mode = true;
+        }
+    }
+
     pub fn new_init(path: &str) -> Self{
         let mut bus = Bus::new();
         bus.cart = RomObject::new(path).ok();
-        if bus.cart.as_mut().unwrap().cgb_flag & 0xC0 > 0 {
-            bus.cgb_mode = true;
-        }
+        bus.detect_cgb_capability();
         bus
     }
     pub fn new_init_rom(rom: &Vec<u8>) -> Self{
         let mut bus = Bus::new();
         bus.cart = Some(RomObject::new_from_rom(rom.clone()));
-        if bus.cart.as_mut().unwrap().cgb_flag & 0xC0 > 0 {
-            bus.cgb_mode = true;
-        }
+        bus.detect_cgb_capability();
         bus
     }
     pub fn set_test_mode(&mut self){

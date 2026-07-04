@@ -7,10 +7,58 @@ add_compile_definitions(NES_ON_WINDOWS)
 endif()
 
 #Kein Terminal:
-if(RELEASE)
-message("------------- Building Windows release build")
+if(NOT FEATURE_CONSOLE)
+message("-------------> Building Windows release build")
 add_link_options(-mwindows)
 endif()
+
+# Abhängigkeiten:
+
+message("Fetching dependencies...")
+
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG        v1.92.5-docking # release-1.10.0
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/imgui"
+  )
+FetchContent_MakeAvailable(imgui)
+  
+set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
+FetchContent_Declare(
+  rtaudio
+  GIT_REPOSITORY  https://github.com/thestk/rtaudio.git
+  GIT_TAG         6.0.1
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/rtaudio"
+)
+FetchContent_MakeAvailable(rtaudio)
+
+FetchContent_Declare(
+  whereami
+  GIT_REPOSITORY  https://github.com/gpakosz/whereami.git
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/whereami"
+)
+FetchContent_MakeAvailable(whereami)
+
+set(GLFW_LIBRARY_TYPE STATIC)
+FetchContent_Declare(
+  glfw
+  GIT_REPOSITORY  https://github.com/glfw/glfw
+  GIT_TAG         3.4
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/glfw"
+)
+FetchContent_MakeAvailable(glfw)
+
+
+FetchContent_Declare(
+  glad
+  GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+  GIT_TAG        v2.0.8
+  SOURCE_SUBDIR	 cmake
+  )
+  
+  FetchContent_MakeAvailable(glad)
+
 
 include_directories(PUBLIC include_deps)
 include_directories(PUBLIC include)
@@ -75,7 +123,7 @@ if(UNIX AND NOT APPLE)
 target_link_libraries(AMSEL "-lX11")
 endif()
 
-
+make_directory(${CMAKE_BINARY_DIR}/locales/)
 
 add_custom_command(
         TARGET AMSEL POST_BUILD
@@ -90,16 +138,3 @@ if(RELEASE)
                    COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --cyan
                    "Built Windows Release for x64 in ./release")
 endif()
-
-
-
-# TESTS
-
-message("Preparing files for testing...")
-FetchContent_Declare(
-  gb-test-roms
-  GIT_REPOSITORY https://github.com/retrio/gb-test-roms.git
-  GIT_TAG        master
-  SOURCE_DIR "${PROJECT_SOURCE_DIR}/source/cgb/resources/gb-test-roms-master"
-  )
-FetchContent_MakeAvailable(gb-test-roms)

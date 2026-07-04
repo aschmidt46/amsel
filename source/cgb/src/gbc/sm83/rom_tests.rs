@@ -1,14 +1,11 @@
 
 #[cfg(test)]
 mod rom_tests {
-    use std::cell::RefCell;
     use std::fs::File;
     use std::io::BufRead;
     use std::io::BufReader;
-    use std::rc::Rc;
 
     use crate::CGB;
-    use crate::gbc::bus::Bus;
     use crate::gbc::sm83::SM83;
     use crate::gbc::sm83::Register8;
     use crate::gbc::sm83::Register16;
@@ -81,7 +78,7 @@ mod rom_tests {
     }
 
     // mesen log
-    fn test_rom_against_log_new(rom_path: &str, log_path: &str, pc_off: u16){
+    fn test_rom_against_log_new(rom_path: &str, log_path: &str, _pc_off: u16){
         let mut cgb = CGB::new(rom_path);
         cgb.bus.borrow_mut().force_ly(0x92);
         cgb.bus.borrow_mut().force_ppu_cycle(0xAF);

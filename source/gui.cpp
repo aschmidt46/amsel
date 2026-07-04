@@ -530,10 +530,12 @@ void Gui::drawControlSettings()
           drawControlSettingsPage(1);
           ImGui::EndTabItem();
         }
+        #ifdef FEATURE_LOCAL_MULTIPLAYER
         if(ImGui::BeginTabItem(locale.getTranslation(Controller2).c_str(), &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
           drawControlSettingsPage(2);
           ImGui::EndTabItem();
         }
+        #endif
       ImGui::EndTabBar();
     }
   ImGui::End();}

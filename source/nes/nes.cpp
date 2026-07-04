@@ -101,22 +101,26 @@ void NES::clock()
     }
     if(halt && allowedClocks==0) return;
 
-    ppu->clock();
     numClocks++;
-    if(numClocks%3==0){
+    if(numClocks%ppuDivisor==0){
+        ppu->clock();
+    }
+    if(numClocks%cpuDivisor==0){
         if(produceDisassembly)
             std::lock_guard<std::mutex> lock(debugM);
         bool cpuAdvanced = cpu->clockCPU();
         apu->clock();
         controller1->clock();
         controller2->clock();
-        numClocks = 0;
 
         // Debug
         if(cpuAdvanced && produceDisassembly){
             if(allowedClocks > 0)
                 allowedClocks--;
         }
+    }
+    if(numClocks%ppuDivisor==0 && numClocks%cpuDivisor==0){
+        numClocks = 0;
     }
     if(ppu->frameReady){
         frameReady = true;
@@ -201,7 +205,9 @@ void NES::setController1Key(bool gamepad, int key, int action)
 
 void NES::setController2Key(bool gamepad, int key, int action)
 {
+    #ifdef FEATURE_LOCAL_MULTIPLAYER
     controller2->setKey(gamepad, key, action);
+    #endif
 }
 
 // Debug Funktionen

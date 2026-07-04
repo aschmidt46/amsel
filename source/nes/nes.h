@@ -35,10 +35,22 @@ class NES{
     std::shared_ptr<Mapper> mapper = nullptr;
     
     std::chrono::time_point<std::chrono::high_resolution_clock> t1 = std::chrono::high_resolution_clock::now();
-    
+
+    #ifdef FEATURE_NTSC
+    const double systemClock = 	21477272.0;
+    const int cpuDivisor = 12;
+    const int ppuDivisor = 4;
+
+    #else
+    const double systemClock = 	26601712.0;
+    const int cpuDivisor = 16;
+    const int ppuDivisor = 5;
+    #endif
+
+
     const double sampleRate = 20000;
     const double audioTimePerSystemSample = 1.0 / sampleRate;
-    const double audioTimePerNESClock = 1.0 / 5369318.0; // ppu clock
+    const double audioTimePerNESClock = 1.0 / systemClock;
     double audioTime = 0.0;
     const float x = 256.0f;
     const float y = 240.0f;
