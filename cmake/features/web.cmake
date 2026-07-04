@@ -24,9 +24,9 @@ source/framework/global_web.cpp
 )
 # target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
 
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
+# target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 
-target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
+# target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 
 set_target_properties(AMSEL PROPERTIES LINK_FLAGS "--bind --emit-tsd AMSEL.d.ts -s TOTAL_STACK=512mb -s EXPORT_ES6=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -s SINGLE_FILE=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -s WASM=1 -Wall -s MODULARIZE=1")
 

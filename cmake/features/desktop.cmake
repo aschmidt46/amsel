@@ -55,9 +55,10 @@ source/console/dummy_implementation.h
 source/framework/glm_replacement.h
 )
 
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
+target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
 
-target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
+# target_compile_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
+# target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 
 #target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
 

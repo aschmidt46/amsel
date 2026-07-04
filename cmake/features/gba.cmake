@@ -28,8 +28,7 @@ source/console/console.h
 source/console/gba_implementation.h source/console/gba_implementation.cpp
 )
 
-target_compile_options(gba PUBLIC -Wall -Wextra -Wpedantic -fsanitize=undefined)
+target_compile_options(gba PUBLIC -Wall -Wextra -Wpedantic)
 
-target_link_options(gba PUBLIC -fsanitize=undefined)
 
 target_link_libraries(AMSEL gba)
