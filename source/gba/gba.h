@@ -19,7 +19,7 @@ namespace gba{
         GBA(const char* path);
         GBA(const std::vector<uint8_t> &bytes);
 
-        float* accessFramebuffer();
+        uint8_t* accessFramebuffer();
         void clock();
         void clockUntilSampleReady();
         bool hasFrame();

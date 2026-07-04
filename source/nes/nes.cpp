@@ -137,9 +137,9 @@ void NES::clock()
     this->newAudioSample = audioSampleReady;
 }
 
-float *NES::accessFramebuffer()
+uint8_t *NES::accessFramebuffer()
 {
-    return ppu->backBuffer.data();
+    return (uint8_t*)ppu->backBuffer.data();
 }
 
 bool NES::frameIsReady()

@@ -62,7 +62,7 @@ pub mod ffi{
 
         fn release_joypad(cgb: &mut Box<CGB>, b: usize);
     
-        fn access_framebuffer(cgb: &Box<CGB>) -> *const f32;
+        fn access_framebuffer(cgb: &Box<CGB>) -> *const u32;
     
         fn set_sample_rate(cgb: &mut Box<CGB>, sample_rate: f64);
     
@@ -142,8 +142,8 @@ fn press_joypad(cgb: &mut Box<CGB>, b: usize){
 fn release_joypad(cgb: &mut Box<CGB>, b: usize){
     cgb.release_joypad(b);
 }
-fn access_framebuffer(cgb: &Box<CGB>) -> *const f32{
-    cgb.access_float_framebuffer()
+fn access_framebuffer(cgb: &Box<CGB>) -> *const u32{
+    cgb.access_framebuffer()
 }
 fn set_sample_rate(cgb: &mut Box<CGB>, sample_rate: f64){
     cgb.set_sample_rate(sample_rate);

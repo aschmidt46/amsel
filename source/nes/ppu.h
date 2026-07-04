@@ -72,8 +72,8 @@ class Ppu{
     std::shared_ptr<Mapper> mapper = nullptr;
 
     // Output, nicht Teil der PPU
-    std::vector<float> pixelBuffer;
-    std::vector<float> backBuffer;
+    std::vector<uint32_t> pixelBuffer;
+    std::vector<uint32_t> backBuffer;
     Palette pal;
 
 
@@ -100,8 +100,8 @@ class Ppu{
             spriteShifterCHRHigh[i] = 0;
         }
         // rgba
-        backBuffer = std::vector<float>(256*240*4, 0);
-        pixelBuffer = std::vector<float>(256*240*4, 0);
+        backBuffer = std::vector<uint32_t>(256*240, 0);
+        pixelBuffer = std::vector<uint32_t>(256*240, 0);
         internalMemory = std::vector<uint8_t>(0x0800, 0);
         for(int i = 0; i < 0x0020; i++){
             palletteIndexes[i] = 0;
@@ -123,7 +123,7 @@ class Ppu{
 
     bool unevenFrame = true;
     void clock();
-    void setPixel(int x, int y, vec3 c);
+    void setPixel(int x, int y, uint32_t c);
     void swapBuffers();
 
     int toggleSpriteRenderIn = -1;

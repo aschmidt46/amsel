@@ -16,7 +16,7 @@ class CgbImplementation : public Console{
     void load(const char* path) override;
     void clock() override;
     void clockUntilSampleReady() override;
-    const float* accessFramebuffer() override;
+    const uint8_t* accessFramebuffer() override;
     bool frameIsReady() override;
     bool audioSampleReady() override;
     std::pair<double, double> getSample() override;

@@ -18,8 +18,13 @@
 
 #include "framework/file_io.h"
 #include "framework/input.h"
+#ifdef BUILD_NES
 #include "console/nes_implementation.h"
+#endif
+
+#ifdef BUILD_CGB
 #include "console/cgb_implementation.h"
+#endif
 #include "framework/screen.h"
 
 std::string ghex(uintptr_t input){

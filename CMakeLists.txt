@@ -31,6 +31,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 option(FEATURE_WEB "Build WebAssembly for Web-App" OFF)
 option(FEATURE_DESKTOP "Build Desktop-App" ON)
+option(FEATURE_LIBRETRO_CORE "Build Libretro-Core" OFF)
 
 option(FEATURE_TEST_SUITE "GBA Tests" OFF)
 
@@ -73,9 +74,17 @@ else()
 
   else()
 
-    add_compile_definitions(BUILD_WEB)
+    if(FEATURE_WEB)
 
-    include(${CMAKE_SOURCE_DIR}/cmake/features/web.cmake)
+      add_compile_definitions(BUILD_WEB)
+
+      include(${CMAKE_SOURCE_DIR}/cmake/features/web.cmake)
+
+    else()
+
+      include(${CMAKE_SOURCE_DIR}/cmake/features/libretro.cmake)
+
+    endif()
 
   endif()
 

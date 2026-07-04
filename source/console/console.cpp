@@ -1,14 +1,19 @@
 #include "console.h"
+#ifdef BUILD_GBA
 #include "gba_implementation.h"
+#endif
+#ifdef BUILD_NES
 #include "nes_implementation.h"
+#endif
+#ifdef BUILD_CGB
 #include "cgb_implementation.h"
+#endif
 #include "dummy_implementation.h"
 #ifndef BUILD_WEB
     #include "../framework/screen.h"
 #endif
 #include "../framework/global.h"
 
-#ifndef BUILD_WEB
 void createConsole(const char *path)
 {
     std::lock_guard lock{consoleLock};
@@ -22,12 +27,12 @@ void createConsole(const char *path)
     }
     #endif
     #ifdef BUILD_CGB
-    else if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
+    if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
         console = new CgbImplementation(filename.c_str());
     }
     #endif
     #ifdef BUILD_GBA
-    else if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
+    if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
         console = new GbaImplementation(filename.c_str());
     }
     #endif
@@ -40,28 +45,27 @@ void createConsole(const char *path)
     #endif
 }
 
-#else
-
-std::unique_ptr<Console> createConsole(std::string filename, std::vector<uint8_t> rom)
+std::unique_ptr<Console> createConsoleFromData(std::string filename, std::vector<uint8_t> rom)
 {
-    std::unique_ptr<Console> c;
+    std::unique_ptr<Console> c = std::make_unique<DummyImplementation>();
+    #ifdef BUILD_NES
     if(filename.substr(filename.find_last_of(".") + 1) == "nes"){
         c = std::make_unique<NesImplementation>(rom);
     }
-    else if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
+    #endif
+    #ifdef BUILD_CGB
+    if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
         c = std::make_unique<CgbImplementation>(rom);
     }
-    else if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
+    #endif
+    #ifdef BUILD_GBA
+    if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
         c = std::make_unique<GbaImplementation>(rom);
     }
-    else{
-        c = std::make_unique<DummyImplementation>();
-    }
+    #endif
     c->setName(filename);
     return c;
 }
-
-#endif
 
 std::string Console::ihex(uintptr_t input)
 {
@@ -128,7 +132,7 @@ EMSCRIPTEN_BINDINGS(ConsoleModule) {
     ;
 
 //   smart_ptr<std::shared_ptr<Console>>("CXXConsole");
-  function("createConsole", &createConsole);
+  function("createConsole", &createConsoleFromData);
 }
 
 #endif

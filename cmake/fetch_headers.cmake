@@ -64,3 +64,12 @@ FetchContent_Declare(
   SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/cereal"
 )
 FetchContent_Populate(cereal)
+
+FetchContent_Declare(
+  libretro
+  GIT_REPOSITORY      https://github.com/libretro/libretro-common
+  GIT_TAG             master
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/libretro-common"
+)
+FetchContent_Populate(libretro)
+file(COPY "${PROJECT_SOURCE_DIR}/deps/libretro-common/include/libretro.h" DESTINATION ${SOURCE_INCLUDE_DIR})

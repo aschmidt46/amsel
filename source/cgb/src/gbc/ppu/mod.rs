@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Weak, sync::atomic::AtomicU8};
+use std::{cell::RefCell, rc::Weak};
 
 use crate::{gbc::bus::Bus};
 
@@ -6,7 +6,7 @@ const N: usize = 160 * 144 * 4;
 
 
 pub struct PPU{
-    pub (crate) framebuffer: Vec<AtomicU8>,
+    pub (crate) framebuffer: Vec<u32>,
     pub (crate) float_framebuffer: Vec<f32>,
     pub (crate) vram: [[u8; 0x2000]; 2], // Beide Bänke zu je 8KiB
     pub (crate) bank_select: usize,
@@ -39,9 +39,9 @@ pub struct PPU{
     wy_count: u8,
 }
 
-fn create_framebuffer() -> Vec<AtomicU8>{
+fn create_framebuffer() -> Vec<u32>{
     let mut v = Vec::new();
-    v.resize_with(N, || AtomicU8::new(255));
+    v.resize_with(N / 4, || 255);
     v
 }
 
@@ -548,10 +548,8 @@ impl PPU{
         (x + 160 * y) * 4 + 0 // Kanal 0 (rot) angenommen
     }
     fn set_pixel(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8){
-        self.framebuffer[Self::index_framebuffer(x, y)].store(r, std::sync::atomic::Ordering::Relaxed);
-        self.framebuffer[Self::index_framebuffer(x, y) + 1].store(g, std::sync::atomic::Ordering::Relaxed);
-        self.framebuffer[Self::index_framebuffer(x, y) + 2].store(b, std::sync::atomic::Ordering::Relaxed);
-        self.framebuffer[Self::index_framebuffer(x, y) + 3].store(255, std::sync::atomic::Ordering::Relaxed);
+        let col : u32 = ((255 as u32) << 24) | ((b as u32) << 16) | ((g as u32) << 8) | (r as u32);
+        self.framebuffer[Self::index_framebuffer(x, y) / 4] = col;
 
         self.float_framebuffer[Self::index_framebuffer(x, y)] = r as f32 / 255.0;
         self.float_framebuffer[Self::index_framebuffer(x, y) + 1] = g as f32 / 255.0;

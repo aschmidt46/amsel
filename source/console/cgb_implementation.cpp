@@ -179,9 +179,9 @@ void CgbImplementation::clockUntilSampleReady()
   cgb_clock_until_samle_ready(cgb);
 }
 
-const float *CgbImplementation::accessFramebuffer()
+const uint8_t *CgbImplementation::accessFramebuffer()
 {
-  return access_framebuffer(cgb);
+  return (uint8_t*)access_framebuffer(cgb);
 }
 
 bool CgbImplementation::frameIsReady()

@@ -7,7 +7,7 @@ pub mod cartridge;
 pub mod apu;
 
 pub(crate) mod gbc{
-    use std::{cell::RefCell, rc::Rc, sync::atomic::AtomicU8};
+    use std::{cell::RefCell, rc::Rc};
     use crate::gbc::{bus::Bus, sm83::{Register8, Register16}};
 
     const CGB_CLOCK: f64 = 4194304.0;
@@ -65,7 +65,7 @@ pub(crate) mod gbc{
             self.bus.borrow_mut().release_joypad(b);
         }
     
-        pub fn access_framebuffer(&self) -> *const AtomicU8{
+        pub fn access_framebuffer(&self) -> *const u32{
             (self.bus.borrow()).ppu.as_ref().unwrap().framebuffer.as_ptr()
         }
         pub fn access_float_framebuffer(&self) -> *const f32{

@@ -292,7 +292,7 @@ void gba::Bus::clock() {
 
 }
 
-float *gba::Bus::accessFramebuffer()
+uint32_t *gba::Bus::accessFramebuffer()
 {
     return ppu.accessFramebuffer();
 }

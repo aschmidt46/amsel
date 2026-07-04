@@ -9,7 +9,7 @@
 namespace gba{
     class Bus;
     class PPU{
-        std::vector<float> framebuffer;
+        std::vector<uint32_t> framebuffer;
 
         // Vram
         std::vector<Byte> paletteRam;
@@ -70,14 +70,14 @@ namespace gba{
         
         public:
         PPU() = default;
-        PPU(std::weak_ptr<Bus> bptr) : framebuffer(240*160*4, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), bus(bptr){};
-        float* accessFramebuffer();
+        PPU(std::weak_ptr<Bus> bptr) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), bus(bptr){};
+        uint32_t* accessFramebuffer();
 
         void clock();
 
         bool hasFrame();
 
-        void setPixel(int x, int y, float cr, float cg, float cb);
+        void setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb);
 
         void drawPixelMode0();
         void drawPixelMode1();

@@ -49,7 +49,7 @@ namespace gba{
 
         void clock();
 
-        float* accessFramebuffer();
+        uint32_t* accessFramebuffer();
         bool hasFrame();
         void setHalt(bool to);
         bool isHalted();

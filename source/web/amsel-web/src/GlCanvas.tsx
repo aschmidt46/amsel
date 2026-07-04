@@ -37,9 +37,9 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
         const gl = cur.getContext("webgl2", {preserveDrawingBuffer: true})!;
         if(!gl) return;
 
-        if (!gl.getExtension('EXT_color_buffer_float')){
-            throw new Error('Rendering to floating point textures is not supported on this platform');
-        }
+        // if (!gl.getExtension('EXT_color_buffer_float')){
+        //     throw new Error('Rendering to floating point textures is not supported on this platform');
+        // }
 
         if(emuObject){
             const ratio = emuObject.getX() / emuObject.getY();
@@ -135,8 +135,8 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 2, 2, 0, gl.RGBA, gl.FLOAT,
-                new Float32Array([0, 0, 1, 1,   1, 0, 0, 1,     0, 1, 0, 1,     1, 1, 1, 1]));
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                new Int32Array([0, 0, 1, 1,   1, 0, 0, 1,     0, 1, 0, 1,     1, 1, 1, 1]));
 
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -183,7 +183,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
                 if(emuObject){
     
                     gl.bindTexture(gl.TEXTURE_2D, texture);
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, emuObject.getX(), emuObject.getY(), 0, gl.RGBA, gl.FLOAT,
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, emuObject.getX(), emuObject.getY(), 0, gl.RGBA, gl.UNSIGNED_BYTE,
                     emuObject.accessFramebufferJS());
                     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);

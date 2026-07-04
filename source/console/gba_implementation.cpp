@@ -29,7 +29,7 @@ void GbaImplementation::clockUntilSampleReady() {
     gba->clockUntilSampleReady();
 }
 
-const float *GbaImplementation::accessFramebuffer()
+const uint8_t *GbaImplementation::accessFramebuffer()
 {
     return gba->accessFramebuffer();
 }

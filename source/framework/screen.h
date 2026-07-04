@@ -147,6 +147,6 @@ class Screen{
     void onSwitchConsole();
     void present();
     void setPixelColor(int x, int y, vec3 c);
-    void copyBufferToScreen(const float* buffer);   //float array, jeder Wert ist eine Farbe zwischen 0 und 1
+    void copyBufferToScreen(const uint8_t* buffer);   //float array, jeder Wert ist eine Farbe zwischen 0 und 1
     void updateFramebufferSize(int w, int h);
 };

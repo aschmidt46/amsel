@@ -31,7 +31,7 @@ void NesImplementation::clockUntilSampleReady()
     }
 }
 
-const float *NesImplementation::accessFramebuffer()
+const uint8_t *NesImplementation::accessFramebuffer()
 {
     return this->console.accessFramebuffer();
 }

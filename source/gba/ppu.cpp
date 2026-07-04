@@ -2,7 +2,7 @@
 #include "bus.h"
 #include <iostream>
 
-float *gba::PPU::accessFramebuffer()
+uint32_t *gba::PPU::accessFramebuffer()
 {
     return framebuffer.data();
 }
@@ -70,25 +70,23 @@ bool gba::PPU::hasFrame() {
     return tmp;
 }
 
-void gba::PPU::setPixel(int x, int y, float cr, float cg, float cb)
+void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 {
-    int index = (x + 240 * y) * 4;
-    framebuffer[index] = cr;
-    framebuffer[index + 1] = cg;
-    framebuffer[index + 2] = cb;
-	framebuffer[index + 3] = 1.0f;
+    int index = (x + 240 * y);
+    uint32_t col = (255 << 24) | (cb << 16) | (cg << 8) | (cr);
+    framebuffer[index] = col;
 }
 
 void gba::PPU::drawPixelMode0() {
-    setPixel(currentCycle, currentScanline, 1.0, 0.0, 0.0);
+    setPixel(currentCycle, currentScanline, 255, 0, 0);
 }
 
 void gba::PPU::drawPixelMode1() {
-    setPixel(currentCycle, currentScanline, 0.0, 0.0, 1.0);
+    setPixel(currentCycle, currentScanline, 0, 0, 255);
 }
 
 void gba::PPU::drawPixelMode2() {
-    setPixel(currentCycle, currentScanline, 1.0, 1.0, 1.0);
+    setPixel(currentCycle, currentScanline, 255, 255, 255);
 }
 
 void gba::PPU::drawPixelMode3() {
@@ -97,7 +95,7 @@ void gba::PPU::drawPixelMode3() {
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
-    setPixel(currentCycle, currentScanline, float(red) / 31.0f, float(green) / 31.0f, float(blue) / 31.0f);
+    setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
 }
 
 void gba::PPU::drawPixelMode4() {
@@ -108,11 +106,11 @@ void gba::PPU::drawPixelMode4() {
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
-    setPixel(currentCycle, currentScanline, float(red) / 31.0f, float(green) / 31.0f, float(blue) / 31.0f);
+    setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
 }
 
 void gba::PPU::drawPixelMode5() {
-    setPixel(currentCycle, currentScanline, 0.0f, 1.0f, 0.0f);
+    setPixel(currentCycle, currentScanline, 0, 255, 0);
 }
 
 void gba::PPU::writePPURegister(Word addr, Byte val) {

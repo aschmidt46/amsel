@@ -70,17 +70,14 @@ void Ppu::clock()
 	}
 }
 
-void Ppu::setPixel(int x, int y, vec3 c)
+void Ppu::setPixel(int x, int y, uint32_t c)
 {
-    int index = (x + 256 * y) * 4;//alter Index: (3*x) + (3*256*y);
+    int index = (x + 256 * y);//alter Index: (3*x) + (3*256*y);
 	if(x > 255 || y > 239 || x < 0 || y < 0){
 		//std::cout << "Pixel out of bounds: " << "x: " << x << ", y: " << y << std::endl;
 		return;
 	}
-    pixelBuffer[index] = c.r;
-    pixelBuffer[index + 1] = c.g;
-    pixelBuffer[index + 2] = c.b;
-	pixelBuffer[index + 3] = 1.0f;
+    pixelBuffer.data()[index] = c;
 }
 
 void Ppu::swapBuffers()

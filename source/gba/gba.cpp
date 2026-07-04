@@ -12,9 +12,9 @@ gba::GBA::GBA(const std::vector<uint8_t> &bytes)
     bus->init();
 }
 
-float *gba::GBA::accessFramebuffer()
+uint8_t *gba::GBA::accessFramebuffer()
 {
-    return bus->accessFramebuffer();
+    return (uint8_t*)bus->accessFramebuffer();
 }
 
 void gba::GBA::clock() {

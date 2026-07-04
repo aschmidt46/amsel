@@ -30,15 +30,15 @@ Palette::Palette()
     }
 }
 
-vec3 Palette::getColor(uint8_t index)
+uint32_t Palette::getColor(uint8_t index)
 {
     if(3*index + 2 > 192) {
         std::cout << "Palette-Index außer Reichweite!" << std::endl;
         throw;
     }
-    float r,g,b;
+    uint32_t r,g,b;
     r = colors[3*index];
     g = colors[3*index+1];
     b = colors[3*index+2];
-    return vec3(r/255.0f,g/255.0f,b/255.0f);
+    return (255u << 24) | (r) | (g << 8) | (b << 16);
 }

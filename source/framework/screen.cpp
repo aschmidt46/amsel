@@ -144,12 +144,12 @@ void Screen::present()
 
 void Screen::setPixelColor(int x, int y, vec3 c)
 {
-    glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGB, GL_FLOAT, &c);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &c);
 }
 
-void Screen::copyBufferToScreen(const float *buffer)
+void Screen::copyBufferToScreen(const uint8_t *buffer)
 {
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, console->getX(), console->getY(), GL_RGBA, GL_FLOAT, buffer);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, console->getX(), console->getY(), GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 }
 
 // Abbildung des Konsolen-Seitenverhätnisses auf den Bildschirm

@@ -72,7 +72,7 @@ class NES{
     void eject();
     void reset();
     void clock();
-    float* accessFramebuffer();
+    uint8_t* accessFramebuffer();
     bool frameIsReady();
     bool hasAudioSample();
     bool shouldChangeTitle();

@@ -2,8 +2,8 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#ifdef BUILD_WEB    
 #include <memory>
+#ifdef BUILD_WEB    
 #include <emscripten.h>
 #include <emscripten/bind.h>
 using namespace emscripten;
@@ -28,7 +28,7 @@ class Console{
     virtual void load(const char* path) = 0;
     virtual void clock() = 0;
     virtual void clockUntilSampleReady() = 0;
-    virtual const float* accessFramebuffer() = 0;
+    virtual const uint8_t* accessFramebuffer() = 0;
     virtual bool frameIsReady() = 0;
     virtual bool audioSampleReady() = 0;
     // Stereo sample
@@ -75,16 +75,9 @@ class Console{
 
 };
 
-#ifndef BUILD_WEB
 
 void createConsole(const char* path);
 
-#else
+std::unique_ptr<Console> createConsoleFromData(std::string filename, std::vector<uint8_t> rom);
 
-std::unique_ptr<Console> createConsole(std::string filename, std::vector<uint8_t> rom);
-
-
-
-
-#endif
 

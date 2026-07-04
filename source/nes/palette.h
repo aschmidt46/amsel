@@ -26,5 +26,5 @@ struct Palette{
     Palette(const char* path);
     Palette();
     ~Palette(){};
-    vec3 getColor(uint8_t index);
+    uint32_t getColor(uint8_t index);
 };
