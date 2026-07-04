@@ -2,7 +2,7 @@
     "displayName": "English",
     "strings": [
         "Select ROM",
-        "Rom-Files (.nes, .gb, .gbc)",
+        "Rom-Files",
         "Back",
         "Up",
         "Down",
@@ -83,7 +83,7 @@
         "Fullscreen",
         "CRT Shader",
         "Sound",
-        "Debug",
+        "Extras",
         "Debugger",
         "Text output",
         "A save file has been created!",
@@ -105,6 +105,7 @@
         "Save file",
         "Mood lighting",
         "Read 4 Bytes",
-        "Last transaction:"
+        "Last transaction:",
+        "Nintendo Gameboy Advance (GBA)"
     ]
 }

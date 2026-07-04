@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import Module from './emscripten/AMSEL-web.js'
+import Module from './emscripten/AMSEL.js'
 import { InputHandler } from './input.js'
-import type { CXXConsole, MainModule } from './emscripten/AMSEL-web.js'
+import type { CXXConsole, MainModule } from './emscripten/AMSEL.js'
 import { LocalizationContext } from './LocalizationContext.js'
 import { GameController } from './GameController.js'
 import { GlCanvas } from './GlCanvas.js'
@@ -114,7 +114,7 @@ function App() {
               </div>
             </div>
             <div>
-              <input type='file' accept='.gb, .gbc, .nes' id='file' ref={inputFile} onChange={handleFileSelected} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
+              <input type='file' accept='.gb, .gbc, .nes, .gba' id='file' ref={inputFile} onChange={handleFileSelected} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
               <button onClick={onButtonClick} onKeyDown={preventInput} onKeyUp={preventInput} className='btn btn-ghost'>{lang.getTranslation("ChooseRom")}</button>
             </div>
             <span>{showTitle()}</span>
@@ -177,8 +177,9 @@ function App() {
             <p className="py-4">{lang.getTranslation("AboutContent")}</p>
             <p className="py-4">{lang.getTranslation("AboutSystem")}</p>
             <ul>
-              <li>{lang.getTranslation("AboutSystem1")}</li>
-              <li>{lang.getTranslation("AboutSystem2")}</li>
+              <li>{lang.getTranslation("ConsoleDescriptionCGB")}</li>
+              <li>{lang.getTranslation("ConsoleDescriptionNES")}</li>
+              <li>{lang.getTranslation("ConsoleDescriptionGBA")}</li>
             </ul>
             <p className='py-4'>{lang.getTranslation("SettingsControls")+":"}</p>
             {/* TODO */}

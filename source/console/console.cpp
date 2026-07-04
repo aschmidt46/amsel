@@ -14,19 +14,24 @@ void createConsole(const char *path)
     std::lock_guard lock{consoleLock};
     std::string filename(path);
     delete console;
+    console = nullptr;
+    #ifdef BUILD_NES
     if(filename.substr(filename.find_last_of(".") + 1) == "nes"){
         console = new NesImplementation();
         console->load(filename.c_str());
     }
-    #ifndef BUILD_WEB
+    #endif
+    #ifdef BUILD_CGB
     else if(filename.substr(filename.find_last_of(".") + 1) == "gb" || filename.substr(filename.find_last_of(".") + 1) == "gbc"){
         console = new CgbImplementation(filename.c_str());
     }
     #endif
+    #ifdef BUILD_GBA
     else if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
         console = new GbaImplementation(filename.c_str());
     }
-    else{
+    #endif
+    if(console == nullptr){
         console = new DummyImplementation();
     }
 

@@ -156,7 +156,7 @@ void gba::PPU::writePPUMemory(Word addr, Byte value) {
         paletteRam[mod] = value;
     }
     else if(addr >= 0x06000000 && addr < 0x07000000){
-        auto relAddr = (addr - 0x06000000);
+        // auto relAddr = (addr - 0x06000000);
         auto mod = addr % 0x20000;
         if(mod >= 0x18000) mod -= 0x8000;
         vRam[mod] = value;
@@ -174,7 +174,7 @@ gba::Byte gba::PPU::readPPUMemory(Word addr)
         return paletteRam[mod];
     }
     else if(addr >= 0x06000000 && addr < 0x07000000){
-        auto relAddr = (addr - 0x06000000);
+        // auto relAddr = (addr - 0x06000000);
         auto mod = addr % 0x20000;
         if(mod >= 0x18000) mod -= 0x8000;
         return vRam[mod];

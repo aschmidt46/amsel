@@ -1,4 +1,4 @@
-import type { CXXConsole } from "./emscripten/AMSEL-web";
+import type { CXXConsole } from "./emscripten/AMSEL";
 
 const jsToGLFW : Map<string, number> = new Map
     ([

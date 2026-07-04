@@ -142,22 +142,22 @@ uint8_t GbaImplementation::readCpuBus(uint64_t addr)
     return gba->readBus(addr);
 }
 
-std::string thex(uintptr_t input)
+std::string tihex(uintptr_t input)
 {
     std::string str = std::format("{:x}", input);
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
     return str;
 }
 
-std::string thexNorm(std::string s, int n)
+std::string tihexNorm(std::string s, int n)
 {
     while ((int)s.size() < n)
         s = "0" + s;
     return s;
 }
 
-std::string getHex(size_t input, int length){
-    return "0x"+thexNorm(thex(input), length);
+std::string getiHex(size_t input, int length){
+    return "0x"+tihexNorm(tihex(input), length);
 }
 
 void GbaImplementation::displayRegisters() {
@@ -168,7 +168,7 @@ void GbaImplementation::displayRegisters() {
     ImGui::TableNextColumn();
     
     for(int i = 0; i < 16; i++){
-        ImGui::Text(("R"+std::to_string(i)+":\t\t"+getHex(state.R[i],8)).c_str());
+        ImGui::Text(("R"+std::to_string(i)+":\t\t"+getiHex(state.R[i],8)).c_str());
     }
     ImGui::Text("");
     ImGui::Text("");
@@ -182,28 +182,28 @@ void GbaImplementation::displayRegisters() {
     ImGui::TableNextColumn();
 
     for(int i = 0; i < 7; i++){
-        ImGui::Text(("R"+std::to_string(i+8)+"_fiq: \t"+getHex(state.R_fiq[i],8)).c_str());
+        ImGui::Text(("R"+std::to_string(i+8)+"_fiq: \t"+getiHex(state.R_fiq[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_svc:\t"+getHex(state.R_svc[i],8)).c_str());
+        ImGui::Text(("R"+std::to_string(i+13)+"_svc:\t"+getiHex(state.R_svc[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_abt:\t"+getHex(state.R_abt[i],8)).c_str());
+        ImGui::Text(("R"+std::to_string(i+13)+"_abt:\t"+getiHex(state.R_abt[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_irq:\t"+getHex(state.R_irq[i],8)).c_str());
+        ImGui::Text(("R"+std::to_string(i+13)+"_irq:\t"+getiHex(state.R_irq[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_und:\t"+getHex(state.R_und[i],8)).c_str());
+        ImGui::Text(("R"+std::to_string(i+13)+"_und:\t"+getiHex(state.R_und[i],8)).c_str());
     }
-    ImGui::Text(("CPSR: \t\t"+getHex(state.CPSR, 8)).c_str());
-    ImGui::Text(("SPSR_fiq:\t"+getHex(state.SPSR[0],8)).c_str());
-    ImGui::Text(("SPSR_svc:\t"+getHex(state.SPSR[1],8)).c_str());
-    ImGui::Text(("SPSR_abt:\t"+getHex(state.SPSR[2],8)).c_str());
-    ImGui::Text(("SPSR_irq:\t"+getHex(state.SPSR[3],8)).c_str());
-    ImGui::Text(("SPSR_und:\t"+getHex(state.SPSR[4],8)).c_str());
-    ImGui::Text(("Pipeline[0]:\t"+getHex(state.Pipeline[0],8)).c_str());
-    ImGui::Text(("Pipeline[1]:\t"+getHex(state.Pipeline[1],8)).c_str());
+    ImGui::Text(("CPSR: \t\t"+getiHex(state.CPSR, 8)).c_str());
+    ImGui::Text(("SPSR_fiq:\t"+getiHex(state.SPSR[0],8)).c_str());
+    ImGui::Text(("SPSR_svc:\t"+getiHex(state.SPSR[1],8)).c_str());
+    ImGui::Text(("SPSR_abt:\t"+getiHex(state.SPSR[2],8)).c_str());
+    ImGui::Text(("SPSR_irq:\t"+getiHex(state.SPSR[3],8)).c_str());
+    ImGui::Text(("SPSR_und:\t"+getiHex(state.SPSR[4],8)).c_str());
+    ImGui::Text(("Pipeline[0]:\t"+getiHex(state.Pipeline[0],8)).c_str());
+    ImGui::Text(("Pipeline[1]:\t"+getiHex(state.Pipeline[1],8)).c_str());
     ImGui::EndTable();
 
     ImGui::Separator();

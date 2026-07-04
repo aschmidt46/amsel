@@ -98,13 +98,14 @@ const localStrings = [
     "AboutTitle",
     "AboutContent",
     "AboutSystem",
-    "AboutSystem1",
-    "AboutSystem2",
+    "ConsoleDescriptionCGB",
+    "ConsoleDescriptionNES",
     "AboutSource",
     "Close",
     "DownloadSave",
     "MoodLighting",
-    "Read4Bytes"
+    "Read4Bytes",
+    "ConsoleDescriptionGBA"
 ];
 
 import german from './assets/locales/de.json'

@@ -26,5 +26,6 @@ GLFWwindow* window;
 int main(){
     setDefaultBindings(globalConfig);
     std::cout << "AMSEL initialized." << std::endl;
+    std::cout << "unsigned long long Bytes: " << sizeof(1ull) << std::endl;
     return 0;
 }

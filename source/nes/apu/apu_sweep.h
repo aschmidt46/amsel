@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <algorithm>
 
-class SquareChannel;
+struct SquareChannel;
 
 struct Sweep{
     Divider divider;

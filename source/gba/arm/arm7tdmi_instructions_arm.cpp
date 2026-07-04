@@ -32,11 +32,11 @@ bool gba::CPU::executeSingleDataSwap(Word instruction)
         *registerMap[mode()][Rd] = contents;
     }
     else{
-        Word contents = readWord(address);
+        uint64_t contents = readWord(address);
         Word shift = 8 * (address & 3);
         contents = (contents >> shift) | (contents << (32 - shift));
         writeWord(address, *registerMap[mode()][Rm]);
-        *registerMap[mode()][Rd] = contents;
+        *registerMap[mode()][Rd] = Word(contents);
     }
     remainingCycles += 4; // 1S + 2N + 1I
     return false;
@@ -311,7 +311,7 @@ bool gba::CPU::executeDataProc(Word instruction)
         if(!registerSpecifiedShift || amount > 0){
             switch(shift){
                 case LogicalLeft:
-                    logicalCarry = amount <= 32 ? op2RegValue & (1u << (32 - amount)) : false; // Unterstes rausgeshiftetes Bit
+                    logicalCarry = amount <= 32 ? op2RegValue & Word((1ull << (32 - amount))) : false; // Unterstes rausgeshiftetes Bit
                     if(amount==0) logicalCarry = carryBefore; // In diesem Fall bleibt C erhalten
                     if(amount >= 32){ // UB in C++
                         operand2Value = 0;
@@ -346,7 +346,7 @@ bool gba::CPU::executeDataProc(Word instruction)
                     break;}
                 case RotateRight:
                     if(amount > 0){ // RR
-                        logicalCarry = op2RegValue & (1u << (amount - 1));
+                        logicalCarry = op2RegValue & Word(1ull << (amount - 1));
                         operand2Value = std::rotr(op2RegValue, amount);
                     }
                     else{//RRX

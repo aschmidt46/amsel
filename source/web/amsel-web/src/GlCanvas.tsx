@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
 import processorUrl from "./audioWorklet.ts?worker&url";
-import type { CXXConsole } from './emscripten/AMSEL-web';
+import type { CXXConsole } from './emscripten/AMSEL';
 
 
 export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, moodLighting: boolean}) {

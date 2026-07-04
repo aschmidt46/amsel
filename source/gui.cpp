@@ -7,6 +7,7 @@
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include "framework/locale.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -39,8 +40,24 @@ void removeCharsFromString( std::string &str, const char* charsToRemove ) {
    }
 }
 
+constexpr std::string getRomFileList(){
+  std::string list = "";
+  #ifdef BUILD_NES
+  list += "*.nes ";
+  #endif
+  #ifdef BUILD_CGB
+  list += "*.gb *.gbc ";
+  #endif
+  #ifdef BUILD_GBA
+  list += "*.gba ";
+  #endif
+
+  return list;
+}
+
 std::optional<std::string> openFile(){
-  auto result = pfd::open_file(locale.getTranslation(ChooseRom), globalConfig.directory, {locale.getTranslation(RomFilter), "*.nes *.gbc *.gb *.gba"}, pfd::opt::none);
+  auto fileList = getRomFileList();
+  auto result = pfd::open_file(locale.getTranslation(ChooseRom), globalConfig.directory, {(locale.getTranslation(RomFilter) + " " + fileList), fileList}, pfd::opt::none);
   auto res = result.result();
   if(res.size()==0){
     return {};
@@ -472,8 +489,15 @@ void Gui::drawAbout()
     ImGui::Separator();
     ImGui::Text(locale.getTranslation(AboutContent).c_str());
     ImGui::Text(locale.getTranslation(AboutSystems).c_str());
-    ImGui::Text(locale.getTranslation(AboutSystem1).c_str());
-    ImGui::Text(locale.getTranslation(AboutSystem2).c_str());
+    #ifdef BUILD_CGB
+    ImGui::Text(locale.getTranslation(ConsoleDescriptionCGB).c_str());
+    #endif
+    #ifdef BUILD_NES
+    ImGui::Text(locale.getTranslation(ConsoleDescriptionNES).c_str());
+    #endif
+    #ifdef BUILD_GBA
+    ImGui::Text(locale.getTranslation(ConsoleDescriptionGBA).c_str());
+    #endif
     ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://forgejo.kassade.de/anton/amsel.git");
   ImGui::End();
 }
@@ -644,6 +668,7 @@ void Gui::render()
                 changeTitle = true;
                 createConsole(result.value().c_str());
                 console->setHalt(this->state->halt);
+                screen->updateFramebufferSize(globalConfig.sizeX, globalConfig.sizeY);
               }
             }
             // if(ImGui::MenuItem("Auswerfen")){
@@ -681,7 +706,8 @@ void Gui::render()
           }
           ImGui::EndMenu();
         }
-        if(ImGui::BeginMenu(locale.getTranslation(MenuDebugger).c_str())){
+        if(ImGui::BeginMenu(locale.getTranslation(MenuExtras).c_str())){
+          #ifdef FEATURE_DEBUGGER
           if(ImGui::MenuItemEx(locale.getTranslation(DebuggerDBItem).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "F1", state->showDebugger)){
             toggleDebugger();
           }
@@ -689,6 +715,7 @@ void Gui::render()
           if(ImGui::MenuItemEx(locale.getTranslation(DebuggerText).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "F2", state->showOutput)){
             toggleTestRomOutput();
           }
+          #endif
           if(ImGui::MenuItemEx(locale.getTranslation(AboutTitle).c_str(), ICON_FA_INFO, "", state->showAbout)){
             state->showAbout = !state->showAbout;
           }

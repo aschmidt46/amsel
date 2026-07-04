@@ -96,7 +96,7 @@ enum LocalizedString{
     SettingsCRTShader = 80,
     SettingsSound = 81,
 
-    MenuDebugger = 82,
+    MenuExtras = 82,
     DebuggerDBItem = 83,
     DebuggerText = 84,
 
@@ -118,18 +118,19 @@ enum LocalizedString{
     AboutTitle = 94,
     AboutContent = 95,
     AboutSystems= 96,
-    AboutSystem1 = 97,
-    AboutSystem2 = 98,
+    ConsoleDescriptionCGB = 97,
+    ConsoleDescriptionNES = 98,
     AboutSource = 99,
     Close = 100,
     DownloadSave = 101,
     MoodLighting = 102,
     DebuggerRead4Byte = 103,
     LastMemoryTransaction = 104,
+    ConsoleDescriptionGBA = 105,
 
 };
 
-constexpr size_t NUM_STRINGS = 105;
+constexpr size_t NUM_STRINGS = 106;
 
 class Locale{
     private:

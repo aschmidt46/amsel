@@ -19,9 +19,9 @@ namespace gba{
         std::weak_ptr<Bus> bus;
 
         // Register
-        LCDCONTROL_T LCDCONTROL;
+        LCDCONTROL_T LCDCONTROL = {.raw = 0};
         HalfWord GREENSWAP; // Undokumentiert
-        LCDSTATUS_T LCDSTATUS;
+        LCDSTATUS_T LCDSTATUS = {.raw = 0};
         HalfWord currentScanline; //VCOUNT
 
         HalfWord BG0CONTROL;
