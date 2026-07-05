@@ -1,5 +1,6 @@
 #pragma once
 #include "console.h"
+#include <mutex>
 
 // Rust FFI, wird während build generiert
 #include "rusty_bridge/bridge.h"
@@ -7,6 +8,7 @@
 class CgbImplementation : public Console{
     private:
     rust::Box<CGB> cgb;
+    std::mutex m;
     void setAddressOf(int i, int to);
     public:
     CgbImplementation() = delete;

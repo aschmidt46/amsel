@@ -176,26 +176,31 @@ void CgbImplementation::clock()
 
 void CgbImplementation::clockUntilSampleReady()
 {
+  std::lock_guard<std::mutex> lock(m);
   cgb_clock_until_samle_ready(cgb);
 }
 
 const uint8_t *CgbImplementation::accessFramebuffer()
 {
+  std::lock_guard<std::mutex> lock(m);
   return (uint8_t*)access_framebuffer(cgb);
 }
 
 bool CgbImplementation::frameIsReady()
 {
+  std::lock_guard<std::mutex> lock(m);
   return has_frame(cgb);
 }
 
 bool CgbImplementation::audioSampleReady()
 {
+  std::lock_guard<std::mutex> lock(m);
   return audio_sample_ready(cgb);
 }
 
 std::pair<double, double> CgbImplementation::getSample()
 {
+  std::lock_guard<std::mutex> lock(m);
   auto res = get_stereo(cgb);
   return {this->volume * res.left, this->volume * res.right};
 }
@@ -217,6 +222,7 @@ float CgbImplementation::getY()
 
 void CgbImplementation::setController1Key(bool gamepad, int key, int action)
 {
+  std::lock_guard<std::mutex> lock(m);
   auto c = &globalConfig.controller1;
   if (gamepad)
   {
