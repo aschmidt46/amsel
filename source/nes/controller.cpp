@@ -1,7 +1,6 @@
 #include "controller.h"
 #include <bit>
 #include <iostream>
-#include <GLFW/glfw3.h>
 #include <assert.h>
 
 void Controller::setKey(bool gamepad, int key, int v)

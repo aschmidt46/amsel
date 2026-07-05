@@ -5,12 +5,15 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
+#include <array>
 #include "../console/console.h"
 #include "../console/dummy_implementation.h"
+#include "framework/global.h"
+#include "framework/common.h"
 
-static std::unique_ptr<Console> console = std::make_unique<DummyImplementation>();
+static std::unique_ptr<Console> core = std::make_unique<DummyImplementation>();
 
-std::string getExtensionListLRetro(){
+constexpr static std::string getExtensionListLRetro(){
     std::string extensions = "";
 	#ifdef BUILD_NES
 	extensions += "nes|";
@@ -25,6 +28,22 @@ std::string getExtensionListLRetro(){
 
 	return extensions;
 }
+
+static std::array<std::pair<std::size_t, int>, 10> keymap = 
+{
+    {
+        { RETRO_DEVICE_ID_JOYPAD_UP,     265 },
+        { RETRO_DEVICE_ID_JOYPAD_DOWN,   264 },
+        { RETRO_DEVICE_ID_JOYPAD_LEFT,   263 },
+        { RETRO_DEVICE_ID_JOYPAD_RIGHT,  262 },
+        { RETRO_DEVICE_ID_JOYPAD_A,      83 },
+        { RETRO_DEVICE_ID_JOYPAD_B,      65 },
+        { RETRO_DEVICE_ID_JOYPAD_START,  257 },
+        { RETRO_DEVICE_ID_JOYPAD_SELECT, 259 },
+		{ RETRO_DEVICE_ID_JOYPAD_L,  81 },
+		{ RETRO_DEVICE_ID_JOYPAD_R,  269 }
+    }
+};
 
 static retro_environment_t environ_cb;
 static retro_log_printf_t log_cb;
@@ -89,18 +108,20 @@ void retro_get_system_av_info(retro_system_av_info* info)
 	std::memset(info, 0, sizeof(retro_system_av_info));
 	info->timing.fps = 60.0f;
 	info->timing.sample_rate = 20000;
-	info->geometry.base_width = console->getX();
-	info->geometry.base_height = console->getY();
-	info->geometry.max_width = console->getX();
-	info->geometry.max_height = console->getY();
-	info->geometry.aspect_ratio = (float)console->getY() / (float)console->getX();
+	info->geometry.base_width = core->getX();
+	info->geometry.base_height = core->getY();
+	info->geometry.max_width = core->getX();
+	info->geometry.max_height = core->getY();
+	info->geometry.aspect_ratio = (float)core->getY() / (float)core->getX();
 }
 
 static void audio_callback(void)
 {
-	console->clockUntilSampleReady();
-	auto sample = console->getSample();
-	audio_cb(sample.first, sample.second);
+	for (unsigned i = 0; i < 20000 / 60; i++){
+		core->clockUntilSampleReady();
+		auto sample = core->getSample();
+		audio_cb((int16_t)(sample.first * 30000), (int16_t)(sample.second * 30000));
+	}
 }
 
 static void audio_set_state(bool enable)
@@ -113,6 +134,7 @@ static void audio_set_state(bool enable)
 */
 bool retro_load_game(const retro_game_info* info)
 {
+	setDefaultBindings(globalConfig);
 
    	enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
    	if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
@@ -126,7 +148,7 @@ bool retro_load_game(const retro_game_info* info)
 	{
 		std::vector<uint8_t> rom;
 		rom.assign((uint8_t*)info->data, (uint8_t*)info->data + info->size);
-		console = createConsoleFromData(info->path, rom);
+		core = createConsoleFromData(info->path, rom);
 	}
 
 	struct retro_audio_callback audio_cb = { audio_callback, audio_set_state };
@@ -144,7 +166,17 @@ static retro_video_refresh_t video_cb;
 // Callback in Sample Rate wie oben
 void retro_run(void)
 {
-	video_cb(console->accessFramebuffer(), console->getX(), console->getY(), console->getX() * sizeof(uint32_t));
+
+	input_poll_cb();
+
+	for(const auto &pair : keymap){
+		auto value = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, pair.first);
+		core->setController1Key(false, pair.second, value != 0);
+	}
+
+
+
+	video_cb(core->accessFramebuffer(), core->getX(), core->getY(), core->getX() * sizeof(uint32_t));
 }
 
 void retro_unload_game(void)
