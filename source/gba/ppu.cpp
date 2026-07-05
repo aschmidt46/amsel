@@ -73,7 +73,11 @@ bool gba::PPU::hasFrame() {
 void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 {
     int index = (x + 240 * y);
+    #ifndef BUILD_LIBRETRO_CORE
     uint32_t col = (255 << 24) | (cb << 16) | (cg << 8) | (cr);
+    #else
+    uint32_t col = (255 << 24) | (cb) | (cg << 8) | (cr << 16);
+    #endif
     framebuffer[index] = col;
 }
 

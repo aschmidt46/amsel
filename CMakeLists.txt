@@ -86,6 +86,8 @@ else()
 
     else()
 
+      add_compile_definitions(BUILD_LIBRETRO_CORE)
+
       include(${CMAKE_SOURCE_DIR}/cmake/features/libretro.cmake)
 
     endif()

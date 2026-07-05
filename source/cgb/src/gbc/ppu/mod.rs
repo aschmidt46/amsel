@@ -548,7 +548,13 @@ impl PPU{
         (x + 160 * y) * 4 + 0 // Kanal 0 (rot) angenommen
     }
     fn set_pixel(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8){
+
+        #[cfg(not(feature = "libretro"))]
         let col : u32 = ((255 as u32) << 24) | ((b as u32) << 16) | ((g as u32) << 8) | (r as u32);
+
+        #[cfg(feature = "libretro")]
+        let col : u32 = ((255 as u32) << 24) | (b as u32) | ((g as u32) << 8) | ((r as u32) << 16);
+
         self.framebuffer[Self::index_framebuffer(x, y) / 4] = col;
 
         self.float_framebuffer[Self::index_framebuffer(x, y)] = r as f32 / 255.0;

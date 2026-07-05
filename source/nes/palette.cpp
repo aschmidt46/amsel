@@ -40,5 +40,9 @@ uint32_t Palette::getColor(uint8_t index)
     r = colors[3*index];
     g = colors[3*index+1];
     b = colors[3*index+2];
+    #ifndef BUILD_LIBRETRO_CORE
     return (255u << 24) | (r) | (g << 8) | (b << 16);
+    #else
+    return (255u << 24) | (r << 16) | (g << 8) | (b);
+    #endif
 }

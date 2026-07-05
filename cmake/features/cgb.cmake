@@ -24,12 +24,16 @@ endif()
 
 # Rust
 # set(RUSTFLAGS -Awarnings)
-
+set(RUST_FEATURES "")
 if(FEATURE_GAMEBOY_CGB_SUPPORT)
-    corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml FEATURES cgb)
-else()
-    corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml)
+set(RUST_FEATURES "${RUST_FEATURES}cgb ")
 endif()
+if(FEATURE_LIBRETRO_CORE)
+set(RUST_FEATURES "${RUST_FEATURES}libretro")
+endif()
+
+
+corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml FEATURES "${RUST_FEATURES}")
 
 
 corrosion_add_cxxbridge(rusty_bridge CRATE cgbcore FILES bridge.rs)
