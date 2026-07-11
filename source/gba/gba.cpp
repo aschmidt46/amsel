@@ -50,6 +50,10 @@ std::pair<float, float> gba::GBA::getSample(){
     return {0,0};
 }
 
+void gba::GBA::loadBios(const std::vector<uint8_t> &content) {
+    this->bus->loadBios(content);
+}
+
 void gba::GBA::setHalt(bool to) {
     bus->setHalt(to);
 }

@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import Module from './emscripten/AMSEL.js'
 import { InputHandler } from './input.js'
-import type { CXXConsole, MainModule } from './emscripten/AMSEL.js'
+import type { CXXConsole, MainModule, vec_str } from './emscripten/AMSEL.js'
 import { LocalizationContext } from './LocalizationContext.js'
 import { GameController } from './GameController.js'
 import { GlCanvas } from './GlCanvas.js'
@@ -11,7 +11,10 @@ function App() {
   const [emu, setEmu] = useState<CXXConsole | null>(null);
   const [input, setInput] = useState<InputHandler>(new InputHandler(emu!));
   const inputFile = useRef<HTMLInputElement | null>(null);
+  const inputSpecialFile = useRef<HTMLInputElement | null>(null);
   const infoModal = useRef<HTMLDialogElement | null>(null);
+
+  const requiredFilesModal = useRef<HTMLDialogElement | null>(null);
 
   const [moodLighting, setMoodLighting] = useState(true);
 
@@ -22,6 +25,10 @@ function App() {
   const lang = useContext(LocalizationContext);
 
   const [canSave, setCanSave] = useState(false);
+
+  const [requiredFiles, setRequiredFiles] = useState<string[]>([]);
+
+  const [mainModule, setMainModule] = useState<MainModule | null>(null);
 
   useEffect(() => {
 
@@ -40,8 +47,6 @@ function App() {
     }
   }, [input, emu, lang]);
 
-  useEffect(() => {console.log("changed");}, [moodLighting])
-
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(e.target.files!)
     e.target.blur();
@@ -50,24 +55,50 @@ function App() {
       bytes.forEach(element => {
         vec.push_back(element)
       });
+      setMainModule(instance);
       const cons = instance.createConsole(files[0].name, vec);
+      cons.setVolume(volume);
+      
+      const list : vec_str = cons.getRequiredFiles();
+      if(list.size() > 0){
+        const jsarr : string[] = [];
+        for(let i : number = 0; i < list.size(); i++){
+          jsarr.push(list.get(i)!);
+        }
+        cons.setHalt(true);
+        setRequiredFiles(jsarr);
+        requiredFilesModal.current?.showModal();
+      }
       setEmu(cons);
       setGameTitle(files[0].name);
       setInput(new InputHandler(cons!));
       setCanSave(cons.canSave());
+
     })})
   }
 
-  const onButtonClick = () => {
-    inputFile.current?.click();
-  };
+  const handleSpecialFile = (e: React.ChangeEvent<HTMLInputElement>, name: string): void => {
+    const files = Array.from(e.target.files!)
+    e.target.blur();
+    files[0].bytes().then((bytes) => {
+      const vec = new mainModule!.vec_u8;
+      bytes.forEach(element => {
+        vec.push_back(element)
+      });
+      emu?.loadSpecialFile(name, vec);
+
+      const newRequiredFiles = requiredFiles.filter((s:string) => (s != name));
+      if(newRequiredFiles.length == 0){
+        emu?.setHalt(false);
+        requiredFilesModal.current?.close();
+      }
+      setRequiredFiles(newRequiredFiles);
+
+    })
+  }
 
   function preventInput(event : React.KeyboardEvent<HTMLInputElement | HTMLButtonElement>) {
       event.preventDefault();
-  }
-
-  const onOpenModal = () => {
-    infoModal.current?.showModal();
   }
 
   const startSaveDownload = () => {
@@ -103,19 +134,35 @@ function App() {
     return <div className='p-1'>{gameTitle}</div>;
   }
 
+  function printFileList(): import("react").ReactNode {
+    const listItems = requiredFiles.map(file =>
+      <li className='list-row' key={file}>
+        <div className='text-xl'>{file}</div>
+        <input type='file' id='filespecial' ref={inputSpecialFile} onChange={(e) => {handleSpecialFile(e, file);}} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
+        <button onClick={() => inputSpecialFile.current?.click()} onKeyDown={preventInput} onKeyUp={preventInput} className='btn  btn-square btn-soft btn-primary right-0'>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+          </svg>
+
+          </button>
+      </li>
+    );
+    return <ul className='list'>{listItems}</ul>;
+  }
+
   return (
     <>
       <section className='flex flex-col h-screen w-screen'>
         <div className="navbar bg-base-200 shadow-sm">
           <div className="flex-none navbar-start">
             <div className="avatar tooltip tooltip-right" data-tip={lang.getTranslation("AboutTitle")}>
-              <div className="btn btn-ghost btn-circle rounded-full" onClick={onOpenModal}>
+              <div className="btn btn-ghost btn-circle rounded-full" onClick={() => infoModal.current?.showModal()}>
                 <img src="./favicon.png" />
               </div>
             </div>
             <div>
-              <input type='file' accept='.gb, .gbc, .nes, .gba' id='file' ref={inputFile} onChange={handleFileSelected} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
-              <button onClick={onButtonClick} onKeyDown={preventInput} onKeyUp={preventInput} className='btn btn-ghost'>{lang.getTranslation("ChooseRom")}</button>
+              <input type='file' accept='.gb, .gbc, .nes, .gba' id='file' ref={inputFile} onChange={(e) => {handleFileSelected(e); }} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
+              <button onClick={() => inputFile.current?.click()} onKeyDown={preventInput} onKeyUp={preventInput} className='btn btn-ghost'>{lang.getTranslation("ChooseRom")}</button>
             </div>
             <span>{showTitle()}</span>
           </div>
@@ -192,6 +239,15 @@ function App() {
                 <button className="btn">{lang.getTranslation("Close")}</button>
               </form>
             </div>
+          </div>
+        </dialog>
+
+        <dialog ref={requiredFilesModal} className='modal'>
+          <div className='modal-box'>
+            <h3 className="font-bold text-lg">{lang.getTranslation("AdditionalRequiredFiles")}</h3>
+              <div>
+                {printFileList()}
+              </div>
           </div>
         </dialog>
       </section>

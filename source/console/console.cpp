@@ -107,6 +107,7 @@ void Console::setVolume(float v)
 
 EMSCRIPTEN_BINDINGS(ConsoleModule) {
   register_vector<uint8_t>("vec_u8");
+  register_vector<std::string>("vec_str");
   value_object<std::pair<double, double>>("pair_double")
         .field("first", &std::pair<double, double>::first)
         .field("second", &std::pair<double, double>::second)
@@ -129,6 +130,9 @@ EMSCRIPTEN_BINDINGS(ConsoleModule) {
     .function("canSave", &Console::canSave)
     .function("getSaveData", &Console::getSaveData)
     .function("setVolume", &Console::setVolume)
+    .function("getRequiredFiles", &Console::getRequiredFiles)
+    .function("loadSpecialFile", &Console::loadSpecialFile)
+    .function("setHalt", &Console::setHalt)
     ;
 
 //   smart_ptr<std::shared_ptr<Console>>("CXXConsole");

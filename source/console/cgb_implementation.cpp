@@ -176,31 +176,41 @@ void CgbImplementation::clock()
 
 void CgbImplementation::clockUntilSampleReady()
 {
+  #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
+  #endif
   cgb_clock_until_samle_ready(cgb);
 }
 
 const uint8_t *CgbImplementation::accessFramebuffer()
 {
+  #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
+  #endif
   return (uint8_t*)access_framebuffer(cgb);
 }
 
 bool CgbImplementation::frameIsReady()
 {
+  #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
+  #endif
   return has_frame(cgb);
 }
 
 bool CgbImplementation::audioSampleReady()
 {
+  #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
+  #endif
   return audio_sample_ready(cgb);
 }
 
 std::pair<double, double> CgbImplementation::getSample()
 {
+  #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
+  #endif
   auto res = get_stereo(cgb);
   return {this->volume * res.left, this->volume * res.right};
 }
@@ -222,7 +232,9 @@ float CgbImplementation::getY()
 
 void CgbImplementation::setController1Key(bool gamepad, int key, int action)
 {
+  #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
+  #endif
   auto c = &globalConfig.controller1;
   if (gamepad)
   {
@@ -251,6 +263,14 @@ void CgbImplementation::setController1Key(bool gamepad, int key, int action)
 void CgbImplementation::setController2Key(bool gamepad, int key, int action)
 {
   // this->setController1Key(gamepad, key, action);
+}
+
+std::vector<std::string> CgbImplementation::getRequiredFiles() {
+  return std::vector<std::string>();
+}
+
+void CgbImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> content) {
+  
 }
 
 bool CgbImplementation::canSave()

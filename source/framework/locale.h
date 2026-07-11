@@ -127,10 +127,11 @@ enum LocalizedString{
     DebuggerRead4Byte = 103,
     LastMemoryTransaction = 104,
     ConsoleDescriptionGBA = 105,
+    AdditionalRequiredFiles = 106,
 
 };
 
-constexpr size_t NUM_STRINGS = 106;
+constexpr size_t NUM_STRINGS = 107;
 
 class Locale{
     private:

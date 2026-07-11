@@ -222,12 +222,14 @@ void gba::Bus::setIF(int bit, bool value) {
 
 gba::Bus::Bus(){
 
+    #ifdef BUILD_DESKTOP
     std::ifstream stream("../gbaroms/gba_bios.bin", std::ios::in | std::ios::binary);
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)),
                                   std::istreambuf_iterator<char>());
 
   this->bios = contents;
   stream.close();
+  #endif
   this->wramBoard = std::vector<Byte>(0x40000, 0);
   this->wramChip = std::vector<Byte>(0x8000, 0);
   this->cartRam = std::vector<Byte>(0x10000, 0);
@@ -439,4 +441,8 @@ std::tuple<std::string, std::string, std::string> gba::Bus::getLastTransaction()
     std::string addr = getHex(cpu.lastTransactionAddress, 8);
     std::string data = getHex(cpu.lastTransactionData, 8);
     return std::tuple<std::string, std::string, std::string>{action, addr, data};
+}
+
+void gba::Bus::loadBios(const std::vector<uint8_t> &content) {
+    this->bios = content;
 }

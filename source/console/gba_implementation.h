@@ -27,6 +27,9 @@ class GbaImplementation : public Console{
     bool canSave() override;
     std::vector<uint8_t> getSaveData() override;
 
+    std::vector<std::string> getRequiredFiles() override;
+    void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
+
 
     void addClock() override;
     void setHalt(bool val) override;

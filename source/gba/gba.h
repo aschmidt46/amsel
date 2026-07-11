@@ -26,6 +26,8 @@ namespace gba{
         bool hasSample();
         std::pair<float, float> getSample();
 
+        void loadBios(const std::vector<uint8_t> &content);
+
         void setHalt(bool to);
         bool isHalted();
         void addClock();

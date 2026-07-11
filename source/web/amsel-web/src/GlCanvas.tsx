@@ -5,9 +5,8 @@ import type { CXXConsole } from './emscripten/AMSEL';
 
 
 export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, moodLighting: boolean}) {
-    const myCanvas = useRef<HTMLCanvasElement>(null);
-    const myCanvas2 = useRef<HTMLCanvasElement>(null);
-    // const [gl, setGL] = useState<WebGL2RenderingContext | null>(null);
+    const emuCanvas = useRef<HTMLCanvasElement>(null);
+    const backgroundCanvas = useRef<HTMLCanvasElement>(null);
     const [actx, setActx] = useState(new AudioContext({sampleRate: 20000}));
 
     const [aspect, setAspect] = useState(1)
@@ -31,15 +30,10 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
 
     // Setup
     useEffect(() => {
-        console.log("effect");
         let animationFrame = 0;
-        const cur = myCanvas.current!;
+        const cur = emuCanvas.current!;
         const gl = cur.getContext("webgl2", {preserveDrawingBuffer: true})!;
         if(!gl) return;
-
-        // if (!gl.getExtension('EXT_color_buffer_float')){
-        //     throw new Error('Rendering to floating point textures is not supported on this platform');
-        // }
 
         if(emuObject){
             const ratio = emuObject.getX() / emuObject.getY();
@@ -136,7 +130,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-                new Int32Array([0, 0, 1, 1,   1, 0, 0, 1,     0, 1, 0, 1,     1, 1, 1, 1]));
+                new Uint8Array([0, 0, 1, 1,   1, 0, 0, 1,     0, 1, 0, 1,     1, 1, 1, 1]));
 
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -189,12 +183,12 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
                     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
                     animationFrame = requestAnimationFrame(render);
 
-                    if(myCanvas2.current){
-                        const cur = myCanvas2.current!;
-                        cur.width = myCanvas.current!.width;
-                        cur.height = myCanvas.current!.height;
+                    if(backgroundCanvas.current){
+                        const cur = backgroundCanvas.current!;
+                        cur.width = emuCanvas.current!.width;
+                        cur.height = emuCanvas.current!.height;
                         const gl2 = cur.getContext("2d")!;
-                        gl2.drawImage(myCanvas.current!, 0, 0);
+                        gl2.drawImage(emuCanvas.current!, 0, 0);
                     }
                 }
             }
@@ -231,7 +225,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
         if(moodLighting){
             return (
                 <div className='hidden dark:block brightness-100 mask-x-to-170% mask-y-to-170% grow fixed top-0 left-0' style={{zIndex: 0, pointerEvents: 'none'}}>
-                    <canvas ref={myCanvas2} width={getWidth()} style={{imageRendering: 'smooth'}} height={getHeight()} className="h-screen w-screen flex grow blur-3xl" ></canvas>
+                    <canvas ref={backgroundCanvas} width={getWidth()} style={{imageRendering: 'smooth'}} height={getHeight()} className="h-screen w-screen flex grow blur-3xl" ></canvas>
                 </div>
             )
         }
@@ -243,7 +237,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
     return (
         // Unschön, da bei Smartphones das Seitenverhältnis nicht ganz stimmt, ich finde keine andere funktionierende Lösung
         <div className='flex grow justify-center h-screen w-screen max-h-dvw'>
-            <canvas ref={myCanvas} width={getWidth()} style={style} height={getHeight()} className={getAspectRatio()} ></canvas>
+            <canvas ref={emuCanvas} width={getWidth()} style={style} height={getHeight()} className={getAspectRatio()} ></canvas>
             {maybeRenderMoody()}
         </div>
 

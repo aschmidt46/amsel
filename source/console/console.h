@@ -47,6 +47,10 @@ class Console{
     virtual bool canSave() = 0;
     virtual std::vector<uint8_t> getSaveData() = 0;
 
+    // Bios usw.
+    virtual std::vector<std::string> getRequiredFiles() = 0;
+    virtual void loadSpecialFile(std::string name, std::vector<uint8_t> content) = 0;
+
 
 
     //Debug

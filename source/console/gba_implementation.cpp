@@ -78,6 +78,16 @@ std::vector<uint8_t> GbaImplementation::getSaveData()
     return std::vector<uint8_t>();
 }
 
+std::vector<std::string> GbaImplementation::getRequiredFiles() {
+  return {"GBA Bios"};
+}
+
+void GbaImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> content) {
+    if(name == std::string("GBA Bios")){
+        gba->loadBios(content);
+    }
+}
+
 void GbaImplementation::addClock() {
     gba->addClock();
 }

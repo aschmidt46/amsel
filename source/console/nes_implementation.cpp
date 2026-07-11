@@ -87,6 +87,14 @@ std::vector<uint8_t> NesImplementation::getSaveData()
     return this->console.getSaveData();
 }
 
+std::vector<std::string> NesImplementation::getRequiredFiles() {
+  return std::vector<std::string>();
+}
+
+void NesImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> content) {
+    
+}
+
 void NesImplementation::addClock()
 {
     this->console.allowedClocks = 1;

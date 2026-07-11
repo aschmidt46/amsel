@@ -66,5 +66,7 @@ namespace gba{
         void setHalt() override;
         std::string getDisassembly(uint64_t code);
         std::tuple<std::string, std::string, std::string> getLastTransaction();
+
+        void loadBios(const std::vector<uint8_t> &content);
     };
 }

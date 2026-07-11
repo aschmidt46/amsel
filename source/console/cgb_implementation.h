@@ -8,7 +8,9 @@
 class CgbImplementation : public Console{
     private:
     rust::Box<CGB> cgb;
+    #ifdef BUILD_LIBRETRO_CORE
     std::mutex m;
+    #endif
     void setAddressOf(int i, int to);
     public:
     CgbImplementation() = delete;
@@ -27,6 +29,9 @@ class CgbImplementation : public Console{
     float getY() override;
     void setController1Key(bool gamepad, int key, int action) override;
     void setController2Key(bool gamepad, int key, int action) override;
+
+    std::vector<std::string> getRequiredFiles() override;
+    void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
 
     bool canSave() override;
     std::vector<uint8_t> getSaveData() override;

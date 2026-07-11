@@ -26,6 +26,9 @@ class DummyImplementation : public Console{
     bool canSave() override {return false;};
     std::vector<uint8_t> getSaveData() override {return std::vector<uint8_t>();};
 
+    std::vector<std::string> getRequiredFiles() override{return {};};
+    void loadSpecialFile(std::string name, std::vector<uint8_t> content) override{};
+
 
     void addClock() override{};
     void setHalt(bool val) override{halt = val;};
