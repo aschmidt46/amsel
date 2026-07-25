@@ -28,7 +28,7 @@ target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -Werror)
 set_target_properties(AMSEL PROPERTIES LINK_FLAGS "--bind --emit-tsd AMSEL.d.ts -s TOTAL_STACK=512mb -s EXPORT_ES6=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -s SINGLE_FILE=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -s WASM=1 -Wall -s MODULARIZE=1")
 
 
-set(WEB_BASE "${PROJECT_SOURCE_DIR}/source/web/amsel-web")
+set(WEB_BASE "${PROJECT_SOURCE_DIR}/source/web")
 
 make_directory(${WEB_BASE}/src/emscripten)
 

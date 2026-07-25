@@ -58,12 +58,12 @@ jobs:
         working-directory: ./build
         run: make
       - name: Npm dependencies
-        working-directory: ./source/web/amsel-web
+        working-directory: ./source/web
         run: npm i
       - name: Build Web App
-        working-directory: ./source/web/amsel-web
+        working-directory: ./source/web
         run: npm run build
-  GBA-Test-Suite:
+  Test-Suite:
     runs-on: node
     defaults:
       run:
