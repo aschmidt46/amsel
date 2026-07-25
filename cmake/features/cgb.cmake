@@ -33,7 +33,7 @@ set(RUST_FEATURES "${RUST_FEATURES}libretro")
 endif()
 
 
-corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml FEATURES "${RUST_FEATURES}")
+corrosion_import_crate(MANIFEST_PATH source/cgb/Cargo.toml PROFILE release FEATURES "${RUST_FEATURES}")
 
 
 corrosion_add_cxxbridge(rusty_bridge CRATE cgbcore FILES bridge.rs)
