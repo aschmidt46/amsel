@@ -11,12 +11,12 @@ Palette::Palette(const char *path) : Palette()
     if(contents.size()==0) return;
 
     if(contents.size() == 192){
-        for(int i = 0; i < contents.size(); i++){
+        for(size_t i = 0; i < contents.size(); i++){
             colors[i] = contents[i];
         }
     }
     else{
-        for(int i = 0; i < 192; i++){
+        for(size_t i = 0; i < 192; i++){
             colors[i] = defPalette[i];
         }
     }

@@ -24,6 +24,7 @@ void initSettings(SettingsConfig &c){
 
 void FileIO::writeDefaultSettings(const std::string &fileName, int posX, int posY)
 {
+    (void)fileName;
     SettingsConfig c;
     c.posX = posX;
     c.posY = posY;

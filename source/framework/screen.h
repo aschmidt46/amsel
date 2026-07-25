@@ -1,7 +1,7 @@
 #pragma once
 #include <glad/gl.h>
 #include <vector>
-#include "glm_replacement.h"
+#include "vector.h"
 
 constexpr const char* vs = 
     "#version 460\n"
@@ -147,6 +147,6 @@ class Screen{
     void onSwitchConsole();
     void present();
     void setPixelColor(int x, int y, vec3 c);
-    void copyBufferToScreen(const uint8_t* buffer);   //float array, jeder Wert ist eine Farbe zwischen 0 und 1
+    void copyBufferToScreen(const uint8_t* buffer);
     void updateFramebufferSize(int w, int h);
 };

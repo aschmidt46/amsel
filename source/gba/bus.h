@@ -7,7 +7,7 @@
 #include "timer.h"
 
 namespace gba{
-    class Bus : public IBus, virtual public std::enable_shared_from_this<Bus>{
+    class Bus final : public IBus, virtual public std::enable_shared_from_this<Bus>{
 
         PPU ppu;
         CPU cpu;
@@ -37,6 +37,7 @@ namespace gba{
         void init();
         Bus(const char *path);
         Bus(const std::vector<Byte> &bytes);
+        ~Bus() = default;
         // Adressen vorher noch alignen?
         void writeByte(Word addr, Byte val) override;
         Byte readByte(Word addr) override;

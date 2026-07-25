@@ -1,5 +1,4 @@
 #include "bus.h"
-#include "test/logging.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -7,6 +6,7 @@
 extern "C"{
     #include <armdisasm.h>
 }
+#include "../framework/stringlib.h"
 
 using namespace gba;
 
@@ -370,7 +370,7 @@ std::vector<std::string> gba::Bus::getStack() {
 
     for(Word i = 0; i < stackSize; i++){
         Word val = readWord(sp + (4 * i));
-        stack.push_back(getHex(val, 8));
+        stack.push_back(getHex0x(val, 8));
     }
 
     return stack;
@@ -438,8 +438,8 @@ std::tuple<std::string, std::string, std::string> gba::Bus::getLastTransaction()
         action = "R";
     }
     else action = "W";
-    std::string addr = getHex(cpu.lastTransactionAddress, 8);
-    std::string data = getHex(cpu.lastTransactionData, 8);
+    std::string addr = getHex0x(cpu.lastTransactionAddress, 8);
+    std::string data = getHex0x(cpu.lastTransactionData, 8);
     return std::tuple<std::string, std::string, std::string>{action, addr, data};
 }
 

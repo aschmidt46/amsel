@@ -1,6 +1,8 @@
 #pragma once
 #include "console.h"
+#ifdef BUILD_LIBRETRO_CORE
 #include <mutex>
+#endif
 
 // Rust FFI, wird während build generiert
 #include "rusty_bridge/bridge.h"
@@ -8,6 +10,9 @@
 class CgbImplementation : public Console{
     private:
     rust::Box<CGB> cgb;
+    // Retroarch verwendet offenbar (im Audio?) eine Art von Nebenläufigkeit, die dafür sorgt, dass mehrere Funktionen auf dem Console Objekt gleichzeitig aufgerufen werden (können).
+    // Das führt zu einem Laufzeitfehler in Rust, weil dadurch das CGB Objekt mehrfach geborrowed wird -> panic
+    // Der Mutex ist ein einfacher Workaround
     #ifdef BUILD_LIBRETRO_CORE
     std::mutex m;
     #endif

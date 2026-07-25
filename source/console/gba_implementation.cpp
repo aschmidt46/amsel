@@ -1,10 +1,10 @@
 #include "gba_implementation.h"
 #include "framework/global.h"
+#include "framework/stringlib.h"
 #ifdef BUILD_DESKTOP
 #include <imgui.h>
 #endif
-#include <format>
-#include <algorithm>
+#include "../framework/stringlib.h"
 
 GbaImplementation::GbaImplementation(const char *path)
 {
@@ -64,9 +64,13 @@ float GbaImplementation::getY()
     return 160.0f;
 }
 
-void GbaImplementation::setController1Key(bool gamepad, int key, int action) {}
+void GbaImplementation::setController1Key(bool gamepad, int key, int action) {
+    (void)gamepad; (void)key; (void)action;
+}
 
-void GbaImplementation::setController2Key(bool gamepad, int key, int action) {}
+void GbaImplementation::setController2Key(bool gamepad, int key, int action) {
+    (void)gamepad; (void)key; (void)action;
+}
 
 bool GbaImplementation::canSave()
 {
@@ -101,7 +105,9 @@ bool GbaImplementation::isHalted()
     return gba->isHalted();
 }
 
-void GbaImplementation::produceDisassembly(bool val) {}
+void GbaImplementation::produceDisassembly(bool val) {
+    (void)val;
+}
 
 int GbaImplementation::addressBytes() {
     return 4;
@@ -139,6 +145,7 @@ std::vector<std::string> GbaImplementation::removeBreakpointOP(std::string bp)
 
 std::string GbaImplementation::getText(uint64_t addr)
 {
+    (void)addr;
     return std::string();
 }
 
@@ -152,23 +159,7 @@ uint8_t GbaImplementation::readCpuBus(uint64_t addr)
     return gba->readBus(addr);
 }
 
-std::string tihex(uintptr_t input)
-{
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
-}
 
-std::string tihexNorm(std::string s, int n)
-{
-    while ((int)s.size() < n)
-        s = "0" + s;
-    return s;
-}
-
-std::string getiHex(size_t input, int length){
-    return "0x"+tihexNorm(tihex(input), length);
-}
 
 void GbaImplementation::displayRegisters() {
     #ifdef BUILD_DESKTOP
@@ -178,42 +169,42 @@ void GbaImplementation::displayRegisters() {
     ImGui::TableNextColumn();
     
     for(int i = 0; i < 16; i++){
-        ImGui::Text(("R"+std::to_string(i)+":\t\t"+getiHex(state.R[i],8)).c_str());
+        ImGui::Text("%s", ("R"+std::to_string(i)+":\t\t"+getHex0x(state.R[i],8)).c_str());
     }
-    ImGui::Text("");
-    ImGui::Text("");
-    ImGui::Text((std::string("Mode: ")+gba->getMode()).c_str());
+    ImGui::NewLine();
+    ImGui::NewLine();
+    ImGui::Text("%s", (std::string("Mode: ")+gba->getMode()).c_str());
 
     auto transaction = gba->getLastTransaction();
 
-    ImGui::Text((locale.getTranslation(LastMemoryTransaction) + " " + std::get<0>(transaction)).c_str());
-    ImGui::Text(("Addr: " + std::get<1>(transaction)).c_str());
-    ImGui::Text(("Data: " + std::get<2>(transaction)).c_str());
+    ImGui::Text("%s", (locale.getTranslation(LastMemoryTransaction) + " " + std::get<0>(transaction)).c_str());
+    ImGui::Text("%s", ("Addr: " + std::get<1>(transaction)).c_str());
+    ImGui::Text("%s", ("Data: " + std::get<2>(transaction)).c_str());
     ImGui::TableNextColumn();
 
     for(int i = 0; i < 7; i++){
-        ImGui::Text(("R"+std::to_string(i+8)+"_fiq: \t"+getiHex(state.R_fiq[i],8)).c_str());
+        ImGui::Text("%s", ("R"+std::to_string(i+8)+"_fiq: \t"+getHex0x(state.R_fiq[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_svc:\t"+getiHex(state.R_svc[i],8)).c_str());
+        ImGui::Text("%s", ("R"+std::to_string(i+13)+"_svc:\t"+getHex0x(state.R_svc[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_abt:\t"+getiHex(state.R_abt[i],8)).c_str());
+        ImGui::Text("%s", ("R"+std::to_string(i+13)+"_abt:\t"+getHex0x(state.R_abt[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_irq:\t"+getiHex(state.R_irq[i],8)).c_str());
+        ImGui::Text("%s", ("R"+std::to_string(i+13)+"_irq:\t"+getHex0x(state.R_irq[i],8)).c_str());
     }
     for(int i = 0; i < 2; i++){
-        ImGui::Text(("R"+std::to_string(i+13)+"_und:\t"+getiHex(state.R_und[i],8)).c_str());
+        ImGui::Text("%s", ("R"+std::to_string(i+13)+"_und:\t"+getHex0x(state.R_und[i],8)).c_str());
     }
-    ImGui::Text(("CPSR: \t\t"+getiHex(state.CPSR, 8)).c_str());
-    ImGui::Text(("SPSR_fiq:\t"+getiHex(state.SPSR[0],8)).c_str());
-    ImGui::Text(("SPSR_svc:\t"+getiHex(state.SPSR[1],8)).c_str());
-    ImGui::Text(("SPSR_abt:\t"+getiHex(state.SPSR[2],8)).c_str());
-    ImGui::Text(("SPSR_irq:\t"+getiHex(state.SPSR[3],8)).c_str());
-    ImGui::Text(("SPSR_und:\t"+getiHex(state.SPSR[4],8)).c_str());
-    ImGui::Text(("Pipeline[0]:\t"+getiHex(state.Pipeline[0],8)).c_str());
-    ImGui::Text(("Pipeline[1]:\t"+getiHex(state.Pipeline[1],8)).c_str());
+    ImGui::Text("%s", ("CPSR: \t\t"+getHex0x(state.CPSR, 8)).c_str());
+    ImGui::Text("%s", ("SPSR_fiq:\t"+getHex0x(state.SPSR[0],8)).c_str());
+    ImGui::Text("%s", ("SPSR_svc:\t"+getHex0x(state.SPSR[1],8)).c_str());
+    ImGui::Text("%s", ("SPSR_abt:\t"+getHex0x(state.SPSR[2],8)).c_str());
+    ImGui::Text("%s", ("SPSR_irq:\t"+getHex0x(state.SPSR[3],8)).c_str());
+    ImGui::Text("%s", ("SPSR_und:\t"+getHex0x(state.SPSR[4],8)).c_str());
+    ImGui::Text("%s", ("Pipeline[0]:\t"+getHex0x(state.Pipeline[0],8)).c_str());
+    ImGui::Text("%s", ("Pipeline[1]:\t"+getHex0x(state.Pipeline[1],8)).c_str());
     ImGui::EndTable();
 
     ImGui::Separator();

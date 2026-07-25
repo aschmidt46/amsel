@@ -47,6 +47,7 @@ bool Sweep::isNotMute(SquareChannel *ch)
 
 void Sweep::onWrite(uint8_t val, SquareChannel* ch)
 {
+    (void)ch;
     raw = val;
     divider.changePeriod(getP());
     wasWrite = true;

@@ -3,6 +3,7 @@
 
 void Mapper0::writeRam(uint8_t *addr, uint8_t value)
 {
+    (void)addr; (void)value;
     return;
 }
 

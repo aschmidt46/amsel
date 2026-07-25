@@ -12,10 +12,6 @@ using namespace emscripten;
 class Console{
     protected:
     std::string loadedGame = "";
-    
-    //Helfer
-    std::string ihex(uintptr_t input);
-    std::string ihexNorm(std::string s, int n);
 
     // Macht das ganze einfacher, weil ich einen Callback weniger in JS brauche
     float volume = 1.0f;

@@ -2,6 +2,7 @@
 
 void Mapper7::writeRam(uint8_t *addr, uint8_t value)
 {
+    (void)addr;
     bankSelect = value & 0b111;
     mirror = value & 0b00010000 ? SINGLE_SCREEN_UPPER : SINGLE_SCREEN_LOWER;
 }

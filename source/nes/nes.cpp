@@ -34,8 +34,8 @@ void NES::load(const char *path)
         loaded = true;
     }
     else{
-        const auto mapper = Slot->header.getMapper();
         #ifdef BUILD_DESKTOP
+        const auto mapper = Slot->header.getMapper();
         MessageStruct m = {
             .type=MT_ERROR,
             .title=locale.getTranslation(GameError),
@@ -58,8 +58,8 @@ void NES::load(std::vector<uint8_t> &rom)
         loaded = true;
     }
     else{
-        const auto mapper = Slot->header.getMapper();
         #ifdef BUILD_DESKTOP
+        const auto mapper = Slot->header.getMapper();
         MessageStruct m = {
             .type=MT_ERROR,
             .title=locale.getTranslation(GameError),

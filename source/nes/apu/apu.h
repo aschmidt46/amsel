@@ -14,7 +14,7 @@ class Apu{
 	private:
 	double square_table[31];
 	double tnd_table[203];
-	uint8_t status; // 0x4015
+	// uint8_t status; // 0x4015
 	
     public:
 	std::shared_ptr<Mapper> mapper;

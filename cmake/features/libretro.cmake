@@ -24,7 +24,6 @@ source/framework/global_web.cpp
 source/console/console.h
 source/console/console.cpp
 source/console/dummy_implementation.h
-source/framework/glm_replacement.h
 source/libretro/libretro_implementation.cpp
 )
 

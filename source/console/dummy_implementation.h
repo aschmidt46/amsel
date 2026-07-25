@@ -7,9 +7,9 @@ class DummyImplementation : public Console{
     bool halt = false;
     public:
     DummyImplementation() = default;
-    DummyImplementation(const char* path){};
+    DummyImplementation(const char* path){(void)path;};
     ~DummyImplementation() = default;
-    void load(const char* path) override{};
+    void load(const char* path) override{(void)path;};
     void clock() override{};
     void clockUntilSampleReady() override{};
     const uint8_t* accessFramebuffer() override{return nullptr;};
@@ -20,30 +20,30 @@ class DummyImplementation : public Console{
     // Kann nicht 0 sein, weil Textur der Größe 0 in OpenGL nicht legal ist
     float getX() override{return 16.0f;};
     float getY() override{return 16.0f;};
-    void setController1Key(bool gamepad, int key, int action) override{};
-    void setController2Key(bool gamepad, int key, int action) override{};
+    void setController1Key(bool gamepad, int key, int action) override{(void)gamepad; (void)key; (void)action;};
+    void setController2Key(bool gamepad, int key, int action) override{(void)gamepad; (void)key; (void)action;};
 
     bool canSave() override {return false;};
     std::vector<uint8_t> getSaveData() override {return std::vector<uint8_t>();};
 
     std::vector<std::string> getRequiredFiles() override{return {};};
-    void loadSpecialFile(std::string name, std::vector<uint8_t> content) override{};
+    void loadSpecialFile(std::string name, std::vector<uint8_t> content) override{(void)name; (void)content;};
 
 
     void addClock() override{};
     void setHalt(bool val) override{halt = val;};
     bool isHalted() override{return halt;};
-    void produceDisassembly(bool val) override{};
+    void produceDisassembly(bool val) override{(void)val;};
     int addressBytes() override{return 0;};
     std::pair<std::string, std::vector<int>> getCurrentDisassembly() override{return {};};
     std::pair<std::string, std::vector<int>> getOldDisassembly() override{return {};};
-    std::vector<uint64_t> addBreakpoint(uint64_t bp) override{return {};};
-    std::vector<uint64_t> removeBreakpoint(uint64_t bp) override{return {};};
-    std::vector<std::string> addBreakpointOP(std::string bp) override{return {};};
-    std::vector<std::string> removeBreakpointOP(std::string bp) override{return {};};
-    std::string getText(uint64_t addr) override{return "";};
-    std::string getOpcodeName(size_t index) override{return "";};
-    uint8_t readCpuBus(uint64_t addr) override{return 0;};
+    std::vector<uint64_t> addBreakpoint(uint64_t bp) override{(void)bp; return {};};
+    std::vector<uint64_t> removeBreakpoint(uint64_t bp) override{(void)bp; return {};};
+    std::vector<std::string> addBreakpointOP(std::string bp) override{(void)bp; return {};};
+    std::vector<std::string> removeBreakpointOP(std::string bp) override{(void)bp; return {};};
+    std::string getText(uint64_t addr) override{(void)addr; return "";};
+    std::string getOpcodeName(size_t index) override{(void)index; return "";};
+    uint8_t readCpuBus(uint64_t addr) override{(void)addr; return 0;};
 
     void displayRegisters() override{};
 };

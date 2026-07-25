@@ -28,6 +28,8 @@ source/nes/mappers/mapper7.cpp source/nes/mappers/mapper7.h
 source/nes/mappers/mappers.cpp source/nes/mappers/mappers.h
 )
 
+target_compile_options(nes PUBLIC -Wall -Wextra -Wpedantic)
+
 set_property(TARGET nes PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 

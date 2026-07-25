@@ -1,6 +1,3 @@
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb")
-
 if(WIN32)
 message("-------- Detected OS: Windows")
 add_compile_definitions(NES_ON_WINDOWS)
@@ -103,18 +100,17 @@ source/console/console.cpp
 source/framework/locale.h
 source/framework/locale.cpp
 source/console/dummy_implementation.h
-source/framework/glm_replacement.h
+source/framework/vector.h
 )
 
 set_property(TARGET AMSEL PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
-target_compile_options(AMSEL PUBLIC -Wall)
 
 # target_compile_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 # target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 
-#target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
+target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -Werror)
 
 target_link_libraries(AMSEL whereami)
 target_link_libraries(AMSEL rtaudio)

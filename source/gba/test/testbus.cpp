@@ -1,6 +1,7 @@
 #include "testbus.h"
 #include "logging.h"
 #include <algorithm>
+#include "../../framework/stringlib.h"
 
 using namespace gba;
 
@@ -135,8 +136,8 @@ void gba::TestBus::logErrorNotTransacted(int index)
     str += "Transaktion nicht durchgeführt:\n";
     str += "\tKind:\t"+printKind(transactions[index].kind)+"\n";
     str += "Size:\t"+std::to_string(transactions[index].size)+"\n";
-    str += "Addr:\t"+getHex(transactions[index].addr, 8)+"\n";
-    str += "Data:\t"+getHex(transactions[index].data, 8)+"\n\n";
+    str += "Addr:\t"+getHex0x(transactions[index].addr, 8)+"\n";
+    str += "Data:\t"+getHex0x(transactions[index].data, 8)+"\n\n";
     logs += str;
 }
 
@@ -147,8 +148,8 @@ void gba::TestBus::logErrorUnknownTransaction(Word size, Word addr, Word val, st
     str += "Unbekannte Transaktion:\n";
     str += "\tKind:\t"+kind+"\n";
     str += "Size:\t"+std::to_string(size)+"\n";
-    str += "Addr:\t"+getHex(addr, 8)+"\n";
-    str += "Data:\t"+getHex(val, 8)+"\n\n";
+    str += "Addr:\t"+getHex0x(addr, 8)+"\n";
+    str += "Data:\t"+getHex0x(val, 8)+"\n\n";
     logs += str;
 }
 
@@ -171,8 +172,8 @@ void gba::TestBus::logErrorDuplicateTransaction(int index)
         str += "Transaktion mehrfach durchgeführt:\n";
         str += "\tKind:\t"+printKind(transactions[index].kind)+"\n";
         str += "Size:\t"+std::to_string(transactions[index].size)+"\n";
-        str += "Addr:\t"+getHex(transactions[index].addr, 8)+"\n";
-        str += "Data:\t"+getHex(transactions[index].data, 8)+"\n\n";
+        str += "Addr:\t"+getHex0x(transactions[index].addr, 8)+"\n";
+        str += "Data:\t"+getHex0x(transactions[index].data, 8)+"\n\n";
         logs += str;
     // }
 };

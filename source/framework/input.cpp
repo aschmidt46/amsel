@@ -3,12 +3,9 @@
 #include "framework/file_io.h"
 #include "framework/global.h"
 
-#include "imgui.h"
 #include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
 
 #include "gui.h"
-#include "nes/nes.h"
 
 GLFWgamepadstate previousState1;
 GLFWgamepadstate previousState2;
@@ -23,7 +20,7 @@ void initInput(){
   glfwSetMouseButtonCallback(window, mouseCallback);
 };
 
-static void mouseCallback(GLFWwindow* window, int button, int action, int mods){
+void mouseCallback(GLFWwindow* window, int button, int action, int mods){
 
   ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 
@@ -101,8 +98,9 @@ void joystickCallback(int jid, int event){
   }
 }
 
-static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+  (void)window; (void)scancode; (void)mods;
   if(action != GLFW_PRESS && action != GLFW_RELEASE) return;
   unsigned int v = action;
 

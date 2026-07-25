@@ -1,5 +1,3 @@
-set(CMAKE_CXX_FLAGS_DEBUG "-O2")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 include_directories(PUBLIC include)
 include_directories(PUBLIC include_deps)
@@ -19,10 +17,9 @@ source/console/console.cpp
 source/framework/locale.h
 source/framework/locale.cpp
 source/console/dummy_implementation.h
-source/framework/glm_replacement.h
 source/framework/global_web.cpp
 )
-# target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
+target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -Werror)
 
 # target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 

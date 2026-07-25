@@ -399,7 +399,9 @@ void Ppu::readCHRByteHigh()
 
 void Ppu::evaluateSprites()
 {
-	std::memset(secondaryOAM, 0xFF, 8 * sizeof(OAMSprite));
+	for(size_t i = 0; i < 8; i++){
+		secondaryOAM[i] = OAMSprite{};
+	}
 	spriteCount = 0;
 	for (uint8_t i = 0; i < 8; i++)
 	{
@@ -439,9 +441,9 @@ void Ppu::setSpriteShifters()
 			}
 			else{
 				// Vertikal umgedreht
-				spriteAddrLow = (PPUCTRL.getPatternSprite() << 12) 			// welche Pattern Tabelle
-							  | (secondaryOAM[i].tileIndex << 4) 		// welches Tile
-							  | 7 - (scanline - secondaryOAM[i].yPos);	// wo im Tile
+				spriteAddrLow = (PPUCTRL.getPatternSprite() << 12)
+							  | (secondaryOAM[i].tileIndex << 4)
+							  | (7 - (scanline - secondaryOAM[i].yPos));
 			}
 		}
 		else{
@@ -467,13 +469,13 @@ void Ppu::setSpriteShifters()
 					// Obere Hälfte
 					spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
 								  | ((secondaryOAM[i].tileIndex & 0xFE) << 4)
-								  | (7 - (scanline - secondaryOAM[i].yPos) & 0x07);
+								  | ((7 - (scanline - secondaryOAM[i].yPos)) & 0x07);
 				}
 				else{
 					// Untere Hälfte
 					spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
 								  | (((secondaryOAM[i].tileIndex & 0xFE) + 1) << 4)
-								  | (7 - (scanline - secondaryOAM[i].yPos) & 0x07);
+								  | ((7 - (scanline - secondaryOAM[i].yPos)) & 0x07);
 				}
 			}
 		}

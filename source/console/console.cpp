@@ -67,20 +67,6 @@ std::unique_ptr<Console> createConsoleFromData(std::string filename, std::vector
     return c;
 }
 
-std::string Console::ihex(uintptr_t input)
-{
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
-}
-
-std::string Console::ihexNorm(std::string s, int n)
-{
-    while (s.size() < n)
-        s = "0" + s;
-    return s;
-}
-
 Console::Console(const char *path)
 {
     std::filesystem::path p(path);

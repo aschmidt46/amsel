@@ -17,6 +17,12 @@ endif()
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_C_FLAGS_DEBUG "-O2 -ggdb")
+set(CMAKE_C_FLAGS_RELEASE "-O2")
+
+
 add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
 
 
@@ -63,6 +69,8 @@ if(FEATURE_DEBUGGER)
   add_compile_definitions(FEATURE_DEBUGGER)
 endif()
 
+# include_directories(${CMAKE_SOURCE_DIR}/source/framework)
+
 
 if(FEATURE_TEST_SUITE)
 
@@ -94,20 +102,26 @@ else()
 
   endif()
 
-  
-  if(FEATURE_NES)
-  add_compile_definitions(BUILD_NES)
-  include(${CMAKE_SOURCE_DIR}/cmake/features/nes.cmake)
-  endif()
-
-  if(FEATURE_CGB)
-  add_compile_definitions(BUILD_CGB)
-  include(${CMAKE_SOURCE_DIR}/cmake/features/cgb.cmake)
-  endif()
-
-  if(FEATURE_GBA)
-  add_compile_definitions(BUILD_GBA)
-  include(${CMAKE_SOURCE_DIR}/cmake/features/gba.cmake)
-  endif()
-
 endif()
+
+if(FEATURE_NES)
+add_compile_definitions(BUILD_NES)
+include(${CMAKE_SOURCE_DIR}/cmake/features/nes.cmake)
+endif()
+
+if(FEATURE_CGB)
+add_compile_definitions(BUILD_CGB)
+include(${CMAKE_SOURCE_DIR}/cmake/features/cgb.cmake)
+endif()
+
+if(FEATURE_GBA)
+add_compile_definitions(BUILD_GBA)
+include(${CMAKE_SOURCE_DIR}/cmake/features/gba.cmake)
+endif()
+
+
+add_library(stringlib
+  source/framework/stringlib.h
+  source/framework/stringlib.cpp
+)
+target_link_libraries(AMSEL stringlib)

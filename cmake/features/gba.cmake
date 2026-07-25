@@ -9,9 +9,12 @@ FetchContent_MakeAvailable(arm_disassembler)
 
 include_directories(PUBLIC deps/arm_disassembler)
 
+add_library(gba_dasm
+  deps/arm_disassembler/armdisasm.h deps/arm_disassembler/armdisasm.c
+)
+
 
 add_library(gba
-deps/arm_disassembler/armdisasm.h deps/arm_disassembler/armdisasm.c
 source/gba/bus.h source/gba/bus.cpp source/gba/ibus.h
 source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_types.h
 source/gba/arm/arm7tdmi_decoding.cpp
@@ -28,7 +31,9 @@ source/console/console.h
 source/console/gba_implementation.h source/console/gba_implementation.cpp
 )
 
-target_compile_options(gba PUBLIC -Wall)
+target_compile_options(gba PUBLIC -Wall -Wextra -Wpedantic)
+
+target_link_libraries(gba PUBLIC gba_dasm)
 
 set_property(TARGET gba PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")

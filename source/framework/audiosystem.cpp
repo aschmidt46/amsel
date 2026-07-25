@@ -1,5 +1,4 @@
 #include "audiosystem.h"
-#include <thread>
 
 static AudioSystem* t;
 
@@ -16,16 +15,16 @@ AudioSystem::~AudioSystem()
 int waveFun( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
          double streamTime, RtAudioStreamStatus status, void *userData )
 {
-  unsigned int i, j;
-  double *buffer = (double *) outputBuffer;
-  unsigned int *lastValues = (unsigned int *) userData;
+  (void)userData; (void)streamTime; (void)inputBuffer;
+
+  double *buffer = (double*)outputBuffer;
   
-  if ( status )
-  std::cout << "Stream underflow detected!" << std::endl;
+  if(status)
+    std::cout << "Stream underflow detected!" << std::endl;
 
   {
     std::lock_guard lock{consoleLock};
-    for(int i = 0; i < nBufferFrames; i++){
+    for(unsigned int i = 0; i < nBufferFrames; i++){
       if(!t->close && console->isLoaded()) {
         console->clockUntilSampleReady();
       }
@@ -58,10 +57,6 @@ void AudioSystem::start()
                        &bufferFrames, &waveFun, (void *)&data ) ) {
     std::cout << '\n' << dac.getErrorText() << '\n' << std::endl;
     exit( 0 ); // problem with device settings
-}
-auto err = dac.startStream();
-// while(!close){
-//     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-// }
-// dac.stopStream();
+  }
+  dac.startStream();
 }

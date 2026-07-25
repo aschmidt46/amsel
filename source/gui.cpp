@@ -8,6 +8,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include "framework/locale.h"
+#include "framework/stringlib.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -26,18 +27,6 @@
 #include "console/cgb_implementation.h"
 #endif
 #include "framework/screen.h"
-
-std::string ghex(uintptr_t input){
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
-}
-
-std::string ghexNorm(std::string s, int n){
-    while(s.size() < n)
-        s = "0"+s;
-    return s;
-}
 
 void removeCharsFromString( std::string &str, const char* charsToRemove ) {
    for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
@@ -176,7 +165,7 @@ std::string translateKeyCode(int c){
     case GLFW_KEY_CAPS_LOCK: return locale.getTranslation(KeyCapsLock);
     case GLFW_KEY_SCROLL_LOCK: return locale.getTranslation(KeyScrollLock);
     case GLFW_KEY_NUM_LOCK: return locale.getTranslation(KeyNumLock);
-    case GLFW_KEY_PRINT_SCREEN: locale.getTranslation(KeyPrint);
+    case GLFW_KEY_PRINT_SCREEN: return locale.getTranslation(KeyPrint);
     case GLFW_KEY_PAUSE: return locale.getTranslation(KeyPause);
     case GLFW_KEY_F1: return locale.getTranslation(KeyF1);
     case GLFW_KEY_F2: return locale.getTranslation(KeyF2);
@@ -240,7 +229,8 @@ std::string getBindingString(int controller, Action a, bool secondary){
     }
     if(secondary){
         // Falsch, andere Funktion für Gamepad
-        const char* name = translateGamepadCode((*v)[(int)a].second).c_str();
+        const std::string gamepadCode = translateGamepadCode((*v)[(int)a].second);
+        const char* name = gamepadCode.c_str();
         return (name != nullptr) ? std::string(name) : std::string(1, (char)(*v)[(int)a].second);
     }
     else{
@@ -256,7 +246,7 @@ std::vector<std::pair<std::string, ASMtype>> detectJumps(const std::pair<std::ve
 
   auto prevLine = lines.first[0];
   auto prevLength = lines.second[0];
-  for(int i = 1; i < lines.first.size(); i++){
+  for(size_t i = 1; i < lines.first.size(); i++){
     // console->adressBytes : Adressbusbreite in Bytes
     auto oldpc = stoll(prevLine.first.substr(1, 2 * console->addressBytes()), 0, 16);
     auto newpc = stoll(lines.first[i].first.substr(1, 2 * console->addressBytes()), 0, 16);
@@ -290,7 +280,7 @@ std::vector<std::pair<std::string, ASMtype>> splitLines(const std::string &lines
   return linesV;
 }
 
-void Gui::ASMLine(std::string l, int id, float r, float g, float b){
+void Gui::ASMLine(std::string l, float r, float g, float b){
   ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(r, g, b, 1.0f));
   ImGui::PushID(runningID++);
   if(ImGui::TextLink(l.substr(0, 2 * console->addressBytes() + 1).c_str())){
@@ -300,23 +290,21 @@ void Gui::ASMLine(std::string l, int id, float r, float g, float b){
   ImGui::PopID();
   ImGui::PopStyleColor();
   ImGui::SameLine();
-  ImGui::TextColored(ImVec4(r, g, b, 1.0f), l.substr(2 * console->addressBytes() + 1, l.size()- (2 * console->addressBytes() + 1)).c_str());
+  ImGui::TextColored(ImVec4(r, g, b, 1.0f), "%s", l.substr(2 * console->addressBytes() + 1, l.size()- (2 * console->addressBytes() + 1)).c_str());
 }
 
 void Gui::printASM(const std::vector<std::pair<std::string, ASMtype>> &v){
-  int id = 0;
   for(const auto &e : v){
-    id++;
     switch(e.second){
       case ASM_JUMP:
-        ASMLine(e.first, id, 1.0f, 0.0f, 0.0f);
+        ASMLine(e.first, 1.0f, 0.0f, 0.0f);
         ImGui::SeparatorText(locale.getTranslation(DebuggerJump).c_str());
         break;
       case ASM_CURRENT:
-        ASMLine(e.first, id, 1.0f, 1.0f, 0.0f);
+        ASMLine(e.first, 1.0f, 1.0f, 0.0f);
         break;
       case ASM_REGULAR:
-        ASMLine(e.first, id, 1.0f, 1.0f, 1.0f);
+        ASMLine(e.first, 1.0f, 1.0f, 1.0f);
         break;
     }
   }
@@ -347,7 +335,7 @@ void Gui::drawRegisters()
 
 void Gui::drawMemoryReader()
 {
-  ImGui::Text(locale.getTranslation(DebuggerAddress).c_str());
+  ImGui::Text("%s", locale.getTranslation(DebuggerAddress).c_str());
   ImGui::SameLine();
   ImGui::PushID(runningID++);
   ImGui::InputText("", memInputBuf, 255);
@@ -397,14 +385,14 @@ void Gui::drawMemoryReader()
     }
   }
 
-  ImGui::Text((locale.getTranslation(DebuggerHex)+ghexNorm(ghex(getLastRead()),console->addressBytes() * 2)).c_str());
+  ImGui::Text("%s", (locale.getTranslation(DebuggerHex)+getHex0x(getLastRead(),console->addressBytes() * 2)).c_str());
   ImGui::SameLine();
-  ImGui::Text((locale.getTranslation(DebuggerOpcode)+(console->getOpcodeName(getLastRead()))).c_str());
+  ImGui::Text("%s", (locale.getTranslation(DebuggerOpcode)+(console->getOpcodeName(getLastRead()))).c_str());
   if(console->addressBytes() <= 2){
-    ImGui::Text((locale.getTranslation(DebuggerBin)+std::bitset<16>(getLastRead()).to_string()).c_str());
+    ImGui::Text("%s", (locale.getTranslation(DebuggerBin)+std::bitset<16>(getLastRead()).to_string()).c_str());
   }
   else{
-    ImGui::Text((locale.getTranslation(DebuggerBin)+std::bitset<32>(getLastRead()).to_string()).c_str());
+    ImGui::Text("%s", (locale.getTranslation(DebuggerBin)+std::bitset<32>(getLastRead()).to_string()).c_str());
   }
 }
 
@@ -439,7 +427,7 @@ void Gui::drawBreakpoints()
   if(ImGui::BeginListBox("")){
     for(const auto &bp : breakpointsOP){
       ImGui::PushID(runningID++);
-      ImGui::Text((locale.getTranslation(DebuggerBreakOp)+bp).c_str());
+      ImGui::Text("%s", (locale.getTranslation(DebuggerBreakOp)+bp).c_str());
       ImGui::SameLine();
       if(ImGui::Button("X")){
         breakpointsOP = console->removeBreakpointOP(bp);
@@ -448,7 +436,7 @@ void Gui::drawBreakpoints()
     }
     for(const auto &bp : breakpoints){
       ImGui::PushID(runningID++);
-      ImGui::Text((locale.getTranslation(DebuggerBreakAddr)+ghexNorm(ghex(bp), 2 * console->addressBytes())).c_str());
+      ImGui::Text("%s", (locale.getTranslation(DebuggerBreakAddr)+getHex0x(bp, 2 * console->addressBytes())).c_str());
       ImGui::SameLine();
       if(ImGui::Button("X")){
         breakpoints = console->removeBreakpoint(bp);
@@ -492,16 +480,16 @@ void Gui::drawAbout()
   ImGui::Begin(locale.getTranslation(AboutTitle).c_str(), &state->showAbout, ImGuiWindowFlags_NoCollapse);
     ImGui::Text("Anton's Multi-System-Emulator (AMSEL) v0.1b");
     ImGui::Separator();
-    ImGui::Text(locale.getTranslation(AboutContent).c_str());
-    ImGui::Text(locale.getTranslation(AboutSystems).c_str());
+    ImGui::Text("%s", locale.getTranslation(AboutContent).c_str());
+    ImGui::Text("%s", locale.getTranslation(AboutSystems).c_str());
     #ifdef BUILD_CGB
-    ImGui::Text(locale.getTranslation(ConsoleDescriptionCGB).c_str());
+    ImGui::Text("%s", locale.getTranslation(ConsoleDescriptionCGB).c_str());
     #endif
     #ifdef BUILD_NES
-    ImGui::Text(locale.getTranslation(ConsoleDescriptionNES).c_str());
+    ImGui::Text("%s", locale.getTranslation(ConsoleDescriptionNES).c_str());
     #endif
     #ifdef BUILD_GBA
-    ImGui::Text(locale.getTranslation(ConsoleDescriptionGBA).c_str());
+    ImGui::Text("%s", locale.getTranslation(ConsoleDescriptionGBA).c_str());
     #endif
     ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://forgejo.kassade.de/anton/amsel.git");
   ImGui::End();
@@ -522,7 +510,7 @@ void Gui::drawOutput()
     ImGui::PushID(runningID++);
     ImGui::InputText("##", outInputBuf, 255);
     ImGui::PopID();
-    ImGui::TextWrapped(console->getText(outputStartsAt).c_str());
+    ImGui::TextWrapped("%s", console->getText(outputStartsAt).c_str());
   ImGui::End();
 }
 
@@ -557,14 +545,14 @@ void Gui::drawControlSettingsPage(int controller)
     
     ImGui::TableNextColumn();
 
-    ImGui::Text(locale.getTranslation(BindingDpadUp).c_str());
-    ImGui::Text(locale.getTranslation(BindingDpadDown).c_str());
-    ImGui::Text(locale.getTranslation(BindingDpadLeft).c_str());
-    ImGui::Text(locale.getTranslation(BindingDpadRight).c_str());
-    ImGui::Text(locale.getTranslation(BindingAButton).c_str());
-    ImGui::Text(locale.getTranslation(BindingBButton).c_str());
-    ImGui::Text(locale.getTranslation(BindingStartButton).c_str());
-    ImGui::Text(locale.getTranslation(BindingSelectButton).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingDpadUp).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingDpadDown).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingDpadLeft).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingDpadRight).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingAButton).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingBButton).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingStartButton).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingSelectButton).c_str());
 
     ImGui::TableNextColumn();
 
@@ -579,7 +567,7 @@ void Gui::drawControlSettingsPage(int controller)
     }
 
     ImGui::EndTable();
-    ImGui::Text(locale.getTranslation(GamepadColon).c_str());
+    ImGui::Text("%s", locale.getTranslation(GamepadColon).c_str());
     ImGui::SameLine();
     const char* name;
     int jid = 0;
@@ -608,7 +596,7 @@ void Gui::drawControlSettingsPage(int controller)
   }
 }
 
-void Gui::buttonChangePrompt(int i, int controller, bool secondary)
+void Gui::buttonChangePrompt(int i, unsigned int controller, bool secondary)
 {
   ImGui::PushID(runningID++);
   std::string bString = (state->waitOn.wait && state->waitOn.actionToSet == (Action)i && state->waitOn.controller == controller && state->waitOn.secondary == secondary)
@@ -632,10 +620,6 @@ Gui::Gui(SharedState *state)
       opInputBuf[i] = 0;
       outInputBuf[i] = 0;
   }
-  // if(debug)
-  // breakpointsOP = console->addBreakpointOP("BRK");
-  // opInputBuf[0] = 'B'; opInputBuf[1] = 'R'; opInputBuf[2] = 'K'; opInputBuf[3] = '\0';
-  // outInputBuf[0] = '6'; outInputBuf[0] = '0'; outInputBuf[0] = '0'; outInputBuf[0] = '4'; outInputBuf[0] = '\0';
 }
 
 void Gui::render()
@@ -730,7 +714,7 @@ void Gui::render()
         }
         bool s = globalConfig.unmute;
         if(!s) ImGui::BeginDisabled();
-          ImGui::Text(getVolumeIcon(globalConfig.volume, globalConfig.unmute));
+          ImGui::Text("%s", getVolumeIcon(globalConfig.volume, globalConfig.unmute));
           ImGui::SetNextItemWidth(-10);
           if(ImGui::SliderFloat("", &globalConfig.volume, 0, 1, "%.2f"))
             FileIO::getInstance().saveSettings(globalConfig);

@@ -1,8 +1,9 @@
 #include "nes_implementation.h"
 #ifdef BUILD_DESKTOP
 #include <imgui.h>
-#endif
 #include <bitset>
+#include "../framework/stringlib.h"
+#endif
 
 NesImplementation::NesImplementation(std::vector<uint8_t> &rom)
 {
@@ -169,13 +170,13 @@ void NesImplementation::displayRegisters()
     #ifdef BUILD_DESKTOP
     ImGui::BeginTable("Register", 2);
     ImGui::TableNextColumn();
-    ImGui::Text(("P: " + std::bitset<8>(console.readRegister(CpuReg::RegP)).to_string()).c_str());
-    ImGui::Text(("PC: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegPC)), 4)).c_str());
-    ImGui::Text(("SP: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegSP)), 2)).c_str());
+    ImGui::Text("%s", ("P: " + std::bitset<8>(console.readRegister(CpuReg::RegP)).to_string()).c_str());
+    ImGui::Text("%s", ("PC: " + getHexDollar(console.readRegister(CpuReg::RegPC), 4)).c_str());
+    ImGui::Text("%s", ("SP: " + getHexDollar(console.readRegister(CpuReg::RegSP), 2)).c_str());
     ImGui::TableNextColumn();
-    ImGui::Text(("A: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegA)), 2)).c_str());
-    ImGui::Text(("X: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegX)), 2)).c_str());
-    ImGui::Text(("Y: $" + ihexNorm(ihex(console.readRegister(CpuReg::RegY)), 2)).c_str());
+    ImGui::Text("%s", ("A: " + getHexDollar(console.readRegister(CpuReg::RegA), 2)).c_str());
+    ImGui::Text("%s", ("X: " + getHexDollar(console.readRegister(CpuReg::RegX), 2)).c_str());
+    ImGui::Text("%s", ("Y: " + getHexDollar(console.readRegister(CpuReg::RegY), 2)).c_str());
     ImGui::EndTable();
     #endif
 }

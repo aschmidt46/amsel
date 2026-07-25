@@ -69,10 +69,10 @@ class Gui{
     void drawOutput();
     void drawControlSettings();
     void drawControlSettingsPage(int controller);
-    void buttonChangePrompt(int i, int controller, bool secondary);
+    void buttonChangePrompt(int i, unsigned int controller, bool secondary);
     
     void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
-    void ASMLine(std::string l, int id, float r, float g, float b);
+    void ASMLine(std::string l, float r, float g, float b);
     
     
     public:

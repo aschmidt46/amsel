@@ -1,5 +1,4 @@
 #include "apu.h"
-#include <iostream>
 
 Apu::Apu()
 {
@@ -99,6 +98,7 @@ void Apu::write(uint16_t reg, uint8_t val)
 
 uint8_t Apu::read(uint16_t reg)
 {
+    (void)reg;
     bool fseqi = fseq.interruptFlag;
     fseq.interruptFlag = false;
 

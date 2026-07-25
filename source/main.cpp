@@ -89,6 +89,7 @@ int run(int argc, wchar_t** argv)
 
   int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
   {
+    (void)hInst; (void)hInstPrev; (void)cmdline; (void)cmdshow;
     auto v = GetCommandLineW();
     int argc;
     wchar_t** argv = CommandLineToArgvW(v, &argc);

@@ -3,8 +3,6 @@
 #include <assert.h>
 #include <iostream>
 #include <string>
-#include <format>
-#include <algorithm>
 #include <filesystem>
 #include <cstring>
 
@@ -100,7 +98,7 @@ NESFile::NESFile(const char *path)
     
 
     std::vector<uint8_t> rawData = std::vector<uint8_t>(contents.size());
-    for(int i = 0; i < contents.size(); i++){
+    for(size_t i = 0; i < contents.size(); i++){
         rawData[i] = contents[i];
     }
     stream.close();

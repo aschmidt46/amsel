@@ -1,11 +1,9 @@
 #include "6502.h"
 #include <limits>
 #include <format>
-#include <iostream>
-#include <algorithm>
-#include <iomanip>
 #include <string>
 #include <cstring>
+#include "../framework/stringlib.h"
 
 void Cpu::RESET()
 {
@@ -46,18 +44,6 @@ bool willCrossPage(uintptr_t a, int8_t b){
     return (b > std::numeric_limits<uint8_t>::max() - lowerA) || (diff < 0);
 }
 
-std::string hex(uintptr_t input){
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
-}
-
-std::string hexNorm(std::string s){
-    while(s.size() < 4)
-        s = "0"+s;
-    return s;
-}
-
 std::pair<std::string, std::vector<int>> Cpu::getPrev10Instructions()
 {
     std::vector<uint16_t> pcList;
@@ -87,7 +73,7 @@ std::pair<std::string, std::vector<int>> Cpu::getPrev10Instructions()
         const opcode_info &info = opcodes[opcode];
 
         const std::pair<std::string, int> &address = formatInstruction(info.mode, op1, op2, pc);
-        res+="$"+hexNorm(hex(pc))+":\t"+info.name+"\t" + address.first+"\n";
+        res+=getHexDollar(pc, 4)+":\t"+info.name+"\t" + address.first+"\n";
         length.push_back(address.second);
     }
     return {res, length};
@@ -106,7 +92,7 @@ std::pair<std::string, std::vector<int>> Cpu::getNextNInstructions(int n)
         const opcode_info &info = opcodes[opcode];
 
         const std::pair<std::string, int> &address = formatInstruction(info.mode, op1, op2, pc);
-        res+="$"+hexNorm(hex(pc))+":\t"+info.name+"\t" + address.first+"\n";
+        res+=getHexDollar(pc, 4)+":\t"+info.name+"\t" + address.first+"\n";
         length.push_back(address.second);
         pc += address.second;
     }
@@ -182,6 +168,8 @@ void Cpu::unimplemented(const std::string &instruction)
         .content = std::vformat(locale.getTranslation(UnimplementedInstruction), std::make_format_args(instruction))
     };
     messageQueue.enqueue(m);
+    #else
+    (void)instruction;
     #endif
 }
 
@@ -194,6 +182,8 @@ void Cpu::falseImplementation(const std::string &instruction)
         .content = std::vformat(locale.getTranslation(UnsafeInstruction), std::make_format_args(instruction))
     };
     messageQueue.enqueue(m);
+    #else
+    (void)instruction;
     #endif
 }
 
@@ -547,6 +537,7 @@ uint8_t Cpu::BPL(uint8_t *mem)
 
 uint8_t Cpu::BRK(uint8_t *mem)
 {
+    (void)mem;
     uint16_t PCH = (PC >> 8) & 0b0000000011111111;
     pushStack(PCH);
     pushStack(PC);
@@ -598,24 +589,28 @@ uint8_t Cpu::BVS(uint8_t *mem)
 
 uint8_t Cpu::CLC(uint8_t *mem)
 {
+    (void)mem;
     setStatus(STATUS_CARRY, false);
     return 0;
 }
 
 uint8_t Cpu::CLD(uint8_t *mem)
 {
+    (void)mem;
     setStatus(STATUS_DECIMAL, false);
     return 0;
 }
 
 uint8_t Cpu::CLI(uint8_t *mem)
 {
+    (void)mem;
     setInterruptNextInstruction = {true, false};
     return 0;
 }
 
 uint8_t Cpu::CLV(uint8_t *mem)
 {
+    (void)mem;
     setStatus(STATUS_OVERFLOW, false);
     return 0;
 }
@@ -663,6 +658,7 @@ uint8_t Cpu::DEC(uint8_t *mem)
 
 uint8_t Cpu::DEX(uint8_t *mem)
 {
+    (void)mem;
     X--;
     setStatus(STATUS_ZERO, X == 0);
     setStatus(STATUS_NEGATIVE, X & 0b10000000);
@@ -671,6 +667,7 @@ uint8_t Cpu::DEX(uint8_t *mem)
 
 uint8_t Cpu::DEY(uint8_t *mem)
 {
+    (void)mem;
     Y--;
     setStatus(STATUS_ZERO, Y == 0);
     setStatus(STATUS_NEGATIVE, Y & 0b10000000);
@@ -698,6 +695,7 @@ uint8_t Cpu::INC(uint8_t *mem)
 
 uint8_t Cpu::INX(uint8_t *mem)
 {
+    (void)mem;
     X++;
     setStatus(STATUS_ZERO, X == 0);
     setStatus(STATUS_NEGATIVE, X & 0b10000000);
@@ -706,6 +704,7 @@ uint8_t Cpu::INX(uint8_t *mem)
 
 uint8_t Cpu::INY(uint8_t *mem)
 {
+    (void)mem;
     Y++;
     setStatus(STATUS_ZERO, Y == 0);
     setStatus(STATUS_NEGATIVE, Y & 0b10000000);
@@ -764,6 +763,7 @@ uint8_t Cpu::LSR(uint8_t *mem)
 
 uint8_t Cpu::NOP(uint8_t *mem)
 {
+    (void)mem;
     return 0;
 }
 
@@ -777,6 +777,7 @@ uint8_t Cpu::ORA(uint8_t *mem)
 
 uint8_t Cpu::PHA(uint8_t *mem)
 {
+    (void)mem;
     write((uint8_t*)0x0100 + SP, A);
     SP--;
     return 0;
@@ -784,6 +785,7 @@ uint8_t Cpu::PHA(uint8_t *mem)
 
 uint8_t Cpu::PHP(uint8_t *mem)
 {
+    (void)mem;
     write((uint8_t*)0x0100 + SP, P | 0b00110000);
     SP--;
     return 0;
@@ -791,6 +793,7 @@ uint8_t Cpu::PHP(uint8_t *mem)
 
 uint8_t Cpu::PLA(uint8_t *mem)
 {
+    (void)mem;
     SP++;
     A = read((uint8_t*)0x0100 + SP);
     setStatus(STATUS_ZERO, A == 0);
@@ -800,6 +803,7 @@ uint8_t Cpu::PLA(uint8_t *mem)
 
 uint8_t Cpu::PLP(uint8_t *mem)
 {
+    (void)mem;
     SP++;
     uint8_t val = read((uint8_t*)0x0100 + SP);
     setStatus(STATUS_CARRY,    val & 0b00000001);
@@ -837,6 +841,7 @@ uint8_t Cpu::ROR(uint8_t *mem)
 
 uint8_t Cpu::RTI(uint8_t *mem)
 {
+    (void)mem;
     uint8_t val = pullStack();
     uint8_t PCl = pullStack();
     uint8_t PCh = pullStack();
@@ -852,6 +857,7 @@ uint8_t Cpu::RTI(uint8_t *mem)
 
 uint8_t Cpu::RTS(uint8_t *mem)
 {
+    (void)mem;
     uint8_t PCl = pullStack();
     uint8_t PCh = pullStack();
     PC = ((uint16_t)PCh << 8) | PCl;
@@ -874,18 +880,21 @@ uint8_t Cpu::SBC(uint8_t *mem)
 
 uint8_t Cpu::SEC(uint8_t *mem)
 {
+    (void)mem;
     setStatus(STATUS_CARRY, true);
     return 0;
 }
 
 uint8_t Cpu::SED(uint8_t *mem)
 {
+    (void)mem;
     setStatus(STATUS_DECIMAL, true);
     return 0;
 }
 
 uint8_t Cpu::SEI(uint8_t *mem)
 {
+    (void)mem;
     setInterruptNextInstruction = {true, true};
     return 0;
 }
@@ -910,6 +919,7 @@ uint8_t Cpu::STY(uint8_t *mem)
 
 uint8_t Cpu::TAX(uint8_t *mem)
 {
+    (void)mem;
     X = A;
     setStatus(STATUS_ZERO, X == 0);
     setStatus(STATUS_NEGATIVE, X & 0b10000000);
@@ -918,6 +928,7 @@ uint8_t Cpu::TAX(uint8_t *mem)
 
 uint8_t Cpu::TAY(uint8_t *mem)
 {
+    (void)mem;
     Y = A;
     setStatus(STATUS_ZERO, Y == 0);
     setStatus(STATUS_NEGATIVE, Y & 0b10000000);
@@ -926,6 +937,7 @@ uint8_t Cpu::TAY(uint8_t *mem)
 
 uint8_t Cpu::TSX(uint8_t *mem)
 {
+    (void)mem;
     X = SP;
     setStatus(STATUS_ZERO, X == 0);
     setStatus(STATUS_NEGATIVE, X & 0b10000000);
@@ -934,6 +946,7 @@ uint8_t Cpu::TSX(uint8_t *mem)
 
 uint8_t Cpu::TXA(uint8_t *mem)
 {
+    (void)mem;
     A = X;
     setStatus(STATUS_ZERO, A == 0);
     setStatus(STATUS_NEGATIVE, A & 0b10000000);
@@ -942,12 +955,14 @@ uint8_t Cpu::TXA(uint8_t *mem)
 
 uint8_t Cpu::TXS(uint8_t *mem)
 {
+    (void)mem;
     SP = X;
     return 0;
 }
 
 uint8_t Cpu::TYA(uint8_t *mem)
 {
+    (void)mem;
     A = Y;
     setStatus(STATUS_ZERO, A == 0);
     setStatus(STATUS_NEGATIVE, A & 0b10000000);
@@ -956,6 +971,7 @@ uint8_t Cpu::TYA(uint8_t *mem)
 
 uint8_t Cpu::STP(uint8_t *mem)
 {
+    (void)mem;
     unimplemented("STP");
     return 0;
 }
@@ -1043,6 +1059,7 @@ uint8_t Cpu::SAX(uint8_t *mem)
 
 uint8_t Cpu::XAA(uint8_t *mem)
 {
+    (void)mem;
     unimplemented("XAA");
     return 0;
 }
@@ -1056,6 +1073,7 @@ uint8_t Cpu::AHX(uint8_t *mem)
 
 uint8_t Cpu::TAS(uint8_t *mem)
 {
+    (void)mem;
     unimplemented("TAS");
     return 0;
 }
@@ -1083,6 +1101,7 @@ uint8_t Cpu::LAX(uint8_t *mem)
 
 uint8_t Cpu::LAS(uint8_t *mem)
 {
+    (void)mem;
     unimplemented("LAS");
     return 0;
 }

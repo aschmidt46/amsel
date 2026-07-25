@@ -8,8 +8,6 @@
 
 #include "icon.h"
 #include "styles.h"
-#define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
-#include "ImGuiNotify.hpp"
 #include "IconsFontAwesome6.h"
 #include "fa-solid-900.h"
 #include "file_io.h"
@@ -19,7 +17,7 @@
 #include "input.h"
 #include "framework/global.h"
 #include "framework/screen.h"
-#include "nes/nes.h"
+#include <string>
 
 int width = 256, height = 240;
 
@@ -53,13 +51,10 @@ GLFWwindow* initWindow(){
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
-  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Multi Viewport für Debugger (braucht docking branch)
-  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-  // Setup Platform/Renderer backends
-  ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+  ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();
 
   io.Fonts->AddFontDefault();
@@ -74,7 +69,7 @@ GLFWwindow* initWindow(){
   iconsConfig.GlyphMinAdvanceX = iconFontSize;
   io.Fonts->AddFontFromMemoryCompressedTTF(fa_solid_900_compressed_data, fa_solid_900_compressed_size, iconFontSize, &iconsConfig, iconsRanges);
 
-    // Nur im Falle, dass noch keine Ini existiert.
+    // Nur im Fall, dass noch keine Ini existiert.
   int autoX, autoY;
   glfwGetWindowPos(window, &autoX, &autoY);
 
@@ -142,7 +137,7 @@ void cleanUp(GLFWwindow* window){
   delete screen;
 }
 
-static void framebufferSizeCallback(GLFWwindow* window, int w, int h){
+void framebufferSizeCallback(GLFWwindow* window, int w, int h){
     width = w;
     height = h;
     screen->updateFramebufferSize(w, h);
@@ -157,12 +152,13 @@ static void framebufferSizeCallback(GLFWwindow* window, int w, int h){
 
 
 
-static void maximizeCallback(GLFWwindow* window, int maximized){
+void maximizeCallback(GLFWwindow* window, int maximized){
+  (void)window;
   globalConfig.maximize = maximized;
   FileIO::getInstance().saveSettings(globalConfig);
 }
 
-static void positionCallback(GLFWwindow* window, int posx, int posy){
+void positionCallback(GLFWwindow* window, int posx, int posy){
   // Für Ini
   if(!sharedGui->state->fullScreen && !glfwGetWindowAttrib(window, GLFW_MAXIMIZED) && glfwGetWindowMonitor(window) == NULL){
     globalConfig.posX = posx;
@@ -177,11 +173,11 @@ void onToggleFullscreen(GLFWwindow* window){
       if(globalConfig.maximize)
         glfwMaximizeWindow(window);
     }
-    else{
-      GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-      const GLFWvidmode* mode = glfwGetVideoMode(monitor);
- 
-      glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+  else{
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+    glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
     }
 }
 

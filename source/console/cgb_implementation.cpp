@@ -1,7 +1,7 @@
 #include "cgb_implementation.h"
 #include "../framework/global.h"
+#include "../framework/stringlib.h"
 #include <cstring>
-#include <iostream>
 #ifdef BUILD_DESKTOP
   #include <imgui.h>
   #include "../framework/file_io.h"
@@ -415,17 +415,17 @@ void CgbImplementation::displayRegisters()
   std::lock_guard lock(consoleLock);
   ImGui::BeginTable("Register", 2);
   ImGui::TableNextColumn();
-  ImGui::Text(("F: " + std::bitset<8>(cgb_read_register_8(cgb, CGBRegister8::F)).to_string()).c_str());
-  ImGui::Text(("PC: $" + ihexNorm(ihex(cgb_read_register_16(cgb, CGBRegister16::PC)), 4)).c_str());
-  ImGui::Text(("SP: $" + ihexNorm(ihex(cgb_read_register_16(cgb, CGBRegister16::SP)), 2)).c_str());
-  ImGui::Text(("D: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::D)), 2)).c_str());
-  ImGui::Text(("H: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::H)), 2)).c_str());
+  ImGui::Text("%s", ("F: " + std::bitset<8>(cgb_read_register_8(cgb, CGBRegister8::F)).to_string()).c_str());
+  ImGui::Text("%s", ("PC: " + getHexDollar(cgb_read_register_16(cgb, CGBRegister16::PC), 4)).c_str());
+  ImGui::Text("%s", ("SP: " + getHexDollar(cgb_read_register_16(cgb, CGBRegister16::SP), 2)).c_str());
+  ImGui::Text("%s", ("D: " + getHexDollar(cgb_read_register_8(cgb, CGBRegister8::D), 2)).c_str());
+  ImGui::Text("%s", ("H: " + getHexDollar(cgb_read_register_8(cgb, CGBRegister8::H), 2)).c_str());
   ImGui::TableNextColumn();
-  ImGui::Text(("A: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::A)), 2)).c_str());
-  ImGui::Text(("B: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::B)), 2)).c_str());
-  ImGui::Text(("C: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::C)), 2)).c_str());
-  ImGui::Text(("E: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::E)), 2)).c_str());
-  ImGui::Text(("L: $" + ihexNorm(ihex(cgb_read_register_8(cgb, CGBRegister8::L)), 2)).c_str());
+  ImGui::Text("%s", ("A: " + getHexDollar(cgb_read_register_8(cgb, CGBRegister8::A), 2)).c_str());
+  ImGui::Text("%s", ("B: " + getHexDollar(cgb_read_register_8(cgb, CGBRegister8::B), 2)).c_str());
+  ImGui::Text("%s", ("C: " + getHexDollar(cgb_read_register_8(cgb, CGBRegister8::C), 2)).c_str());
+  ImGui::Text("%s", ("E: " + getHexDollar(cgb_read_register_8(cgb, CGBRegister8::E), 2)).c_str());
+  ImGui::Text("%s", ("L: " + getHexDollar(cgb_read_register_8(cgb, CGBRegister8::L), 2)).c_str());
   ImGui::EndTable();
   #endif
 }

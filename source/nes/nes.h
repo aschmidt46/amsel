@@ -2,7 +2,6 @@
 #include "6502.h"
 #include "ppu.h"
 #include "mapper.h"
-#include "nes_file.h"
 #include <chrono>
 #include "controller.h"
 #include "apu/apu.h"
