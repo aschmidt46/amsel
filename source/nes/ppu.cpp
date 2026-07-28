@@ -4,12 +4,6 @@
 #include <format>
 #include <algorithm>
 
-std::string phex(uintptr_t input){
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
-}
-
 
 void Ppu::clock()
 {
@@ -330,8 +324,8 @@ void Ppu::loadBackgroundShifters()
 {
 	shifterCHRLow = (shifterCHRLow & 0xFF00) | nextTileCHRLow;
 	shifterCHRHigh = (shifterCHRHigh & 0xFF00) | nextTileCHRHigh;
-	shifterATLow  = (shifterATLow & 0xFF00) | ((nextTileATByte & 0b01) ? 0xFF : 0x00);
-	shifterATHigh  = (shifterATHigh & 0xFF00) | ((nextTileATByte & 0b10) ? 0xFF : 0x00);
+	shifterATLow  = (shifterATLow & 0xFF00) | ((nextTileATByte & 0b01) ? 0xFF : 0);
+	shifterATHigh  = (shifterATHigh & 0xFF00) | ((nextTileATByte & 0b10) ? 0xFF : 0);
 }
 
 void Ppu::updateShifters()
@@ -375,10 +369,10 @@ void Ppu::readNTByte()
 
 void Ppu::readATByte()
 {                                                                    // nametable xy      coarse y                coarse x
-	nextTileATByte = mapper->readVRAM((uint8_t*)(uintptr_t)(0x23C0 | (v.raw & 0x0C00) | ((v.raw >> 4) & 0x38) | ((v.raw >> 2) & 0x07)));			
-	if (v.getCoarseY() & 0x02) nextTileATByte >>= 4;
-	if (v.getCoarseX() & 0x02) nextTileATByte >>= 2;
-	nextTileATByte &= 0x03;
+	nextTileATByte = mapper->readVRAM((uint8_t*)(uintptr_t)(0x23C0 | (v.raw & 0x0C00) | ((v.raw >> 4) & 0x38) | ((v.raw >> 2) & 7)));			
+	if (v.getCoarseY() & 2) nextTileATByte >>= 4;
+	if (v.getCoarseX() & 2) nextTileATByte >>= 2;
+	nextTileATByte &= 3;
 }
 
 void Ppu::readCHRByteLow()
@@ -431,72 +425,34 @@ void Ppu::setSpriteShifters()
 	for(uint8_t i = 0; i < spriteCount; i++){
 		uint8_t spriteCHRLow, spriteCHRHigh;
 		uint16_t spriteAddrLow, spriteAddrHigh;
+		int invert = secondaryOAM[i].attributes & 0x80 ? -1 : 1; // vertikal umgedreht
+		int invertOffset = secondaryOAM[i].attributes & 0x80 ? 7 : 0;
 		if(!PPUCTRL.getSpriteSize()){
 			// 8x8 Modus
-			if(!(secondaryOAM[i].attributes & 0x80)){
-				// Normale vertikale Ausrichtung
-				spriteAddrLow = (PPUCTRL.getPatternSprite() << 12) 		// welche Pattern Tabelle
-							  | (secondaryOAM[i].tileIndex << 4) 	// welches Tile
-							  | (scanline - secondaryOAM[i].yPos);	// wo im Tile
-			}
-			else{
-				// Vertikal umgedreht
-				spriteAddrLow = (PPUCTRL.getPatternSprite() << 12)
-							  | (secondaryOAM[i].tileIndex << 4)
-							  | (7 - (scanline - secondaryOAM[i].yPos));
-			}
+			spriteAddrLow = (PPUCTRL.getPatternSprite() << 12) // Pattern Table wählen
+							  | (secondaryOAM[i].tileIndex << 4) // Tile wählen
+							  | (invertOffset + invert * (scanline - secondaryOAM[i].yPos)); // Position im Tile
 		}
 		else{
 			// 8x16
-			if(!(secondaryOAM[i].attributes & 0x80)){
-				// Normale vertikale Ausrichtung
-				if(scanline - secondaryOAM[i].yPos < 8){
-					// Obere Hälfte
-					spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
-								  | ((secondaryOAM[i].tileIndex & 0xFE) << 4)
-								  | ((scanline - secondaryOAM[i].yPos) & 0x07);
-				}
-				else{
-					// Untere Hälfte
-					spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
-								  | (((secondaryOAM[i].tileIndex & 0xFE) + 1) << 4)
-								  | ((scanline - secondaryOAM[i].yPos) & 0x07);
-				}
-			}
-			else{
-				// Vertikal umgedreht
-				if(scanline - secondaryOAM[i].yPos >= 8){
-					// Obere Hälfte
-					spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
-								  | ((secondaryOAM[i].tileIndex & 0xFE) << 4)
-								  | ((7 - (scanline - secondaryOAM[i].yPos)) & 0x07);
-				}
-				else{
-					// Untere Hälfte
-					spriteAddrLow = ((secondaryOAM[i].tileIndex & 0x01) << 12)
-								  | (((secondaryOAM[i].tileIndex & 0xFE) + 1) << 4)
-								  | ((7 - (scanline - secondaryOAM[i].yPos)) & 0x07);
-				}
-			}
+			uint8_t indexOffset = scanline - secondaryOAM[i].yPos >= 8 ? 1 : 0; // untere hälfte / obere  hälfte
+			spriteAddrLow = ((secondaryOAM[i].tileIndex & 1) << 12)
+								  | (((secondaryOAM[i].tileIndex & 254u) + indexOffset) << 4)
+								  | (invertOffset - invert * ((scanline - secondaryOAM[i].yPos) & 7));
 		}
 		spriteAddrHigh = spriteAddrLow + 8;
 		spriteCHRLow = mapper->readVRAM((uint8_t*)(uintptr_t)spriteAddrLow);
 		spriteCHRHigh = mapper->readVRAM((uint8_t*)(uintptr_t)spriteAddrHigh);
 		// Flip horizontal
 		if(secondaryOAM[i].attributes & 0x40){
-			// This little lambda function "flips" a byte
-			// so 0b11100000 becomes 0b00000111. It's very
-			// clever, and stolen completely from here:
-			// https://stackoverflow.com/a/2602885
-			auto flipbyte = [](uint8_t b)
-			{
+			auto reverse = [](uint8_t b){
 				b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
 				b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
 				b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
 				return b;
 			};
-			spriteCHRLow = flipbyte(spriteCHRLow);
-			spriteCHRHigh = flipbyte(spriteCHRHigh);
+			spriteCHRLow = reverse(spriteCHRLow);
+			spriteCHRHigh = reverse(spriteCHRHigh);
 		}
 		spriteShifterCHRLow[i] = spriteCHRLow;
 		spriteShifterCHRHigh[i] = spriteCHRHigh;

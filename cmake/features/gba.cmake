@@ -16,6 +16,7 @@ add_library(gba_dasm
 
 add_library(gba
 source/gba/bus.h source/gba/bus.cpp source/gba/ibus.h
+source/gba/register/general_purpose.h source/gba/register/general_purpose.cpp
 source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_types.h
 source/gba/arm/arm7tdmi_decoding.cpp
 source/gba/arm/arm7tdmi_instructions_arm.cpp
@@ -25,6 +26,8 @@ source/gba/arm/arm7tdmi_aux.cpp
 source/gba/ppu.h source/gba/ppu_registers.h source/gba/ppu.cpp
 source/gba/timer.h
 source/gba/timer.cpp
+source/gba/dma.h
+source/gba/dma.cpp
 source/gba/gba.h source/gba/gba.cpp
 source/gba/test/logging.h source/gba/test/logging.cpp
 source/console/console.h

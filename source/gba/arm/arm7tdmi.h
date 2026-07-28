@@ -113,6 +113,8 @@ namespace gba{
         Word lastTransactionAddress = 0;
         Word lastTransactionData = 0;
 
+        bool wasInterrupt = false;
+
         InstructionInfo decodeInstruction(Word code);
         static InstructionInfo decodeInstructionARM(Word code);
         static InstructionInfo decodeInstructionTHUMB(Word code);
@@ -185,11 +187,13 @@ namespace gba{
 
 
         // Debug
+        bool pipelineHasValue();
         bool advancedThisClock();
         std::pair<std::string, std::vector<int>> getNextNInstructions(int n);
         std::pair<std::string, std::vector<int>> getPrev10Instructions();
         void incrementCircular();
-        std::vector<std::pair<int64_t, CpuState>> circular{std::vector<std::pair<int64_t, CpuState>>(10,{-1, ARM})};
+        const int circSize = 10;
+        std::vector<std::pair<int64_t, CpuState>> circular{std::vector<std::pair<int64_t, CpuState>>(circSize,{-1, ARM})};
         unsigned int circularIndex = 0;
         std::string getCurrentOpcode();
 

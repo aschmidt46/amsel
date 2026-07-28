@@ -99,7 +99,13 @@ void gba::CPU::advanceCPU()
         flushPipeline();
     }
     else{
+        wasInterrupt = false;
+        Word prevPC = _R15_PC;
         bool jump = executeInstruction();
+        if(jump && !wasInterrupt && prevPC > 0x01000000 && _R15_PC < 0x01000000){
+            std::cout << "Verdächtiger Sprung!\n";
+            // bus.lock()->setHalt();
+        }
         if(jump){
             flushPipeline();
         }
@@ -124,8 +130,10 @@ void gba::CPU::advanceCPUToNextValidState()
 void gba::CPU::clock() {
     if(this->remainingCycles <= 0){
         //Debugging
-        circular[circularIndex] = {_R15_PC - (state() == ARM ? 8 : 4), state()};
-        incrementCircular();
+        if(pipelineDecoded.has_value()){
+            circular[circularIndex] = {_R15_PC - (state() == ARM ? 8 : 4), state()};
+            incrementCircular();
+        }
         
         
         this->advanceCPU();
@@ -139,8 +147,8 @@ void gba::CPU::clock() {
 
 bool gba::CPU::pollInterrupts()
 {
-    //                                       interrupt disable nicht gesetzt             ime gesetzt
-    if(!std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]).state.I && (bus.lock()->readByte(0x4000208) & 1u)){
+    //interrupt disable nicht gesetzt             ime gesetzt
+    if(!_CPSR.state.I && (bus.lock()->readByte(0x4000208) & 1u)){
         HalfWord IE = this->bus.lock()->readHalfWord(0x4000200);
         HalfWord IF = this->bus.lock()->readHalfWord(0x4000202);
         for(int i = 0; i < 14; i++){
@@ -175,6 +183,10 @@ bool gba::CPU::advancedThisClock() {
     return advanced;
 }
 
+bool gba::CPU::pipelineHasValue(){
+    return pipelineDecoded.has_value();
+}
+
 std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
 {
     int offset = (state() == ARM ? 4 : 2);
@@ -190,7 +202,7 @@ std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
     
     for(int i = 0; i < n; i++){
         Word opcode = this->bus.lock()->readWord(pc & ~0b11);
-        s.address = pc;
+        s.address = pc - offset;
         if(state() == ARM){
             s.arm_mode = 1;
             disasm_arm(&s, opcode);
@@ -209,9 +221,10 @@ std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
 
 std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
 {
+    int offset = (state() == ARM ? 4 : 2);
     std::vector<std::pair<Word, Word>> pcList;
     int it = circularIndex;
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i < circSize; i++){
 
         auto instruction = circular[it];
 
@@ -219,7 +232,7 @@ std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
             pcList.push_back(instruction);
 
 
-        if(it>=9){
+        if(it>=circSize-1){
             it = 0;
         }
         else{
@@ -237,7 +250,7 @@ std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
     }
     for(const auto &pc : pcList){
         std::string str = "";
-        s.address = pc.first;
+        s.address = pc.first - offset;
         Word opcode = this->bus.lock()->readWord(pc.first & ~0b11);
         if(pc.second == ARM){
             s.arm_mode = 1;
@@ -257,7 +270,7 @@ std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
 
 void gba::CPU::incrementCircular() {
     circularIndex += 1;
-    circularIndex %= 10;
+    circularIndex %= circSize;
 }
 
 std::string gba::CPU::getCurrentOpcode() {

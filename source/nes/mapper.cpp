@@ -5,12 +5,6 @@
 #include <format>
 #include "framework/file_io.h"
 
-std::string mhex(uintptr_t input){
-    std::string str = std::format("{:x}", input);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
-}
-
 
 Mapper::Mapper(std::weak_ptr<Cpu> cpu, std::weak_ptr<Ppu> ppu, std::weak_ptr<Apu> apu)
 {

@@ -50,6 +50,14 @@ std::pair<float, float> gba::GBA::getSample(){
     return {0,0};
 }
 
+void gba::GBA::press(int i){
+    this->bus->press(i);
+}
+
+void gba::GBA::release(int i){
+    this->bus->release(i);
+}
+
 void gba::GBA::loadBios(const std::vector<uint8_t> &content) {
     this->bus->loadBios(content);
 }

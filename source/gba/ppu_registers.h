@@ -36,4 +36,19 @@ namespace gba{
         } state;
         HalfWord raw;
     };
+
+    union BGCNT_T {
+        struct{
+            HalfWord BGPriority : 2; //lsb
+            HalfWord CHRBaseBlock : 2;
+            HalfWord unused : 2; // muss 0 sein
+            HalfWord mosaic : 1;
+            HalfWord colorsPalettes : 1;
+            HalfWord screenBaseBlock : 4;
+            HalfWord unusedBG0BG1 : 1;
+            HalfWord DisplayAreaOverflowBG2BG3 : 1;
+            HalfWord screenSize : 2;
+        } state;
+        HalfWord raw;
+    };
 }

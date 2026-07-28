@@ -1,4 +1,7 @@
 #include "bus.h"
+#include "dma.h"
+#include "framework/stringlib.h"
+#include <bitset>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -50,6 +53,48 @@ Byte* gba::Bus::accessMemory(Word addr)
     return &null;
 }
 
+unsigned int Bus::getCyclesForAccess(Word addr, bool sequential){
+    // TODO
+    (void)addr;
+    (void)sequential;
+    return 1;
+}
+
+void Bus::PPUEnteredHBlank(){
+    for(auto &d : dma){
+        if(d.getStartTiming() == DMA_HBLANK)
+            d.isActive = true;
+    }
+    if(ppu.getVCount() >= 2 && ppu.getVCount() < 162){
+        if(dma[3].getStartTiming() == DMA_VIDEO_CAPTURE) dma[3].isActive = true;
+    }
+}
+
+void Bus::PPULeftHBlank(){
+    for(auto &d : dma){
+        if(d.getStartTiming() == DMA_HBLANK || d.getStartTiming() == DMA_VIDEO_CAPTURE)
+            d.isActive = false;
+    }
+    if(ppu.getVCount() >= 162 && dma[3].getStartTiming() == DMA_VIDEO_CAPTURE){
+        dma[3].Control.raw &= ~(1u << 15);
+    }
+}
+
+void Bus::PPUEnteredVBlank(){
+    for(auto &d : dma){
+        if(d.getStartTiming() == DMA_VBLANK)
+            d.isActive = true;
+    }
+}
+
+void Bus::PPULeftVBlank(){
+    for(auto &d : dma){
+        if(d.getStartTiming() == DMA_VBLANK)
+            d.isActive = false;
+    }
+}
+
+
 void gba::Bus::writeByte(Word addr, Byte val)
 {
     (void)addr;
@@ -59,58 +104,99 @@ void gba::Bus::writeByte(Word addr, Byte val)
         // WRAM (board) + Mirror
         auto mod = (addr - 0x02000000) % 0x40000;
         wramBoard[mod] = val;
-        return;
     }
-    if(addr >= 0x03000000 && addr < 0x04000000){
+    else if(addr >= 0x03000000 && addr < 0x04000000){
         // WRAM (chip) + Mirror
         auto mod = (addr - 0x03000000) % 0x8000;
         wramChip[mod] = val;
-        return;
     }
 
-    if(addr >= 0x04000000 && addr < 0x04000060){
+    else if(addr >= 0x04000000 && addr < 0x04000060){
         ppu.writePPURegister(addr, val);
-        return;
+    }
+
+    // DMA
+    else if(addr >= 0x040000B0 && addr < 0x040000BC){
+        dma[0].onWrite(addr - 0x040000B0, val);
+    }
+    else if(addr >= 0x040000BC && addr < 0x040000C8){
+        dma[1].onWrite(addr - 0x040000BC, val);
+    }
+    else if(addr >= 0x040000C8 && addr < 0x040000D4){
+        dma[2].onWrite(addr - 0x040000C8, val);
+    }
+    else if(addr >= 0x040000D4 && addr < 0x040000E0){
+        dma[3].onWrite(addr - 0x040000D4, val);
+    }
+
+    // Timer
+    else if(addr >= 0x04000100 && addr < 0x04000104){
+        timers[0].onWrite(addr - 0x04000100, val);
+    }
+    else if(addr >= 0x04000104 && addr < 0x04000108){
+        timers[1].onWrite(addr - 0x04000104, val);
+    }
+    else if(addr >= 0x04000108 && addr < 0x0400010A){
+        timers[2].onWrite(addr - 0x04000108, val);
+    }
+    else if(addr >= 0x0400010A && addr < 0x04000110){
+        timers[3].onWrite(addr - 0x0400010A, val);
+    }
+
+    else if(addr >= 0x04000132 && addr < 0x04000134){
+        KEYCNT.OnWriteByte(addr, val);
     }
 
     //Interrupt Handling
-    if(addr == 0x04000200){
+    else if(addr == 0x04000200){
         IE = (IE & 0xFF00) | val;
-        return;
+        std::cout << "IE write: " << std::bitset<16>(IE) << "\n";
     }
-    if(addr == 0x04000201){//!!
-        IE = (IE & 0x00FF) | (val << 8);
-        return;
+    else if(addr == 0x04000201){//!!
+        IE = (IE & 0x00FF) | (HalfWord(val) << 8);
+        std::cout << "IE write: " << std::bitset<16>(IE) << "\n";
     }
-    if(addr == 0x04000202){
+    else if(addr == 0x04000202){
         IF = IF & ~HalfWord(val);
-        return;
     }
-    if(addr == 0x04000203){
+    else if(addr == 0x04000203){
         IF = IF & ~(HalfWord(val) << 8);
-        return;
     }
-    if(addr == 0x04000208){
-        IME = val;
-        return;
+    else if(addr >= 0x04000204 && addr < 0x04000208){
+        waitCNT.OnWriteByte(addr, val);
+    }
+    else if(addr >= 0x04000208 && addr < 0x0400020C){
+        IME.OnWriteByte(addr, val);
     }
 
-    if(addr >= 0x05000000 && addr < 0x08000000){
+    else if(addr == 0x04000300){
+        POSTFLG = val;
+    }
+    else if(addr == 0x04000301){
+        HALTCNT = val;
+    }
+
+    else if(addr >= 0x04000800 && addr < 0x05000000 && ((addr & 0xFFFFFF) % 0x10000) >= 0x800 && ((addr & 0xFFFFFF) % 0x10000) < 0x804){
+        InternalMemoryControl.OnWriteByte(((addr & 0xFFFFFF) % 0x10000), val);
+    }
+
+    else if(addr >= 0x05000000 && addr < 0x08000000){
         ppu.writePPUMemory(addr, val);
-        return;
     }
 
     // Cart Ram
-    if(addr >= 0x0E000000 && addr < 0x0E010000){
+    else if(addr >= 0x0E000000 && addr < 0x0E010000){
         cartRam[addr - 0x0E000000] = val;
-        return;
     }
-    if(addr >= 0x0F000000 && addr < 0x0F010000){
+    else if(addr >= 0x0F000000 && addr < 0x0F010000){
         cartRam[addr - 0x0F000000] = val;
+    }
+    else if(addr >= 0x04000060 && addr < 0x040000A8){
+        //Audio Register
         return;
     }
 
-    // std::cout << "Unbekannter Write: " << getHex(addr, 8) << std::endl;
+    // else std::cout << "Unbekannter Write: " << getHex0x(addr, 8) << std::endl;
 }
 
 Byte gba::Bus::readByte(Word addr)
@@ -136,6 +222,41 @@ Byte gba::Bus::readByte(Word addr)
         return ppu.readPPURegister(addr);
     }
 
+    // DMA
+    if(addr >= 0x040000B0 && addr < 0x040000BC){
+        return dma[0].onRead(addr - 0x040000B0);
+    }
+    if(addr >= 0x040000BC && addr < 0x040000C8){
+        return dma[1].onRead(addr - 0x040000BC);
+    }
+    if(addr >= 0x040000C8 && addr < 0x040000D4){
+        return dma[2].onRead(addr - 0x040000C8);
+    }
+    if(addr >= 0x040000D4 && addr < 0x040000E0){
+        return dma[3].onRead(addr - 0x040000D4);
+    }
+
+    // Timer
+    if(addr >= 0x04000100 && addr < 0x04000104){
+        return timers[0].onRead(addr - 0x04000100);
+    }
+    if(addr >= 0x04000104 && addr < 0x04000108){
+        return timers[1].onRead(addr - 0x04000104);
+    }
+    if(addr >= 0x04000108 && addr < 0x0400010A){
+        return timers[2].onRead(addr - 0x04000108);
+    }
+    if(addr >= 0x0400010A && addr < 0x04000110){
+        return timers[3].onRead(addr - 0x0400010A);
+    }
+
+    if(addr >= 0x04000130 && addr < 0x04000132){
+        return KEYINPUT.OnReadByte(addr);
+    }
+    if(addr >= 0x04000132 && addr < 0x04000134){
+        return KEYCNT.OnReadByte(addr);
+    }
+
     //Interrupt Handling
     if(addr == 0x04000200){
         return IE;
@@ -149,8 +270,23 @@ Byte gba::Bus::readByte(Word addr)
     if(addr == 0x04000203){
         return IF >> 8;
     }
-    if(addr == 0x04000208){
-        return IME;
+    if(addr >= 0x04000204 && addr < 0x04000208){
+        return waitCNT.OnReadByte(addr);
+    }
+    if(addr >= 0x04000208 && addr < 0x0400020C){
+        return IME.OnReadByte(addr);
+    }
+
+    if(addr == 0x04000300){
+        return POSTFLG;
+    }
+
+
+    if(addr >= 0x04000800 && addr < 0x05000000){
+        Word mAddr = addr & 0xFFFFFF;
+        mAddr %= 0x10000;
+        if(mAddr >= 0x800 && mAddr < 0x804)
+            return InternalMemoryControl.OnReadByte(mAddr);
     }
 
     // Ppu
@@ -180,8 +316,12 @@ Byte gba::Bus::readByte(Word addr)
     if(addr >= 0x0F000000 && addr < 0x0F010000){
         return cartRam[addr - 0x0F000000];
     }
+    if(addr >= 0x04000060 && addr < 0x040000A8){
+        //Audio Register
+        return 0;
+    }
 
-    // std::cout << "Unbekannter Read: " << getHex(addr, 8) << std::endl;
+    // std::cout << "Unbekannter Read: " << getHex0x(addr, 8) << std::endl;
 
     return 0;
 }
@@ -220,24 +360,28 @@ void gba::Bus::setIF(int bit, bool value) {
     IF = (IF & ~(1u << bit)) | (value << bit);
 }
 
-gba::Bus::Bus(){
+gba::Bus::Bus() : IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KEYCNT(0x04000132), InternalMemoryControl(0x800)
+{
+    KEYINPUT.raw = 0b1111111111;
+    InternalMemoryControl.raw = 0x0D000020;
 
     #ifdef BUILD_DESKTOP
     std::ifstream stream("../gbaroms/gba_bios.bin", std::ios::in | std::ios::binary);
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)),
                                   std::istreambuf_iterator<char>());
 
-  this->bios = contents;
-  stream.close();
-  #endif
-  this->wramBoard = std::vector<Byte>(0x40000, 0);
-  this->wramChip = std::vector<Byte>(0x8000, 0);
-  this->cartRam = std::vector<Byte>(0x10000, 0);
+    this->bios = contents;
+    stream.close();
+    #endif
+    this->wramBoard = std::vector<Byte>(0x40000, 0);
+    this->wramChip = std::vector<Byte>(0x8000, 0);
+    this->cartRam = std::vector<Byte>(0x10000, 0);
 }
 
 void gba::Bus::init() {
     for(int i = 0; i < 4; i++){
         timers.push_back(Timer(i, shared_from_this()));
+        dma.push_back(DMAChannel(i, shared_from_this()));
     }
     ppu = PPU(shared_from_this());
     new (&cpu) CPU(shared_from_this());
@@ -258,6 +402,25 @@ gba::Bus::Bus(const std::vector<Byte> &bytes)  : Bus(){
     this->gamePak = bytes;
 };
 
+void gba::Bus::press(int i){
+    KEYINPUT.raw &= ~(1u << i);
+    if(KEYCNT.raw & (1u << 14)){ // IRQ enable
+        if(KEYCNT.raw & (1u << i)){
+            if(KEYCNT.raw & (1u << 15)){ // AND
+                if((KEYINPUT.raw & 0b1111111111u) == 0){
+                    setIF(12, true);
+                }
+            }
+            else{
+                setIF(12, true);
+            }
+        }
+    }
+}
+
+void gba::Bus::release(int i){
+    KEYINPUT.raw |= (1u << i);
+}
 
 void gba::Bus::clock() {
 
@@ -271,7 +434,7 @@ void gba::Bus::clock() {
     }
 
 
-    if(!halted || steps > 0){
+    if(!halted || steps > 0 || !cpu.pipelineHasValue()){
         // Timers
         for(int i = 0; i < 4; i++){
             if(timers[i].usesPreviousTimer()){ // Bei t0 immer falsch
@@ -284,8 +447,17 @@ void gba::Bus::clock() {
             }
         }
     
-        cpu.clock();
         ppu.clock();
+        bool cpuBlocked = false;
+        // for(size_t i = 0; i < dma.size(); i++){
+        //     if(dma[i].clock()){
+        //         cpuBlocked = true;
+        //         break;
+        //     }
+        // }
+        if(!cpuBlocked){
+            cpu.clock();
+        }
 
         if(steps > 0 && cpu.advancedThisClock()){
             steps--;

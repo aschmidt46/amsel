@@ -153,6 +153,7 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
 bool gba::CPU::executeSoftwareInterrupt(Word instruction)
 {
     (void)instruction;
+    // bus.lock()->setHalt();
     _R14_SVC = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
     *registerMap[mode()][R15] = 0x08;
     _SPSR_SVC.raw = *registerMap[mode()][CPSR];
@@ -165,7 +166,8 @@ bool gba::CPU::executeSoftwareInterrupt(Word instruction)
 
 void gba::CPU::executeHardwareInterrupt(){
     // bus.lock()->setHalt();
-    // std::cout << "IRQ" << std::endl;
+    std::cout << "IRQ, IF: " << std::bitset<16>(bus.lock()->readByte(0x04000202)) << std::endl;
+    std::cout << "IE: " << std::bitset<16>(bus.lock()->readByte(0x04000200)) << std::endl;
     _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 0);
     // std::cout << getHex(_R14_irq, 8) << std::endl;
     _R15_PC = 0x18; // BIOS Interrupt Vector

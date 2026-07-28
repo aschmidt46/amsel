@@ -5,6 +5,20 @@
 #include <imgui.h>
 #endif
 #include "../framework/stringlib.h"
+//           0  1   2     3      4     5    6    7    8  9
+// KEYINPUT: A, B, SEL, START, Right, Left, Up, Down, R, L
+// Address:  UpDwn Lft   Rgt    A      B   Sta  Sel   -  -
+constexpr int translateKeypad[16] = {6, 7, 5, 4, 0, 1, 3, 2, 9, 8, 0, 0, 0, 0, 0, 0};
+
+void GbaImplementation::setAddressOf(int i, int to){
+
+    if(to){
+        gba->press(translateKeypad[i]);
+    }
+    else{
+        gba->release(translateKeypad[i]);
+    }
+}
 
 GbaImplementation::GbaImplementation(const char *path)
 {
@@ -66,6 +80,29 @@ float GbaImplementation::getY()
 
 void GbaImplementation::setController1Key(bool gamepad, int key, int action) {
     (void)gamepad; (void)key; (void)action;
+    auto c = &globalConfig.controller1;
+    if (gamepad)
+    {
+      for (int i = 0; i < 8; i++)
+      {
+        if ((*c)[i].second == key)
+        {
+          setAddressOf(i, action);
+          return;
+        }
+      }
+    }
+    else
+    { // Tastatur
+      for (int i = 0; i < 8; i++)
+      {
+        if ((*c)[i].first == key)
+        {
+          setAddressOf(i, action);
+          return;
+        }
+      }
+    }
 }
 
 void GbaImplementation::setController2Key(bool gamepad, int key, int action) {

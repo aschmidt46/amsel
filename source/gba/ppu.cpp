@@ -2,6 +2,8 @@
 #include "bus.h"
 #include <iostream>
 
+using namespace gba;
+
 uint32_t *gba::PPU::accessFramebuffer()
 {
     return framebuffer.data();
@@ -15,6 +17,7 @@ void gba::PPU::clock() {
         if(LCDSTATUS.state.hBlankIE){
             bus.lock()->setIF(1, true);
         }
+        bus.lock()->PPUEnteredHBlank();
     }
     else if(currentCycle >= 1232){
         currentCycle = 0;
@@ -24,6 +27,7 @@ void gba::PPU::clock() {
             bus.lock()->setIF(2, true);
             LCDSTATUS.state.vCounterFlag = 1;
         }
+        bus.lock()->PPULeftHBlank();
     }
     if(currentScanline == 160 && currentCycle == 0){
         // Vblank
@@ -33,17 +37,19 @@ void gba::PPU::clock() {
             bus.lock()->setIF(0, true);
         }
         hasframe = true;
+        bus.lock()->PPUEnteredVBlank();
     }
     else if(currentScanline >= 228){
         currentScanline = 0;
         LCDSTATUS.state.vCounterFlag = 0;
         LCDSTATUS.state.vBlankFlag = 0;
+        bus.lock()->PPULeftVBlank();
     }
 
     if(currentCycle < 240 && currentScanline < 160){ // Bis jetzt k.A. wie das Timing wirklich ist
         switch(LCDCONTROL.state.bgMode){
             case 0:
-                drawPixelMode0();
+                drawPixelMode3();
                 break;
             case 1:
                 drawPixelMode1();
@@ -62,6 +68,31 @@ void gba::PPU::clock() {
                 break;
         }
     }
+}
+
+gba::Word gba::PPU::getVCount(){
+    return currentScanline;
+}
+
+void PPU::drawSprites(){
+    // beide Blöcke
+    // int increment = 
+    // for(Word i = 0x06010000; i < 0x06018000; i+=increment){
+
+    // }
+}
+
+void PPU::drawBG0(){
+//    Memory	0600:0000	0600:4000	0600:8000	0600:C000
+// charblock        0	        1	        2	        3
+// screenblock	0	…	7	8	…	15	16	…	23	24	…	31
+
+    const Word screenblockSize = 0x800;
+    const Word chrblockSize = 0x4000;
+    const Word VRAMBegin = 0x06000000;
+    const Word screenBaseBlock = BG0CONTROL.state.screenBaseBlock;
+    const Word characterBaseBlock = BG0CONTROL.state.CHRBaseBlock;
+
 }
 
 bool gba::PPU::hasFrame() {
@@ -149,9 +180,12 @@ gba::Byte gba::PPU::readPPURegister(Word addr)
         case 0x04000006:
             return currentScanline;
     }
+
+    std::cout << "Unbekannter PPU Register read\n";
     return 0;
 }
 
+// MUSS gefixt werden (auch für Openlara), bei Byte Writes wird das Byte in beide Bytes des Halbworts geschrieben
 void gba::PPU::writePPUMemory(Word addr, Byte value) {
     if(addr >= 0x05000000 && addr < 0x06000000){
         auto mod = (addr - 0x05000000) % 0x400;
@@ -185,5 +219,6 @@ gba::Byte gba::PPU::readPPUMemory(Word addr)
         auto mod = (addr - 0x07000000) % 0x400;
         return oamAttribs[mod];
     }
-    else return 0;
+    std::cout << "Unbekannter PPU mem read\n";
+    return 0;
 }

@@ -5,6 +5,7 @@
 class GbaImplementation : public Console{
     private:
     std::shared_ptr<gba::GBA> gba;
+    void setAddressOf(int i, int to);
     // void setAddressOf(int i, int to);
     public:
     GbaImplementation() = delete;

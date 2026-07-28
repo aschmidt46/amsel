@@ -25,6 +25,8 @@ namespace gba{
         bool hasFrame();
         bool hasSample();
         std::pair<float, float> getSample();
+        void press(int i);
+        void release(int i);
 
         void loadBios(const std::vector<uint8_t> &content);
 

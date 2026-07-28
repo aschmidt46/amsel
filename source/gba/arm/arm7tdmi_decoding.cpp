@@ -430,6 +430,8 @@ bool gba::CPU::executeInstruction()
                         return this->executePSRTransfer(info.code);
                     default:
                         std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
+                        bus.lock()->setHalt();
+                        // throw "error";
                         return false;
                 }
             }
@@ -477,6 +479,8 @@ bool gba::CPU::executeInstruction()
                     return this->executeThumbLongBranchWithLink(info.code);
                 default:
                     std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
+                    // throw "error";
+                    bus.lock()->setHalt();
                     return false;
             }
         }

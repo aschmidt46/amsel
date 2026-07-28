@@ -24,10 +24,10 @@ namespace gba{
         LCDSTATUS_T LCDSTATUS = {.raw = 0};
         HalfWord currentScanline; //VCOUNT
 
-        HalfWord BG0CONTROL;
-        HalfWord BG1CONTROL;
-        HalfWord BG2CONTROL;
-        HalfWord BG3CONTROL;
+        BGCNT_T BG0CONTROL = {.raw = 0};
+        BGCNT_T BG1CONTROL = {.raw = 0};
+        BGCNT_T BG2CONTROL = {.raw = 0};
+        BGCNT_T BG3CONTROL = {.raw = 0};
 
         HalfWord BG0_X_OFFSET;
         HalfWord BG0_Y_OFFSET;
@@ -74,10 +74,14 @@ namespace gba{
         uint32_t* accessFramebuffer();
 
         void clock();
+        Word getVCount();
 
         bool hasFrame();
 
         void setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb);
+
+        void drawSprites();
+        void drawBG0();
 
         void drawPixelMode0();
         void drawPixelMode1();

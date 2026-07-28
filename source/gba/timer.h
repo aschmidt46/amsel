@@ -1,6 +1,7 @@
 #pragma once
 
 #include "arm/bus_types.h"
+#include "register/general_purpose.h"
 #include <memory>
 
 
@@ -20,17 +21,12 @@ namespace gba{
         bool overflow = false;
 
         public:
-        Timer(int num, std::weak_ptr<Bus> bptr) : number(num), bus(bptr){};
-        HalfWord reload;
-        HalfWord control;
+        Timer(int num, std::weak_ptr<Bus> bptr) : number(num), bus(bptr), reload(0), control(2){};
+        GeneralPurpose16 reload;
+        GeneralPurpose16 control;
 
-        // void onReloadWriteHW(HalfWord val);
-        // void onControlWriteHW(HalfWord val);
-        // void onReloadWriteBLower(Byte val);
-        // void onReloadWriteBHigher(Byte val);
-        // void onControlWriteBLower(Byte val);
-        // void onControlWriteBHigher(Byte val);
-        // void onWordWrite(Word val);
+        void onWrite(Word addr, Byte val);
+        Byte onRead(Word addr);
 
         bool usesPreviousTimer();
 
