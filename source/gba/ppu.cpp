@@ -1,5 +1,6 @@
 #include "ppu.h"
 #include "bus.h"
+#include "framework/stringlib.h"
 #include <iostream>
 
 using namespace gba;
@@ -179,9 +180,11 @@ gba::Byte gba::PPU::readPPURegister(Word addr)
             return LCDSTATUS.raw >> 8;
         case 0x04000006:
             return currentScanline;
+        case 0x04000007:
+            return currentScanline >> 8;
     }
 
-    std::cout << "Unbekannter PPU Register read\n";
+    std::cout << "Unbekannter PPU Register read: "<< getHex0x(addr, 8) << "\n";
     return 0;
 }
 

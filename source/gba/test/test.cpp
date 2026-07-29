@@ -57,10 +57,7 @@ void performSingleStepTest(const char* path){
         }
         if(iInfo.type == gba::TypePSRTransfer){
             if((iInfo.code & 0xFFF) == 0 && (((iInfo.code & (0b111111 << 16)) >> 16) == 0xF) && (((iInfo.code & (0b11111 << 23)) >> 23) == 0b10)){ // MRS
-                if(((iInfo.code & (0xFu << 16)) >> 16) == 15) continue; // "You must not specify R15 as destination Register"
-            }
-            if(iInfo.code & (1u << 21)){ // MSR
-                if((testcase.initial.CPSR & 0b11111) == 31) continue; // System Mode (Bei mir nicht implementiert, anderes Verhalten im CPSR Transfer)
+                if(((iInfo.code & (0xFu << 12)) >> 12) == 15) continue; // "You must not specify R15 as destination Register"
             }
         }
         if(iInfo.type == gba::TypeMultiply){ // R15 als Operand ist illegal

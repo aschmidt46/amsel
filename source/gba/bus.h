@@ -34,8 +34,9 @@ namespace gba{
         std::vector<Byte> wramChip;
         std::vector<Byte> gamePak;
         std::vector<Byte> cartRam;
+        // std::vector<Byte> eeprom;
+        // class EEPROM
         Byte null = 0;
-        Byte* accessMemory(Word addr);
         Bus();
         bool halted = false;
         int steps = 0;
@@ -52,6 +53,7 @@ namespace gba{
         ~Bus() = default;
         // Adressen vorher noch alignen?
         void writeByte(Word addr, Byte val) override;
+        void writeByteFromWide(Word addr, Byte val);
         Byte readByte(Word addr) override;
         void writeHalfWord(Word addr, HalfWord val) override;
         HalfWord readHalfWord(Word addr) override;

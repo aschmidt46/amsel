@@ -166,8 +166,8 @@ bool gba::CPU::executeSoftwareInterrupt(Word instruction)
 
 void gba::CPU::executeHardwareInterrupt(){
     // bus.lock()->setHalt();
-    std::cout << "IRQ, IF: " << std::bitset<16>(bus.lock()->readByte(0x04000202)) << std::endl;
-    std::cout << "IE: " << std::bitset<16>(bus.lock()->readByte(0x04000200)) << std::endl;
+    // std::cout << "IRQ, IF: " << std::bitset<16>(bus.lock()->readByte(0x04000202)) << std::endl;
+    // std::cout << "IE: " << std::bitset<16>(bus.lock()->readByte(0x04000200)) << std::endl;
     _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 0);
     // std::cout << getHex(_R14_irq, 8) << std::endl;
     _R15_PC = 0x18; // BIOS Interrupt Vector
@@ -186,6 +186,7 @@ bool gba::CPU::executeCoProcDataOperation(Word instruction)
 bool gba::CPU::executeCoProcDataTransfer(Word instruction)
 {
     std::cout << "Coprozessor-Datentransfer aufgerufen!" << instruction << std::endl;
+    bus.lock()->setHalt();
     return false;
 }
 
@@ -348,8 +349,8 @@ bool gba::CPU::executeDataProc(Word instruction)
                     break;}
                 case RotateRight:
                     if(amount > 0){ // RR
-                        logicalCarry = op2RegValue & Word(1ull << (amount - 1));
                         operand2Value = std::rotr(op2RegValue, amount);
+                        logicalCarry = operand2Value & (1u << 31);
                     }
                     else{//RRX
                         logicalCarry = op2RegValue & 1u; // bit 0
@@ -360,6 +361,7 @@ bool gba::CPU::executeDataProc(Word instruction)
         }
         else{
             operand2Value = op2RegValue;
+            // if(shift == LogicalLeft && amount == 0)
             keepOldCarry = true;
         }
     }
@@ -903,7 +905,7 @@ bool gba::CPU::executeMultiplyLong(Word instruction)
     if(S){
         StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
         cpsr.state.C = 0; // "Meaningless value"
-        cpsr.state.V = 0; // genau wie C
+        // v nicht ändern!
         cpsr.state.Z = result == 0;
         cpsr.state.N = (result & (1ull << 63)) > 0;
         *registerMap[mode()][CPSR] = cpsr.raw;

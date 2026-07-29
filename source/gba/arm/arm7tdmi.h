@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 #include <optional>
 #include <string>
 #include <memory>
@@ -192,7 +193,7 @@ namespace gba{
         std::pair<std::string, std::vector<int>> getNextNInstructions(int n);
         std::pair<std::string, std::vector<int>> getPrev10Instructions();
         void incrementCircular();
-        const int circSize = 10;
+        const int circSize = 15;
         std::vector<std::pair<int64_t, CpuState>> circular{std::vector<std::pair<int64_t, CpuState>>(circSize,{-1, ARM})};
         unsigned int circularIndex = 0;
         std::string getCurrentOpcode();
@@ -204,6 +205,7 @@ namespace gba{
         InstructionInfo getInstructionInPipeline();
         std::string printCPSR();
         std::string printMode();
+        std::string getDisassembly(Word code);
 
     };
 };

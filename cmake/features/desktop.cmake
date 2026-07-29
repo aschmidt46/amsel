@@ -110,7 +110,7 @@ set_property(TARGET AMSEL PROPERTY
 # target_compile_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 # target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -Werror)
+target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
 
 target_link_libraries(AMSEL whereami)
 target_link_libraries(AMSEL rtaudio)
@@ -130,8 +130,14 @@ make_directory(${CMAKE_BINARY_DIR}/locales/)
 add_custom_command(
         TARGET AMSEL POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_SOURCE_DIR}/source/framework/locales/*.json
-                ${CMAKE_BINARY_DIR}/locales/)
+                ${CMAKE_SOURCE_DIR}/source/framework/locales/de.json
+                ${CMAKE_BINARY_DIR}/locales/de.json)
+
+add_custom_command(
+        TARGET AMSEL POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_SOURCE_DIR}/source/framework/locales/en.json
+                ${CMAKE_BINARY_DIR}/locales/en.json)
 
 if(RELEASE)
   add_custom_command(TARGET AMSEL POST_BUILD

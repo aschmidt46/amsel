@@ -39,19 +39,6 @@ using namespace gba;
 // Unused Memory Area
 //   10000000-FFFFFFFF   Not used (upper 4bits of address bus unused)
 
-Byte* gba::Bus::accessMemory(Word addr)
-{
-    (void)addr;
-    if(addr >= 0x02000000 && addr < 0x20040000){
-        // WRAM (board)
-        return wramBoard.data() + (addr - 0x02000000);
-    }
-    if(addr >= 0x03000000 && addr < 0x03008000){
-        // WRAM (chip)
-        return wramChip.data() + (addr - 0x03000000);
-    }
-    return &null;
-}
 
 unsigned int Bus::getCyclesForAccess(Word addr, bool sequential){
     // TODO
@@ -75,7 +62,7 @@ void Bus::PPULeftHBlank(){
         if(d.getStartTiming() == DMA_HBLANK || d.getStartTiming() == DMA_VIDEO_CAPTURE)
             d.isActive = false;
     }
-    if(ppu.getVCount() >= 162 && dma[3].getStartTiming() == DMA_VIDEO_CAPTURE){
+    if(ppu.getVCount() == 162 && dma[3].getStartTiming() == DMA_VIDEO_CAPTURE){
         dma[3].Control.raw &= ~(1u << 15);
     }
 }
@@ -94,8 +81,17 @@ void Bus::PPULeftVBlank(){
     }
 }
 
+void gba::Bus::writeByte(Word addr, Byte val){
+    if(addr >= 0x05000000 && addr < 0x08000000){
+        Word modAddr = addr & ~1u;
+        // Byte wird in beide Bytes des Halbworts gespiegelt
+        writeByteFromWide(modAddr, val);
+        writeByteFromWide(modAddr + 1, val);
+    }
+    else writeByteFromWide(addr, val);
+}
 
-void gba::Bus::writeByte(Word addr, Byte val)
+void gba::Bus::writeByteFromWide(Word addr, Byte val)
 {
     (void)addr;
     (void)val;
@@ -136,11 +132,11 @@ void gba::Bus::writeByte(Word addr, Byte val)
     else if(addr >= 0x04000104 && addr < 0x04000108){
         timers[1].onWrite(addr - 0x04000104, val);
     }
-    else if(addr >= 0x04000108 && addr < 0x0400010A){
+    else if(addr >= 0x04000108 && addr < 0x0400010C){
         timers[2].onWrite(addr - 0x04000108, val);
     }
-    else if(addr >= 0x0400010A && addr < 0x04000110){
-        timers[3].onWrite(addr - 0x0400010A, val);
+    else if(addr >= 0x0400010C && addr < 0x04000110){
+        timers[3].onWrite(addr - 0x0400010C, val);
     }
 
     else if(addr >= 0x04000132 && addr < 0x04000134){
@@ -183,6 +179,11 @@ void gba::Bus::writeByte(Word addr, Byte val)
     else if(addr >= 0x05000000 && addr < 0x08000000){
         ppu.writePPUMemory(addr, val);
     }
+
+    // else if(addr >= 0x0D000000 && addr < 0x0E000000){
+    //     Word modAddr = (addr - 0xD000000) % 0x2000;
+    //     eeprom[modAddr] = val;
+    // }
 
     // Cart Ram
     else if(addr >= 0x0E000000 && addr < 0x0E010000){
@@ -236,18 +237,18 @@ Byte gba::Bus::readByte(Word addr)
         return dma[3].onRead(addr - 0x040000D4);
     }
 
-    // Timer
+    // // Timer
     if(addr >= 0x04000100 && addr < 0x04000104){
         return timers[0].onRead(addr - 0x04000100);
     }
     if(addr >= 0x04000104 && addr < 0x04000108){
         return timers[1].onRead(addr - 0x04000104);
     }
-    if(addr >= 0x04000108 && addr < 0x0400010A){
+    if(addr >= 0x04000108 && addr < 0x0400010C){
         return timers[2].onRead(addr - 0x04000108);
     }
-    if(addr >= 0x0400010A && addr < 0x04000110){
-        return timers[3].onRead(addr - 0x0400010A);
+    if(addr >= 0x0400010C && addr < 0x04000110){
+        return timers[3].onRead(addr - 0x0400010C);
     }
 
     if(addr >= 0x04000130 && addr < 0x04000132){
@@ -308,6 +309,10 @@ Byte gba::Bus::readByte(Word addr)
     if(addr >= 0x0C000000 && addr - 0x0C000000 < gamePak.size()){
         return gamePak[addr - 0x0C000000];
     }
+    // if(addr >= 0x0D000000 && addr < 0x0E000000){
+    //     Word modAddr = (addr - 0xD000000) % 0x2000;
+    //     return eeprom[modAddr];
+    // }
 
     // Cart Ram
     if(addr >= 0x0E000000 && addr < 0x0E010000){
@@ -321,15 +326,15 @@ Byte gba::Bus::readByte(Word addr)
         return 0;
     }
 
-    // std::cout << "Unbekannter Read: " << getHex0x(addr, 8) << std::endl;
+    std::cout << "Unbekannter Read: " << getHex0x(addr, 8) << std::endl;
 
     return 0;
 }
 
 void gba::Bus::writeHalfWord(Word addr, HalfWord val)
 {
-    writeByte(addr, val & 0xFF);
-    writeByte(addr + 1, (val & (0xFF << 8)) >> 8);
+    writeByteFromWide(addr, val & 0xFF);
+    writeByteFromWide(addr + 1, (val & (0xFF << 8)) >> 8);
 }
 
 HalfWord gba::Bus::readHalfWord(Word addr)
@@ -341,10 +346,10 @@ HalfWord gba::Bus::readHalfWord(Word addr)
 
 void gba::Bus::writeWord(Word addr, Word val)
 {
-    writeByte(addr, val & 0xFF);
-    writeByte(addr + 1, (val & (0xFF << 8)) >> 8);
-    writeByte(addr + 2, (val & (0xFF << 16)) >> 16);
-    writeByte(addr + 3, (val & (0xFF << 24)) >> 24);
+    writeByteFromWide(addr, val & 0xFF);
+    writeByteFromWide(addr + 1, (val & (0xFF << 8)) >> 8);
+    writeByteFromWide(addr + 2, (val & (0xFF << 16)) >> 16);
+    writeByteFromWide(addr + 3, (val & (0xFF << 24)) >> 24);
 }
 
 Word gba::Bus::readWord(Word addr)
@@ -449,12 +454,12 @@ void gba::Bus::clock() {
     
         ppu.clock();
         bool cpuBlocked = false;
-        // for(size_t i = 0; i < dma.size(); i++){
-        //     if(dma[i].clock()){
-        //         cpuBlocked = true;
-        //         break;
-        //     }
-        // }
+        for(size_t i = 0; i < dma.size(); i++){
+            if(dma[i].clock()){
+                cpuBlocked = true;
+                break;
+            }
+        }
         if(!cpuBlocked){
             cpu.clock();
         }

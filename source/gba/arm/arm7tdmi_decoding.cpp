@@ -1,6 +1,9 @@
 #include "arm7tdmi.h"
+#include "framework/stringlib.h"
 #include "gba/test/logging.h"
 #include <bit>
+#include <bitset>
+#include <fstream>
 #include <string>
 #include <iostream>
 #include "../test/logging.h"
@@ -384,9 +387,58 @@ std::string gba::CPU::printInstructionType(InstructionType t){
 
 bool gba::CPU::executeInstruction()
 {
+    // auto catastrophicExit = [&](int num){
+    //     std::cout << "KATASTROPHE: Fall " << num << " ist eingetreten!\n";
+    //     // throw "ERROR";
+    //     std::cout << "Adresse: " << getHex0x(_R15_PC, 8) << "\n";
+    //     std::cout << getDisassembly(pipelineDecoded.value().code) << "\n";
+    //     std::cout << std::bitset<32>(pipelineDecoded.value().code) << "\n";
+    //     bus.lock()->setHalt();
+    // };
     if(this->pipelineDecoded.has_value()){
         InstructionInfo info = this->pipelineDecoded.value();
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
+
+        // auto iInfo = info;
+
+        // if(iInfo.type == gba::TypeBlockDataTransfer){
+        //     if(iInfo.code & (1u << 22)) catastrophicExit(1); // S gesetzt
+        //     if(((iInfo.code & (0xFu << 16)) >> 16) == 15) catastrophicExit(2); // R15 als Basisregister ("R15 should not be used as the base register in any LDM or STM instruction")
+        // }
+        // if(iInfo.type == gba::TypePSRTransfer){
+        //     if((iInfo.code & 0xFFF) == 0 && (((iInfo.code & (0b111111 << 16)) >> 16) == 0xF) && (((iInfo.code & (0b11111 << 23)) >> 23) == 0b10)){ // MRS
+        //         if(((iInfo.code & (0xFu << 12)) >> 12) == 15) catastrophicExit(3); // "You must not specify R15 as destination Register"
+        //     }
+        // }
+        // if(iInfo.type == gba::TypeMultiply){ // R15 als Operand ist illegal
+        //     if((iInfo.code & (0xFu)) == R15) catastrophicExit(4);
+        //     if(((iInfo.code & (0xFu << 8)) >> 8) == R15) catastrophicExit(5);
+        //     if(((iInfo.code & (0xFu << 12)) >> 12) == R15) catastrophicExit(6);
+        // }
+        // if(iInfo.type == gba::TypeMultiplyL){ // R15 als Operand oder Destination ist illegal
+        //     if((iInfo.code & (0xFu)) == R15) catastrophicExit(7);
+        //     if(((iInfo.code & (0xFu << 8)) >> 8) == R15) catastrophicExit(8);
+        //     if(((iInfo.code & (0xFu << 12)) >> 12) == R15) catastrophicExit(9);
+        //     if(((iInfo.code & (0xFu << 16)) >> 16) == R15) catastrophicExit(10);
+        // }
+        // if(iInfo.type == gba::TypeSingleDataSwap){ // "Do not use R15 as Parameters"
+        //     if((iInfo.code & 0xF) == R15) catastrophicExit(11);
+        //     if(((iInfo.code & 0xF000) >> 12) == R15) catastrophicExit(12);
+        //     if(((iInfo.code & 0xF0000) >> 16) == R15) catastrophicExit(13);
+        // }
+
+        // std::string line;
+        // std::getline(openlara, line);
+        // std::string token = "0x"+line.substr(0, line.find(" "));
+        // int offset = state() == ARM ? 8 : 4;
+        // if(token != getHex0x(_R15_PC - offset, 8)){
+        //     std::cout << "PC weicht ab.\n";
+        //     std::cout << "Ich:   \t" << getHex0x(_R15_PC - offset, 8) << "\n";
+        //     std::cout << "mesen: \t" << token << "\n";
+        //     bus.lock()->setHalt();
+        // }
+
+
         if(this->state() == ARM){
             // ARMSTATE s;
             // disasm_init(&s, DISASM_ADDRESS | DISASM_INSTR);
@@ -673,4 +725,21 @@ bool gba::CPU::checkCondition(Condition c) const
         case NV: return false;
     }
     return false;
+}
+
+std::string CPU::getDisassembly(Word code){
+    ARMSTATE s;
+    auto state = getRegisterState();
+    disasm_init(&s, 0);
+    int mode = ((state.CPSR >> 5) & 1u) ? 0 : 1;
+    s.arm_mode = mode;
+    if(mode == 1){
+        disasm_arm(&s, code);
+    }
+    else{
+        disasm_thumb(&s, uint16_t(code), uint16_t(code >> 16));
+    }
+    std::string text = s.text;
+    disasm_cleanup(&s);
+    return text;
 }

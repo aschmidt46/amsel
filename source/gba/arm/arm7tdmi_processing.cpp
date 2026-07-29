@@ -201,8 +201,9 @@ std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
     disasm_arm(&s, 0);
     
     for(int i = 0; i < n; i++){
-        Word opcode = this->bus.lock()->readWord(pc & ~0b11);
-        s.address = pc - offset;
+        Word mask = state() == ARM ? 0b11 : 0b1;
+        Word opcode = this->bus.lock()->readWord(pc & ~mask);
+        s.address = pc - 4;
         if(state() == ARM){
             s.arm_mode = 1;
             disasm_arm(&s, opcode);
@@ -222,6 +223,7 @@ std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
 std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
 {
     int offset = (state() == ARM ? 4 : 2);
+    Word mask = state() == ARM ? 0b11 : 0b1;
     std::vector<std::pair<Word, Word>> pcList;
     int it = circularIndex;
     for(int i = 0; i < circSize; i++){
@@ -251,7 +253,7 @@ std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
     for(const auto &pc : pcList){
         std::string str = "";
         s.address = pc.first - offset;
-        Word opcode = this->bus.lock()->readWord(pc.first & ~0b11);
+        Word opcode = this->bus.lock()->readWord(pc.first & ~mask);
         if(pc.second == ARM){
             s.arm_mode = 1;
             disasm_arm(&s, opcode);
