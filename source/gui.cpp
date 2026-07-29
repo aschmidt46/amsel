@@ -659,6 +659,12 @@ void Gui::render()
                 changeTitle = true;
                 createConsole(result.value().c_str());
                 console->setHalt(this->state->halt);
+                for(auto bp : breakpoints){
+                  console->addBreakpoint(bp);
+                }
+                for(auto bp : breakpointsOP){
+                  console->addBreakpointOP(bp);
+                }
                 screen->updateFramebufferSize(globalConfig.sizeX, globalConfig.sizeY);
               }
             }

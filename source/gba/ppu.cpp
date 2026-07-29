@@ -15,7 +15,7 @@ void gba::PPU::clock() {
     if(currentCycle == 1004){
         // Hblank
         LCDSTATUS.state.hBlankFlag = 1;
-        if(LCDSTATUS.state.hBlankIE){
+        if(LCDSTATUS.state.hBlankIE && currentScanline < 160){
             bus.lock()->setIF(1, true);
         }
         bus.lock()->PPUEnteredHBlank();
@@ -43,6 +43,8 @@ void gba::PPU::clock() {
     else if(currentScanline >= 228){
         currentScanline = 0;
         LCDSTATUS.state.vCounterFlag = 0;
+    }
+    if(currentScanline >= 227){
         LCDSTATUS.state.vBlankFlag = 0;
         bus.lock()->PPULeftVBlank();
     }
@@ -50,7 +52,7 @@ void gba::PPU::clock() {
     if(currentCycle < 240 && currentScanline < 160){ // Bis jetzt k.A. wie das Timing wirklich ist
         switch(LCDCONTROL.state.bgMode){
             case 0:
-                drawPixelMode3();
+                drawPixelMode0();
                 break;
             case 1:
                 drawPixelMode1();
@@ -93,6 +95,8 @@ void PPU::drawBG0(){
     const Word VRAMBegin = 0x06000000;
     const Word screenBaseBlock = BG0CONTROL.state.screenBaseBlock;
     const Word characterBaseBlock = BG0CONTROL.state.CHRBaseBlock;
+
+
 
 }
 
@@ -157,6 +161,7 @@ void gba::PPU::writePPURegister(Word addr, Byte val) {
             break;
         case 0x04000001:
             LCDCONTROL.raw = (LCDCONTROL.raw & 0x00FF) | (HalfWord(val) << 8);
+            LCDCONTROL.state.cgbMode = 0;
             break;
         case 0x04000004:
             LCDSTATUS.raw = (LCDSTATUS.raw & 0xFF00) | val;

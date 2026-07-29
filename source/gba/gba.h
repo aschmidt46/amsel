@@ -41,6 +41,7 @@ namespace gba{
         CpuRegisterState getRegs();
         std::vector<std::string> getStack();
         std::string getMode();
+        std::string getState();
         std::vector<uint64_t> addBreakpoint(uint64_t bp);
         std::vector<uint64_t> removeBreakpoint(uint64_t bp);
 

@@ -556,6 +556,11 @@ std::vector<std::string> gba::Bus::getStack() {
 std::string gba::Bus::getMode() {
     return cpu.printMode();
 }
+std::string gba::Bus::getState() {
+    auto s = cpu.state();
+    if(s == ARM) return "ARM";
+    else return "THUMB";
+}
 
 std::vector<uint64_t> gba::Bus::addBreakpoint(uint64_t bp) {
   if(!watchBreakpoints){
@@ -605,6 +610,8 @@ std::string gba::Bus::getDisassembly(uint64_t code)
     }
     std::string text = s.text;
     disasm_cleanup(&s);
+    auto info = cpu.decodeInstruction(code);
+    text += " | " + cpu.printInstructionType(info.type);
     return text;
 }
 

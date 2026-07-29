@@ -101,6 +101,9 @@ std::vector<std::string> gba::GBA::getStack() {
 std::string gba::GBA::getMode() {
     return bus->getMode();
 }
+std::string gba::GBA::getState(){
+    return bus->getState();
+}
 
 std::vector<uint64_t> gba::GBA::addBreakpoint(uint64_t bp) {
   return bus->addBreakpoint(bp);

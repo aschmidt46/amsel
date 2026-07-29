@@ -51,7 +51,7 @@ bool gba::CPU::executeBranchLink(Word instruction)
     else relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 24));
 
     if(L){
-        *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus)
+        *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus) ACHTUNG WAR 2, ist das so richtig?? PC + 4
     }
     _R15_PC += relJump;
     remainingCycles += 3; //2S + 1N
@@ -429,7 +429,7 @@ bool gba::CPU::executeDataProc(Word instruction)
     }
 
     if(S){
-        if(Rd==15 && mode() != System && mode() != User && state() == ARM){ // state==ARM experimentell bestimmt (Warum?)
+        if(Rd==15 && mode() != System && mode() != User && state() == ARM){ // state==ARM experimentell bestimmt (Warum?) (Exceptions sind immer in ARM state?)
             *registerMap[mode()][CPSR] = *registerMap[mode()][SPSR];
         }
         else{
@@ -439,11 +439,9 @@ bool gba::CPU::executeDataProc(Word instruction)
             // Z - gesetzt, wenn Ergebnis 0
             // N - Bit 31
             if(opcode <= 1 || opcode >= 0b1100 || opcode == 0b1000 || opcode == 0b1001){
-                StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
-                cpsr.state.C = keepOldCarry ? carryBefore : logicalCarry;
-                cpsr.state.Z = result32 == 0;
-                cpsr.state.N = (result32 & (1u << 31)) > 0;
-                *registerMap[mode()][CPSR] = cpsr.raw;
+                _CPSR.state.C = keepOldCarry ? carryBefore : logicalCarry;
+                _CPSR.state.Z = result32 == 0;
+                _CPSR.state.N = (result32 & (1u << 31)) > 0;
             }
     
             // (SUB, RSB, ADD, ADC, SBC, RSC, CMP, CMN):
@@ -452,12 +450,10 @@ bool gba::CPU::executeDataProc(Word instruction)
             // Z - gesetzt, wenn Ergebnis 0
             // N - Bit 31
             else{
-                StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
-                cpsr.state.V = setVFlag(opcode, operand1Value, operand2Value, result);
-                cpsr.state.C = setCFlag(opcode, operand1Value, operand2Value, result, op3);
-                cpsr.state.Z = result32 == 0;
-                cpsr.state.N = (result32 & (1ull << 31)) > 0;
-                *registerMap[mode()][CPSR] = cpsr.raw;
+                _CPSR.state.V = (Word)setVFlag(opcode, operand1Value, operand2Value, result);
+                _CPSR.state.C = (Word)setCFlag(opcode, operand1Value, operand2Value, result, op3);
+                _CPSR.state.Z = result32 == 0;
+                _CPSR.state.N = (result32 & (1ull << 31)) > 0;
             }
         }
     }

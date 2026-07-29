@@ -101,7 +101,11 @@ void gba::CPU::writeWordUnaligned(Word addr, Word val)
 
 void gba::CPU::advanceCPU()
 {
-    // std::cout << getHex(_R15_PC, 8) << std::endl;
+    // Die Pipeline MUSS gefüllt sein, bevor IRQ beginnt
+    if(!pipelineDecoded.has_value() || !pipelineRead.has_value()){
+        advancePipeline();
+        return;
+    }
     if(pollInterrupts()){
         executeHardwareInterrupt();
         flushPipeline();

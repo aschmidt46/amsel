@@ -211,6 +211,7 @@ void GbaImplementation::displayRegisters() {
     ImGui::NewLine();
     ImGui::NewLine();
     ImGui::Text("%s", (std::string("Mode: ")+gba->getMode()).c_str());
+    ImGui::Text("%s", (std::string("State: ")+gba->getState()).c_str());
 
     auto transaction = gba->getLastTransaction();
 

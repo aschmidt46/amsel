@@ -1,4 +1,5 @@
 #include "arm7tdmi.h"
+#include <iostream>
 
 using namespace gba;
 
@@ -209,6 +210,8 @@ bool gba::CPU::executeThumbPushPopRegisters(Word instruction)
             *registerMap[mode()][R13] += 0x40;
         }
         else{
+            std::cout << "Push mit leerer Liste!\n";
+            bus.lock()->setHalt();
             *registerMap[mode()][R13] -= 0x40;
             writeWordUnaligned(*registerMap[mode()][R13], *registerMap[mode()][R15] + 2);
         }
