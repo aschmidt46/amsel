@@ -73,6 +73,14 @@ void gba::CPU::writeHalfWord(Word addr, HalfWord val)
     lastTransactionAddress = addr;
 }
 
+void gba::CPU::writeHalfWordUnaligned(Word addr, HalfWord val)
+{
+    this->bus.lock()->writeHalfWord(addr, val);
+    lastTransactionWasRead = false;
+    lastTransactionData = val;
+    lastTransactionAddress = addr;
+}
+
 void gba::CPU::writeWord(Word addr, Word val)
 {
     addr &= ~(0b11);

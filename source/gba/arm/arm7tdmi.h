@@ -37,7 +37,17 @@ namespace gba{
                 case 23: return AbortMode;
                 case 27: return Undefined;
                 case 31: return System;
-                default: return User;
+                default:{
+                    auto m = _CPSR.state.mode_bits;
+                    if(m < 16){
+                        m &= 0b11;
+                        if(m==0) return User;
+                        if(m==1) return FIQ;
+                        if(m==2) return IRQ;
+                        if(m==3) return Supervisor;
+                    }
+                    return User;
+                }
             }
         }
 
@@ -91,6 +101,7 @@ namespace gba{
         Word readWordUnaligned(Word addr);
         void writeByte(Word addr, Byte val);
         void writeHalfWord(Word addr, HalfWord val);
+        void writeHalfWordUnaligned(Word addr, HalfWord val);
         void writeWord(Word addr, Word val);
         void writeWordUnaligned(Word addr, Word val);
         bool checkCondition(Condition c) const;

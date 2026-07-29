@@ -111,6 +111,7 @@ void performSingleStepTest(const char* path){
         ASSERT_FALSE(tb->hadError) << "\n\nTransaktionsfehler in Testfall " << number << ":\n"
             << tb->completed.size() << " durchgeführte Transaktionen.\n"
             << "Gelesene Instruktion: " << iStr << "\n"
+            << "Disassembly: " << disassemble_code(testcase.initial, iInfo.code)
             << "\t31\t27\t23\t19\t15\t11\t7\t3\n"
             << "Code: " << iCode << "\n"
             << "CPSR: " << cpsr << "\n"

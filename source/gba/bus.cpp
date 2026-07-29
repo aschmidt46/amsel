@@ -326,7 +326,7 @@ Byte gba::Bus::readByte(Word addr)
         return 0;
     }
 
-    std::cout << "Unbekannter Read: " << getHex0x(addr, 8) << std::endl;
+    // std::cout << "Unbekannter Read: " << getHex0x(addr, 8) << std::endl;
 
     return 0;
 }

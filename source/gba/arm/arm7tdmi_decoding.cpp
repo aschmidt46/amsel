@@ -438,6 +438,11 @@ bool gba::CPU::executeInstruction()
         //     bus.lock()->setHalt();
         // }
 
+        // if(_R15_PC == 0x8){
+        //     std::cout << "Bin bei 0\n";
+        //     bus.lock()->setHalt();
+        // }
+
 
         if(this->state() == ARM){
             // ARMSTATE s;

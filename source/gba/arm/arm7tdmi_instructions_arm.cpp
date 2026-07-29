@@ -175,6 +175,7 @@ void gba::CPU::executeHardwareInterrupt(){
     _CPSR.state.mode_bits = 18; // IRQ
     _CPSR.state.I = 1; // IRQs ausschalten
     _CPSR.state.T = 0; // Zurück zu ARM Modus
+    // bus.lock()->setHalt();
 }
 
 bool gba::CPU::executeCoProcDataOperation(Word instruction)
@@ -754,7 +755,7 @@ bool gba::CPU::executeDataTransferSignHDW(Word instruction)
     else{ // Unsigned Halbwort
         if(L){
             Word val = readHalfWord(modifiedBase);
-            // Siehe Nanoboyadvance
+            // Siehe gbatek "Alignment"
             if (modifiedBase & 1) {
               val = (val >> 8) | (val << 24);
             }
