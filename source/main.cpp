@@ -41,7 +41,7 @@ int run(int argc, wchar_t** argv)
   initInput();
   screen = new Screen();
   console = new DummyImplementation();
-  // AudioSystem audiosystem;
+  AudioSystem audiosystem;
   SharedState state;
   postInit();
 
@@ -59,19 +59,18 @@ int run(int argc, wchar_t** argv)
   sharedGui = &gui;
 
   // Audiosystem taktet die Konsole in separatem Thread
-  // std::thread t(&AudioSystem::start, &audiosystem);
+  std::thread t(&AudioSystem::start, &audiosystem);
 
 
   while(!glfwWindowShouldClose(window)){
+      do {
       onWindowUpdate();
       screen->present();
       gui.render();
       glfwSwapBuffers(window);
       updateOtherViewports();
 
-      while(!console->frameIsReady()){
-        console->clockUntilSampleReady();
-      }
+    } while (!console->frameIsReady() && !glfwWindowShouldClose(window));
 
     {
       std::lock_guard lock{consoleLock};
@@ -79,8 +78,8 @@ int run(int argc, wchar_t** argv)
     }
   }
 
-  // audiosystem.close = true;
-  // t.join();
+  audiosystem.close = true;
+  t.join();
   cleanUp(window);
   return 0;
 }

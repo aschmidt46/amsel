@@ -22,7 +22,7 @@ TEST(CPUTest, BasicAssertions){
 
 void performSingleStepTest(const char* path){
     auto tb = std::make_shared<TestBus>();
-    CPU cpu(tb);
+    CPU cpu(tb.get());
     std::ifstream f(path);
     json data = json::parse(f);
     std::vector<CpuTransition> cases = parseSingleStepTest(data);
