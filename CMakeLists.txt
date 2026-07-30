@@ -17,10 +17,10 @@ endif()
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
-set(CMAKE_C_FLAGS_DEBUG "-O2 -ggdb")
-set(CMAKE_C_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb -g3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -ggdb -g3")
+set(CMAKE_C_FLAGS_DEBUG "-O2 -ggdb -g3")
+set(CMAKE_C_FLAGS_RELEASE "-O2 -ggdb -g3")
 
 
 add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)

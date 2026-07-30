@@ -13,7 +13,7 @@ class DummyImplementation : public Console{
     void clock() override{};
     void clockUntilSampleReady() override{};
     const uint8_t* accessFramebuffer() override{return nullptr;};
-    bool frameIsReady() override{return false;};
+    bool frameIsReady() override{return true;};
     bool audioSampleReady() override{return false;};
     std::pair<double, double> getSample() override{return {};};
     bool isLoaded() override{return false;};

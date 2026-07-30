@@ -211,7 +211,7 @@ bool gba::CPU::executeThumbPushPopRegisters(Word instruction)
         }
         else{
             std::cout << "Push mit leerer Liste!\n";
-            bus.lock()->setHalt();
+            bus->setHalt();
             *registerMap[mode()][R13] -= 0x40;
             writeWordUnaligned(*registerMap[mode()][R13], *registerMap[mode()][R15] + 2);
         }

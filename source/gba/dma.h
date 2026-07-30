@@ -32,7 +32,7 @@ namespace gba{
     };
 
     class DMAChannel{
-        std::weak_ptr<Bus> bus;
+        Bus* bus;
         int dmaIndex;
 
         GeneralPurpose32 SourceAddress;
@@ -48,24 +48,61 @@ namespace gba{
 
         int remainingCycles = 0;
 
+        // Vorberechnete Derivate
+        DMAStartTiming startTiming = DMA_IMMEDIATE;
+        int destIncrement = 0;
+        int sourceIncrement = 0;
+
         void resetInternalCounters(bool SAD, bool DAD);
+        void printStartTiming();
     
         public:
         bool isActive = false;
-        DMAChannel(int index, std::weak_ptr<Bus> busPtr);
+        DMAChannel() : SourceAddress(0), DestinationAddress(0), WordCount(0), Control(0){};
+        DMAChannel(int index, Bus* busPtr);
         void onWrite(Word addr, Byte val);
         Byte onRead(Word addr);
 
         // war aktiv / hat etwas getan
         bool clock();
 
-        DestAddrControl getDestAddrControl();
-        SrcAddrControl getSrcAddrControl();
-        bool doesRepeat();
-        bool dmaTransferIs32Bit();
-        bool gamepakDRQ();
-        DMAStartTiming getStartTiming();
-        bool irqOnEnd();
-        bool isEnabled();
+        inline DestAddrControl getDestAddrControl() const{
+            return DestAddrControl((Control.raw >> 5) & 0b11u);
+        }
+
+        inline SrcAddrControl getSrcAddrControl() const{
+            return SrcAddrControl((Control.raw >> 7) & 0b11u);
+        }
+
+        inline bool doesRepeat() const{
+            return Control.raw & (1u << 9);
+        }
+
+        inline bool dmaTransferIs32Bit() const{
+            return Control.raw & (1u << 10);
+        }
+
+        inline bool gamepakDRQ() const{
+            return Control.raw & (1u << 11);
+        }
+
+        inline DMAStartTiming getStartTiming() const{
+            DMAStartTiming timing = DMAStartTiming((Control.raw >> 12) & 0b11u);
+            if((dmaIndex == 1 || dmaIndex == 2) && timing == DMA_SPECIAL_PROHIBITED){
+                timing = DMA_SOUND_FIFO;
+            }
+            else if(dmaIndex == 3 && timing == DMA_SPECIAL_PROHIBITED){
+                timing = DMA_VIDEO_CAPTURE;
+            }
+            return timing;
+        }
+
+        inline bool irqOnEnd() const{
+            return Control.raw & (1u << 14);
+        }
+
+        inline bool isEnabled() const{
+            return Control.raw & (1u << 15);
+        }
     };
 }

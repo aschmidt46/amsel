@@ -12,6 +12,9 @@ namespace gba{
         void logErrorDuplicateTransaction(int index);
 
       public:
+        HalfWord getIE() override;
+        HalfWord getIF() override;
+        bool hasIME() override;
         std::vector<size_t> completed;
         std::string logs = "";
         bool hadError = false;

@@ -7,14 +7,16 @@
 #include <vector>
 #include "register/general_purpose.h"
 #include "timer.h"
+#include <array>
+#include <cstring>
 
 namespace gba{
     class Bus final : public IBus, virtual public std::enable_shared_from_this<Bus>{
 
         PPU ppu;
         CPU cpu;
-        std::vector<Timer> timers; // 0,1,2,3
-        std::vector<DMAChannel> dma; // 0,1,2,3
+        std::array<Timer, 4> timers; // 0,1,2,3
+        std::array<DMAChannel, 4> dma; // 0,1,2,3
         std::vector<Byte> bios;
 
         // Register
@@ -30,10 +32,10 @@ namespace gba{
         Byte HALTCNT = 0;
 
 
-        std::vector<Byte> wramBoard;
-        std::vector<Byte> wramChip;
+        std::array<Byte, 0x40000>* wramBoard;
+        std::array<Byte, 0x8000>* wramChip;
         std::vector<Byte> gamePak;
-        std::vector<Byte> cartRam;
+        std::array<Byte, 0x10000>* cartRam;
         // std::vector<Byte> eeprom;
         // class EEPROM
         Byte null = 0;
@@ -46,11 +48,18 @@ namespace gba{
 
 
         public:
+        HalfWord getIE() override;
+        HalfWord getIF() override;
+        bool hasIME() override;
         unsigned int getCyclesForAccess(Word addr, bool sequential);
         void init();
         Bus(const char *path);
         Bus(const std::vector<Byte> &bytes);
-        ~Bus() = default;
+        ~Bus(){
+            delete wramBoard;
+            delete wramChip;
+            delete cartRam;
+        };
         // Adressen vorher noch alignen?
         void writeByte(Word addr, Byte val) override;
         void writeByteFromWide(Word addr, Byte val);

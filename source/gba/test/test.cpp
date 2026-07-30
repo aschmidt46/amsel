@@ -13,7 +13,7 @@ using namespace gba;
 // Demonstrate some basic assertions.
 TEST(CPUTest, BasicAssertions){
     auto tb = std::make_shared<TestBus>();
-    CPU cpu(tb);
+    CPU cpu(tb.get());
     // Expect two strings not to be equal.
     // EXPECT_STRNE("hello", "world");
     // // Expect equality.

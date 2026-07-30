@@ -67,14 +67,14 @@ namespace gba{
             ARM = 0,
             THUMB = 1,
         };
-        enum OperatingMode{
-            System = 0,
-            User = 1,
-            FIQ = 2,
-            Supervisor = 3,
-            AbortMode = 4,
-            IRQ = 5,
-            Undefined = 6,
+        enum OperatingMode : Word{
+            System = 31,
+            User = 16,
+            FIQ = 17,
+            Supervisor = 19,
+            AbortMode = 23,
+            IRQ = 18,
+            Undefined = 27,
         };
         static constexpr const int OP_MODES = 7;
     
@@ -275,6 +275,7 @@ namespace gba{
             ThumbSoftwareInterrupt,
             ThumbUnconditionalBranch,
             ThumbLongBranchWithLink,
+            PipelineEmpty,
         };
     
         struct InstructionInfo {

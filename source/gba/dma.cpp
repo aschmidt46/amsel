@@ -17,16 +17,45 @@ void DMAChannel::onWrite(Word addr, Byte val){
         WordCount.OnWriteByte(addr, val);
     }
     else if(addr < 12){
-        bool enabledBefore = isEnabled();
+        const bool enabledBefore = isEnabled();
         Control.OnWriteByte(addr, val);
+        startTiming = getStartTiming();
+        const int incrementer = dmaTransferIs32Bit() ? 4 : 2;
+        int destIncrementFactor = 0;
+        switch(getDestAddrControl()){
+            case DEST_INCREMENT:
+            case DEST_INCREMENT_RELOAD:
+                destIncrementFactor = 1;
+                break;
+            case DEST_DESCREMENT:
+                destIncrementFactor = -1;
+                break;
+            default:
+                break;
+        }
+        int sourceIncrementFactor = 0;
+        switch(getSrcAddrControl()){
+            case SRC_INCREMENT:
+                sourceIncrementFactor = 1;
+                break;
+            case SRC_DESCREMENT:
+                sourceIncrementFactor = -1;
+                break;
+            default:
+                break;
+        }
+        sourceIncrement = sourceIncrementFactor * incrementer;
+        destIncrement = destIncrementFactor * incrementer;
+
+
         if(!enabledBefore && isEnabled()){
-            std::cout << "Control write dma " << dmaIndex << "\n";
-            if(getStartTiming() == DMA_SOUND_FIFO) std::cout << "Sound fifo\n";
-            std::cout << std::bitset<16>(Control.raw) << "\n";
-            std::cout << "src: " << getHex0x(SourceAddress.raw, 8) << ", dst: " << getHex0x(DestinationAddress.raw, 8) << ", count: " << WordCount.raw << "\n";
+            // std::cout << "Control write dma " << dmaIndex << "\n";
+            // std::cout << std::bitset<16>(Control.raw) << "\n";
+            // printStartTiming();
+            // std::cout << "src: " << getHex0x(SourceAddress.raw, 8) << ", dst: " << getHex0x(DestinationAddress.raw, 8) << ", count: " << WordCount.raw << "\n";
             resetInternalCounters(true, true);
             remainingCycles += 2; // 2I, Achtung kann auch 4 sein (nicht implementiert)
-            if(getStartTiming() == DMA_IMMEDIATE) isActive = true;
+            if(startTiming == DMA_IMMEDIATE) isActive = true;
         }
         else if(enabledBefore && !isEnabled()){
             isActive = false;
@@ -68,11 +97,11 @@ Byte DMAChannel::onRead(Word addr){
     }
 }
 
-DMAChannel::DMAChannel(int index, std::weak_ptr<Bus> busPtr) : bus(busPtr), dmaIndex(index), SourceAddress(0), DestinationAddress(4), WordCount(8), Control(10){}
+DMAChannel::DMAChannel(int index, Bus* busPtr) : bus(busPtr), dmaIndex(index), SourceAddress(0), DestinationAddress(4), WordCount(8), Control(10){}
 
 bool DMAChannel::clock(){
     // muss ich noch implementieren, kann problematisch werden, wenn IO Register überschrieben werden
-    if(getStartTiming() == DMA_SOUND_FIFO){
+    if(startTiming == DMA_SOUND_FIFO){
         isActive = false;
         Control.raw &= ~(1u << 15);
         return false;
@@ -86,14 +115,14 @@ bool DMAChannel::clock(){
                 if(doesRepeat()){
                     bool reloadDAD = getDestAddrControl() == DEST_INCREMENT_RELOAD;
                     resetInternalCounters(false, reloadDAD);
-                    if(getStartTiming() == DMA_IMMEDIATE) isActive = true;
+                    if(startTiming == DMA_IMMEDIATE) isActive = true;
                 }
                 else{
                     Control.raw &= ~(1u << 15);
                 }
 
                 if(irqOnEnd()){
-                    bus.lock()->setIF(8 + dmaIndex, true);
+                    bus->setIF(8 + dmaIndex, true);
                 }
             }
         }
@@ -101,47 +130,25 @@ bool DMAChannel::clock(){
     }
     else if(isEnabled() && isActive){
         if(currentCount == 0){
-            remainingCycles += bus.lock()->getCyclesForAccess(currentSourceAddr, false);
-            remainingCycles += bus.lock()->getCyclesForAccess(currentDestAddr, false);
+            remainingCycles += bus->getCyclesForAccess(currentSourceAddr, false);
+            remainingCycles += bus->getCyclesForAccess(currentDestAddr, false);
         }
         else{
-            remainingCycles += bus.lock()->getCyclesForAccess(currentSourceAddr, true);
-            remainingCycles += bus.lock()->getCyclesForAccess(currentDestAddr, true);
+            remainingCycles += bus->getCyclesForAccess(currentSourceAddr, true);
+            remainingCycles += bus->getCyclesForAccess(currentDestAddr, true);
         }
 
         if(dmaTransferIs32Bit()){
-            const Word data = bus.lock()->readWord(currentSourceAddr);
-            bus.lock()->writeWord(currentDestAddr, data);
+            const Word data = bus->readWord(currentSourceAddr);
+            bus->writeWord(currentDestAddr, data);
         }
         else{
-            const HalfWord data = bus.lock()->readHalfWord(currentSourceAddr);
-            bus.lock()->writeHalfWord(currentDestAddr, data);
+            const HalfWord data = bus->readHalfWord(currentSourceAddr);
+            bus->writeHalfWord(currentDestAddr, data);
         }
 
-        const int incrementer = dmaTransferIs32Bit() ? 4 : 2;
-
-        switch(getDestAddrControl()){
-            case DEST_INCREMENT:
-            case DEST_INCREMENT_RELOAD:
-                currentDestAddr += incrementer;
-                break;
-            case DEST_DESCREMENT:
-                currentDestAddr -= incrementer;
-                break;
-            default:
-                break;
-        }
-
-        switch(getSrcAddrControl()){
-            case SRC_INCREMENT:
-                currentDestAddr += incrementer;
-                break;
-            case SRC_DESCREMENT:
-                currentDestAddr -= incrementer;
-                break;
-            default:
-                break;
-        }
+        currentDestAddr += destIncrement;
+        currentSourceAddr += sourceIncrement;
 
         currentCount++;
         return true;
@@ -151,42 +158,27 @@ bool DMAChannel::clock(){
     }
 }
 
-DestAddrControl DMAChannel::getDestAddrControl(){
-    return DestAddrControl((Control.raw >> 5) & 0b11u);
-}
-
-SrcAddrControl DMAChannel::getSrcAddrControl(){
-    return SrcAddrControl((Control.raw >> 7) & 0b11u);
-}
-
-bool DMAChannel::doesRepeat(){
-    return Control.raw & (1u << 9);
-}
-
-bool DMAChannel::dmaTransferIs32Bit(){
-    return Control.raw & (1u << 10);
-}
-
-bool DMAChannel::gamepakDRQ(){
-    return Control.raw & (1u << 11);
-}
-
-DMAStartTiming DMAChannel::getStartTiming(){
-    DMAStartTiming timing = DMAStartTiming((Control.raw >> 12) & 0b11u);
-    if((dmaIndex == 1 || dmaIndex == 2) && timing == DMA_SPECIAL_PROHIBITED){
-        timing = DMA_SOUND_FIFO;
+void DMAChannel::printStartTiming(){
+    auto s = getStartTiming();
+    switch(s){
+        case DMA_VIDEO_CAPTURE:
+            std::cout << "Video Capture\n";
+            break;
+        case DMA_SOUND_FIFO:
+            std::cout << "Sound FIFO\n";
+            break;
+        case DMA_IMMEDIATE:
+            std::cout << "Immediate\n";
+            break;
+        case DMA_HBLANK:
+            std::cout << "HBLANK\n";
+            break;
+        case DMA_VBLANK:
+            std::cout << "VBLANK\n";
+            break;
+        case DMA_SPECIAL_PROHIBITED:
+            std::cout << "Dma verboten\n";
+            break;
     }
-    else if(dmaIndex == 3 && timing == DMA_SPECIAL_PROHIBITED){
-        timing = DMA_VIDEO_CAPTURE;
-    }
-    return timing;
-}
-
-bool DMAChannel::irqOnEnd(){
-    return Control.raw & (1u << 14);
-}
-
-bool DMAChannel::isEnabled(){
-    return Control.raw & (1u << 15);
 }
 

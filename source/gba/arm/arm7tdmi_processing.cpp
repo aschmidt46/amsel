@@ -3,6 +3,7 @@
 #include <iostream>
 #include "../test/logging.h"
 #include "bus_types.h"
+#include "gba/arm/arm7tdmi_types.h"
 extern "C" {
 #include <armdisasm.h>
 }
@@ -11,7 +12,7 @@ using namespace gba;
 
 Byte gba::CPU::readByte(Word addr)
 {
-    Byte res = this->bus.lock()->readByte(addr);
+    Byte res = this->bus->readByte(addr);
     lastTransactionWasRead = true;
     lastTransactionData = res;
     lastTransactionAddress = addr;
@@ -21,7 +22,7 @@ Byte gba::CPU::readByte(Word addr)
 HalfWord gba::CPU::readHalfWord(Word addr)
 {
     addr &= ~1u;
-    HalfWord res = this->bus.lock()->readHalfWord(addr);
+    HalfWord res = this->bus->readHalfWord(addr);
     lastTransactionWasRead = true;
     lastTransactionData = res;
     lastTransactionAddress = addr;
@@ -30,7 +31,7 @@ HalfWord gba::CPU::readHalfWord(Word addr)
 
 HalfWord gba::CPU::readHalfWordUnaligned(Word addr)
 {
-    HalfWord res = this->bus.lock()->readHalfWord(addr);
+    HalfWord res = this->bus->readHalfWord(addr);
     lastTransactionWasRead = true;
     lastTransactionData = res;
     lastTransactionAddress = addr;
@@ -40,7 +41,7 @@ HalfWord gba::CPU::readHalfWordUnaligned(Word addr)
 Word gba::CPU::readWord(Word addr)
 {
     addr &= ~(0b11);
-    Word res = this->bus.lock()->readWord(addr);
+    Word res = this->bus->readWord(addr);
     lastTransactionWasRead = true;
     lastTransactionData = res;
     lastTransactionAddress = addr;
@@ -49,7 +50,7 @@ Word gba::CPU::readWord(Word addr)
 
 Word gba::CPU::readWordUnaligned(Word addr)
 {
-    Word res = this->bus.lock()->readWord(addr);
+    Word res = this->bus->readWord(addr);
     lastTransactionWasRead = true;
     lastTransactionData = res;
     lastTransactionAddress = addr;
@@ -58,7 +59,7 @@ Word gba::CPU::readWordUnaligned(Word addr)
 
 void gba::CPU::writeByte(Word addr, Byte val)
 {
-    this->bus.lock()->writeByte(addr, val);
+    this->bus->writeByte(addr, val);
     lastTransactionWasRead = false;
     lastTransactionData = val;
     lastTransactionAddress = addr;
@@ -67,7 +68,7 @@ void gba::CPU::writeByte(Word addr, Byte val)
 void gba::CPU::writeHalfWord(Word addr, HalfWord val)
 {
     addr &= ~1u;
-    this->bus.lock()->writeHalfWord(addr, val);
+    this->bus->writeHalfWord(addr, val);
     lastTransactionWasRead = false;
     lastTransactionData = val;
     lastTransactionAddress = addr;
@@ -75,7 +76,7 @@ void gba::CPU::writeHalfWord(Word addr, HalfWord val)
 
 void gba::CPU::writeHalfWordUnaligned(Word addr, HalfWord val)
 {
-    this->bus.lock()->writeHalfWord(addr, val);
+    this->bus->writeHalfWord(addr, val);
     lastTransactionWasRead = false;
     lastTransactionData = val;
     lastTransactionAddress = addr;
@@ -84,7 +85,7 @@ void gba::CPU::writeHalfWordUnaligned(Word addr, HalfWord val)
 void gba::CPU::writeWord(Word addr, Word val)
 {
     addr &= ~(0b11);
-    this->bus.lock()->writeWord(addr, val);
+    this->bus->writeWord(addr, val);
     lastTransactionWasRead = false;
     lastTransactionData = val;
     lastTransactionAddress = addr;
@@ -92,7 +93,7 @@ void gba::CPU::writeWord(Word addr, Word val)
 
 void gba::CPU::writeWordUnaligned(Word addr, Word val)
 {
-    this->bus.lock()->writeWord(addr, val);
+    this->bus->writeWord(addr, val);
     lastTransactionWasRead = false;
     lastTransactionData = val;
     lastTransactionAddress = addr;
@@ -102,7 +103,7 @@ void gba::CPU::writeWordUnaligned(Word addr, Word val)
 void gba::CPU::advanceCPU()
 {
     // Die Pipeline MUSS gefüllt sein, bevor IRQ beginnt
-    if(!pipelineDecoded.has_value() || !pipelineRead.has_value()){
+    if((pipelineDecoded.type == PipelineEmpty) || (pipelineRead < 0)){
         advancePipeline();
         return;
     }
@@ -112,12 +113,7 @@ void gba::CPU::advanceCPU()
     }
     else{
         wasInterrupt = false;
-        Word prevPC = _R15_PC;
         bool jump = executeInstruction();
-        if(jump && !wasInterrupt && prevPC > 0x01000000 && _R15_PC < 0x01000000){
-            std::cout << "Verdächtiger Sprung!\n";
-            // bus.lock()->setHalt();
-        }
         if(jump){
             flushPipeline();
         }
@@ -142,7 +138,7 @@ void gba::CPU::advanceCPUToNextValidState()
 void gba::CPU::clock() {
     if(this->remainingCycles <= 0){
         //Debugging
-        if(pipelineDecoded.has_value()){
+        if(pipelineDecoded.type != PipelineEmpty){
             circular[circularIndex] = {_R15_PC - (state() == ARM ? 8 : 4), state()};
             incrementCircular();
         }
@@ -160,35 +156,34 @@ void gba::CPU::clock() {
 bool gba::CPU::pollInterrupts()
 {
     //interrupt disable nicht gesetzt             ime gesetzt
-    if(!_CPSR.state.I && (bus.lock()->readByte(0x4000208) & 1u)){
-        HalfWord IE = this->bus.lock()->readHalfWord(0x4000200);
-        HalfWord IF = this->bus.lock()->readHalfWord(0x4000202);
-        for(int i = 0; i < 14; i++){
-            if((IE & (1u << i)) && (IF & (1u << i))){
-                return true;
-            }
-        }
+    if(!_CPSR.state.I && bus->hasIME()){
+        HalfWord IE = this->bus->getIE();
+        HalfWord IF = this->bus->getIF();
+        return (IE & 0x3FFF) & (IF & 0x3FFF);
     }
     return false;
 }
 
 bool gba::CPU::pipelineIsSaturated()
 {
-    return pipelineDecoded.has_value() && pipelineRead.has_value();
+    return pipelineDecoded.type != PipelineEmpty && pipelineRead >= 0;
 }
 
 void gba::CPU::flushPipeline()
 {
-    this->pipelineRead = {};
-    this->pipelineDecoded = {};
+    this->pipelineRead = -1;
+    this->pipelineDecoded = {PipelineEmpty, 0};
 }
 
 void gba::CPU::advancePipeline()
 {
-    Word pcOffset = this->state() == ARM ? 4 : 2;
-    pipelineDecoded = pipelineRead.and_then([this](auto val) -> std::optional<InstructionInfo> {return {this->decodeInstruction(val)};});
-    pipelineRead = this->state() == ARM ? this->readWord(*registerMap[mode()][R15]) : this->readHalfWord(*registerMap[mode()][R15]);
-    *registerMap[mode()][R15] += pcOffset;
+    if(pipelineRead >= 0){
+        pipelineDecoded = decodeInstruction(Word(pipelineRead));
+    }
+    else pipelineDecoded = {PipelineEmpty, 0};
+
+    pipelineRead = this->state() == ARM ? this->readWord(_R15_PC) : this->readHalfWord(_R15_PC);
+    _R15_PC += this->state() == ARM ? 4 : 2;
 }
 
 bool gba::CPU::advancedThisClock() {
@@ -196,7 +191,7 @@ bool gba::CPU::advancedThisClock() {
 }
 
 bool gba::CPU::pipelineHasValue(){
-    return pipelineDecoded.has_value();
+    return pipelineDecoded.type != PipelineEmpty;
 }
 
 std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
@@ -214,7 +209,7 @@ std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
     
     for(int i = 0; i < n; i++){
         Word mask = state() == ARM ? 0b11 : 0b1;
-        Word opcode = this->bus.lock()->readWord(pc & ~mask);
+        Word opcode = this->bus->readWord(pc & ~mask);
         s.address = pc - 4;
         if(state() == ARM){
             s.arm_mode = 1;
@@ -265,7 +260,7 @@ std::pair<std::string, std::vector<int>> CPU::getPrev10Instructions()
     for(const auto &pc : pcList){
         std::string str = "";
         s.address = pc.first - offset;
-        Word opcode = this->bus.lock()->readWord(pc.first & ~mask);
+        Word opcode = this->bus->readWord(pc.first & ~mask);
         if(pc.second == ARM){
             s.arm_mode = 1;
             disasm_arm(&s, opcode);
@@ -291,10 +286,10 @@ std::string gba::CPU::getCurrentOpcode() {
     ARMSTATE s;
     disasm_init(&s, 0);
     if(state()==ARM){
-        disasm_arm(&s, pipelineDecoded.value_or(InstructionInfo{ InstructionType::UnimplementedInstruction, 0}).code);
+        disasm_arm(&s, pipelineDecoded.code);
     }
     else{
-        auto code = pipelineDecoded.value_or(InstructionInfo{ InstructionType::UnimplementedInstruction, 0}).code;
+        auto code = pipelineDecoded.code;
         disasm_thumb(&s, HalfWord(code), HalfWord(code >> 16));
     }
     std::string text = s.text;

@@ -15,13 +15,14 @@ namespace gba{
         Word dividerValue;
         int number;
 
-        std::weak_ptr<Bus> bus;
+        Bus* bus;
 
         void onIncrement();
         bool overflow = false;
 
         public:
-        Timer(int num, std::weak_ptr<Bus> bptr) : number(num), bus(bptr), reload(0), control(2){};
+        Timer() : reload(0), control(0){};
+        Timer(int num, Bus* bptr) : number(num), bus(bptr), reload(0), control(2){};
         GeneralPurpose16 reload;
         GeneralPurpose16 control;
 

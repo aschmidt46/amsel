@@ -25,30 +25,31 @@ namespace gba{
 
         public:
         inline OperatingMode mode() const{
-            switch(_CPSR.state.mode_bits){
-                case 0: return User;      // ;\26bit Backward Compatibility modes
-                case 1: return FIQ;             // ; (supported only on ARMv3, except ARMv3G,
-                case 2: return IRQ;             // ; and on some non-T variants of ARMv4)
-                case 3: return Supervisor;      // ;/
-                case 16: return User;
-                case 17: return FIQ;
-                case 18: return IRQ;
-                case 19: return Supervisor;
-                case 23: return AbortMode;
-                case 27: return Undefined;
-                case 31: return System;
-                default:{
-                    auto m = _CPSR.state.mode_bits;
-                    if(m < 16){
-                        m &= 0b11;
-                        if(m==0) return User;
-                        if(m==1) return FIQ;
-                        if(m==2) return IRQ;
-                        if(m==3) return Supervisor;
-                    }
-                    return User;
-                }
-            }
+            return (OperatingMode)_CPSR.state.mode_bits;
+            // switch(_CPSR.state.mode_bits){
+                // case 0: return User;      // ;\26bit Backward Compatibility modes
+                // case 1: return FIQ;             // ; (supported only on ARMv3, except ARMv3G,
+                // case 2: return IRQ;             // ; and on some non-T variants of ARMv4)
+                // case 3: return Supervisor;      // ;/
+                // case 16: return User;
+                // case 17: return FIQ;
+                // case 18: return IRQ;
+                // case 19: return Supervisor;
+                // case 23: return AbortMode;
+                // case 27: return Undefined;
+                // case 31: return System;
+                // default:{
+                //     // auto m = _CPSR.state.mode_bits;
+                //     // if(m < 16){
+                //     //     m &= 0b11;
+                //     //     if(m==0) return User;
+                //     //     if(m==1) return FIQ;
+                //     //     if(m==2) return IRQ;
+                //     //     if(m==3) return Supervisor;
+                //     // }
+                //     return User;
+                // }
+            // }
         }
 
         inline CpuState state() const{
@@ -67,28 +68,30 @@ namespace gba{
             return mode() == System || mode() == User;
         }
 
-        Word* const registerMap[OP_MODES][18] = {{
+        Word* const registerMap[32][18] = {
+            {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr}, {nullptr},
+            { // 16 User
                 &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
                 &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_SP, &_R14_L_R, &_R15_PC, &_CPSR.raw, nullptr
             },
-            {
-                &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
-                &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_SP, &_R14_L_R, &_R15_PC, &_CPSR.raw, nullptr
-            },{
+            { // 17 FIQ
                 &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
                 &_R8_fiq, &_R9_fiq, &_R10_fiq, &_R11_fiq, &_R12_fiq, &_R13_fiq, &_R14_fiq, &_R15_PC, &_CPSR.raw, &_SPSR_fiq.raw
-            },{
-                &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
-                &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_SVC, &_R14_SVC, &_R15_PC, &_CPSR.raw, &_SPSR_SVC.raw
-            },{
-                &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
-                &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_abt, &_R14_abt, &_R15_PC, &_CPSR.raw, &_SPSR_abt.raw
-            },{
+            },{ // 18 IRQ
                 &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
                 &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_irq, &_R14_irq, &_R15_PC, &_CPSR.raw, &_SPSR_irq.raw
-            },{
+            },{ // 19 SVC
+                &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
+                &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_SVC, &_R14_SVC, &_R15_PC, &_CPSR.raw, &_SPSR_SVC.raw
+            }, {nullptr}, {nullptr}, {nullptr}, { // 23 ABT
+                &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
+                &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_abt, &_R14_abt, &_R15_PC, &_CPSR.raw, &_SPSR_abt.raw
+            },{nullptr}, {nullptr}, {nullptr}, { // 27 UND
                 &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
                 &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_und, &_R14_und, &_R15_PC, &_CPSR.raw, &_SPSR_und.raw
+            },{nullptr}, {nullptr}, {nullptr}, { // 31 System
+                &_R0, &_R1, &_R2, &_R3, &_R4, &_R5, &_R6, &_R7,
+                &_R8, &_R9, &_R10, &_R11, &_R12, &_R13_SP, &_R14_L_R, &_R15_PC, &_CPSR.raw, nullptr
             }};
 
 
@@ -109,13 +112,13 @@ namespace gba{
         
         
         // Pipeline Zustand
-        std::optional<Word> pipelineRead;
-        std::optional<InstructionInfo> pipelineDecoded;
+        int64_t pipelineRead = -1;
+        InstructionInfo pipelineDecoded = {PipelineEmpty, 0};
         
         size_t remainingCycles = 0; // Extreme Vereinfachung, muss ich ändern
 
 
-        std::weak_ptr<gba::IBus> bus;
+        IBus* bus;
 
         bool shouldFlush = false;
             
@@ -127,7 +130,7 @@ namespace gba{
 
         bool wasInterrupt = false;
 
-        InstructionInfo decodeInstruction(Word code);
+        InstructionInfo decodeInstruction(Word code) const;
         static InstructionInfo decodeInstructionARM(Word code);
         static InstructionInfo decodeInstructionTHUMB(Word code);
         static std::string printInstructionType(InstructionType t);
@@ -181,7 +184,7 @@ namespace gba{
         
         public:
         CPU();
-        CPU(std::shared_ptr<IBus> bus) : CPU(){
+        CPU(IBus* bus) : CPU(){
             this->bus = bus;
         };
         

@@ -1,5 +1,7 @@
 #include "arm7tdmi.h"
+#include "arm7tdmi_types.h"
 #include "framework/stringlib.h"
+#include "gba/arm/arm7tdmi_types.h"
 #include "gba/test/logging.h"
 #include <bit>
 #include <bitset>
@@ -381,6 +383,9 @@ std::string gba::CPU::printInstructionType(InstructionType t){
         case ThumbLongBranchWithLink:
             s = "ThumbLongBranchWithLink";
             break;
+        case PipelineEmpty:
+            s = "Pipeline is Empty";
+            break;
     }
     return s;
 }
@@ -393,10 +398,10 @@ bool gba::CPU::executeInstruction()
     //     std::cout << "Adresse: " << getHex0x(_R15_PC, 8) << "\n";
     //     std::cout << getDisassembly(pipelineDecoded.value().code) << "\n";
     //     std::cout << std::bitset<32>(pipelineDecoded.value().code) << "\n";
-    //     bus.lock()->setHalt();
+    //     bus->setHalt();
     // };
-    if(this->pipelineDecoded.has_value()){
-        InstructionInfo info = this->pipelineDecoded.value();
+    if(this->pipelineDecoded.type != PipelineEmpty){
+        InstructionInfo info = this->pipelineDecoded;
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
 
         // auto iInfo = info;
@@ -435,12 +440,12 @@ bool gba::CPU::executeInstruction()
         //     std::cout << "PC weicht ab.\n";
         //     std::cout << "Ich:   \t" << getHex0x(_R15_PC - offset, 8) << "\n";
         //     std::cout << "mesen: \t" << token << "\n";
-        //     bus.lock()->setHalt();
+        //     bus->setHalt();
         // }
 
         // if(_R15_PC == 0x8){
         //     std::cout << "Bin bei 0\n";
-        //     bus.lock()->setHalt();
+        //     bus->setHalt();
         // }
 
 
@@ -487,7 +492,7 @@ bool gba::CPU::executeInstruction()
                         return this->executePSRTransfer(info.code);
                     default:
                         std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
-                        bus.lock()->setHalt();
+                        bus->setHalt();
                         // throw "error";
                         return false;
                 }
@@ -537,7 +542,7 @@ bool gba::CPU::executeInstruction()
                 default:
                     std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
                     // throw "error";
-                    bus.lock()->setHalt();
+                    bus->setHalt();
                     return false;
             }
         }
@@ -545,7 +550,7 @@ bool gba::CPU::executeInstruction()
     return false;
 }
 
-InstructionInfo gba::CPU::decodeInstruction(Word code)
+InstructionInfo gba::CPU::decodeInstruction(Word code) const
 {
     if(this->state() == ARM){
         return decodeInstructionARM(code);
@@ -694,37 +699,31 @@ gba::CPU::CPU()
 bool gba::CPU::checkCondition(Condition c) const
 {
     switch(c){
-        case EQ: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.Z == 1;
-        case NE: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.Z == 0;
-        case CS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.C == 1;
-        case CC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.C == 0;
-        case MI: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.N == 1;
-        case PL: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.N == 0;
-        case VS: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.V == 1;
-        case VC: return std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]).state.V == 0;
+        case EQ: return _CPSR.state.Z == 1;
+        case NE: return _CPSR.state.Z == 0;
+        case CS: return _CPSR.state.C == 1;
+        case CC: return _CPSR.state.C == 0;
+        case MI: return _CPSR.state.N == 1;
+        case PL: return _CPSR.state.N == 0;
+        case VS: return _CPSR.state.V == 1;
+        case VC: return _CPSR.state.V == 0;
         case HI: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.state.C == 1 && status.state.Z == 0;
+                return _CPSR.state.C == 1 && _CPSR.state.Z == 0;
             }
         case LS: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.state.C == 0 || status.state.Z == 1;
+                return _CPSR.state.C == 0 || _CPSR.state.Z == 1;
             }
         case GE: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.state.N == status.state.V;
+                return _CPSR.state.N == _CPSR.state.V;
             }
         case LT: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.state.N != status.state.V;
+                return _CPSR.state.N != _CPSR.state.V;
             }
         case GT: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.state.Z == 0 && (status.state.N == status.state.V);
+                return _CPSR.state.Z == 0 && (_CPSR.state.N == _CPSR.state.V);
             }
         case LE: {
-                auto status = std::bit_cast<StatusRegister>(*this->registerMap[mode()][CPSR]);
-                return status.state.Z == 1 || (status.state.N != status.state.V);
+                return _CPSR.state.Z == 1 || (_CPSR.state.N != _CPSR.state.V);
             }
         case AL: return true;
         case NV: return false;

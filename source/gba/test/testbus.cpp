@@ -5,6 +5,18 @@
 
 using namespace gba;
 
+HalfWord TestBus::getIE(){
+    return 0;
+}
+
+HalfWord TestBus::getIF(){
+    return 0;
+}
+
+bool TestBus::hasIME(){
+    return false;
+}
+
 void gba::TestBus::setTransactions(std::vector<Transaction> transactions)
 {
     this->completed.clear();

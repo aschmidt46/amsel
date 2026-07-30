@@ -2,6 +2,7 @@
 #include "dma.h"
 #include "framework/stringlib.h"
 #include <bitset>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -45,6 +46,18 @@ unsigned int Bus::getCyclesForAccess(Word addr, bool sequential){
     (void)addr;
     (void)sequential;
     return 1;
+}
+
+HalfWord Bus::getIE(){
+    return IE;
+}
+
+HalfWord Bus::getIF(){
+    return IF;
+}
+
+bool Bus::hasIME(){
+    return IME.raw & 1;
 }
 
 void Bus::PPUEnteredHBlank(){
@@ -99,12 +112,12 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
     if(addr >= 0x02000000 && addr < 0x03000000){
         // WRAM (board) + Mirror
         auto mod = (addr - 0x02000000) % 0x40000;
-        wramBoard[mod] = val;
+        (*wramBoard)[mod] = val;
     }
     else if(addr >= 0x03000000 && addr < 0x04000000){
         // WRAM (chip) + Mirror
         auto mod = (addr - 0x03000000) % 0x8000;
-        wramChip[mod] = val;
+        (*wramChip)[mod] = val;
     }
 
     else if(addr >= 0x04000000 && addr < 0x04000060){
@@ -146,11 +159,9 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
     //Interrupt Handling
     else if(addr == 0x04000200){
         IE = (IE & 0xFF00) | val;
-        std::cout << "IE write: " << std::bitset<16>(IE) << "\n";
     }
     else if(addr == 0x04000201){//!!
         IE = (IE & 0x00FF) | (HalfWord(val) << 8);
-        std::cout << "IE write: " << std::bitset<16>(IE) << "\n";
     }
     else if(addr == 0x04000202){
         IF = IF & ~HalfWord(val);
@@ -187,10 +198,10 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
 
     // Cart Ram
     else if(addr >= 0x0E000000 && addr < 0x0E010000){
-        cartRam[addr - 0x0E000000] = val;
+        (*cartRam)[addr - 0x0E000000] = val;
     }
     else if(addr >= 0x0F000000 && addr < 0x0F010000){
-        cartRam[addr - 0x0F000000] = val;
+        (*cartRam)[addr - 0x0F000000] = val;
     }
     else if(addr >= 0x04000060 && addr < 0x040000A8){
         //Audio Register
@@ -210,12 +221,12 @@ Byte gba::Bus::readByte(Word addr)
     if(addr >= 0x02000000 && addr < 0x03000000){
         // WRAM (board) + Mirror
         auto mod = (addr - 0x02000000) % 0x40000;
-        return wramBoard[mod];
+        return (*wramBoard)[mod];
     }
     if(addr >= 0x03000000 && addr < 0x04000000){
         // WRAM (chip) + Mirror
         auto mod = (addr - 0x03000000) % 0x8000;
-        return wramChip[mod];
+        return (*wramChip)[mod];
     }
 
 
@@ -316,10 +327,10 @@ Byte gba::Bus::readByte(Word addr)
 
     // Cart Ram
     if(addr >= 0x0E000000 && addr < 0x0E010000){
-        return cartRam[addr - 0x0E000000];
+        return (*cartRam)[addr - 0x0E000000];
     }
     if(addr >= 0x0F000000 && addr < 0x0F010000){
-        return cartRam[addr - 0x0F000000];
+        return (*cartRam)[addr - 0x0F000000];
     }
     if(addr >= 0x04000060 && addr < 0x040000A8){
         //Audio Register
@@ -378,18 +389,21 @@ gba::Bus::Bus() : IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KE
     this->bios = contents;
     stream.close();
     #endif
-    this->wramBoard = std::vector<Byte>(0x40000, 0);
-    this->wramChip = std::vector<Byte>(0x8000, 0);
-    this->cartRam = std::vector<Byte>(0x10000, 0);
+    this->wramBoard = new std::array<Byte, 0x40000>();
+    std::memset(&((*wramBoard)[0]), 0, 0x40000);
+    this->wramChip = new std::array<Byte, 0x8000>();
+    std::memset(&((*wramChip)[0]), 0, 0x8000);
+    this->cartRam = new std::array<Byte, 0x10000>();
+    std::memset(&((*cartRam)[0]), 0, 0x10000);
 }
 
 void gba::Bus::init() {
     for(int i = 0; i < 4; i++){
-        timers.push_back(Timer(i, shared_from_this()));
-        dma.push_back(DMAChannel(i, shared_from_this()));
+        timers[i] = Timer(i, this);
+        dma[i] = DMAChannel(i, this);
     }
     ppu = PPU(shared_from_this());
-    new (&cpu) CPU(shared_from_this());
+    new (&cpu) CPU(this);
 }
 
 gba::Bus::Bus(const char *path) : Bus() {
@@ -454,7 +468,7 @@ void gba::Bus::clock() {
     
         ppu.clock();
         bool cpuBlocked = false;
-        for(size_t i = 0; i < dma.size(); i++){
+        for(size_t i = 0; i < 4; i++){
             if(dma[i].clock()){
                 cpuBlocked = true;
                 break;

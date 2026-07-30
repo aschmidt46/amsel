@@ -68,7 +68,7 @@ void gba::Timer::onIncrement() {
         overflow = true;
         this->value = reload.raw;
         if(control.raw & 64){ // IRQ Enable
-            bus.lock()->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
+            bus->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
         }
     }
 }
