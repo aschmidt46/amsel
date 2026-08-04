@@ -44,10 +44,20 @@ namespace gba{
             HalfWord unused : 2; // muss 0 sein
             HalfWord mosaic : 1;
             HalfWord colorsPalettes : 1;
-            HalfWord screenBaseBlock : 4;
-            HalfWord unusedBG0BG1 : 1;
+            HalfWord screenBaseBlock : 5;
+            // HalfWord unusedBG0BG1 : 1;
             HalfWord DisplayAreaOverflowBG2BG3 : 1;
             HalfWord screenSize : 2;
+        } state;
+        HalfWord raw;
+    };
+
+    union ScreenEntry {
+        struct{
+            HalfWord TileID : 10; //lsb
+            HalfWord flipHorizontal : 1;
+            HalfWord flipVertical : 1;
+            HalfWord paletteBank : 4;
         } state;
         HalfWord raw;
     };

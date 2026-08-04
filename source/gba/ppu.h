@@ -1,10 +1,12 @@
 #pragma once
 
 #include "arm/bus_types.h"
+#include <utility>
 #include <vector>
 #include <memory>
 
 #include "ppu_registers.h"
+#include "register/general_purpose.h"
 
 namespace gba{
     class Bus;
@@ -20,53 +22,61 @@ namespace gba{
 
         // Register
         LCDCONTROL_T LCDCONTROL = {.raw = 0};
-        HalfWord GREENSWAP; // Undokumentiert
+        HalfWord GREENSWAP = 0; // Undokumentiert
         LCDSTATUS_T LCDSTATUS = {.raw = 0};
-        HalfWord currentScanline; //VCOUNT
+        HalfWord currentScanline = 0; //VCOUNT
 
-        BGCNT_T BG0CONTROL = {.raw = 0};
-        BGCNT_T BG1CONTROL = {.raw = 0};
-        BGCNT_T BG2CONTROL = {.raw = 0};
-        BGCNT_T BG3CONTROL = {.raw = 0};
+        BGCNT_T BG_CNT[4] = {{.raw = 0}, {.raw = 0}, {.raw = 0}, {.raw = 0}};
 
-        HalfWord BG0_X_OFFSET;
-        HalfWord BG0_Y_OFFSET;
-        HalfWord BG1_X_OFFSET;
-        HalfWord BG1_Y_OFFSET;
-        HalfWord BG2_X_OFFSET;
-        HalfWord BG2_Y_OFFSET;
-        HalfWord BG3_X_OFFSET;
-        HalfWord BG3_Y_OFFSET;
+        HalfWord BG_X_OFFSET[4] = {0, 0, 0, 0};
+        HalfWord BG_Y_OFFSET[4] = {0, 0, 0, 0};
 
-        HalfWord BG2_DX;
-        HalfWord BG2_DMX;
-        HalfWord BG2_DY;
-        HalfWord BG2_DMY;
-        Word     BG2_REFERENCE_X;
-        Word     BG2_REFERENCE_Y;
+        HalfWord BG2_DX = 0;
+        HalfWord BG2_DMX = 0;
+        HalfWord BG2_DY = 0;
+        HalfWord BG2_DMY = 0;
+        Word     BG2_REFERENCE_X = 0;
+        Word     BG2_REFERENCE_Y = 0;
 
-        HalfWord BG3_DX;
-        HalfWord BG3_DMX;
-        HalfWord BG3_DY;
-        HalfWord BG3_DMY;
-        Word     BG3_REFERENCE_X;
-        Word     BG3_REFERENCE_Y;
+        HalfWord BG3_DX = 0;
+        HalfWord BG3_DMX = 0;
+        HalfWord BG3_DY = 0;
+        HalfWord BG3_DMY = 0;
+        Word     BG3_REFERENCE_X = 0;
+        Word     BG3_REFERENCE_Y = 0;
 
-        HalfWord WINDOW_0_HORIZONTAL_DIM;
-        HalfWord WINDOW_1_HORIZONTAL_DIM;
-        HalfWord WINDOW_0_VERTICAL_DIM;
-        HalfWord WINDOW_1_VERTICAL_DIM;
-        HalfWord WININ;
-        HalfWord WINOUT;
-        HalfWord MOSAIC;
+        HalfWord WINDOW_0_HORIZONTAL_DIM = 0;
+        HalfWord WINDOW_1_HORIZONTAL_DIM = 0;
+        HalfWord WINDOW_0_VERTICAL_DIM = 0;
+        HalfWord WINDOW_1_VERTICAL_DIM = 0;
+        HalfWord WININ = 0;
+        HalfWord WINOUT = 0;
+        HalfWord MOSAIC = 0;
     
-        HalfWord SPECIAL_EFFECTS;
-        HalfWord ALPHA_BLENDING;
-        HalfWord BRIGHTNESS_FADE;
+        HalfWord SPECIAL_EFFECTS = 0;
+        HalfWord ALPHA_BLENDING = 0;
+        HalfWord BRIGHTNESS_FADE = 0;
 
         Word currentCycle = 0;
 
         bool hasframe = false;
+
+        Word seIndexFast(Word tx, Word ty, BGCNT_T bgcnt);
+
+        inline bool displayBG(const int i) const{
+            switch(i){
+                case 0:
+                    return LCDCONTROL.state.displayBG0;
+                case 1:
+                    return LCDCONTROL.state.displayBG1;
+                case 2:
+                    return LCDCONTROL.state.displayBG2;
+                case 3:
+                    return LCDCONTROL.state.displayBG3;
+                default:
+                    std::unreachable();
+            }
+        }
         
         public:
         PPU() = default;
@@ -81,7 +91,7 @@ namespace gba{
         void setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb);
 
         void drawSprites();
-        void drawBG0();
+        void drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY);
 
         void drawPixelMode0();
         void drawPixelMode1();
