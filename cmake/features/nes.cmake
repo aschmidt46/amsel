@@ -1,31 +1,31 @@
 add_library(nes
-source/nes/6502.cpp source/nes/6502.h
-source/nes/ppu.cpp source/nes/ppu.h
-source/nes/nes_file.cpp source/nes/nes_file.h
-source/nes/mapper.cpp source/nes/mapper.h
-source/nes/controller.cpp source/nes/controller.h
-source/nes/nes.cpp source/nes/nes.h
-source/nes/palette.cpp source/nes/palette.h
-source/nes/apu/apu.cpp source/nes/apu/apu.h
-source/nes/apu/apu_divider.cpp source/nes/apu/apu_divider.h
-source/nes/apu/apu_envelope.cpp source/nes/apu/apu_envelope.h
-source/nes/apu/apu_frame_sequencer.cpp source/nes/apu/apu_frame_sequencer.h
-source/nes/apu/apu_length_counter.cpp source/nes/apu/apu_length_counter.h
-source/nes/apu/apu_sequencer.cpp source/nes/apu/apu_sequencer.h
-source/nes/apu/apu_square_channel.cpp source/nes/apu/apu_square_channel.h
-source/nes/apu/apu_sweep.cpp source/nes/apu/apu_sweep.h
-source/nes/apu/apu_triangle_channel.cpp source/nes/apu/apu_triangle_channel.h
-source/nes/apu/apu_noise_channel.cpp source/nes/apu/apu_noise_channel.h
-source/nes/apu/apu_delta_modulation_channel.cpp source/nes/apu/apu_delta_modulation_channel.h
-source/nes/apu/apu_linear_counter.cpp source/nes/apu/apu_linear_counter.h
-source/nes/mappers/abstract_mapper.cpp source/nes/mappers/abstract_mapper.h
-source/nes/mappers/mapper0.cpp source/nes/mappers/mapper0.h
-source/nes/mappers/mapper1.cpp source/nes/mappers/mapper1.h
-source/nes/mappers/mapper2.cpp source/nes/mappers/mapper2.h
-source/nes/mappers/mapper3.cpp source/nes/mappers/mapper3.h
-source/nes/mappers/mapper4.cpp source/nes/mappers/mapper4.h
-source/nes/mappers/mapper7.cpp source/nes/mappers/mapper7.h
-source/nes/mappers/mappers.cpp source/nes/mappers/mappers.h
+src/nes/6502.cpp src/nes/6502.h
+src/nes/ppu.cpp src/nes/ppu.h
+src/nes/nes_file.cpp src/nes/nes_file.h
+src/nes/mapper.cpp src/nes/mapper.h
+src/nes/controller.cpp src/nes/controller.h
+src/nes/nes.cpp src/nes/nes.h
+src/nes/palette.cpp src/nes/palette.h
+src/nes/apu/apu.cpp src/nes/apu/apu.h
+src/nes/apu/apu_divider.cpp src/nes/apu/apu_divider.h
+src/nes/apu/apu_envelope.cpp src/nes/apu/apu_envelope.h
+src/nes/apu/apu_frame_sequencer.cpp src/nes/apu/apu_frame_sequencer.h
+src/nes/apu/apu_length_counter.cpp src/nes/apu/apu_length_counter.h
+src/nes/apu/apu_sequencer.cpp src/nes/apu/apu_sequencer.h
+src/nes/apu/apu_square_channel.cpp src/nes/apu/apu_square_channel.h
+src/nes/apu/apu_sweep.cpp src/nes/apu/apu_sweep.h
+src/nes/apu/apu_triangle_channel.cpp src/nes/apu/apu_triangle_channel.h
+src/nes/apu/apu_noise_channel.cpp src/nes/apu/apu_noise_channel.h
+src/nes/apu/apu_delta_modulation_channel.cpp src/nes/apu/apu_delta_modulation_channel.h
+src/nes/apu/apu_linear_counter.cpp src/nes/apu/apu_linear_counter.h
+src/nes/mappers/abstract_mapper.cpp src/nes/mappers/abstract_mapper.h
+src/nes/mappers/mapper0.cpp src/nes/mappers/mapper0.h
+src/nes/mappers/mapper1.cpp src/nes/mappers/mapper1.h
+src/nes/mappers/mapper2.cpp src/nes/mappers/mapper2.h
+src/nes/mappers/mapper3.cpp src/nes/mappers/mapper3.h
+src/nes/mappers/mapper4.cpp src/nes/mappers/mapper4.h
+src/nes/mappers/mapper7.cpp src/nes/mappers/mapper7.h
+src/nes/mappers/mappers.cpp src/nes/mappers/mappers.h
 )
 
 target_compile_options(nes PUBLIC -Wall -Wextra -Wpedantic)
@@ -33,8 +33,8 @@ target_compile_options(nes PUBLIC -Wall -Wextra -Wpedantic)
 set_property(TARGET nes PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
-add_library(nes_implementation source/console/console.h
-source/console/nes_implementation.h source/console/nes_implementation.cpp
+add_library(nes_implementation src/console/console.h
+src/console/nes_implementation.h src/console/nes_implementation.cpp
 )
 
 set_property(TARGET nes_implementation PROPERTY

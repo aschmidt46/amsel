@@ -15,23 +15,23 @@ add_library(gba_dasm
 
 
 add_library(gba
-source/gba/bus.h source/gba/bus.cpp source/gba/ibus.h
-source/gba/register/general_purpose.h source/gba/register/general_purpose.cpp
-source/gba/arm/bus_types.h source/gba/arm/arm7tdmi.h source/gba/arm/arm7tdmi_types.h
-source/gba/arm/arm7tdmi_decoding.cpp
-source/gba/arm/arm7tdmi_instructions_arm.cpp
-source/gba/arm/arm7tdmi_instructions_thumb.cpp
-source/gba/arm/arm7tdmi_processing.cpp
-source/gba/arm/arm7tdmi_aux.cpp
-source/gba/ppu.h source/gba/ppu_registers.h source/gba/ppu.cpp
-source/gba/timer.h
-source/gba/timer.cpp
-source/gba/dma.h
-source/gba/dma.cpp
-source/gba/gba.h source/gba/gba.cpp
-source/gba/test/logging.h source/gba/test/logging.cpp
-source/console/console.h
-source/console/gba_implementation.h source/console/gba_implementation.cpp
+src/gba/bus.h src/gba/bus.cpp src/gba/ibus.h
+src/gba/register/general_purpose.h src/gba/register/general_purpose.cpp
+src/gba/arm/bus_types.h src/gba/arm/arm7tdmi.h src/gba/arm/arm7tdmi_types.h
+src/gba/arm/arm7tdmi_decoding.cpp
+src/gba/arm/arm7tdmi_instructions_arm.cpp
+src/gba/arm/arm7tdmi_instructions_thumb.cpp
+src/gba/arm/arm7tdmi_processing.cpp
+src/gba/arm/arm7tdmi_aux.cpp
+src/gba/ppu.h src/gba/ppu_registers.h src/gba/ppu.cpp
+src/gba/timer.h
+src/gba/timer.cpp
+src/gba/dma.h
+src/gba/dma.cpp
+src/gba/gba.h src/gba/gba.cpp
+src/gba/test/logging.h src/gba/test/logging.cpp
+src/console/console.h
+src/console/gba_implementation.h src/console/gba_implementation.cpp
 )
 
 target_compile_options(gba PUBLIC -Wall -Wextra -Wpedantic)

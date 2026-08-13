@@ -69,7 +69,7 @@ if(FEATURE_DEBUGGER)
   add_compile_definitions(FEATURE_DEBUGGER)
 endif()
 
-# include_directories(${CMAKE_SOURCE_DIR}/source/framework)
+# include_directories(${CMAKE_SOURCE_DIR}/src/framework)
 
 
 if(FEATURE_TEST_SUITE)
@@ -121,7 +121,7 @@ endif()
 
 
 add_library(stringlib
-  source/framework/stringlib.h
-  source/framework/stringlib.cpp
+  src/framework/stringlib.h
+  src/framework/stringlib.cpp
 )
 target_link_libraries(AMSEL stringlib)

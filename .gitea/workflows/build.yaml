@@ -58,10 +58,10 @@ jobs:
         working-directory: ./build
         run: make
       - name: Npm dependencies
-        working-directory: ./source/web
+        working-directory: ./src/web
         run: npm i
       - name: Build Web App
-        working-directory: ./source/web
+        working-directory: ./src/web
         run: npm run build
   Test-Suite:
     runs-on: node

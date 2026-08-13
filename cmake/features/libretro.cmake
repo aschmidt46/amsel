@@ -15,16 +15,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
 # add_library(skeleton SHARED
-# source/libretro/libretro.cpp
+# src/libretro/libretro.cpp
 # )
 
 add_library(AMSEL SHARED
-source/framework/common.cpp source/framework/common.h
-source/framework/global_web.cpp
-source/console/console.h
-source/console/console.cpp
-source/console/dummy_implementation.h
-source/libretro/libretro_implementation.cpp
+src/framework/common.cpp src/framework/common.h
+src/framework/global_web.cpp
+src/console/console.h
+src/console/console.cpp
+src/console/dummy_implementation.h
+src/libretro/libretro_implementation.cpp
 )
 
 set_property(TARGET AMSEL PROPERTY

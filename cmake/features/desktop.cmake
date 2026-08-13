@@ -87,20 +87,20 @@ add_library(whereami STATIC
 )
 
 
-add_executable(AMSEL source/main.cpp
-source/framework/common.cpp source/framework/common.h
-source/framework/file_io.cpp source/framework/file_io.h
-source/framework/input.cpp source/framework/input.h
-source/framework/windowing.cpp source/framework/windowing.h
-source/framework/screen.cpp source/framework/screen.h
-source/gui.cpp source/gui.h
-source/framework/audiosystem.cpp source/framework/audiosystem.h
-source/console/console.h
-source/console/console.cpp
-source/framework/locale.h
-source/framework/locale.cpp
-source/console/dummy_implementation.h
-source/framework/vector.h
+add_executable(AMSEL src/main.cpp
+src/framework/common.cpp src/framework/common.h
+src/framework/file_io.cpp src/framework/file_io.h
+src/framework/input.cpp src/framework/input.h
+src/framework/windowing.cpp src/framework/windowing.h
+src/framework/screen.cpp src/framework/screen.h
+src/gui.cpp src/gui.h
+src/framework/audiosystem.cpp src/framework/audiosystem.h
+src/console/console.h
+src/console/console.cpp
+src/framework/locale.h
+src/framework/locale.cpp
+src/console/dummy_implementation.h
+src/framework/vector.h
 )
 
 set_property(TARGET AMSEL PROPERTY
@@ -130,13 +130,13 @@ make_directory(${CMAKE_BINARY_DIR}/locales/)
 add_custom_command(
         TARGET AMSEL POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_SOURCE_DIR}/source/framework/locales/de.json
+                ${CMAKE_SOURCE_DIR}/src/framework/locales/de.json
                 ${CMAKE_BINARY_DIR}/locales/de.json)
 
 add_custom_command(
         TARGET AMSEL POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_SOURCE_DIR}/source/framework/locales/en.json
+                ${CMAKE_SOURCE_DIR}/src/framework/locales/en.json
                 ${CMAKE_BINARY_DIR}/locales/en.json)
 
 if(RELEASE)

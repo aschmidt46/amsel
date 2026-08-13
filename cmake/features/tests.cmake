@@ -24,11 +24,11 @@ enable_testing()
 
 add_executable(
   AMSEL
-  source/gba/test/logging.h source/gba/test/logging.cpp
-  source/gba/test/test.cpp
-  source/gba/test/testbus.cpp
-  source/gba/test/testbus.h
-  source/gba/test/cpustate.h
+  src/gba/test/logging.h src/gba/test/logging.cpp
+  src/gba/test/test.cpp
+  src/gba/test/testbus.cpp
+  src/gba/test/testbus.h
+  src/gba/test/cpustate.h
 )
 target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
 target_link_libraries(

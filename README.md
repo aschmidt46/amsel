@@ -63,7 +63,7 @@ Erfordert Emscripten und npm.
 emcmake cmake .. -DFEATURE_WEB=ON -DFEATURE_DESKTOP=OFF
 make
 ```
-Dann in source/web/amsel-web:
+Dann in src/web/amsel-web:
 ```
 npm install
 npm run dev         (startet Entwicklungsserver)
