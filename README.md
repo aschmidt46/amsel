@@ -1,52 +1,58 @@
 # Antons Multi-System-Emulator (AMSEL)<img src="resources/amsel.png" height="auto" width="80" style="border-radius:50%">
 
-Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB)
+Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB, GBA)
 
 
 <img src="resources/kristall.png" width="48%">   <img src="resources/zelda.png" width="48%">
 
-## Systeme und Kompatibilität
+## Systems and Compatibility
 ### Nintendo Entertainment System
-- Verhalten ist an NTSC abgestimmt, experimenteller PAL-Modus
-- Die häufigst verwendeten Mapper sind implementiert (MMC1, UxROM, CNROM, (MMC3), AxROM)
-- MMC3 implementierung ist unvollständig mit stark vereinfachtem IRQ Timing, manche Spiele laufen wenn überhaupt nur mit visuellen Glitches
-### Nintendo Gameboy Color (unterstützt auch originale Gameboy-Spiele)
-- DMG Spiele laufen nur in schwarz-weiß
-- Die meisten Mapper sind implementiert (MBC1, MBC2, MBC3, MBC5)
-- Die Echtzeituhr von entsprechenden Cartridges ist aktuell noch nicht implementiert
-- Einige wenige Spiele funktionieren aufgrund von obskuren DMA Timings nicht korrekt
-### Nintendo Gameboy Advance (in Arbeit)
+- Behaviour was developed conforming to NTSC, added experimental PAL setting
+- Most common Mappers implemented (MMC1, UxROM, CNROM, (MMC3), AxROM)
+- MMC3 implementation is incomplete with simplified IRQ timing, some games have visual glitches
+### Nintendo Gameboy Color (amd dmg)
+- DMG games are in black and white
+- Most mappers implemented (MBC1, MBC2, MBC3, MBC5)
+- RTC is missing
+- Some games require very strict DMA timing and don't work correctly because of it
+### Nintendo Gameboy Advance (incomplete)
+- Working CPU and Bus
+- Passes ARMWrestler, arm.gba and thumb.gba by jsmolka, most SingleStepTests
+- PPU mode 3 and 4 working (bitmap modes), mode 0 backgrounds
+- No audio yet
+- Timings, Waitstates not implemented
+- EEPROM, Flash not implemented
+- L, R buttons not implemented
+- Performance is weak
 - TODO
 
 ## Features
-- Persistente Einstellungen (Lautstärke, Tastenbelegungen, Sprache, etc.)
-- Persistente Speicherstände
-- Visueller Debugger / Disassembler
-- Lokaler Mehrspieler (NES)
-- Gamepad-Unterstützung
+- Persistent settings (Volume, keybinds, language, etc.)
+- Persistent savegames
+- Debugger / Disassembler
+- Local multiplayer (NES)
+- Gamepad support
 - CRT-Shader
-- Lokalisierung über JSON-Dateien (standardmäßig deutsch, englisch)
-- React-Weboberfläche, ermöglicht Nutzung auf Smartphones
+- Localization using JSON files (german, english included)
+- React web interface, includes smartphone layout
 
-## Aufbau
-Das Projekt ist zum Großteil in C++ geschrieben. Die einzelnen Konsolen sind größtenteils von der Benutzeroberfläche entkoppelt, dadurch lässt sich das Programm auch zumindest theoretisch leicht erweitern, allerdings gehen einige Teile der Benutzeroberfläche noch strikt von einem NES / Gameboy aus (z.B. Tastenbelegungen).
-Die Benutzeroberfläche ist aktuell in Dear ImGui implementiert, das ganze Desktop-Frontend läuft in einem OpenGL-Kontext.
+## Structure
+The project is mostly written in C++. The individual consoles are decoupled from the interface, making the emulator easily extensible in theory, however some parts currently assume a NES / gameboy layout. The desktop frontend is implemented in Dear ImGui, running in an OpenGL 4.6 context.
 
-Den Gameboy-Emulator hatte ich zuerst in einem eigenständigen Projekt in Rust implementiert, um die Sprache zu lernen. Anschließend habe ich in dem Projekt ein Foreign Function Interface zu C++ mit Rust CXX gebaut, um es in das NES-Projekt zu integrieren. Mit Corrosion lässt sich ein Rust-Paket mit CXX sehr leicht in ein vorhandenes CMake-Skript eingliedern.
+I implemented the gameboy emulator in a separate project at first to learn Rust, which is why it's written in that language. To include it here, I defined a FFI in Rust CXX. Using Corrosion in Cmake it's trivial to then include it in an existing C++ project.
 
-Für die Web-App definiert der Emulator eine Javascript-Schnittstelle und wird mit Emscripten kompiliert.
-Die Oberfläche selbst ist in React / Typescript geschrieben.
+The web app frontend is written in React / Typescript. The emulator defines a javascript interface and is then compiled using emscripten to webassembly.
 
 <img src="resources/feature-model.png" width="100%">
-Der Emulator wurde als Software-Produktlinie (SPL) entwickelt. Die einzelnen Features lassen sich beim kompilieren als CMAKE-Optionen setzen und entsprechend des Feature-Modells gültige Produkte erzeugen. Im Lösungsraum habe ich eine Kombination aus Preprozessor und Build-System verwendet, um die Variabilität herzustellen.
+The entire project is developed as a Software Product Line (SPL). Individual features are able to be set at compile time as CMake options to create valid products according to the feature model ([see here](https://en.wikipedia.org/wiki/Feature_model)). The solution space is realized as a mix of preprocessor annotations and build system to create variability.
 
 # Build
 
-Erfordert CMake.
-Erfordert Python 3 für das Bauen von glad.
-Erfordert Rust bzw. Cargo für den Gameboy-Teil.
+requires CMake.
+requires Python 3 for building glad.
+requires Rust and Cargo for the Gameboy part.
 
-Bauen:
+building:
 ```
 cd build
 python -m venv .venv
@@ -55,32 +61,32 @@ python -m pip install jinja2
 cmake ..
 make
 ```
-## Bauen der Web-App
+## building the web app
 
-Erfordert Emscripten und npm.
+requires Emscripten and npm.
 
 ```
 emcmake cmake .. -DFEATURE_WEB=ON -DFEATURE_DESKTOP=OFF
 make
 ```
-Dann in src/web/amsel-web:
+then in src/web:
 ```
 npm install
-npm run dev         (startet Entwicklungsserver)
-npm run build       (Baut Webseite für Auslieferung)
+npm run dev         (start dev server)
+npm run build       (build website for delivery)
 ```
 
-## Bauen des Libretro-Core
+## building as Libretro core
 
-Muss auf Windows mit MSVC gebaut werden, falls der Core mit den Standard-Releases von Retroarch funktionieren soll.
+On windows, has to be built with MSVC in order to work with standard releases of retroarch.
 
 ```
 cmake .. -DFEATURE_LIBRETRO_CORE=ON -DFEATURE_DESKTOP=OFF
 ```
 
-Dann entsprechendes Build-Werkzeug verwenden.
+Then use appropriate build tool.
 
-## Ausführen der Tests
+## running the tests
 
 ```
 cmake .. -DFEATURE_TEST_SUITE=ON
