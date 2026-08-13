@@ -1,6 +1,6 @@
 # Antons Multi-System-Emulator (AMSEL)<img src="resources/amsel.png" height="auto" width="80" style="border-radius:50%">
 
-Cross-Plattform Multi-System-Emulator in C++ (NES, DMG, CGB, GBA)
+Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 
 
 <img src="resources/kristall.png" width="48%">   <img src="resources/zelda.png" width="48%">
