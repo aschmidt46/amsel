@@ -82,6 +82,10 @@ gba::Word gba::PPU::getVCount(){
     return currentScanline;
 }
 
+void gba::PPU::detectSpritesOnScanline(){
+    
+}
+
 void PPU::drawSprites(){
     // beide Blöcke
     // int increment = 

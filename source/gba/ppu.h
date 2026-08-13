@@ -90,6 +90,8 @@ namespace gba{
 
         void setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb);
 
+        void detectSpritesOnScanline();
+
         void drawSprites();
         void drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY);
 
