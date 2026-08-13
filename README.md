@@ -44,7 +44,7 @@ I implemented the gameboy emulator in a separate project at first to learn Rust,
 The web app frontend is written in React / Typescript. The emulator defines a javascript interface and is then compiled using emscripten to webassembly.
 
 <img src="resources/feature-model.png" width="100%">
-The entire project is developed as a Software Product Line (SPL). Individual features are able to be set at compile time as CMake options to create valid products according to the feature model ([see here](https://en.wikipedia.org/wiki/Feature_model)). The solution space is realized as a mix of preprocessor annotations and build system to create variability.
+The entire project is developed as a Software Product Line (SPL). Individual features are able to be set at compile time as CMake options to create valid products according to the feature model <a href="https://en.wikipedia.org/wiki/Feature_model">(see here)</a>. The solution space is realized as a mix of preprocessor annotations and build system to create variability.
 
 # Build
 

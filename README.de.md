@@ -46,7 +46,7 @@ Für die Web-App definiert der Emulator eine Javascript-Schnittstelle und wird m
 Die Oberfläche selbst ist in React / Typescript geschrieben.
 
 <img src="resources/feature-model.png" width="100%">
-Den Emulator habe ich als Software-Produktlinie (SPL) entwickelt. Die einzelnen Features lassen sich beim Kompilieren als CMake-Optionen setzen und entsprechend des Feature-Modells gültige Produkte erzeugen ([siehe hier](https://en.wikipedia.org/wiki/Feature_model)). Im Lösungsraum habe ich eine Kombination aus Preprozessor und Build-System verwendet, um die Variabilität herzustellen.
+Den Emulator habe ich als Software-Produktlinie (SPL) entwickelt. Die einzelnen Features lassen sich beim Kompilieren als CMake-Optionen setzen und entsprechend des Feature-Modells gültige Produkte erzeugen <a href="https://en.wikipedia.org/wiki/Feature_model">(siehe hier)</a>. Im Lösungsraum habe ich eine Kombination aus Preprozessor und Build-System verwendet, um die Variabilität herzustellen.
 
 # Build
 
