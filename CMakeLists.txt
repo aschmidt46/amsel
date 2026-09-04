@@ -57,6 +57,8 @@ cmake_dependent_option(FEATURE_GAMEBOY_CGB_SUPPORT "Gameboy supports CGB Games" 
 cmake_dependent_option(FEATURE_NES_NTSC "NTSC Region" ON FEATURE_NES OFF)
 cmake_dependent_option(FEATURE_LOCAL_MULTIPLAYER "Add local Multiplayer support" ON FEATURE_NES OFF)
 
+include_directories(${CMAKE_SOURCE_DIR}/src)
+
 if(FEATURE_NES_NTSC)
   add_compile_definitions(FEATURE_NTSC)
 endif()
