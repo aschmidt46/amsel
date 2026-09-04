@@ -1,4 +1,5 @@
 #include "gba_implementation.h"
+#include "console.h"
 #include "framework/global.h"
 #include "framework/stringlib.h"
 #ifdef BUILD_DESKTOP
@@ -20,9 +21,13 @@ void GbaImplementation::setAddressOf(int i, int to){
     }
 }
 
+std::string GbaImplementation::getConsoleName(){
+    return "Nintendo Gameboy Advance";
+}
+
 GbaImplementation::GbaImplementation(const char *path)
 {
-    gba = std::make_shared<gba::GBA>(path);
+    load(path);
 }
 
 GbaImplementation::GbaImplementation(std::vector<uint8_t> &rom)
@@ -32,7 +37,8 @@ GbaImplementation::GbaImplementation(std::vector<uint8_t> &rom)
 
 void GbaImplementation::load(const char *path)
 {
-    gba = std::make_shared<gba::GBA>(path);
+    std::string biosFile = std::get<RequiredFile>(options[0]).path;
+    gba = std::make_shared<gba::GBA>(path, biosFile.c_str());
 }
 
 void GbaImplementation::clock() {
@@ -127,6 +133,10 @@ void GbaImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
     if(name == std::string("GBA Bios")){
         gba->loadBios(content);
     }
+}
+
+std::vector<SystemOption>* GbaImplementation::getSystemOptions(){
+    return &options;
 }
 
 void GbaImplementation::addClock() {
@@ -257,3 +267,5 @@ void GbaImplementation::displayRegisters() {
 
     #endif
 }
+
+std::vector<SystemOption> GbaImplementation::options = {RequiredFile{"Bios Location", "*.bin", ""}};

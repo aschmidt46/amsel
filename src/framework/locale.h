@@ -128,10 +128,11 @@ enum LocalizedString{
     LastMemoryTransaction = 104,
     ConsoleDescriptionGBA = 105,
     AdditionalRequiredFiles = 106,
+    SettingsSystemOptions = 107,
 
 };
 
-constexpr size_t NUM_STRINGS = 107;
+constexpr size_t NUM_STRINGS = 108;
 
 class Locale{
     private:

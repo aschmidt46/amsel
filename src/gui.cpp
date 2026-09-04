@@ -2,11 +2,14 @@
 
 #include <string>
 #include <filesystem>
+#include <variant>
 #include <vector>
 #include <bitset>
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include "console/console.h"
+#include "console/gba_implementation.h"
 #include "framework/locale.h"
 #include "framework/stringlib.h"
 #include "imgui.h"
@@ -596,6 +599,50 @@ void Gui::drawControlSettingsPage(int controller)
   }
 }
 
+void Gui::drawSystemOptions(){
+  ImGui::Begin(locale.getTranslation(SettingsSystemOptions).c_str(), &state->showSystemOptions, ImGuiWindowFlags_NoCollapse);
+    if(ImGui::BeginTable("SystemOptionsTable##", 2, ImGuiTableFlags_BordersInner)){
+      ImGui::TableNextColumn();
+      for(size_t i = 0; i < systemOptions.size(); i++){
+        std::string& consoleName = systemOptions[i].first;
+        ImGui::PushID(runningID++);
+        if(ImGui::Selectable(consoleName.c_str(), i == state->systemOptionsIndex)){
+          state->systemOptionsIndex = i;
+        }
+        ImGui::PopID();
+      }
+      // ImGui::EndListBox();
+      ImGui::TableNextColumn();
+      auto visitor = overload{
+        [&](RequiredFile& f){
+          ImGui::Text("%s", f.name.c_str());
+          ImGui::SameLine();
+          if(ImGui::Button("...")){
+            auto result = pfd::open_file(f.name, globalConfig.directory, {f.extensions, f.extensions}, pfd::opt::none);
+            auto res = result.result();
+            if(res.size()>0){
+              std::replace(res[0].begin(), res[0].end(), '\\', '/');
+              f.path = res[0];
+              FileIO::getInstance().saveSystemSettings(systemOptions);
+            }
+          }
+          ImGui::SameLine();
+          ImGui::InputText("", f.path.data(), 1024);
+        },
+        [&](Toggle& t){
+          if(ImGui::Checkbox(t.name.c_str(), &t.value)){
+            FileIO::getInstance().saveSystemSettings(systemOptions);
+          }
+        }
+      };
+      for(auto &option : *systemOptions[state->systemOptionsIndex].second){
+        std::visit(visitor, option);
+      }
+      ImGui::EndTable();
+    }
+  ImGui::End();
+}
+
 void Gui::buttonChangePrompt(int i, unsigned int controller, bool secondary)
 {
   ImGui::PushID(runningID++);
@@ -643,6 +690,10 @@ void Gui::render()
 
     if(state->showInput){
       drawControlSettings();
+    }
+
+    if(state->showSystemOptions){
+      drawSystemOptions();
     }
 
     if(state->show){
@@ -700,6 +751,9 @@ void Gui::render()
               }
             }
             ImGui::EndMenu();
+          }
+          if(ImGui::MenuItemEx(locale.getTranslation(SettingsSystemOptions).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", state->showSystemOptions)){
+            state->showSystemOptions = !state->showSystemOptions;
           }
           ImGui::EndMenu();
         }

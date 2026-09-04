@@ -5,6 +5,10 @@
 #include "../framework/stringlib.h"
 #endif
 
+std::string NesImplementation::getConsoleName(){
+    return "Nintendo Entertainment System";
+}
+
 NesImplementation::NesImplementation(std::vector<uint8_t> &rom)
 {
     new (&this->console) NES();
@@ -96,6 +100,10 @@ void NesImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
     
 }
 
+std::vector<SystemOption>* NesImplementation::getSystemOptions(){
+    return &options;
+}
+
 void NesImplementation::addClock()
 {
     this->console.allowedClocks = 1;
@@ -180,3 +188,5 @@ void NesImplementation::displayRegisters()
     ImGui::EndTable();
     #endif
 }
+
+std::vector<SystemOption> NesImplementation::options = {};

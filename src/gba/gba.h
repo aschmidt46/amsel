@@ -16,7 +16,7 @@ namespace gba{
 
 
         public:
-        GBA(const char* path);
+        GBA(const char* path, const char* biosPath);
         GBA(const std::vector<uint8_t> &bytes);
 
         uint8_t* accessFramebuffer();
@@ -29,6 +29,7 @@ namespace gba{
         void release(int i);
 
         void loadBios(const std::vector<uint8_t> &content);
+        void setBios(std::string path);
 
         void setHalt(bool to);
         bool isHalted();

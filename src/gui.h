@@ -1,5 +1,7 @@
 #pragma once
+#include "console/console.h"
 #include "nes/nes.h"
+#include <utility>
 
 // Eingabeänderung / Steuerungseinstellung (Gui Zustand)
 struct InputWaitContext{
@@ -18,6 +20,8 @@ struct SharedState{
     bool showOutput = false;
     bool showInput = false;
     bool showAbout = false;
+    bool showSystemOptions = false;
+    size_t systemOptionsIndex = 0;
     int controllerContext = 1; // Controller Nummer
     InputWaitContext waitOn;
 };
@@ -69,6 +73,7 @@ class Gui{
     void drawOutput();
     void drawControlSettings();
     void drawControlSettingsPage(int controller);
+    void drawSystemOptions();
     void buttonChangePrompt(int i, unsigned int controller, bool secondary);
     
     void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);

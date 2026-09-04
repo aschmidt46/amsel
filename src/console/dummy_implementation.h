@@ -5,7 +5,9 @@ class DummyImplementation : public Console{
     private:
     // Ist eigentlich UI Zustand, naja
     bool halt = false;
+    static std::vector<SystemOption> options;
     public:
+    std::string getConsoleName() override{return "";};
     DummyImplementation() = default;
     DummyImplementation(const char* path){(void)path;};
     ~DummyImplementation() = default;
@@ -28,6 +30,8 @@ class DummyImplementation : public Console{
 
     std::vector<std::string> getRequiredFiles() override{return {};};
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override{(void)name; (void)content;};
+
+    std::vector<SystemOption>* getSystemOptions() override{return &options;};
 
 
     void addClock() override{};

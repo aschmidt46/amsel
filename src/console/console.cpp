@@ -126,3 +126,5 @@ EMSCRIPTEN_BINDINGS(ConsoleModule) {
 }
 
 #endif
+
+std::vector<SystemOption> DummyImplementation::options = {};

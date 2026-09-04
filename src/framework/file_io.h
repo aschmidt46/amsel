@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include "console/console.h"
 #include "framework/global.h"
 
 
@@ -24,4 +25,7 @@ class FileIO{
 
     SettingsConfig loadSettings(int posX, int posY);
     void saveSettings(const SettingsConfig &config);
+
+    void saveSystemSettings(const std::vector<std::pair<std::string, std::vector<SystemOption>*>> &options);
+    void loadSystemSettings(const std::vector<std::pair<std::string, std::vector<SystemOption>*>> &options);
 };

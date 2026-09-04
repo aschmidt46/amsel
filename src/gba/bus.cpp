@@ -381,14 +381,6 @@ gba::Bus::Bus() : IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KE
     KEYINPUT.raw = 0b1111111111;
     InternalMemoryControl.raw = 0x0D000020;
 
-    #ifdef BUILD_DESKTOP
-    std::ifstream stream("../gbaroms/gba_bios.bin", std::ios::in | std::ios::binary);
-    std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)),
-                                  std::istreambuf_iterator<char>());
-
-    this->bios = contents;
-    stream.close();
-    #endif
     this->wramBoard = new std::array<Byte, 0x40000>();
     std::memset(&((*wramBoard)[0]), 0, 0x40000);
     this->wramChip = new std::array<Byte, 0x8000>();
@@ -406,7 +398,7 @@ void gba::Bus::init() {
     new (&cpu) CPU(this);
 }
 
-gba::Bus::Bus(const char *path) : Bus() {
+gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
     std::filesystem::path p(path);
 
     std::ifstream stream(path, std::ios::in | std::ios::binary);
@@ -415,6 +407,15 @@ gba::Bus::Bus(const char *path) : Bus() {
 
     this->gamePak = contents;
     stream.close();
+
+    #ifdef BUILD_DESKTOP
+    std::ifstream bstream(biosPath, std::ios::in | std::ios::binary);
+    std::vector<uint8_t> bcontents((std::istreambuf_iterator<char>(bstream)),
+                                  std::istreambuf_iterator<char>());
+
+    this->bios = bcontents;
+    bstream.close();
+    #endif
 }
 
 gba::Bus::Bus(const std::vector<Byte> &bytes)  : Bus(){

@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include "console/cgb_implementation.h"
+#include "console/gba_implementation.h"
+#include "console/nes_implementation.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -126,6 +129,29 @@ void postInit()
   int fw, fh;
   glfwGetFramebufferSize(window, &fw, &fh);
   screen->updateFramebufferSize(fw, fh);
+}
+
+void registerConsoles(){
+  std::vector<Console*> registeredConsoles;
+  auto dummyrom = std::vector<uint8_t>();
+  #ifdef BUILD_NES
+  auto nes = NesImplementation();
+  registeredConsoles.push_back(&nes);
+  #endif
+  #ifdef BUILD_CGB
+  auto cgb = CgbImplementation(dummyrom);
+  registeredConsoles.push_back(&cgb);
+  #endif
+  #ifdef BUILD_GBA
+  auto gba = GbaImplementation(dummyrom);
+  registeredConsoles.push_back(&gba);
+  #endif
+
+  for(const auto &cs : registeredConsoles){
+    auto options = cs->getSystemOptions();
+    systemOptions.push_back({cs->getConsoleName(), options});
+  }
+  FileIO::getInstance().loadSystemSettings(systemOptions);
 }
 
 void cleanUp(GLFWwindow* window){

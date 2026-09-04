@@ -31,6 +31,7 @@ Screen* screen;
 Console* console;
 std::mutex consoleLock;
 GLFWwindow* window;
+std::vector<std::pair<std::string, std::vector<SystemOption>*>> systemOptions;
 // ---------------------------
 
 
@@ -44,6 +45,7 @@ int run(int argc, wchar_t** argv)
   AudioSystem audiosystem;
   SharedState state;
   postInit();
+  registerConsoles();
 
   Gui gui(&state);
 

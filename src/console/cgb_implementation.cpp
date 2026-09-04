@@ -111,6 +111,14 @@ void CgbImplementation::setAddressOf(int i, int to)
   }
 }
 
+std::string CgbImplementation::getConsoleName(){
+    #ifdef FEATURE_CGB
+    return "Nintendo Gameboy Color";
+    #else
+    return "Nintendo Gameboy";
+    #endif
+}
+
 CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Console(path)
 {
   #ifdef BUILD_DESKTOP
@@ -273,6 +281,10 @@ void CgbImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
   
 }
 
+std::vector<SystemOption>* CgbImplementation::getSystemOptions(){
+  return &options;
+}
+
 bool CgbImplementation::canSave()
 {
     return cgb_can_save(cgb);
@@ -429,3 +441,5 @@ void CgbImplementation::displayRegisters()
   ImGui::EndTable();
   #endif
 }
+
+std::vector<SystemOption> CgbImplementation::options = {};

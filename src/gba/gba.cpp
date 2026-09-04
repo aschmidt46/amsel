@@ -1,8 +1,8 @@
 #include "gba.h"
 
-gba::GBA::GBA(const char *path)
+gba::GBA::GBA(const char *path, const char* biosPath)
 {
-    bus = std::make_shared<Bus>(path);
+    bus = std::make_shared<Bus>(path, biosPath);
     bus->init();
 }
 

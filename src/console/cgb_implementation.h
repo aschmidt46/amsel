@@ -17,7 +17,9 @@ class CgbImplementation : public Console{
     std::mutex m;
     #endif
     void setAddressOf(int i, int to);
+    static std::vector<SystemOption> options;
     public:
+    std::string getConsoleName() override;
     CgbImplementation() = delete;
     CgbImplementation(const char* path);
     CgbImplementation(std::vector<uint8_t> &rom);
@@ -37,6 +39,8 @@ class CgbImplementation : public Console{
 
     std::vector<std::string> getRequiredFiles() override;
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
+
+    std::vector<SystemOption>* getSystemOptions() override;
 
     bool canSave() override;
     std::vector<uint8_t> getSaveData() override;

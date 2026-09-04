@@ -5,7 +5,9 @@
 class NesImplementation : public Console{
     private:
     NES console;
+    static std::vector<SystemOption> options;
     public:
+    std::string getConsoleName() override;
     NesImplementation() = default;
     ~NesImplementation() = default;
     NesImplementation(std::vector<uint8_t> &rom);
@@ -27,6 +29,7 @@ class NesImplementation : public Console{
 
     std::vector<std::string> getRequiredFiles() override;
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
+    std::vector<SystemOption>* getSystemOptions() override;
 
 
     void addClock() override;

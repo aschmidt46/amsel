@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <variant>
 #include <vector>
 #include <cstdint>
 #include <memory>
@@ -9,6 +10,19 @@
 using namespace emscripten;
 #endif
 
+struct RequiredFile{
+    std::string name;
+    std::string extensions;
+    std::string path;
+};
+
+struct Toggle{
+    std::string name;
+    bool value;
+};
+
+using SystemOption = std::variant<RequiredFile, Toggle>;
+
 class Console{
     protected:
     std::string loadedGame = "";
@@ -17,6 +31,7 @@ class Console{
     float volume = 1.0f;
     
     public:
+    virtual std::string getConsoleName() = 0;
     Console() = default;
     Console(const char* path);
     virtual ~Console() = default;
@@ -42,6 +57,8 @@ class Console{
 
     virtual bool canSave() = 0;
     virtual std::vector<uint8_t> getSaveData() = 0;
+
+    virtual std::vector<SystemOption>* getSystemOptions() = 0;
 
     // Bios usw.
     virtual std::vector<std::string> getRequiredFiles() = 0;

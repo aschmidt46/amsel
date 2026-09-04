@@ -62,6 +62,14 @@ enum Action{
     AC_BUTTON_SELECT = 7
 };
 
+// Utility to allow overloading lambdas for use in std::visit
+template<class... Ts>
+struct overload : Ts... {
+    using Ts::operator()...;
+};
+template<class... Ts>
+overload(Ts...) -> overload<Ts...>;
+
 // Globaler Zustand:
 
 extern bool changeTitle;
@@ -78,3 +86,4 @@ extern Screen* screen;
 extern Console* console;
 extern std::mutex consoleLock;
 extern GLFWwindow* window; // Haupt-Viewport
+extern std::vector<std::pair<std::string, std::vector<SystemOption>*>> systemOptions;

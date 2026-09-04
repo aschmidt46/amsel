@@ -4,6 +4,7 @@
 
 GLFWwindow* initWindow();
 void postInit();
+void registerConsoles();
 void cleanUp(GLFWwindow* window);
 
 // Callbacks

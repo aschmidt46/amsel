@@ -53,7 +53,7 @@ namespace gba{
         bool hasIME() override;
         unsigned int getCyclesForAccess(Word addr, bool sequential);
         void init();
-        Bus(const char *path);
+        Bus(const char *path, const char* biosPath);
         Bus(const std::vector<Byte> &bytes);
         ~Bus(){
             delete wramBoard;

@@ -1,5 +1,7 @@
 #include "file_io.h"
 #include <fstream>
+#include <variant>
+#include "console/console.h"
 #include "inicpp.h"
 #include "common.h"
 
@@ -135,4 +137,63 @@ void FileIO::saveSettings(const SettingsConfig &config)
     ini["Devices"]["Gamepad_2"] = config.jidController2;
 
     ini.save((workDirectory / "settings.ini").string());
+}
+
+void FileIO::saveSystemSettings(const std::vector<std::pair<std::string, std::vector<SystemOption>*>> &options){
+    for(const auto &console : options){
+
+        ini::IniFile ini;
+
+        auto visitor = overload{
+            [&](const RequiredFile &f){
+                std::string optName = f.name;
+                optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
+                ini["General"][optName] = f.path;        
+            },
+            [&](const Toggle &t){
+                std::string optName = t.name;
+                optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
+                ini["General"][optName] = t.value;
+            }
+        };
+
+        for(const auto &option : *console.second){
+            std::visit(visitor, option);
+        }
+        std::string fileName = console.first;
+        fileName.erase(remove_if(fileName.begin(), fileName.end(), isspace), fileName.end());
+        fileName += ".ini";
+        ini.save((workDirectory / fileName).string());
+    }
+}
+
+void FileIO::loadSystemSettings(const std::vector<std::pair<std::string, std::vector<SystemOption>*>> &options){
+    for(auto &console : options){
+        std::string fileName = console.first;
+        fileName.erase(remove_if(fileName.begin(), fileName.end(), isspace), fileName.end());
+        fileName += ".ini";
+
+        if(!std::filesystem::exists(workDirectory / fileName)){
+            continue;
+        }
+
+        ini::IniFile ini((workDirectory / fileName).string());
+
+        auto visitor = overload{
+            [&](RequiredFile &f){
+                std::string optName = f.name;
+                optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
+                f.path = ini["General"][optName].as<std::string>();
+            },
+            [&](Toggle &t){
+                std::string optName = t.name;
+                optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
+                t.value = ini["General"][optName].as<bool>();
+            }
+        };
+
+        for(auto &option : *console.second){
+            std::visit(visitor, option);
+        }
+    }
 }

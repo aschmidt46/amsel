@@ -107,7 +107,8 @@ const localStrings = [
     "Read4Bytes",
     "LastTransaction",
     "ConsoleDescriptionGBA",
-    "AdditionalRequiredFiles"
+    "AdditionalRequiredFiles",
+    "SettingsSystemOptions"
 ];
 
 import german from './assets/locales/de.json'

@@ -7,7 +7,9 @@ class GbaImplementation : public Console{
     std::shared_ptr<gba::GBA> gba;
     void setAddressOf(int i, int to);
     // void setAddressOf(int i, int to);
+    static std::vector<SystemOption> options;
     public:
+    std::string getConsoleName() override;
     GbaImplementation() = delete;
     GbaImplementation(const char* path);
     GbaImplementation(std::vector<uint8_t> &rom);
@@ -30,6 +32,7 @@ class GbaImplementation : public Console{
 
     std::vector<std::string> getRequiredFiles() override;
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
+    std::vector<SystemOption>* getSystemOptions() override;
 
 
     void addClock() override;
