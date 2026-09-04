@@ -78,15 +78,15 @@ SettingsConfig FileIO::loadSettings(int posX, int posY)
 
     ini::IniFile ini((workDirectory / "settings.ini").string());
 
-    auto c1 = std::vector<std::pair<int, int>>(8);
-    auto c2 = std::vector<std::pair<int, int>>(8);
+    auto c1 = std::vector<std::pair<int, int>>(10);
+    auto c2 = std::vector<std::pair<int, int>>(10);
 
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 10; i++){
         c1[i].first = ini["Controller1"]["Action_"+std::to_string(i)+"_primary"].as<int>();
         c1[i].second = ini["Controller1"]["Action_"+std::to_string(i)+"_secondary"].as<int>();
     }
 
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 10; i++){
         c2[i].first = ini["Controller2"]["Action_"+std::to_string(i)+"_primary"].as<int>();
         c2[i].second = ini["Controller2"]["Action_"+std::to_string(i)+"_secondary"].as<int>();
     }
@@ -124,11 +124,11 @@ void FileIO::saveSettings(const SettingsConfig &config)
     ini["Sound"]["Volume"] = config.volume;
     ini["Sound"]["Unmute"] = config.unmute;
 
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 10; i++){
         ini["Controller1"]["Action_"+std::to_string(i)+"_primary"] = config.controller1[i].first;
         ini["Controller1"]["Action_"+std::to_string(i)+"_secondary"] = config.controller1[i].second;
     }
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 10; i++){
         ini["Controller2"]["Action_"+std::to_string(i)+"_primary"] = config.controller2[i].first;
         ini["Controller2"]["Action_"+std::to_string(i)+"_secondary"] = config.controller2[i].second;
     }

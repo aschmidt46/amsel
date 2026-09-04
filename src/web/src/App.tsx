@@ -230,7 +230,7 @@ function App() {
             </ul>
             <p className='py-4'>{lang.getTranslation("SettingsControls")+":"}</p>
             {/* TODO */}
-            <p>Arrow Keys, S, A, Enter, Backspace</p>
+            <p>Arrow Keys, S(A), A(B), Q(L), W(R), Enter(START), Backspace(SELECT)</p>
             <p className='pt-4'>
               <a href='...' className='underline'>Repository</a>
             </p>

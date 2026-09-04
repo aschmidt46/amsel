@@ -89,7 +89,7 @@ void GbaImplementation::setController1Key(bool gamepad, int key, int action) {
     auto c = &globalConfig.controller1;
     if (gamepad)
     {
-      for (int i = 0; i < 8; i++)
+      for (int i = 0; i < 10; i++)
       {
         if ((*c)[i].second == key)
         {
@@ -100,7 +100,7 @@ void GbaImplementation::setController1Key(bool gamepad, int key, int action) {
     }
     else
     { // Tastatur
-      for (int i = 0; i < 8; i++)
+      for (int i = 0; i < 10; i++)
       {
         if ((*c)[i].first == key)
         {

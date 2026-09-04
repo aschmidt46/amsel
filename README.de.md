@@ -22,7 +22,6 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - Kein Ton
 - Timings, Waitstates nicht implementiert
 - EEPROM, Flash nicht implementiert
-- L und R Tasten nicht implementiert
 - Performance schwach
 - TODO
 

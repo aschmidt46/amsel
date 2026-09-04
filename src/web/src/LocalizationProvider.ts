@@ -108,7 +108,9 @@ const localStrings = [
     "LastTransaction",
     "ConsoleDescriptionGBA",
     "AdditionalRequiredFiles",
-    "SettingsSystemOptions"
+    "SettingsSystemOptions",
+    "BindingLButton",
+    "BindingRButton"
 ];
 
 import german from './assets/locales/de.json'

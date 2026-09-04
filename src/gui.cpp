@@ -556,16 +556,18 @@ void Gui::drawControlSettingsPage(int controller)
     ImGui::Text("%s", locale.getTranslation(BindingBButton).c_str());
     ImGui::Text("%s", locale.getTranslation(BindingStartButton).c_str());
     ImGui::Text("%s", locale.getTranslation(BindingSelectButton).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingLButton).c_str());
+    ImGui::Text("%s", locale.getTranslation(BindingRButton).c_str());
 
     ImGui::TableNextColumn();
 
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 10; i++){
       buttonChangePrompt(i, controller, false);
     }
 
     ImGui::TableNextColumn();
 
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 10; i++){
       buttonChangePrompt(i, controller, true);
     }
 
@@ -733,6 +735,9 @@ void Gui::render()
         //     ImGui::EndMenu();
         // }
         if(ImGui::BeginMenu(locale.getTranslation(MenuSettings).c_str())){
+          if(ImGui::MenuItemEx(locale.getTranslation(SettingsSystemOptions).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", state->showSystemOptions)){
+            state->showSystemOptions = !state->showSystemOptions;
+          }
           if(ImGui::MenuItemEx(locale.getTranslation(SettingsControls).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", state->showInput)){
             state->showInput = !state->showInput;
           }
@@ -751,9 +756,6 @@ void Gui::render()
               }
             }
             ImGui::EndMenu();
-          }
-          if(ImGui::MenuItemEx(locale.getTranslation(SettingsSystemOptions).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", state->showSystemOptions)){
-            state->showSystemOptions = !state->showSystemOptions;
           }
           ImGui::EndMenu();
         }

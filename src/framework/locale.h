@@ -129,10 +129,12 @@ enum LocalizedString{
     ConsoleDescriptionGBA = 105,
     AdditionalRequiredFiles = 106,
     SettingsSystemOptions = 107,
+    BindingLButton = 108,
+    BindingRButton = 109,
 
 };
 
-constexpr size_t NUM_STRINGS = 108;
+constexpr size_t NUM_STRINGS = 110;
 
 class Locale{
     private:
