@@ -3,7 +3,7 @@
 Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 
 
-<img src="resources/kristall.png" width="48%">   <img src="resources/zelda.png" width="48%">
+<img src="resources/crystal.png" width="48%">   <img src="resources/zelda.png" width="48%">
 
 ## Systems and Compatibility
 ### Nintendo Entertainment System
