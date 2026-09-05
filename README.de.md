@@ -93,3 +93,7 @@ Dann entsprechendes Build-Werkzeug verwenden.
 cmake .. -DFEATURE_TEST_SUITE=ON
 make test
 ```
+
+# Lizenz
+AMSEL ist lizensiert unter BSD-3.
+Teile des NES-PPU Codes sind abgeändert aus olcNES übernommen (<a href="https://github.com/OneLoneCoder/olcNES#license-olc-3">Siehe Lizenz</a>).
