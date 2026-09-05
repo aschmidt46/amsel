@@ -83,6 +83,9 @@ int run(int argc, wchar_t** argv)
   audiosystem.close = true;
   t.join();
   cleanUp(window);
+  
+  delete console;
+  delete screen;
   return 0;
 }
 
