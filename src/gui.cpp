@@ -481,7 +481,7 @@ void Gui::drawDebugger()
 void Gui::drawAbout()
 {
   ImGui::Begin(locale.getTranslation(AboutTitle).c_str(), &state->showAbout, ImGuiWindowFlags_NoCollapse);
-    ImGui::Text("Anton's Multi-System-Emulator (AMSEL) v0.1b");
+    ImGui::Text("Anton's Multi-System-Emulator (AMSEL)");
     ImGui::Separator();
     ImGui::Text("%s", locale.getTranslation(AboutContent).c_str());
     ImGui::Text("%s", locale.getTranslation(AboutSystems).c_str());

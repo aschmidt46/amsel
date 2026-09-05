@@ -58,14 +58,6 @@ file(COPY "${PROJECT_SOURCE_DIR}/deps/nlohmann/single_include/nlohmann/json.hpp"
 file(COPY "${PROJECT_SOURCE_DIR}/deps/nlohmann/single_include/nlohmann/json_fwd.hpp" DESTINATION ${SOURCE_INCLUDE_DIR}/nlohmann)
 
 FetchContent_Declare(
-  cereal
-  GIT_REPOSITORY    https://github.com/USCiLab/cereal
-  GIT_TAG           master
-  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/cereal"
-)
-FetchContent_Populate(cereal)
-
-FetchContent_Declare(
   libretro
   GIT_REPOSITORY      https://github.com/libretro/libretro-common
   GIT_TAG             master

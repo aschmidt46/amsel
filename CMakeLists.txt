@@ -82,7 +82,7 @@ else()
 
   if(FEATURE_DESKTOP)
 
-    # MinGW Bibliotheken statisch verlinken
+    # MinGW Bibliotheken statisch verlinken (libwinpthread, libgcc, libstdc++)
     add_link_options(-static)
 
     add_compile_definitions(BUILD_DESKTOP)
