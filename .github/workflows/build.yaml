@@ -1,6 +1,17 @@
 name: Build and Test Script
 run-name: Push by @${{ github.actor }}
-on: [push]
+on:
+  push:
+    branches: ["master"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   Build-Desktop:
@@ -37,12 +48,15 @@ jobs:
       - name: Build
         working-directory: ./build
         run: make
-  Build-Web-App:
+  Build-Deploy-Web-App:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: node-debian
     defaults:
       run:
         shell: bash
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -50,7 +64,7 @@ jobs:
       - run: apt-get update
       - run: apt-get install cmake --yes
       - run: mkdir -p build
-      - uses: https://github.com/emscripten-core/setup-emsdk@v16
+      - uses: emscripten-core/setup-emsdk@v16
       - name: Configure
         working-directory: ./build
         run: emcmake cmake .. -DFEATURE_WEB=ON -DFEATURE_DESKTOP=OFF
@@ -63,6 +77,16 @@ jobs:
       - name: Build Web App
         working-directory: ./src/web
         run: npm run build
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire repository
+          path: './src/web/dist'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
   Test-Suite:
     runs-on: node
     defaults:
