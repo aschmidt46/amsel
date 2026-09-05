@@ -425,16 +425,17 @@ void Ppu::setSpriteShifters()
 	for(uint8_t i = 0; i < spriteCount; i++){
 		uint8_t spriteCHRLow, spriteCHRHigh;
 		uint16_t spriteAddrLow, spriteAddrHigh;
-		int invert = !bool(secondaryOAM[i].attributes & 0x80) ? -1 : 1; // vertikal umgedreht
 		int invertOffset = secondaryOAM[i].attributes & 0x80 ? 7 : 0;
 		if(!PPUCTRL.getSpriteSize()){
 			// 8x8 Modus
+			int invert = secondaryOAM[i].attributes & 0x80 ? -1 : 1; // vertikal umgedreht
 			spriteAddrLow = (PPUCTRL.getPatternSprite() << 12) // Pattern Table wählen
 							  | (secondaryOAM[i].tileIndex << 4) // Tile wählen
 							  | (invertOffset + invert * (scanline - secondaryOAM[i].yPos)); // Position im Tile
 		}
 		else{
 			// 8x16
+			int invert = !bool(secondaryOAM[i].attributes & 0x80) ? -1 : 1; // vertikal umgedreht
 			uint8_t indexOffset = invert == -1 ? (scanline - secondaryOAM[i].yPos >= 8 ? 1 : 0) : (scanline - secondaryOAM[i].yPos < 8 ? 1 : 0); // untere hälfte / obere  hälfte
 			spriteAddrLow = ((secondaryOAM[i].tileIndex & 1) << 12)
 								  | (((secondaryOAM[i].tileIndex & 254u) + indexOffset) << 4)
