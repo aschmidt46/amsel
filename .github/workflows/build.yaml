@@ -15,7 +15,8 @@ permissions:
 
 jobs:
   Build-Desktop:
-    runs-on: node
+    runs-on: ubuntu-latest
+    container: node:24-alpine3.23
     defaults:
       run:
         shell: sh
@@ -52,7 +53,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: node-debian
+    runs-on: ubuntu-latest
+    container: node:24-bookworm
     defaults:
       run:
         shell: bash
@@ -88,7 +90,8 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v5
   Test-Suite:
-    runs-on: node
+    runs-on: ubuntu-latest
+    container: node:24-alpine3.23
     defaults:
       run:
         shell: sh
