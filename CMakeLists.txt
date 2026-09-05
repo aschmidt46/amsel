@@ -83,8 +83,9 @@ else()
   if(FEATURE_DESKTOP)
 
     # MinGW Bibliotheken statisch verlinken (libwinpthread, libgcc, libstdc++)
+    if(WIN32)
     add_link_options(-static)
-
+    endif()
     add_compile_definitions(BUILD_DESKTOP)
 
     include(${CMAKE_SOURCE_DIR}/cmake/features/desktop.cmake)
