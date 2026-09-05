@@ -4,8 +4,9 @@ add_compile_definitions(NES_ON_WINDOWS)
 endif()
 
 #Kein Terminal:
-if(NOT FEATURE_CONSOLE)
+if(NOT FEATURE_CONSOLE AND WIN32)
 message("-------------> Building Windows release build")
+add_compile_definitions(WINDOWS_NO_CONSOLE)
 add_link_options(-mwindows)
 endif()
 

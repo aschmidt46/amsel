@@ -1,4 +1,4 @@
-# Benötigt strip und ResourceHacker in PATH
+# Benötigt strip, uname und ResourceHacker in PATH
 
 New-Item -ItemType Directory -Force -Path "./release" | out-null
 New-Item -ItemType Directory -Force -Path "./release/locales" | out-null
@@ -13,3 +13,12 @@ Copy-Item  -Path "palette.pal" -Destination "./release/palette.pal" -Recurse -fo
 strip "./release/AMSEL.exe"
 
 ResourceHacker -open "./release/AMSEL.exe" -save "./release/AMSEL.exe" -resource "../resources/amsel.ico" -mask ICONGROUP,MAINICON,0 -action addskip -log CONSOLE
+
+$arch = uname -m
+
+$compress = @{
+  Path = "./release/*"
+  CompressionLevel = "Fastest"
+  DestinationPath = "./release_windows_" + $arch + ".zip"
+}
+Compress-Archive -Force @compress

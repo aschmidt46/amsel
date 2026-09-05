@@ -87,7 +87,7 @@ int run(int argc, wchar_t** argv)
 }
 
 // Einstiegspunkte
-#ifdef NES_ON_WINDOWS
+#ifdef WINDOWS_NO_CONSOLE
 
   int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
   {

@@ -82,6 +82,9 @@ else()
 
   if(FEATURE_DESKTOP)
 
+    # MinGW Bibliotheken statisch verlinken
+    add_link_options(-static)
+
     add_compile_definitions(BUILD_DESKTOP)
 
     include(${CMAKE_SOURCE_DIR}/cmake/features/desktop.cmake)
