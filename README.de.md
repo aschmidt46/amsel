@@ -2,6 +2,7 @@
 
 Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 
+## <a href="https://aschmidt46.github.io/amsel/">Web-Demo</a>
 
 <img src="resources/crystal.png" width="48%">   <img src="resources/zelda.png" width="48%">
 
