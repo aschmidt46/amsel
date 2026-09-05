@@ -232,7 +232,7 @@ function App() {
             {/* TODO */}
             <p>Arrow Keys, S(A), A(B), Q(L), W(R), Enter(START), Backspace(SELECT)</p>
             <p className='pt-4'>
-              <a href='...' className='underline'>Repository</a>
+              <a href='https://github.com/aschmidt46/amsel' className='underline'>Repository</a>
             </p>
             <div className="modal-action">
               <form method="dialog">

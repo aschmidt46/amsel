@@ -494,7 +494,7 @@ void Gui::drawAbout()
     #ifdef BUILD_GBA
     ImGui::Text("%s", locale.getTranslation(ConsoleDescriptionGBA).c_str());
     #endif
-    ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://forgejo.kassade.de/anton/amsel.git");
+    ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://github.com/aschmidt46/amsel");
   ImGui::End();
 }
 
