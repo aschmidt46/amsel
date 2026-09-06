@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
       - run: |
-          echo "$GITHUB_WORKSPACE/.cargo/bin" >> $GITHUB_PATH
+          echo "~/.cargo/bin" >> $GITHUB_PATH
       - run: rustup target add wasm32-unknown-emscripten
       - run: cargo install cargo-bundle-licenses
       - run: apt-get update
