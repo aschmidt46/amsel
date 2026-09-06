@@ -87,7 +87,7 @@ jobs:
         run: npx --package=node-module-license-output -- third-party-license --dependencies-all --license "./dist/THIRD-PARTY-LICENSE-npm.md"
       - name: Collect Cargo Licenses
         working-directory: ./src/cgb
-        run: cargo-bundle-licenses --format yaml --output ../web/dist/THIRDPARTY-cargo.yml
+        run: PATH=$PATH:~/.cargo/bin cargo-bundle-licenses --format yaml --output ../web/dist/THIRDPARTY-cargo.yml
       # Enthält überflüssige Lizenzen von Bibliotheken, die nur in der Desktop App existieren
       - name: Copy c++ Licenses
         run: cp ./scripts/THIRDPARTY.txt ./src/web/dist/THIRDPARTY.txt
