@@ -231,8 +231,20 @@ function App() {
             <p className='py-4'>{lang.getTranslation("SettingsControls")+":"}</p>
             {/* TODO */}
             <p>Arrow Keys, S(A), A(B), Q(L), W(R), Enter(START), Backspace(SELECT)</p>
-            <p className='pt-4'>
-              <a href='https://github.com/aschmidt46/amsel' className='underline'>Repository</a>
+            <p className='pt-4 py-4'>
+              <a href='https://github.com/aschmidt46/amsel' className='underline' target='_blank'>Repository</a>
+            </p>
+            <p>
+            <a className='pt-4 underline' href="LICENSE.txt" target='_blank'>license</a>
+            </p>
+            <p>
+              <a className='underline' href="THIRDPARTY.txt" target='_blank'>thirdparty c++ licenses</a>
+            </p>
+            <p>
+              <a className='underline' href="THIRDPARTY-cargo.yml" target='_blank'>thirdparty rust licenses</a>
+            </p>
+            <p>
+              <a className='underline' href="THIRD-PARTY-LICENSE-npm.md" target='_blank'>thirdparty npm licenses</a>
             </p>
             <div className="modal-action">
               <form method="dialog">

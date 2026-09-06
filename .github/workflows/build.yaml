@@ -63,6 +63,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
       - run: ~/.cargo/bin/rustup target add wasm32-unknown-emscripten
+      - run: cargo install cargo-bundle-licenses
       - run: apt-get update
       - run: apt-get install cmake --yes
       - run: mkdir -p build
@@ -79,6 +80,17 @@ jobs:
       - name: Build Web App
         working-directory: ./src/web
         run: npm run build
+      - name: Collect NPM Licenses
+        working-directory: ./src/web
+        run: npx --package=node-module-license-output -- third-party-license --dependencies-all --license "./dist/THIRD-PARTY-LICENSE-npm.md"
+      - name: Collect Cargo Licenses
+        working-directory: ./src/cgb
+        run: cargo-bundle-licenses --format yaml --output ../web/dist/THIRDPARTY-cargo.yml
+      # Enthält überflüssige Lizenzen von Bibliotheken, die nur in der Desktop App existieren
+      - name: Copy c++ Licenses
+        run: cp ./scripts/THIRDPARTY.txt ./src/web/dist/THIRDPARTY.txt
+      - name: Copy App License
+        run: cp ./LICENSE ./src/web/dist/LICENSE.txt
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
