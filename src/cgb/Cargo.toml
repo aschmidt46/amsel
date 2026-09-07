@@ -5,7 +5,7 @@ edition = "2024"
 license = "BSD-3-Clause"
 
 [lib]
-crate-type = ["lib", "cdylib", "staticlib"]
+crate-type = ["staticlib"]
 name = "cgbcore"
 path = "src/bridge.rs"
 
