@@ -1,13 +1,10 @@
-if(WIN32)
-message("-------- Detected OS: Windows")
-add_compile_definitions(NES_ON_WINDOWS)
-endif()
 
 #Kein Terminal:
 if(NOT FEATURE_CONSOLE AND WIN32)
 message("-------------> Building Windows release build")
 add_compile_definitions(WINDOWS_NO_CONSOLE)
 add_link_options(-mwindows)
+set(WIN32_EXECUTABLE TRUE)
 endif()
 
 # Abhängigkeiten:
@@ -66,6 +63,7 @@ include_directories(PUBLIC include)
 include_directories(PUBLIC .)
 include_directories(PUBLIC source)
 include_directories(PUBLIC deps/imgui)
+include_directories(PUBLIC deps/glfw/include)
 include_directories(PUBLIC deps/imgui/backends)
 include_directories(PUBLIC deps/rtaudio)
 include_directories(PUBLIC deps/whereami/src)
@@ -87,8 +85,11 @@ add_library(whereami STATIC
   deps/whereami/src/whereami.c
 )
 
+if(WIN32_EXECUTABLE)
+set(WM WIN32)
+endif()
 
-add_executable(AMSEL src/main.cpp
+add_executable(AMSEL ${WM} src/main.cpp
 src/framework/common.cpp src/framework/common.h
 src/framework/file_io.cpp src/framework/file_io.h
 src/framework/input.cpp src/framework/input.h
@@ -104,14 +105,11 @@ src/console/dummy_implementation.h
 src/framework/vector.h
 )
 
-set_property(TARGET AMSEL PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
-
 
 # target_compile_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 # target_link_options(AMSEL PUBLIC -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
+target_compile_options(AMSEL PUBLIC -Wall)
 
 target_link_libraries(AMSEL whereami)
 target_link_libraries(AMSEL rtaudio)

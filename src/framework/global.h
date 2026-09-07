@@ -10,7 +10,7 @@
 
 class NES;
 class Gui;
-class GLFWwindow;
+struct GLFWwindow;
 class Screen;
 
 enum MessageType{ // Toast Symbol

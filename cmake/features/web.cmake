@@ -19,7 +19,7 @@ src/framework/locale.cpp
 src/console/dummy_implementation.h
 src/framework/global_web.cpp
 )
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -Werror)
+target_compile_options(AMSEL PUBLIC -Wall)
 
 # target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-merge)
 

@@ -52,6 +52,9 @@ requires CMake.
 requires Python 3 for building glad.
 requires Rust and Cargo for the Gameboy part.
 
+Note: In MSVC, can only be built in release mode, because of an issue with rust debug level.
+Note: Static linking of libstdc++23 (as is default on mingw) requires a new version of g++ / clang.
+
 building:
 ```
 cd build

@@ -9,7 +9,7 @@
 #include "console/dummy_implementation.h"
 #include <cstring>
 
-#ifdef NES_ON_WINDOWS
+#ifdef WINDOWS_NO_CONSOLE
   #include <Windows.h>
 #endif
 

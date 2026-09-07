@@ -10,10 +10,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 
@@ -21,9 +17,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_DEBUG "-O2 -ggdb")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
-
-
-add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
 
 
 include(FetchContent)
@@ -71,8 +64,6 @@ if(FEATURE_DEBUGGER)
   add_compile_definitions(FEATURE_DEBUGGER)
 endif()
 
-# include_directories(${CMAKE_SOURCE_DIR}/src/framework)
-
 
 if(FEATURE_TEST_SUITE)
 
@@ -82,9 +73,11 @@ else()
 
   if(FEATURE_DESKTOP)
 
-    # MinGW Bibliotheken statisch verlinken (libwinpthread, libgcc, libstdc++)
-    if(WIN32)
-    add_link_options(-static)
+  if(WIN32)
+    if(NOT (CMAKE_GENERATOR MATCHES "Visual Studio"))
+        # MinGW Bibliotheken statisch verlinken (libwinpthread, libgcc, libstdc++)
+        add_link_options(-static)
+      endif()
     endif()
     add_compile_definitions(BUILD_DESKTOP)
 
@@ -130,4 +123,5 @@ add_library(stringlib
   src/framework/stringlib.h
   src/framework/stringlib.cpp
 )
+
 target_link_libraries(AMSEL stringlib)

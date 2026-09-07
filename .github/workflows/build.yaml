@@ -72,7 +72,7 @@ jobs:
       - uses: emscripten-core/setup-emsdk@v16
       - name: Configure
         working-directory: ./build
-        run: emcmake cmake .. -DFEATURE_WEB=ON -DFEATURE_DESKTOP=OFF
+        run: emcmake cmake .. -DFEATURE_WEB=ON -DFEATURE_DESKTOP=OFF -DCMAKE_BUILD_TYPE=Release
       - name: Build WASM
         working-directory: ./build
         run: make

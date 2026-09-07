@@ -30,7 +30,7 @@ add_executable(
   src/gba/test/testbus.h
   src/gba/test/cpustate.h
 )
-target_compile_options(AMSEL PUBLIC -Wall -Wextra -Wpedantic)
+target_compile_options(AMSEL PUBLIC -Wall)
 target_link_libraries(
   AMSEL
   GTest::gtest_main

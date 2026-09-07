@@ -28,17 +28,12 @@ src/nes/mappers/mapper7.cpp src/nes/mappers/mapper7.h
 src/nes/mappers/mappers.cpp src/nes/mappers/mappers.h
 )
 
-target_compile_options(nes PUBLIC -Wall -Wextra -Wpedantic)
-
-set_property(TARGET nes PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+target_compile_options(nes PUBLIC -Wall)
 
 add_library(nes_implementation src/console/console.h
 src/console/nes_implementation.h src/console/nes_implementation.cpp
 )
 
-set_property(TARGET nes_implementation PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 target_link_libraries(AMSEL nes nes_implementation)
 

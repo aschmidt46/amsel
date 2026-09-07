@@ -5,7 +5,7 @@ edition = "2024"
 license = "BSD-3-Clause"
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["lib", "cdylib", "staticlib"]
 name = "cgbcore"
 path = "src/bridge.rs"
 
@@ -20,9 +20,9 @@ strip = true
 # debug = true
 
 [profile.dev]
-opt-level = 3
-lto = true
-strip = true
+opt-level = 0
+# lto = true
+# strip = true
 overflow-checks = false
 
 [dependencies]

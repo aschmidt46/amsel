@@ -33,22 +33,22 @@ if(FEATURE_LIBRETRO_CORE)
 set(RUST_FEATURES "${RUST_FEATURES}libretro")
 endif()
 
+# In Debug builds, we are forced to use .dll due to incompatible _ITERATOR_DEBUG_LEVEL values: 0 in cc-rs via Rust and 2 in C++.
+# if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+#   set(RECURSIVE_CPP_CRATE_TYPE cdylib)
+# else()
+#   set(RECURSIVE_CPP_CRATE_TYPE staticlib)
+# endif()
 
-corrosion_import_crate(MANIFEST_PATH src/cgb/Cargo.toml PROFILE release FEATURES "${RUST_FEATURES}")
-
+corrosion_import_crate(MANIFEST_PATH src/cgb/Cargo.toml FEATURES "${RUST_FEATURES}")
 
 corrosion_add_cxxbridge(rusty_bridge CRATE cgbcore FILES bridge.rs)
+# corrosion_set_env_vars(rusty_bridge "CFLAGS=-MTd" "CXXFLAGS=-MTd")
 include_directories(${CMAKE_BINARY_DIR}/corrosion_generated/cxxbridge/rusty_bridge/include)
 
 add_library(cgb_implementation src/console/console.h
 src/console/cgb_implementation.h src/console/cgb_implementation.cpp
 )
-
-set_property(TARGET rusty_bridge PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
-
-set_property(TARGET cgb_implementation PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 target_link_libraries(cgb_implementation cgbcore rusty_bridge)
 

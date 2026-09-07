@@ -54,6 +54,9 @@ Erfordert CMake.
 Erfordert Python 3 für das Bauen von glad.
 Erfordert Rust bzw. Cargo für den Gameboy-Teil.
 
+Achtung: Kann mit MSVC nur im Release Modus gebaut werden, wegen eines Problems mit dem Debug Level in Rust.
+Achtung: Statisches Binden von libstdc++23 (standard bei mingw) benötigt eine neue Version von g++ / clang.
+
 Bauen:
 ```
 cd build

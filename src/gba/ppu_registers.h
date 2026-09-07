@@ -1,6 +1,15 @@
 #pragma once
 #include "arm/bus_types.h"
 
+#ifdef __GNUC__
+#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
+#endif
+
+#ifdef _MSC_VER
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
+#endif
+
+
 namespace gba{
     union LCDCONTROL_T {
         struct{
@@ -63,7 +72,7 @@ namespace gba{
     };
 
     
-    struct __attribute__((__packed__)) OAMEntry {
+    PACK(struct OAMEntry {
         struct{
             HalfWord TileID : 10; //lsb
             HalfWord flipHorizontal : 1;
@@ -71,7 +80,7 @@ namespace gba{
             HalfWord paletteBank : 4;
         } state;
         HalfWord raw;
-    };
+    });
 
     union Attribute0_T {
         struct{
@@ -110,14 +119,14 @@ namespace gba{
         HalfWord raw;
     };
 
-    struct __attribute__((__packed__)) OAMAttribs {
+    PACK(struct OAMAttribs {
         Attribute0_T attr0;
         Attribute1_T attr1;
         Attribute2_T attr2;
         HalfWord fill;
-    };
+    });
 
-    struct __attribute__((__packed__)) AffineAttribs {
+    PACK(struct AffineAttribs {
         HalfWord fill0[3];
         int16_t pa;
         HalfWord fill1[3];
@@ -126,7 +135,7 @@ namespace gba{
         int16_t pc;
         HalfWord fill3[3];
         int16_t pd;
-    };
+    });
 
 
 
