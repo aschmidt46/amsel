@@ -127,7 +127,7 @@ jobs:
         run: python transcode_json.py
       - name: Configure
         working-directory: ./build
-        run: cmake .. -DFEATURE_TEST_SUITE=ON -DFEATURE_CGB=OFF
+        run: cmake .. -DFEATURE_TEST_SUITE=ON
       - name: Build
         working-directory: ./build
         run: make
