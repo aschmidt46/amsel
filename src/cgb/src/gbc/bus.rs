@@ -63,6 +63,8 @@ pub struct Bus{
     awaiting_serial: bool,
     serial_count: usize,
     serial_min: usize,
+    pub catch_up_cycles: usize,
+    pub enable_catch_up: bool,
     net_state: Option<cxx::WeakPtr<NetworkState>>,
 
     // mbc3
@@ -98,7 +100,8 @@ impl Bus{
             cgb_mode: false, wram_bank: 1, hdma1: 0, hdma2: 0, hdma3: 0, hdma4: 0, hdma5: 0, vram_dma_active: DmaMode::Finished, vram_dma_bytes_remaining: 0,
             vram_dma_pointer: 0, br: false, palette_address: 0, palette_address_obj: 0, ff72: 0, ff73: 0, ff74: 0, ff75: 0, mbc1_bank_mode: false, mbc1_magic_register: 0,
             sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false, apu: None, watch_breakpoints: false, breakpoints: Vec::new(), breakpoints_op: Vec::new(),
-            test_mode: false, test_output: None, out_buffer: 0, is_master: false, net_state: None, received: false, sent: false, serial_count: 0, serial_min: 0, awaiting_serial: false
+            test_mode: false, test_output: None, out_buffer: 0, is_master: false, net_state: None, received: false, sent: false, serial_count: 0, serial_min: 0,
+            awaiting_serial: false, catch_up_cycles: 0, enable_catch_up: false
         }
     }
 
@@ -658,6 +661,13 @@ impl Bus{
     }
     pub fn clock(&mut self){
 
+        if self.catch_up_cycles > 0 && self.enable_catch_up{
+            self.catch_up_cycles = self.catch_up_cycles.saturating_sub(1);
+        }
+        if self.enable_catch_up && self.catch_up_cycles == 0{
+            self.enable_catch_up = false;
+        }
+
         if self.watch_breakpoints && self.cpu.as_mut().unwrap().remaining_steps == 0{
             let pc_val = self.cpu.as_mut().unwrap().reg_pc;
             if self.breakpoints.contains(&pc_val){
@@ -674,7 +684,7 @@ impl Bus{
             let dual_speed = self.cpu.as_mut().unwrap().dual_speed_mode;
 
 
-            if (self.sc & 128) > 0{ // Übertragung aktiv
+            if !self.enable_catch_up && (self.sc & 128) > 0{ // Übertragung aktiv,   nicht dabei, aufzuholen
                 if self.is_master{
                     self.serial_count = self.serial_count.saturating_add(1);
                     if self.serial_count >= self.serial_min{
@@ -684,9 +694,11 @@ impl Bus{
                             self.serial_min = 0;
                             self.sc = self.sc & !(1 << 7);
                             self.request_serial();
+                            self.enable_catch_up = true;
                         }
                         else{
                             // Gameboy pausieren
+                            self.catch_up_cycles = self.catch_up_cycles.saturating_add(1);
                             return;
                         }
                     }

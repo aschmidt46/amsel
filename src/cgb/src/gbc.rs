@@ -111,6 +111,9 @@ pub(crate) mod gbc{
         pub fn clock_until_sample_ready(&mut self){
             while !self.audio_sample_ready(){
                 self.clock();
+                while self.bus.borrow().enable_catch_up{
+                    self.bus.borrow_mut().clock();
+                }
                 if self.bus.borrow().is_halted(){
                     break;
                 }
