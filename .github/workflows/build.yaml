@@ -29,6 +29,7 @@ jobs:
       - run: apk add git
       - run: apk add python3
       - run: apk add py3-jinja2
+      - run: apk add linux-headers
       - run: apk add g++
       - run: apk add make
       - run: apk add cmake
@@ -68,6 +69,7 @@ jobs:
       - run: cargo install cargo-bundle-licenses
       - run: apt-get update
       - run: apt-get install cmake --yes
+      - run: apt-get install linux-headers-generic --yes
       - run: mkdir -p build
       - uses: emscripten-core/setup-emsdk@v16
       - name: Configure
@@ -114,6 +116,11 @@ jobs:
       - run: apk add git
       - run: apk add python3
       - run: apk add py3-jinja2
+      - run: apk add curl
+      - run: apk add linux-headers
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - run: |
+          echo "~/.cargo/bin" >> $GITHUB_PATH
       - run: apk add g++
       - run: apk add make
       - run: apk add cmake
