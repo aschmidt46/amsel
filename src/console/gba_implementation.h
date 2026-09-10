@@ -33,6 +33,7 @@ class GbaImplementation : public Console{
     std::vector<std::string> getRequiredFiles() override;
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
     std::vector<SystemOption>* getSystemOptions() override;
+    void renderCustomMenuDesktop() override;
 
 
     void addClock() override;

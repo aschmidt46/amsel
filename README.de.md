@@ -16,6 +16,7 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - Die meisten Mapper sind implementiert (MBC1, MBC2, MBC3, MBC5)
 - Die Echtzeituhr von entsprechenden Cartridges ist aktuell noch nicht implementiert
 - Einige wenige Spiele funktionieren aufgrund von obskuren DMA Timings nicht korrekt
+- Link Cable Emulation via TCP, das Master-Gerät läuft je nach Latenz langsamer
 ### Nintendo Gameboy Advance (in Arbeit)
 - Funktionierende CPU und Bus
 - Besteht ARMWrestler, arm.gba und thumb.gba von jsmolka, die meisten SingleStepTests
@@ -31,6 +32,7 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - Persistente Speicherstände
 - Visueller Debugger / Disassembler
 - Lokaler Mehrspieler (NES)
+- Experimenteller Online-Mehrspielermodus (Gameboy, Nur Desktop)
 - Gamepad-Unterstützung
 - CRT-Shader
 - Lokalisierung über JSON-Dateien (standardmäßig deutsch, englisch)

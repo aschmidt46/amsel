@@ -65,3 +65,14 @@ FetchContent_Declare(
 )
 FetchContent_Populate(libretro)
 file(COPY "${PROJECT_SOURCE_DIR}/deps/libretro-common/include/libretro.h" DESTINATION ${SOURCE_INCLUDE_DIR})
+
+include(FetchContent)
+FetchContent_Declare(
+  asio
+  GIT_REPOSITORY "https://github.com/chriskohlhoff/asio"
+  GIT_TAG        "master"
+  SOURCE_DIR     "${CMAKE_SOURCE_DIR}/deps/asio"
+)
+FetchContent_Populate(asio)
+include_directories("${CMAKE_SOURCE_DIR}/deps/asio/include")
+

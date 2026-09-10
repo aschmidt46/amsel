@@ -7,6 +7,9 @@
 #include <vector>
 #include "../console/console.h"
 #include "locale.h"
+#ifdef BUILD_DESKTOP
+#include "asio.hpp"
+#endif
 
 class NES;
 class Gui;
@@ -87,3 +90,6 @@ extern Console* console;
 extern std::mutex consoleLock;
 extern GLFWwindow* window; // Haupt-Viewport
 extern std::vector<std::pair<std::string, std::vector<SystemOption>*>> systemOptions;
+#ifdef BUILD_DESKTOP
+extern asio::io_context io_context;
+#endif

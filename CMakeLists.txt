@@ -13,9 +13,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -ggdb")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
-set(CMAKE_C_FLAGS_DEBUG "-O2 -ggdb")
+set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 
 
@@ -125,3 +125,7 @@ add_library(stringlib
 )
 
 target_link_libraries(AMSEL stringlib)
+
+if(WIN32)
+target_link_libraries(AMSEL wsock32)
+endif()

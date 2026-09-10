@@ -16,6 +16,7 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 - Most mappers implemented (MBC1, MBC2, MBC3, MBC5)
 - RTC is missing
 - Some games require very strict DMA timing and don't work correctly because of it
+- Link Cable Implementation over TCP, Master Gameboy experiences Slowdown while waiting for packets
 ### Nintendo Gameboy Advance (incomplete)
 - Working CPU and Bus
 - Passes ARMWrestler, arm.gba and thumb.gba by jsmolka, most SingleStepTests
@@ -31,6 +32,7 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 - Persistent savegames
 - Debugger / Disassembler
 - Local multiplayer (NES)
+- EXPERIMENTAL Online Multiplayer (Gameboy, Only on Desktop)
 - Gamepad support
 - CRT-Shader
 - Localization using JSON files (german, english included)

@@ -1,7 +1,14 @@
 #include "cgb_implementation.h"
 #include "../framework/global.h"
 #include "../framework/stringlib.h"
+#include "asio/placeholders.hpp"
+#include "console.h"
+#include "console/cgb_bridge.h"
 #include <cstring>
+#include <exception>
+#include <functional>
+#include <limits>
+#include <stdexcept>
 #ifdef BUILD_DESKTOP
   #include <imgui.h>
   #include "../framework/file_io.h"
@@ -119,7 +126,7 @@ std::string CgbImplementation::getConsoleName(){
     #endif
 }
 
-CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Console(path)
+CgbImplementation::CgbImplementation(const char *path) : netState(new NetworkState()), cgb(new_cgb(path, netState)), Console(path)
 {
   #ifdef BUILD_DESKTOP
   if(cgb_can_save(cgb)){
@@ -133,7 +140,7 @@ CgbImplementation::CgbImplementation(const char *path) : cgb(new_cgb(path)), Con
   #endif
 }
 
-CgbImplementation::CgbImplementation(std::vector<uint8_t> &rom) : cgb(new_cgb_rom(rom))
+CgbImplementation::CgbImplementation(std::vector<uint8_t> &rom) : netState(new NetworkState()), cgb(new_cgb_rom(rom, netState))
 {
   #ifdef BUILD_DESKTOP
   if(cgb_can_save(cgb)){
@@ -163,7 +170,7 @@ CgbImplementation::~CgbImplementation()
 
 void CgbImplementation::load(const char *path)
 {
-  cgb = new_cgb(path);
+  cgb = new_cgb(path, netState);
 
   #ifdef BUILD_DESKTOP
   if(cgb_can_save(cgb)){
@@ -184,41 +191,41 @@ void CgbImplementation::clock()
 
 void CgbImplementation::clockUntilSampleReady()
 {
-  #ifdef BUILD_LIBRETRO_CORE
+  // #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
-  #endif
+  // #endif
   cgb_clock_until_samle_ready(cgb);
 }
 
 const uint8_t *CgbImplementation::accessFramebuffer()
 {
-  #ifdef BUILD_LIBRETRO_CORE
+  // #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
-  #endif
+  // #endif
   return (uint8_t*)access_framebuffer(cgb);
 }
 
 bool CgbImplementation::frameIsReady()
 {
-  #ifdef BUILD_LIBRETRO_CORE
+  // #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
-  #endif
+  // #endif
   return has_frame(cgb);
 }
 
 bool CgbImplementation::audioSampleReady()
 {
-  #ifdef BUILD_LIBRETRO_CORE
+  // #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
-  #endif
+  // #endif
   return audio_sample_ready(cgb);
 }
 
 std::pair<double, double> CgbImplementation::getSample()
 {
-  #ifdef BUILD_LIBRETRO_CORE
+  // #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
-  #endif
+  // #endif
   auto res = get_stereo(cgb);
   return {this->volume * res.left, this->volume * res.right};
 }
@@ -240,9 +247,9 @@ float CgbImplementation::getY()
 
 void CgbImplementation::setController1Key(bool gamepad, int key, int action)
 {
-  #ifdef BUILD_LIBRETRO_CORE
+  // #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
-  #endif
+  // #endif
   auto c = &globalConfig.controller1;
   if (gamepad)
   {
@@ -283,6 +290,13 @@ void CgbImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
 
 std::vector<SystemOption>* CgbImplementation::getSystemOptions(){
   return &options;
+}
+
+void CgbImplementation::clockLinkCable(){
+  // if(connection.has_value()){
+  //   connection.value()->writeByte(116);
+  //   connection.value()->readByte();
+  // }
 }
 
 bool CgbImplementation::canSave()
@@ -442,4 +456,18 @@ void CgbImplementation::displayRegisters()
   #endif
 }
 
-std::vector<SystemOption> CgbImplementation::options = {};
+void CgbImplementation::renderCustomMenuDesktop(){
+  netState->renderMenuDesktop(this);
+}
+
+void CgbImplementation::transferReceive(uint8_t value){
+  std::lock_guard<std::mutex> lock(m);
+  completed_transfer(cgb, value);
+}
+
+void CgbImplementation::transferSent(){
+  std::lock_guard<std::mutex> lock(m);
+  completed_send(cgb);
+}
+
+std::vector<SystemOption> CgbImplementation::options = {CustomMenu{"Link Cable"}};

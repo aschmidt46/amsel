@@ -6,12 +6,14 @@ use gbc::gbc::CGB;
 
 use crate::ffi::CGBRegister8;
 use crate::ffi::CGBRegister16;
+use crate::ffi::NetworkState;
 use crate::ffi::InstructionPair;
 use crate::gbc::sm83::Register8;
 use crate::gbc::sm83::Register16;
 
 #[cxx::bridge]
 pub mod ffi{
+
 
 
     struct StereoTuple{
@@ -45,12 +47,26 @@ pub mod ffi{
         PC,
     }
 
+    unsafe extern "C++"{
+        include!("cgb/src/include/cgb_bridge.h");
+        type NetworkState;
+
+        #[cfg(not(feature = "f_test"))]
+        fn start_transfer(net_state: &WeakPtr<NetworkState>, send_byte: u8, is_slave: bool);
+        #[cfg(not(feature = "f_test"))]
+        fn cancel_transfer(net_state: &WeakPtr<NetworkState>);
+    }
+
     extern "Rust"{
         type CGB;
 
-        fn new_cgb(path: &str) -> Box<CGB>;
+        fn new_cgb(path: &str, imp: &WeakPtr<NetworkState>) -> Box<CGB>;
 
-        fn new_cgb_rom(rom: &CxxVector<u8>) -> Box<CGB>;
+        fn new_cgb_rom(rom: &CxxVector<u8>, imp: &WeakPtr<NetworkState>) -> Box<CGB>;
+
+        fn completed_transfer(cgb: &mut Box<CGB>, received: u8);
+        
+        fn completed_send(cgb: &mut Box<CGB>);
 
         fn has_frame(cgb: &mut Box<CGB>) -> bool;
 
@@ -121,8 +137,9 @@ fn get_cgb_register16(r16: CGBRegister16) -> Register16{
     }
 }
 
-fn new_cgb(path: &str) -> Box<CGB>{
-    return Box::new(CGB::new(path))
+fn new_cgb(path: &str, imp: &cxx::WeakPtr<NetworkState>) -> Box<CGB>{
+    // start_transfer(imp, 0, false);
+    return Box::new(CGB::new(path, imp))
 }
 
 fn has_frame(cgb: &mut Box<CGB>) -> bool{
@@ -233,10 +250,18 @@ fn cgb_load_save(cgb: &mut Box<CGB>, vec: &cxx::CxxVector<u8>){
     cgb.load_save(v);
 }
 
-fn new_cgb_rom(rom: &cxx::CxxVector<u8>) -> Box<CGB>{
+fn new_cgb_rom(rom: &cxx::CxxVector<u8>, imp: &cxx::WeakPtr<NetworkState>) -> Box<CGB>{
     let mut v : Vec<u8> = Vec::new();
     for el in rom{
         v.push(el.clone());
     }
-    return Box::new(CGB::new_rom(&v))
+    return Box::new(CGB::new_rom(&v, imp))
+}
+
+fn completed_transfer(cgb: &mut Box<CGB>, received: u8){
+    cgb.bus.borrow_mut().receive(received);
+}
+
+fn completed_send(cgb: &mut Box<CGB>){
+    cgb.bus.borrow_mut().sent();
 }

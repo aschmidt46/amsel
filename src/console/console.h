@@ -21,7 +21,12 @@ struct Toggle{
     bool value;
 };
 
-using SystemOption = std::variant<RequiredFile, Toggle>;
+struct CustomMenu{
+    std::string name;
+    bool visible = false;
+};
+
+using SystemOption = std::variant<RequiredFile, Toggle, CustomMenu>;
 
 class Console{
     protected:
@@ -58,11 +63,13 @@ class Console{
     virtual bool canSave() = 0;
     virtual std::vector<uint8_t> getSaveData() = 0;
 
-    virtual std::vector<SystemOption>* getSystemOptions() = 0;
-
+    
     // Bios usw.
     virtual std::vector<std::string> getRequiredFiles() = 0;
     virtual void loadSpecialFile(std::string name, std::vector<uint8_t> content) = 0;
+    
+    virtual std::vector<SystemOption>* getSystemOptions() = 0;
+    virtual void renderCustomMenuDesktop() = 0;
 
 
 

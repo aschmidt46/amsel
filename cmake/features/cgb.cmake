@@ -27,10 +27,13 @@ endif()
 set(RUST_FEATURES "")
 if(FEATURE_GAMEBOY_CGB_SUPPORT)
 add_compile_definitions(FEATURE_CGB)
-set(RUST_FEATURES "${RUST_FEATURES}cgb ")
+set(RUST_FEATURES "${RUST_FEATURES}f_cgb ")
 endif()
 if(FEATURE_LIBRETRO_CORE)
 set(RUST_FEATURES "${RUST_FEATURES}libretro")
+endif()
+if(FEATURE_TEST_SUITE)
+set(RUST_FEATURES "${RUST_FEATURES}f_test")
 endif()
 
 # In Debug builds, we are forced to use .dll due to incompatible _ITERATOR_DEBUG_LEVEL values: 0 in cc-rs via Rust and 2 in C++.
@@ -48,10 +51,10 @@ include_directories(${CMAKE_BINARY_DIR}/corrosion_generated/cxxbridge/rusty_brid
 
 add_library(cgb_implementation src/console/console.h
 src/console/cgb_implementation.h src/console/cgb_implementation.cpp
+src/console/cgb_bridge.h src/console/cgb_bridge.cpp
 )
 
 target_link_libraries(cgb_implementation cgbcore rusty_bridge)
-
 
 # TESTS
 if(FEATURE_TEST_SUITE)
@@ -65,8 +68,8 @@ if(FEATURE_TEST_SUITE)
     )
     FetchContent_MakeAvailable(gb-test-roms)
 
-    add_test(NAME "Gameboy Tests (Cargo)" COMMAND cargo test --manifest-path ${CMAKE_SOURCE_DIR}/src/cgb/Cargo.toml)
-    
+    add_test(NAME "Gameboy Tests (Cargo)" COMMAND cargo test --manifest-path ${CMAKE_SOURCE_DIR}/src/cgb/Cargo.toml --features "${RUST_FEATURES}")
+
 else()
     target_link_libraries(AMSEL cgb_implementation)
 endif()

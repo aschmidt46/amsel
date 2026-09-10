@@ -2,10 +2,13 @@
 #[cfg(test)]
 mod rom_tests {
 
-    use crate::CGB;
+    use cxx::WeakPtr;
+
+use crate::CGB;
 
     fn test_blargg_rom(rom_path: &str){
-        let mut cgb = CGB::new(rom_path);
+        let ptr = WeakPtr::null();
+        let mut cgb = CGB::new(rom_path, &ptr);
         cgb.bus.borrow_mut().set_test_mode();
         let mut count: usize = 0;
         let mut found: bool = false;

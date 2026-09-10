@@ -2,7 +2,10 @@
 
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
-use crate::gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Register8, Register16, SM83}};
+use crate::{ffi::{NetworkState}, gbc::{apu::APU, cartridge::RomObject, ppu::PPU, sm83::{CPUMode, Register8, Register16, SM83}}};
+
+#[cfg(not(feature = "f_test"))]
+use crate::{ffi::{cancel_transfer, start_transfer}};
 
 #[derive(PartialEq)]
 enum DmaMode{
@@ -10,6 +13,9 @@ enum DmaMode{
     Hblank,
     Finished
 }
+
+// Nach wie vielen Clocks kann ein BYTE übertragen werden, in gbdev pandocs sind es pro bit clocks
+const SERIAL_CLOCKS_NORMAL: [usize;2] = [4096, 128]; // double halbiert diese clocks?
 
 pub struct Bus{
     work_ram: [[u8; 0x1000]; 8], // 32KiB (8 Bänke a 4KiB), 8KiB auf DMG
@@ -50,6 +56,14 @@ pub struct Bus{
     //serial
     sb: u8,
     sc: u8,
+    out_buffer: u8,
+    is_master: bool,
+    received: bool,
+    sent: bool,
+    awaiting_serial: bool,
+    serial_count: usize,
+    serial_min: usize,
+    net_state: Option<cxx::WeakPtr<NetworkState>>,
 
     // mbc3
     enable_ram_rtc: bool,
@@ -84,15 +98,15 @@ impl Bus{
             cgb_mode: false, wram_bank: 1, hdma1: 0, hdma2: 0, hdma3: 0, hdma4: 0, hdma5: 0, vram_dma_active: DmaMode::Finished, vram_dma_bytes_remaining: 0,
             vram_dma_pointer: 0, br: false, palette_address: 0, palette_address_obj: 0, ff72: 0, ff73: 0, ff74: 0, ff75: 0, mbc1_bank_mode: false, mbc1_magic_register: 0,
             sb: 0, sc: 0, hdma_initiated_now: false, cpu_advanced: false, apu: None, watch_breakpoints: false, breakpoints: Vec::new(), breakpoints_op: Vec::new(),
-            test_mode: false, test_output: None
+            test_mode: false, test_output: None, out_buffer: 0, is_master: false, net_state: None, received: false, sent: false, serial_count: 0, serial_min: 0, awaiting_serial: false
         }
     }
 
     fn detect_cgb_capability(&mut self){
-        #[cfg(feature = "cgb")]
+        #[cfg(feature = "f_cgb")]
         let feature_cfg = true;
 
-        #[cfg(not(feature = "cgb"))]
+        #[cfg(not(feature = "f_cgb"))]
         let feature_cfg = false;
 
         if self.cart.as_mut().unwrap().cgb_flag & 0xC0 > 0 && feature_cfg {
@@ -100,14 +114,16 @@ impl Bus{
         }
     }
 
-    pub fn new_init(path: &str) -> Self{
+    pub fn new_init(path: &str, imp: &cxx::WeakPtr<NetworkState>) -> Self{
         let mut bus = Bus::new();
+        bus.net_state = Option::Some(imp.clone());
         bus.cart = RomObject::new(path).ok();
         bus.detect_cgb_capability();
         bus
     }
-    pub fn new_init_rom(rom: &Vec<u8>) -> Self{
+    pub fn new_init_rom(rom: &Vec<u8>, imp: &cxx::WeakPtr<NetworkState>) -> Self{
         let mut bus = Bus::new();
+        bus.net_state = Option::Some(imp.clone());
         bus.cart = Some(RomObject::new_from_rom(rom.clone()));
         bus.detect_cgb_capability();
         bus
@@ -447,17 +463,42 @@ impl Bus{
                 self.read_buttons = (val & 0b00100000) > 0;
                 self.read_joypad = (val &  0b00010000) > 0;
             },
-            0xFF01 => self.sb = val,
+            0xFF01 => {
+                self.sb = val;
+                self.out_buffer = val
+            },
             0xFF02 => {
+                self.received = false;
+                self.sent = false;
                 if self.test_mode && val == 0x81{
                     // Nur Debug Ausgabe
                     self.test_output.as_mut().unwrap().push(self.sb);
                 }
-                else{ // Normales Verhalten
+                else{
                     let speed = if self.cgb_mode {val & 0b10} else {0};
                     let clock_select = val & 1;
                     let transfer_enable = val & 128;
+                    // let transfer_was_enable = self.sc & 128;
                     self.sc = speed | clock_select | transfer_enable;
+                    if transfer_enable > 0{ // neu eingeschaltet
+                        if clock_select > 0{ // Master
+                            self.is_master = true;
+                        }
+                        else{ // Slave
+                            self.is_master = false;
+                        }
+                        self.serial_count = 0;
+                        self.serial_min = SERIAL_CLOCKS_NORMAL[clock_select as usize];
+                        if speed > 0{
+                            self.serial_min /= 2;
+                        }
+                        #[cfg(not(feature = "f_test"))]
+                        start_transfer(self.net_state.as_ref().unwrap(), self.out_buffer, !self.is_master);
+                    }
+                    else{
+                        #[cfg(not(feature = "f_test"))]
+                        cancel_transfer(self.net_state.as_ref().unwrap());
+                    }
                 }
             },
             0xFF04 => self.div = 0,
@@ -589,6 +630,9 @@ impl Bus{
     pub fn request_timer(&mut self){
         self.cpu.as_mut().unwrap().if_reg |= 1 << 2;
     }
+    pub fn request_serial(&mut self){
+        self.cpu.as_mut().unwrap().if_reg |= 1 << 3;
+    }
     pub fn request_joypad(&mut self){
         self.cpu.as_mut().unwrap().if_reg |= 1 << 4;
     }
@@ -628,6 +672,26 @@ impl Bus{
 
         if (!self.br) || (self.cpu.as_mut().unwrap().remaining_steps > 0) {
             let dual_speed = self.cpu.as_mut().unwrap().dual_speed_mode;
+
+
+            if (self.sc & 128) > 0{ // Übertragung aktiv
+                if self.is_master{
+                    self.serial_count = self.serial_count.saturating_add(1);
+                    if self.serial_count >= self.serial_min{
+                        if self.awaiting_serial{
+                            self.awaiting_serial = false;
+                            self.serial_count = 0;
+                            self.serial_min = 0;
+                            self.sc = self.sc & !(1 << 7);
+                            self.request_serial();
+                        }
+                        else{
+                            // Gameboy pausieren
+                            return;
+                        }
+                    }
+                }
+            }
 
             // Timer Quelle: https://github.com/Ashiepaws/GBEDG/blob/master/timers/index.md
 
@@ -815,6 +879,40 @@ impl Bus{
     pub fn load_save(&mut self, data: Vec<u8>){
         for i in 0..data.len(){
             self.external_ram[i / 0x2000][i % 0x2000] = data[i];
+        }
+    }
+
+    pub fn receive(&mut self, value: u8){
+        if (self.sc & 0x80) > 0{
+            self.received = true;
+            self.sb = value;
+            if self.received && self.sent {
+                self.received = false;
+                self.sent = false;
+                if self.is_master{
+                    self.awaiting_serial = true;
+                }
+                else{
+                    self.sc = self.sc & !(1 << 7);
+                    self.request_serial();
+                }
+            }
+        }
+    }
+    pub fn sent(&mut self){
+        if (self.sc & 0x80) > 0{
+            self.sent = true;
+            if self.received && self.sent {
+                self.received = false;
+                self.sent = false;
+                if self.is_master{
+                    self.awaiting_serial = true;
+                }
+                else{
+                    self.sc = self.sc & !(1 << 7);
+                    self.request_serial();
+                }
+            }
         }
     }
 }

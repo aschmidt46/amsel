@@ -32,6 +32,7 @@ class DummyImplementation : public Console{
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override{(void)name; (void)content;};
 
     std::vector<SystemOption>* getSystemOptions() override{return &options;};
+    void renderCustomMenuDesktop() override{};
 
 
     void addClock() override{};

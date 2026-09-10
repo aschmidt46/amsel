@@ -104,6 +104,10 @@ std::vector<SystemOption>* NesImplementation::getSystemOptions(){
     return &options;
 }
 
+void NesImplementation::renderCustomMenuDesktop(){
+
+}
+
 void NesImplementation::addClock()
 {
     this->console.allowedClocks = 1;

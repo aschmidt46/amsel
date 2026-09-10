@@ -5,6 +5,7 @@
 #include "console/cgb_implementation.h"
 #include "console/gba_implementation.h"
 #include "console/nes_implementation.h"
+#include "global.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -218,6 +219,7 @@ bool shouldChangeTitle(){
 void onWindowUpdate()
 {
   glfwPollEvents();
+  io_context.run();
   pollGamepadEvents();
   if(wasFullscreen != sharedGui->state->fullScreen){
     wasFullscreen = sharedGui->state->fullScreen;

@@ -1,5 +1,11 @@
 #pragma once
+#include "cgb_bridge.h"
 #include "console.h"
+#include "framework/global.h"
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <system_error>
 #ifdef BUILD_LIBRETRO_CORE
 #include <mutex>
 #endif
@@ -7,17 +13,20 @@
 // Rust FFI, wird während build generiert
 #include "rusty_bridge/bridge.h"
 
-class CgbImplementation : public Console{
+class CgbImplementation : public Console, std::enable_shared_from_this<CgbImplementation>{
     private:
+    std::shared_ptr<NetworkState> netState;
     rust::Box<CGB> cgb;
+    static std::vector<SystemOption> options;
     // Retroarch verwendet offenbar (im Audio?) eine Art von Nebenläufigkeit, die dafür sorgt, dass mehrere Funktionen auf dem Console Objekt gleichzeitig aufgerufen werden (können).
     // Das führt zu einem Laufzeitfehler in Rust, weil dadurch das CGB Objekt mehrfach geborrowed wird -> panic
     // Der Mutex ist ein einfacher Workaround
-    #ifdef BUILD_LIBRETRO_CORE
+    // #ifdef BUILD_LIBRETRO_CORE
     std::mutex m;
-    #endif
+    // #endif
     void setAddressOf(int i, int to);
-    static std::vector<SystemOption> options;
+
+    void clockLinkCable();
     public:
     std::string getConsoleName() override;
     CgbImplementation() = delete;
@@ -39,6 +48,9 @@ class CgbImplementation : public Console{
 
     std::vector<std::string> getRequiredFiles() override;
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
+    void renderCustomMenuDesktop() override;
+    void transferReceive(uint8_t value);
+    void transferSent();
 
     std::vector<SystemOption>* getSystemOptions() override;
 

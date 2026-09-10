@@ -8,7 +8,7 @@ pub mod apu;
 
 pub(crate) mod gbc{
     use std::{cell::RefCell, rc::Rc};
-    use crate::gbc::{bus::Bus, sm83::{Register8, Register16}};
+    use crate::{ffi::NetworkState, gbc::{bus::Bus, sm83::{Register8, Register16}}};
 
     const CGB_CLOCK: f64 = 4194304.0;
     // const SAMPLE_RATE: f64 = 20000.0;
@@ -31,15 +31,15 @@ pub(crate) mod gbc{
     }
     
     impl CGB{
-        pub fn new(path: &str) -> Self{
-            let bus: Rc<RefCell<Bus>> = Rc::new(RefCell::new(Bus::new_init(path)));
+        pub fn new(path: &str, imp: &cxx::WeakPtr<NetworkState>) -> Self{
+            let bus: Rc<RefCell<Bus>> = Rc::new(RefCell::new(Bus::new_init(path, imp)));
             bus.borrow_mut().create_components(bus.clone());
             CGB { bus, has_frame: false, audio_time: 0.0, audio_sample_ready: false, audio_sample_left: 0.0, audio_sample_right: 0.0
                 , sample_rate: 20000.0, audio_time_per_clock: 1.0 / CGB_CLOCK, audio_time_per_sample: 1.0 / 20000.0 }
         }
 
-        pub fn new_rom(rom: &Vec<u8>) -> Self{
-            let bus: Rc<RefCell<Bus>> = Rc::new(RefCell::new(Bus::new_init_rom(rom)));
+        pub fn new_rom(rom: &Vec<u8>, imp: &cxx::WeakPtr<NetworkState>) -> Self{
+            let bus: Rc<RefCell<Bus>> = Rc::new(RefCell::new(Bus::new_init_rom(rom, imp)));
             bus.borrow_mut().create_components(bus.clone());
             CGB { bus, has_frame: false, audio_time: 0.0, audio_sample_ready: false, audio_sample_left: 0.0, audio_sample_right: 0.0
                 , sample_rate: 20000.0, audio_time_per_clock: 1.0 / CGB_CLOCK, audio_time_per_sample: 1.0 / 20000.0 }

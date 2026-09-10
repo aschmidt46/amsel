@@ -154,6 +154,9 @@ void FileIO::saveSystemSettings(const std::vector<std::pair<std::string, std::ve
                 std::string optName = t.name;
                 optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
                 ini["General"][optName] = t.value;
+            },
+            [&](const CustomMenu &m){
+
             }
         };
 
@@ -189,6 +192,9 @@ void FileIO::loadSystemSettings(const std::vector<std::pair<std::string, std::ve
                 std::string optName = t.name;
                 optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
                 t.value = ini["General"][optName].as<bool>();
+            },
+            [&](CustomMenu &m){
+
             }
         };
 

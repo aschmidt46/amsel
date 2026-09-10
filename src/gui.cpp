@@ -635,6 +635,14 @@ void Gui::drawSystemOptions(){
           if(ImGui::Checkbox(t.name.c_str(), &t.value)){
             FileIO::getInstance().saveSystemSettings(systemOptions);
           }
+        },
+        [&](CustomMenu& m){
+          if(ImGui::MenuItemEx(m.name.c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", m.visible)){
+            m.visible = !m.visible;
+          }
+          if(m.visible){
+            console->renderCustomMenuDesktop();
+          }
         }
       };
       for(auto &option : *systemOptions[state->systemOptionsIndex].second){

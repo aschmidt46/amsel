@@ -139,6 +139,10 @@ std::vector<SystemOption>* GbaImplementation::getSystemOptions(){
     return &options;
 }
 
+void GbaImplementation::renderCustomMenuDesktop(){
+
+}
+
 void GbaImplementation::addClock() {
     gba->addClock();
 }
