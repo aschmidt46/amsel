@@ -219,7 +219,6 @@ bool shouldChangeTitle(){
 void onWindowUpdate()
 {
   glfwPollEvents();
-  io_context.run();
   pollGamepadEvents();
   if(wasFullscreen != sharedGui->state->fullScreen){
     wasFullscreen = sharedGui->state->fullScreen;

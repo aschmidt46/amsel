@@ -14,18 +14,26 @@ void TCPConnection::handle_write(const std::error_code& error, size_t bytes_tran
   #ifdef BUILD_DESKTOP
     if(bytes_transferred>0){
       // std::cout << "sent: " << int(linkCableBufferOut[0]) << "\n";
+      cgb->transferSent();
     }
-    cgb->transferSent();
+    else{ // Fehler
+      if(isSlave){ // Slave schreibt nur, wenn extern geclockt, Datenverlust nicht erlaubt
+        if(!cancelTransfer)
+          writeByte(linkCableBufferOut[0]);
+      }
+      else{
+        // std::cout << error.message() << std::endl;
+        cgb->transferSent();
+      }
+    }
     #endif
 }
 
 void TCPConnection::handle_read(const std::error_code& error, size_t bytes_transferred){
   #ifdef BUILD_DESKTOP
-  if(bytes_transferred>0){
+  if(bytes_transferred==0){
       // std::cout << "received: " << int(linkCableBufferIn[0]) << "\n";
-    }
-  else{
-    linkCableBufferIn[0] = 0xFF;
+      linkCableBufferIn[0] = 0xFF;
   }
   if(isSlave){
     if(bytes_transferred > 0){ // Transfer erfolgreich = externer Clock -> schreiben, nach schreiben receive
@@ -41,6 +49,8 @@ void TCPConnection::handle_read(const std::error_code& error, size_t bytes_trans
     }
   }
   else{
+    // if(bytes_transferred==0)
+      // std::cout << error.message() << std::endl;
     cgb->transferReceive(linkCableBufferIn[0]);
   }
   #endif

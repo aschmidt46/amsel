@@ -37,7 +37,7 @@ asio::io_context io_context;
 #endif
 // ---------------------------
 
-
+bool stopNetworkThread = false;
 
 int run(int argc, wchar_t** argv)
 {
@@ -66,6 +66,12 @@ int run(int argc, wchar_t** argv)
   // Audiosystem taktet die Konsole in separatem Thread
   std::thread t(&AudioSystem::start, &audiosystem);
 
+  std::thread nt([&](){
+    while(!stopNetworkThread){
+      io_context.run();
+    }
+  });
+
 
   while(!glfwWindowShouldClose(window)){
       do {
@@ -85,6 +91,8 @@ int run(int argc, wchar_t** argv)
 
   audiosystem.close = true;
   t.join();
+  stopNetworkThread = true;
+  nt.join();
   cleanUp(window);
   return 0;
 }
