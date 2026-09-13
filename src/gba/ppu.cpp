@@ -82,18 +82,148 @@ gba::Word gba::PPU::getVCount(){
     return currentScanline;
 }
 
-void gba::PPU::detectSpritesOnScanline(){
-    
+// Shape, Size -> sizeX, sizeY in px
+constexpr std::array<std::array<std::pair<size_t, size_t>, 4>, 3> spriteShapeSizeTable = {{
+    {std::pair{8,8}, std::pair{16,16},std::pair{32,32}, std::pair{64,64}},
+    {std::pair{16,8}, std::pair{32,8}, std::pair{32,16}, std::pair{64,32}},
+    {std::pair{8,16}, std::pair{8,32}, std::pair{16,32}, std::pair{32,64}}
+}};
+
+// Hier muss noch der Fall berücksichtigt werden, wenn ein Sprite links oder oben verschwindet, siehe tonc obj-demo
+void PPU::detectSpritesOnScanline(){
+    this->oamAttribsCurrentLineSize = 0;
+    const Word y = currentScanline;
+
+    // sicher?
+    OAMAttribs* oamMap = (OAMAttribs*)this->oamAttribs.data();
+    constexpr size_t oamSize = 128;
+    for(size_t i = 0; i < oamSize; i++){
+        OAMAttribs current = oamMap[i];
+        auto [sizeX, sizeY] = spriteShapeSizeTable[current.attr0.state.spriteShape][current.attr1.state.spriteSize];
+        (void)sizeX;
+        if(current.attr0.state.yCoord <= y){
+            const Word yEnd = current.attr0.state.yCoord + sizeY;
+            if(yEnd >= y){
+                //push
+                *(OAMAttribs*)(this->oamAttribsCurrentLine.data() + oamAttribsCurrentLineSize * sizeof(OAMAttribs)) = current;
+                oamAttribsCurrentLineSize += 1;
+            }
+        }
+    }
+}
+
+// hier auch wie oben
+bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
+    const Word x = currentCycle;
+    const Word y = currentScanline;
+
+    auto [sizeX, sizeY] = spriteShapeSizeTable[current.attr0.state.spriteShape][current.attr1.state.spriteSize];
+    if(current.attr1.state.xCoord <= x && (current.attr0.state.yCoord <= y)){
+        const Word xEnd = current.attr1.state.xCoord + sizeX;
+        const Word yEnd = current.attr0.state.yCoord + sizeY;
+        if(xEnd >= x && yEnd >= y){
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void PPU::drawSprites(){
-    // beide Blöcke
-    // int increment = 
-    // for(Word i = 0x06010000; i < 0x06018000; i+=increment){
+    bool spriteMappingMode1D = LCDCONTROL.state.ObjCharVRAMMapping;
 
-    // }
+    OAMAttribs* oamMap = (OAMAttribs*)this->oamAttribsCurrentLine.data();
+    const size_t oamSize = oamAttribsCurrentLineSize;
+
+    OAMAttribs sprite = {};
+    // Problem: nur ein Sprite wird gezeichnet, auch wenn transparenter Pixel
+    HalfWord priority = 99;
+
+    for(size_t i = 0; i < oamSize; i++){
+        if(spriteCollidesCurrentPixel(oamMap[i])){
+            if(oamMap[i].attr2.state.priority < priority){
+                sprite = oamMap[i];
+                priority = sprite.attr2.state.priority;
+            }
+        }
+    }
+
+    if(sprite.attr0.state.objectMode > 0){
+        // affine oder versteckt
+        setPixel(currentCycle, currentScanline, 0, 255, 0);
+        return;
+    }
+
+    if(priority < 99){ // Sprite gefunden
+        const bool bpp8 = sprite.attr0.state.colorMode;
+        const Word tileOffset =  0x20; // egal ob 8bbp oder 4bbp
+        const Word spriteX = sprite.attr1.state.xCoord;
+        const Word spriteY = sprite.attr0.state.yCoord;
+        const auto [sizeX, sizeY] = spriteShapeSizeTable[sprite.attr0.state.spriteShape][sprite.attr1.state.spriteSize];
+        const Word tileSizeX = sizeX / 8;
+        const Word tileSizeY = sizeY / 8;
+        const Word xOffset = currentCycle - spriteX;
+        const Word yOffset = currentScanline - spriteY;
+
+        const Word baseTileIndex = sprite.attr2.state.baseTileIndex;
+
+        const Word paletteBank = sprite.attr2.state.paletteBank; // nur in 4bbp modus
+
+        Byte* vRamTiles = vRam.data() + 0x00010000;
+
+        Word currentTileX = xOffset / 8;
+        if(sprite.attr1.state.getHorizontalFlip()){
+            currentTileX = tileSizeX - 1 - currentTileX;
+        }
+        Word currentTileY = yOffset / 8;
+        if(sprite.attr1.state.getVerticalFlip()){
+            currentTileY = tileSizeY - 1 - currentTileY;
+        }
+        const Word inTileX = xOffset % 8;
+        const Word inTileY = yOffset % 8;
+
+        if(!spriteMappingMode1D){ // später
+            setPixel(currentCycle, currentScanline, 255, 0, 0);
+            return;
+        }
+
+        const Word tileIndex = baseTileIndex + currentTileX + currentTileY * tileSizeX;
+
+        const Word tileWidthByte = bpp8 ? 8 : 4;
+
+        Byte* tileStart = vRamTiles + tileOffset * tileIndex;
+
+        const Word verticalFactor = sprite.attr1.state.getVerticalFlip() ? -1 : 1;
+        const Word horizontalFactor = sprite.attr1.state.getHorizontalFlip() ? -1 : 1;
+
+        const Word verticalWidth = sprite.attr1.state.getVerticalFlip() ? 7 * tileWidthByte : 0;
+        const Word horizontalWidth = sprite.attr1.state.getHorizontalFlip() ? (bpp8 ? 7 : 3) : 0;
+
+        const Word bitWidthInTile = bpp8 ? inTileX : inTileX / 2;
+
+        // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
+        const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
+        if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return;
+        Byte pixel = *(tileStart + pixelIndex);
+        if(!bpp8){
+            if((inTileX & 1) ^ sprite.attr1.state.getHorizontalFlip()) pixel >>= 4;
+            pixel &= 0xF;
+        }
+        Byte paletteIndex =  bpp8 ? pixel : pixel | (paletteBank << 4);
+        HalfWord colorLow = paletteRam[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
+        HalfWord colorHigh = paletteRam[2 * Word(paletteIndex) + 0x201];
+        HalfWord color = colorLow | (colorHigh << 8);
+        HalfWord red = color & 0b11111;
+        HalfWord green = (color >> 5) & 0b11111;
+        HalfWord blue = (color >> 10) & 0b11111;
+        if(pixel > 0)
+            setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
+
+    }
 }
 
+// https://www.coranac.com/tonc/text/regbg.htm
+// screen entry index für tile-coord paar
 Word PPU::seIndexFast(Word tx, Word ty, BGCNT_T bgcnt)
 {
     Word n = tx + ty * 32;
@@ -166,7 +296,7 @@ void PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BG
     HalfWord red = color & 0b11111;
     HalfWord green = (color >> 5) & 0b11111;
     HalfWord blue = (color >> 10) & 0b11111;
-    if(paletteIndex > 0)
+    if(pixel > 0)
         setPixel(pixelX, pixelY, red << 3, green << 3, blue << 3);
 }
 
@@ -187,7 +317,13 @@ void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
     framebuffer[index] = col;
 }
 
+
+// Pixel Reihenfolge: https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html
+// Ist aktuell noch falsch
 void gba::PPU::drawPixelMode0() {
+    if(currentCycle == 0){
+        this->detectSpritesOnScanline();
+    }
     setPixel(currentCycle, currentScanline, 0, 0, 0);
     std::array<Word, 4> bgOrder = {0, 1, 2, 3};
     std::stable_sort(std::begin(bgOrder), std::end(bgOrder), [this](const auto &a, const auto &b){
@@ -198,6 +334,9 @@ void gba::PPU::drawPixelMode0() {
         if(displayBG(i)){
             drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i]);
         }
+    }
+    if(LCDCONTROL.state.displayOBJ){
+        this->drawSprites();
     }
 }
 
