@@ -124,6 +124,10 @@ namespace gba{
         Attribute1_T attr1;
         Attribute2_T attr2;
         HalfWord fill;
+
+        auto operator<=>(const OAMAttribs& b) const{
+            return b.attr2.state.priority <=> attr2.state.priority;
+        }
     });
 
     PACK(struct AffineAttribs {

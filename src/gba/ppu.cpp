@@ -10,6 +10,17 @@
 
 using namespace gba;
 
+template<typename T> // Insertion Sort für EIN Element in bereits sortiertes Array
+void insertIntoSorted(std::vector<T> &sorted, const T &element, size_t &oldSize){
+    sorted[oldSize] = element;
+    size_t i = oldSize;
+    oldSize++;
+    while(sorted[i] < sorted[i-1] && i > 0){
+        std::swap(sorted[i], sorted[i-1]);
+        i--;
+    }
+}
+
 uint32_t *gba::PPU::accessFramebuffer()
 {
     return framebuffer.data();
@@ -96,17 +107,19 @@ void PPU::detectSpritesOnScanline(){
 
     // sicher?
     OAMAttribs* oamMap = (OAMAttribs*)this->oamAttribs.data();
-    constexpr size_t oamSize = 128;
-    for(size_t i = 0; i < oamSize; i++){
+    // Rückwärtsiteration fixt die Sprite Priorität, nochmal anschauen
+    constexpr int oamSize = 128;
+    for(int i = oamSize-1; i >= 0; i--){
         OAMAttribs current = oamMap[i];
         auto [sizeX, sizeY] = spriteShapeSizeTable[current.attr0.state.spriteShape][current.attr1.state.spriteSize];
         (void)sizeX;
         if(current.attr0.state.yCoord <= y){
             const Word yEnd = current.attr0.state.yCoord + sizeY;
-            if(yEnd >= y){
+            if(yEnd > y){
                 //push
-                *(OAMAttribs*)(this->oamAttribsCurrentLine.data() + oamAttribsCurrentLineSize * sizeof(OAMAttribs)) = current;
-                oamAttribsCurrentLineSize += 1;
+                insertIntoSorted(oamAttribsCurrentLine, current, oamAttribsCurrentLineSize);
+                // *(this->oamAttribsCurrentLine.data() + oamAttribsCurrentLineSize) = current;
+                // oamAttribsCurrentLineSize += 1;
             }
         }
     }
@@ -121,7 +134,7 @@ bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
     if(current.attr1.state.xCoord <= x && (current.attr0.state.yCoord <= y)){
         const Word xEnd = current.attr1.state.xCoord + sizeX;
         const Word yEnd = current.attr0.state.yCoord + sizeY;
-        if(xEnd >= x && yEnd >= y){
+        if(xEnd > x && yEnd > y){
             return true;
         }
     }
@@ -132,93 +145,84 @@ bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
 void PPU::drawSprites(){
     bool spriteMappingMode1D = LCDCONTROL.state.ObjCharVRAMMapping;
 
-    OAMAttribs* oamMap = (OAMAttribs*)this->oamAttribsCurrentLine.data();
+    OAMAttribs* oamMap = this->oamAttribsCurrentLine.data();
     const size_t oamSize = oamAttribsCurrentLineSize;
 
     OAMAttribs sprite = {};
-    // Problem: nur ein Sprite wird gezeichnet, auch wenn transparenter Pixel
-    HalfWord priority = 99;
 
     for(size_t i = 0; i < oamSize; i++){
         if(spriteCollidesCurrentPixel(oamMap[i])){
-            if(oamMap[i].attr2.state.priority < priority){
-                sprite = oamMap[i];
-                priority = sprite.attr2.state.priority;
+            sprite = oamMap[i];
+
+            if(sprite.attr0.state.objectMode > 0){
+                // affine oder versteckt
+                setPixel(currentCycle, currentScanline, 0, 255, 0);
+                continue;
             }
+    
+            const bool bpp8 = sprite.attr0.state.colorMode;
+            const Word tileOffset =  0x20; // egal ob 8bbp oder 4bbp
+            const Word spriteX = sprite.attr1.state.xCoord;
+            const Word spriteY = sprite.attr0.state.yCoord;
+            const auto [sizeX, sizeY] = spriteShapeSizeTable[sprite.attr0.state.spriteShape][sprite.attr1.state.spriteSize];
+            Word tileSizeX = sizeX / 8;
+            const Word tileSizeY = sizeY / 8;
+            const Word xOffset = currentCycle - spriteX;
+            const Word yOffset = currentScanline - spriteY;
+    
+            const Word baseTileIndex = sprite.attr2.state.baseTileIndex;
+    
+            const Word paletteBank = sprite.attr2.state.paletteBank; // nur in 4bbp modus
+    
+            Byte* vRamTiles = vRam.data() + 0x00010000;
+    
+            Word currentTileX = xOffset / 8;
+            if(sprite.attr1.state.getHorizontalFlip()){
+                currentTileX = tileSizeX - 1 - currentTileX;
+            }
+            Word currentTileY = yOffset / 8;
+            if(sprite.attr1.state.getVerticalFlip()){
+                currentTileY = tileSizeY - 1 - currentTileY;
+            }
+            const Word inTileX = xOffset % 8;
+            const Word inTileY = yOffset % 8;
+        
+            if(!spriteMappingMode1D){
+                tileSizeX = 32; // 32 Tiles in Folge, dann kommt die nächste Zeile
+            }
+        
+            const Word tileIndex = baseTileIndex + currentTileX + currentTileY * tileSizeX;
+        
+            const Word tileWidthByte = bpp8 ? 8 : 4;
+        
+            Byte* tileStart = vRamTiles + tileOffset * tileIndex;
+        
+            const Word verticalFactor = sprite.attr1.state.getVerticalFlip() ? -1 : 1;
+            const Word horizontalFactor = sprite.attr1.state.getHorizontalFlip() ? -1 : 1;
+        
+            const Word verticalWidth = sprite.attr1.state.getVerticalFlip() ? 7 * tileWidthByte : 0;
+            const Word horizontalWidth = sprite.attr1.state.getHorizontalFlip() ? (bpp8 ? 7 : 3) : 0;
+        
+            const Word bitWidthInTile = bpp8 ? inTileX : inTileX / 2;
+        
+            // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
+            const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
+            if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return;
+            Byte pixel = *(tileStart + pixelIndex);
+            if(!bpp8){
+                if((inTileX & 1) ^ sprite.attr1.state.getHorizontalFlip()) pixel >>= 4;
+                pixel &= 0xF;
+            }
+            Byte paletteIndex =  bpp8 ? pixel : pixel | (paletteBank << 4);
+            HalfWord colorLow = paletteRam[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
+            HalfWord colorHigh = paletteRam[2 * Word(paletteIndex) + 0x201];
+            HalfWord color = colorLow | (colorHigh << 8);
+            HalfWord red = color & 0b11111;
+            HalfWord green = (color >> 5) & 0b11111;
+            HalfWord blue = (color >> 10) & 0b11111;
+            if(pixel > 0)
+                setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
         }
-    }
-
-    if(sprite.attr0.state.objectMode > 0){
-        // affine oder versteckt
-        setPixel(currentCycle, currentScanline, 0, 255, 0);
-        return;
-    }
-
-    if(priority < 99){ // Sprite gefunden
-        const bool bpp8 = sprite.attr0.state.colorMode;
-        const Word tileOffset =  0x20; // egal ob 8bbp oder 4bbp
-        const Word spriteX = sprite.attr1.state.xCoord;
-        const Word spriteY = sprite.attr0.state.yCoord;
-        const auto [sizeX, sizeY] = spriteShapeSizeTable[sprite.attr0.state.spriteShape][sprite.attr1.state.spriteSize];
-        const Word tileSizeX = sizeX / 8;
-        const Word tileSizeY = sizeY / 8;
-        const Word xOffset = currentCycle - spriteX;
-        const Word yOffset = currentScanline - spriteY;
-
-        const Word baseTileIndex = sprite.attr2.state.baseTileIndex;
-
-        const Word paletteBank = sprite.attr2.state.paletteBank; // nur in 4bbp modus
-
-        Byte* vRamTiles = vRam.data() + 0x00010000;
-
-        Word currentTileX = xOffset / 8;
-        if(sprite.attr1.state.getHorizontalFlip()){
-            currentTileX = tileSizeX - 1 - currentTileX;
-        }
-        Word currentTileY = yOffset / 8;
-        if(sprite.attr1.state.getVerticalFlip()){
-            currentTileY = tileSizeY - 1 - currentTileY;
-        }
-        const Word inTileX = xOffset % 8;
-        const Word inTileY = yOffset % 8;
-
-        if(!spriteMappingMode1D){ // später
-            setPixel(currentCycle, currentScanline, 255, 0, 0);
-            return;
-        }
-
-        const Word tileIndex = baseTileIndex + currentTileX + currentTileY * tileSizeX;
-
-        const Word tileWidthByte = bpp8 ? 8 : 4;
-
-        Byte* tileStart = vRamTiles + tileOffset * tileIndex;
-
-        const Word verticalFactor = sprite.attr1.state.getVerticalFlip() ? -1 : 1;
-        const Word horizontalFactor = sprite.attr1.state.getHorizontalFlip() ? -1 : 1;
-
-        const Word verticalWidth = sprite.attr1.state.getVerticalFlip() ? 7 * tileWidthByte : 0;
-        const Word horizontalWidth = sprite.attr1.state.getHorizontalFlip() ? (bpp8 ? 7 : 3) : 0;
-
-        const Word bitWidthInTile = bpp8 ? inTileX : inTileX / 2;
-
-        // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
-        const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-        if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return;
-        Byte pixel = *(tileStart + pixelIndex);
-        if(!bpp8){
-            if((inTileX & 1) ^ sprite.attr1.state.getHorizontalFlip()) pixel >>= 4;
-            pixel &= 0xF;
-        }
-        Byte paletteIndex =  bpp8 ? pixel : pixel | (paletteBank << 4);
-        HalfWord colorLow = paletteRam[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
-        HalfWord colorHigh = paletteRam[2 * Word(paletteIndex) + 0x201];
-        HalfWord color = colorLow | (colorHigh << 8);
-        HalfWord red = color & 0b11111;
-        HalfWord green = (color >> 5) & 0b11111;
-        HalfWord blue = (color >> 10) & 0b11111;
-        if(pixel > 0)
-            setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
-
     }
 }
 

@@ -18,7 +18,7 @@ namespace gba{
         std::vector<Byte> vRam;
         std::vector<Byte> oamAttribs;
         // Aktuelle Sprites
-        std::vector<Byte> oamAttribsCurrentLine;
+        std::vector<OAMAttribs> oamAttribsCurrentLine;
         size_t oamAttribsCurrentLineSize = 0; // neu-Allokation verhindern größe von oamAttribsCurrentLine ist konstant
 
         std::weak_ptr<Bus> bus;
@@ -83,7 +83,7 @@ namespace gba{
         
         public:
         PPU() = default;
-        PPU(std::weak_ptr<Bus> bptr) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), oamAttribsCurrentLine(0x400, 0), bus(bptr){};
+        PPU(std::weak_ptr<Bus> bptr) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), oamAttribsCurrentLine(128, OAMAttribs{}), bus(bptr){};
         uint32_t* accessFramebuffer();
 
         void clock();
