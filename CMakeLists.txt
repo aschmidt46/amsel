@@ -40,6 +40,8 @@ option(FEATURE_NES "NES-Core" ON)
 option(FEATURE_CGB "CGB-Core" ON)
 option(FEATURE_GBA "GBA-Core" ON)
 
+option(PROFILE_MODE "Run Emulation as fast as possible" OFF)
+
 include(CMakeDependentOption)
 
 cmake_dependent_option(FEATURE_DEBUGGER "Add Debugger to Desktop-App" ON FEATURE_DESKTOP OFF)
@@ -62,6 +64,11 @@ endif()
 
 if(FEATURE_DEBUGGER)
   add_compile_definitions(FEATURE_DEBUGGER)
+endif()
+
+if(PROFILE_MODE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  add_compile_definitions(PROFILE_MODE)
 endif()
 
 

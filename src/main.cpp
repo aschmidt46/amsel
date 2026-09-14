@@ -63,14 +63,25 @@ int run(int argc, wchar_t** argv)
 
   sharedGui = &gui;
 
+  #ifndef PROFILE_MODE
   // Audiosystem taktet die Konsole in separatem Thread
   std::thread t(&AudioSystem::start, &audiosystem);
+  #else
+  std::thread t([&](){
+    while(!stopNetworkThread){
+      std::lock_guard lock{consoleLock};
+      console->clockUntilSampleReady();
+    }
+  });
+  #endif
 
+  #ifndef PROFILE_MODE
   std::thread nt([&](){
     while(!stopNetworkThread){
       io_context.run();
     }
   });
+  #endif
 
 
   while(!glfwWindowShouldClose(window)){
@@ -90,9 +101,11 @@ int run(int argc, wchar_t** argv)
   }
 
   audiosystem.close = true;
-  t.join();
   stopNetworkThread = true;
+  t.join();
+  #ifndef PROFILE_MODE
   nt.join();
+  #endif
   cleanUp(window);
   return 0;
 }
