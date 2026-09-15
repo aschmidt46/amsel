@@ -113,14 +113,10 @@ void PPU::detectSpritesOnScanline(){
         OAMAttribs current = oamMap[i];
         auto [sizeX, sizeY] = spriteShapeSizeTable[current.attr0.state.spriteShape][current.attr1.state.spriteSize];
         (void)sizeX;
-        if(current.attr0.state.yCoord <= y){
-            const Word yEnd = current.attr0.state.yCoord + sizeY;
-            if(yEnd > y){
-                //push
-                insertIntoSorted(oamAttribsCurrentLine, current, oamAttribsCurrentLineSize);
-                // *(this->oamAttribsCurrentLine.data() + oamAttribsCurrentLineSize) = current;
-                // oamAttribsCurrentLineSize += 1;
-            }
+        const int yEnd = current.attr0.state.yCoord + sizeY;
+        if((current.attr0.state.yCoord <= y && yEnd > int(y)) || (current.attr0.state.yCoord > 160 && (yEnd - 256) > int(y))){
+            //push
+            insertIntoSorted(oamAttribsCurrentLine, current, oamAttribsCurrentLineSize);
         }
     }
 }
@@ -131,14 +127,14 @@ bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
     const Word y = currentScanline;
 
     auto [sizeX, sizeY] = spriteShapeSizeTable[current.attr0.state.spriteShape][current.attr1.state.spriteSize];
-    if(current.attr1.state.xCoord <= x && (current.attr0.state.yCoord <= y)){
-        const Word xEnd = current.attr1.state.xCoord + sizeX;
-        const Word yEnd = current.attr0.state.yCoord + sizeY;
-        if(xEnd > x && yEnd > y){
-            return true;
-        }
+    const int xEnd = current.attr1.state.xCoord + sizeX;
+    const int yEnd = current.attr0.state.yCoord + sizeY;
+    if(
+        ((current.attr0.state.yCoord <= y && yEnd > int(y)) || (current.attr0.state.yCoord > 160 && (yEnd - 256) > int(y)))
+        && ((current.attr1.state.xCoord <= x && xEnd > int(x)) || (current.attr1.state.xCoord > 240 && (xEnd - 512) > int(x)))
+    ){
+        return true;
     }
-
     return false;
 }
 
@@ -162,8 +158,12 @@ void PPU::drawSprites(){
     
             const bool bpp8 = sprite.attr0.state.colorMode;
             const Word tileOffset =  0x20; // egal ob 8bbp oder 4bbp
-            const Word spriteX = sprite.attr1.state.xCoord;
-            const Word spriteY = sprite.attr0.state.yCoord;
+            int spriteX = sprite.attr1.state.xCoord;
+            if(spriteX > 240)
+                spriteX -= 512;
+            int spriteY = sprite.attr0.state.yCoord;
+            if(spriteY > 160)
+                spriteY -= 256;
             const auto [sizeX, sizeY] = spriteShapeSizeTable[sprite.attr0.state.spriteShape][sprite.attr1.state.spriteSize];
             Word tileSizeX = sizeX / 8;
             const Word tileSizeY = sizeY / 8;
