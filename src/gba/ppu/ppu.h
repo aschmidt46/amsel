@@ -23,14 +23,16 @@ namespace gba{
         size_t oamAttribsCurrentLineSize = 0; // neu-Allokation verhindern größe von oamAttribsCurrentLine ist konstant
 
         // BG Priorität
-        std::vector<int> bgOrder = std::vector<int>(5, 0);
         std::vector<PIXEL_T> layerOrder = std::vector<PIXEL_T>(6, PIXEL_T{});
-        int bgOrderSize = 0;
         size_t layerOrderSize = 0;
 
         PIXEL_T getBackdrop();
 
+        void setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives);
+        void mixFinalColor(const WINDOW_ACTIVES_T &actives, PIXEL_T &targetA, PIXEL_T &targetB, PIXEL_T &output);
+
         WINDOW_ACTIVES_T getActives(int window);
+        WINDOW_ACTIVES_T getActives();
         bool insideObjectWindow = false;
         bool insideWindow0();
         bool insideWindow1();

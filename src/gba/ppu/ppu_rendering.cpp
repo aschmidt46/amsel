@@ -55,6 +55,20 @@ WINDOW_ACTIVES_T PPU::getActives(int window){
     };
 }
 
+WINDOW_ACTIVES_T gba::PPU::getActives()
+{
+    WINDOW_ACTIVES_T actives = WINDOW_ACTIVES_T{.enableBG0 = true, .enableBG1 = true, .enableBG2 = true, .enableBG3 = true, .enableObj = true, .enableSpecialFX = true};
+    
+    if(LCDCONTROL.state.displayWin0 || LCDCONTROL.state.displayWin1 || LCDCONTROL.state.displayObjWindow){
+        actives = getActives(2); // Win outside
+        if(LCDCONTROL.state.displayObjWindow && insideObjectWindow) actives = getActives(3);
+        if(LCDCONTROL.state.displayWin1 && insideWindow1()) actives = getActives(1);
+        if(LCDCONTROL.state.displayWin0 && insideWindow0()) actives = getActives(0);
+    }
+
+    return actives;
+}
+
 bool PPU::insideWindow0(){
     if(WINDOW_0_H.state.leftMost > WINDOW_0_H.state.rightMostPlus1
         && (currentCycle < WINDOW_0_H.state.rightMostPlus1 || currentCycle >= WINDOW_0_H.state.leftMost)
@@ -469,6 +483,44 @@ PIXEL_T PPU::darken(const PIXEL_T &p){
     return res;
 }
 
+void gba::PPU::setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives)
+{
+    PIXEL_T output_color{.priority = 99};
+    PIXEL_T target_a{.priority = 99};
+    PIXEL_T target_b{.priority = 99};
+
+    output_color = layerOrder[layerOrderSize - 1];
+
+    if(layerOrderSize > 1){
+        target_a = layerOrder[layerOrderSize - 1];
+        target_b = layerOrder[layerOrderSize - 2];
+        output_color = target_a;
+
+        mixFinalColor(actives, target_a, target_b, output_color);
+    }
+
+    setPixel(currentCycle, currentScanline, output_color.red, output_color.green, output_color.blue);
+}
+
+void PPU::mixFinalColor(const WINDOW_ACTIVES_T &actives, PIXEL_T &targetA, PIXEL_T &targetB, PIXEL_T &output)
+{
+    // target a ist transparenter sprite
+    if(actives.enableSpecialFX || (spriteAlphaOverride && targetA.layerIndex == 0 && hasTargetB(targetB.layerIndex))){
+        if(spriteAlphaOverride && targetB.layerIndex == 0 && hasTargetB(targetB.layerIndex)){
+            output = blend(targetA, targetB);
+        }
+        else if(SPECIAL_EFFECTS.state.specialEffect == 1 && hasTargetA(targetA.layerIndex) && hasTargetB(targetB.layerIndex)){
+            output = blend(targetA, targetB);
+        }
+        else if(SPECIAL_EFFECTS.state.specialEffect == 2 && hasTargetA(targetA.layerIndex)){
+            output = brighten(targetA);
+        }
+        else if(SPECIAL_EFFECTS.state.specialEffect == 3 && hasTargetA(targetA.layerIndex)){
+            output = darken(targetA);
+        }
+    }
+}
+
 bool gba::PPU::hasFrame() {
     bool tmp = hasframe;
     hasframe = false;
@@ -493,70 +545,22 @@ void gba::PPU::drawPixelMode0() {
     if(currentCycle == 0){
         this->detectSpritesOnScanline();
     }
-    setPixel(currentCycle, currentScanline, 0, 0, 0);
-    bgOrderSize = 0;
+
+    WINDOW_ACTIVES_T actives = getActives();
+
+    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
     for(int i = 3; i >= 0; i--){
-        insertBGIntoSorted(bgOrder, i, bgOrderSize);
-    }
-
-    WINDOW_ACTIVES_T actives = WINDOW_ACTIVES_T{.enableBG0 = true, .enableBG1 = true, .enableBG2 = true, .enableBG3 = true, .enableObj = true, .enableSpecialFX = true};
-    
-    if(LCDCONTROL.state.displayWin0 || LCDCONTROL.state.displayWin1 || LCDCONTROL.state.displayObjWindow){
-        actives = getActives(2); // Win outside
-        if(LCDCONTROL.state.displayObjWindow && insideObjectWindow) actives = getActives(3);
-        if(LCDCONTROL.state.displayWin1 && insideWindow1()) actives = getActives(1);
-        if(LCDCONTROL.state.displayWin0 && insideWindow0()) actives = getActives(0);
-    }
-
-    PIXEL_T output_color;
-    output_color.priority = 99;
-    PIXEL_T target_a;
-    target_a.priority = 99;
-    PIXEL_T target_b;
-    target_b.priority = 99;
-    
-    std::array<PIXEL_T, 4> bgPixels = {{{.priority = 99}, {.priority = 99}, {.priority = 99}, {.priority = 99}}}; // pixel in bg-Reihenfolge
-
-    PIXEL_T bd = getBackdrop();
-    PIXEL_T objPixel = LCDCONTROL.state.displayOBJ ? this->drawSprites() : PIXEL_T{.priority = 99, .layerIndex = 0};
-    for(int i = 0; i < 4; i++){
-        if(displayBG(i)){
-            bgPixels[i] = drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i], i);
+        if(displayBG(i) && actives.bgActive(i)){
+            PIXEL_T bg = drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i], i);
+            if(bg.priority < 99)
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
         }
     }
-    insertIntoSorted(layerOrder, bd, layerOrderSize); // niedrigste Prio
-    for(int i = 3; i >= 0; i--){
-        if(displayBG(i) && actives.bgActive(i) && bgPixels[i].priority < 99)
-            insertIntoSorted(layerOrder, bgPixels[i], layerOrderSize); // Dann alle Hintergründe
-    }
-    if(actives.enableObj)
-        insertIntoSorted(layerOrder, objPixel, layerOrderSize); // höchste prio
-
-    output_color = layerOrder[layerOrderSize - 1];
-
-    if(layerOrderSize > 1){
-        target_a = layerOrder[layerOrderSize - 1];
-        target_b = layerOrder[layerOrderSize - 2];
-        output_color = target_a;
-
-                                        // target a ist transparenter sprite
-        if(actives.enableSpecialFX || (spriteAlphaOverride && target_a.layerIndex == 0 && hasTargetB(target_b.layerIndex))){
-            if(spriteAlphaOverride && target_a.layerIndex == 0 && hasTargetB(target_b.layerIndex)){
-                output_color = blend(target_a, target_b);
-            }
-            else if(SPECIAL_EFFECTS.state.specialEffect == 1 && hasTargetA(target_a.layerIndex) && hasTargetB(target_b.layerIndex)){
-                output_color = blend(target_a, target_b);
-            }
-            else if(SPECIAL_EFFECTS.state.specialEffect == 2 && hasTargetA(target_a.layerIndex)){
-                output_color = brighten(target_a);
-            }
-            else if(SPECIAL_EFFECTS.state.specialEffect == 3 && hasTargetA(target_a.layerIndex)){
-                output_color = darken(target_a);
-            }
-        }
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
+        insertIntoSorted(layerOrder, this->drawSprites(), layerOrderSize); // höchste prio
     }
 
-    setPixel(currentCycle, currentScanline, output_color.red, output_color.green, output_color.blue);
+    setColorFromLayerOrder(actives);
 }
 
 void gba::PPU::drawPixelMode1() {
@@ -568,15 +572,35 @@ void gba::PPU::drawPixelMode2() {
 }
 
 void gba::PPU::drawPixelMode3() {
+    layerOrderSize = 0;
+    if(currentCycle == 0){
+        this->detectSpritesOnScanline();
+    }
     int index = currentCycle + 240 * currentScanline;
     HalfWord pixel = HalfWord(vRam[2 * index]) | (HalfWord(vRam[2 * index + 1]) << 8);
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
-    setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
+    PIXEL_T bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = BG_CNT[2].state.BGPriority, .layerIndex = 3};
+
+    WINDOW_ACTIVES_T actives = getActives();
+
+    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
+
+    if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
+        insertIntoSorted(layerOrder, bg2, layerOrderSize);
+        
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ)
+        insertIntoSorted(layerOrder, drawSprites(), layerOrderSize);
+    
+    setColorFromLayerOrder(actives);
 }
 
 void gba::PPU::drawPixelMode4() {
+    layerOrderSize = 0;
+    if(currentCycle == 0){
+        this->detectSpritesOnScanline();
+    }
     int index = currentCycle + 240 * currentScanline;
     size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
     Byte paletteIndex = vRam[index + page];
@@ -584,7 +608,19 @@ void gba::PPU::drawPixelMode4() {
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
-    setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
+    PIXEL_T bg2 = {.pixel = paletteIndex, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = BG_CNT[2].state.BGPriority, .layerIndex = 3};
+
+    WINDOW_ACTIVES_T actives = getActives();
+
+    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
+
+    if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
+        insertIntoSorted(layerOrder, bg2, layerOrderSize);
+        
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ)
+        insertIntoSorted(layerOrder, drawSprites(), layerOrderSize);
+    
+    setColorFromLayerOrder(actives);
 }
 
 void gba::PPU::drawPixelMode5() {

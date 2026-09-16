@@ -18,9 +18,8 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 - Some games require very strict DMA timing and don't work correctly because of it
 - Link Cable Implementation over TCP, Master Gameboy experiences audio glitches because of latency
 ### Nintendo Gameboy Advance (incomplete)
-- Working CPU and Bus
 - Passes ARMWrestler, arm.gba and thumb.gba by jsmolka, most SingleStepTests
-- PPU mode 3 and 4 working (bitmap modes), mode 0 backgrounds
+- PPU mode 0, 3 and 4 working, non affine sprites and backgrounds
 - No audio yet
 - Timings, Waitstates not implemented
 - EEPROM, Flash not implemented
