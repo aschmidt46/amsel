@@ -10,23 +10,12 @@
 
 using namespace gba;
 
-template<typename T> // Insertion Sort für EIN Element in bereits sortiertes Array
-void insertIntoSorted(std::vector<T> &sorted, const T &element, size_t &oldSize){
+template<typename T, size_t N> // Insertion Sort für EIN Element in bereits sortiertes Array
+void insertIntoSorted(std::array<T, N> &sorted, const T &element, size_t &oldSize){
     sorted[oldSize] = element;
     size_t i = oldSize;
     oldSize++;
     while(i > 0 && sorted[i] < sorted[i-1]){
-        std::swap(sorted[i], sorted[i-1]);
-        i--;
-    }
-}
-
-// Alternative: Index-basiert für Hintergründe
-void PPU::insertBGIntoSorted(std::vector<int> &sorted, const int &element, int &oldSize){
-    sorted[oldSize] = element;
-    size_t i = oldSize;
-    oldSize++;
-    while(i > 0 && BG_CNT[sorted[i]] < BG_CNT[sorted[i-1]]){
         std::swap(sorted[i], sorted[i-1]);
         i--;
     }

@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 #include <memory>
+#include <array>
 
 #include "ppu_registers.h"
 #include "../register/general_purpose.h"
@@ -19,11 +20,11 @@ namespace gba{
         std::vector<Byte> oamAttribs;
         bool spriteAlphaOverride = false;
         // Aktuelle Sprites
-        std::vector<OAMAttribs> oamAttribsCurrentLine;
+        std::array<OAMAttribs, 128> oamAttribsCurrentLine = {};
         size_t oamAttribsCurrentLineSize = 0; // neu-Allokation verhindern größe von oamAttribsCurrentLine ist konstant
 
         // BG Priorität
-        std::vector<PIXEL_T> layerOrder = std::vector<PIXEL_T>(6, PIXEL_T{});
+        std::array<PIXEL_T, 6> layerOrder = {};
         size_t layerOrderSize = 0;
 
         PIXEL_T getBackdrop();
@@ -105,7 +106,7 @@ namespace gba{
         
         public:
         PPU() = default;
-        PPU(std::weak_ptr<Bus> bptr) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), oamAttribsCurrentLine(128, OAMAttribs{}), bus(bptr){};
+        PPU(std::weak_ptr<Bus> bptr) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), bus(bptr){};
         uint32_t* accessFramebuffer();
 
         void clock();
@@ -120,8 +121,6 @@ namespace gba{
 
         PIXEL_T drawSprites();
         PIXEL_T drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY, const int index);
-
-        void insertBGIntoSorted(std::vector<int> &sorted, const int &element, int &oldSize);
 
         void drawPixelMode0();
         void drawPixelMode1();
