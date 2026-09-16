@@ -1,12 +1,12 @@
 #pragma once
 
-#include "arm/bus_types.h"
+#include "../arm/bus_types.h"
 #include <utility>
 #include <vector>
 #include <memory>
 
 #include "ppu_registers.h"
-#include "register/general_purpose.h"
+#include "../register/general_purpose.h"
 
 namespace gba{
     class Bus;

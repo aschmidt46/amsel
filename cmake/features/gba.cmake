@@ -23,7 +23,7 @@ src/gba/arm/arm7tdmi_instructions_arm.cpp
 src/gba/arm/arm7tdmi_instructions_thumb.cpp
 src/gba/arm/arm7tdmi_processing.cpp
 src/gba/arm/arm7tdmi_aux.cpp
-src/gba/ppu.h src/gba/ppu_registers.h src/gba/ppu.cpp
+src/gba/ppu/ppu.h src/gba/ppu/ppu_registers.h src/gba/ppu/ppu_io.cpp src/gba/ppu/ppu_rendering.cpp
 src/gba/timer.h
 src/gba/timer.cpp
 src/gba/dma.h

@@ -3,7 +3,7 @@
 #include "dma.h"
 #include "ibus.h"
 #include "arm/arm7tdmi.h"
-#include "ppu.h"
+#include "ppu/ppu.h"
 #include <vector>
 #include "register/general_purpose.h"
 #include "timer.h"

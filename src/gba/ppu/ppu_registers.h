@@ -1,5 +1,5 @@
 #pragma once
-#include "arm/bus_types.h"
+#include "../arm/bus_types.h"
 
 #ifdef __GNUC__
 #define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
