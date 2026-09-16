@@ -176,6 +176,11 @@ namespace gba{
         Byte green = 0;
         Byte blue = 0;
         Byte priority = 0;
+        Byte layerIndex = 99; // 0=sprite, 1-4 = bg0-3, 5 = bd
+
+        auto operator<=>(const PIXEL_T& b) const{
+            return b.priority <=> priority;
+        }
     };
 
     union ScreenEntry {

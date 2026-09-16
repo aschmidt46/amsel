@@ -78,6 +78,7 @@ namespace gba{
         // Adressen vorher noch alignen?
         void writeByte(Word addr, Byte val) override;
         void writeByteFromWide(Word addr, Byte val);
+        Byte readByteFromWide(Word addr);
         Byte readByte(Word addr) override;
         void writeHalfWord(Word addr, HalfWord val) override;
         HalfWord readHalfWord(Word addr) override;

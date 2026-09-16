@@ -23,13 +23,22 @@ namespace gba{
         size_t oamAttribsCurrentLineSize = 0; // neu-Allokation verhindern größe von oamAttribsCurrentLine ist konstant
 
         // BG Priorität
-        std::vector<int> bgOrder = std::vector<int>(4, 0);
+        std::vector<int> bgOrder = std::vector<int>(5, 0);
+        std::vector<PIXEL_T> layerOrder = std::vector<PIXEL_T>(6, PIXEL_T{});
         int bgOrderSize = 0;
+        size_t layerOrderSize = 0;
+
+        PIXEL_T getBackdrop();
 
         WINDOW_ACTIVES_T getActives(int window);
         bool insideObjectWindow = false;
         bool insideWindow0();
         bool insideWindow1();
+        bool hasTargetA(int index);
+        bool hasTargetB(int index);
+        PIXEL_T blend(PIXEL_T &p1, PIXEL_T &p2);
+        PIXEL_T brighten(const PIXEL_T &p);
+        PIXEL_T darken(const PIXEL_T &p);
         
 
         std::weak_ptr<Bus> bus;
@@ -108,7 +117,7 @@ namespace gba{
         bool spriteCollidesCurrentPixel(const OAMAttribs &attrs);
 
         PIXEL_T drawSprites();
-        PIXEL_T drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY);
+        PIXEL_T drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY, const int index);
 
         void insertBGIntoSorted(std::vector<int> &sorted, const int &element, int &oldSize);
 

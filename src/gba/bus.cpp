@@ -292,9 +292,15 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
     // else std::cout << "Unbekannter Write: " << getHex0x(addr, 8) << std::endl;
 }
 
-Byte gba::Bus::readByte(Word addr)
+Byte gba::Bus::readByteFromWide(Word addr)
 {
     (void)addr;
+
+    // stub flash
+    if(backupType == BACKUP_FLASH_128){
+        if(addr == 0x0E000000) return 0x62;
+        if(addr == 0x0E000001) return 0x13;
+    }
     
     if(addr < 0x4000){
         return bios[addr];
@@ -423,6 +429,11 @@ Byte gba::Bus::readByte(Word addr)
     return 0;
 }
 
+Byte gba::Bus::readByte(Word addr)
+{
+    return readByteFromWide(addr);
+}
+
 void gba::Bus::writeHalfWord(Word addr, HalfWord val)
 {
     writeByteFromWide(addr, val & 0xFF);
@@ -431,8 +442,8 @@ void gba::Bus::writeHalfWord(Word addr, HalfWord val)
 
 HalfWord gba::Bus::readHalfWord(Word addr)
 {
-    HalfWord A1 = readByte(addr);
-    HalfWord A2 = readByte(addr + 1);
+    HalfWord A1 = readByteFromWide(addr);
+    HalfWord A2 = readByteFromWide(addr + 1);
     return A1 | (A2 << 8);
 }
 
@@ -446,10 +457,10 @@ void gba::Bus::writeWord(Word addr, Word val)
 
 Word gba::Bus::readWord(Word addr)
 {
-    Word A1 = readByte(addr);
-    Word A2 = readByte(addr + 1);
-    Word A3 = readByte(addr + 2);
-    Word A4 = readByte(addr + 3);
+    Word A1 = readByteFromWide(addr);
+    Word A2 = readByteFromWide(addr + 1);
+    Word A3 = readByteFromWide(addr + 2);
+    Word A4 = readByteFromWide(addr + 3);
     return A1 | (A2 << 8) | (A3 << 16) | (A4 << 24);
 }
 

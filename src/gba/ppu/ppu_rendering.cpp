@@ -65,6 +65,44 @@ bool PPU::insideWindow1(){
     && currentScanline >= WINDOW_1_V.state.topMost && currentScanline < WINDOW_1_V.state.bottomMostPlus1;
 }
 
+bool PPU::hasTargetA(int index){
+    switch(index){
+        case 0:
+            return SPECIAL_EFFECTS.state.targetA_obj;
+        case 1:
+            return SPECIAL_EFFECTS.state.targetA_bg0;
+        case 2:
+            return SPECIAL_EFFECTS.state.targetA_bg1;
+        case 3:
+            return SPECIAL_EFFECTS.state.targetA_bg2;
+        case 4:
+            return SPECIAL_EFFECTS.state.targetA_bg3;
+        case 5:
+            return SPECIAL_EFFECTS.state.targetA_bd;
+        default:
+            return false;
+    }
+}
+
+bool PPU::hasTargetB(int index){
+    switch(index){
+        case 0:
+            return SPECIAL_EFFECTS.state.targetB_obj;
+        case 1:
+            return SPECIAL_EFFECTS.state.targetB_bg0;
+        case 2:
+            return SPECIAL_EFFECTS.state.targetB_bg1;
+        case 3:
+            return SPECIAL_EFFECTS.state.targetB_bg2;
+        case 4:
+            return SPECIAL_EFFECTS.state.targetB_bg3;
+        case 5:
+            return SPECIAL_EFFECTS.state.targetB_bd;
+        default:
+            return false;
+    }
+}
+
 uint32_t *gba::PPU::accessFramebuffer()
 {
     return framebuffer.data();
@@ -183,6 +221,7 @@ bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
 PIXEL_T PPU::drawSprites(){
     PIXEL_T result;
     result.priority = 99;
+    result.layerIndex = 0;
     bool spriteMappingMode1D = LCDCONTROL.state.ObjCharVRAMMapping;
     insideObjectWindow = false;
 
@@ -273,7 +312,7 @@ PIXEL_T PPU::drawSprites(){
             Byte blue = (color >> 10) & 0b11111;
             if(pixel > 0){
                 insideObjectWindow = true;
-                result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)sprite.attr2.state.priority};
+                result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)sprite.attr2.state.priority, .layerIndex = 0};
             }
         }
     }
@@ -297,9 +336,10 @@ Word PPU::seIndexFast(Word tx, Word ty, BGCNT_T bgcnt)
 constexpr std::array<std::pair<Word, Word>, 4> regularBgrSizes = {std::pair{256,256}, std::pair{512,256}, std::pair{256,512}, std::pair{512,512}};
 
 
-PIXEL_T PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY){
+PIXEL_T PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY, const int index){
     PIXEL_T result;
     result.priority = 99;
+    result.layerIndex = index + 1;
     const int pixelX = currentCycle;
     const int pixelY = currentScanline;
 //    Memory	0600:0000	0600:4000	0600:8000	0600:C000
@@ -358,9 +398,63 @@ PIXEL_T PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord 
     Byte green = (color >> 5) & 0b11111;
     Byte blue = (color >> 10) & 0b11111;
     if(pixel > 0)
-        result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)CONTROL.state.BGPriority};
+        result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)CONTROL.state.BGPriority, .layerIndex = Byte(index + 1)};
 
     return result;
+}
+
+PIXEL_T PPU::getBackdrop(){
+    HalfWord colorLow = paletteRam[0];
+    HalfWord colorHigh = paletteRam[1];
+    HalfWord color = colorLow | (colorHigh << 8);
+    Byte red = color & 0b11111;
+    Byte green = (color >> 5) & 0b11111;
+    Byte blue = (color >> 10) & 0b11111;
+    return PIXEL_T{
+        .pixel = 0,
+        .red = Byte(red << 3),
+        .green = Byte(green << 3),
+        .blue = Byte(blue << 3),
+        .priority = 9,
+        .layerIndex = 5
+    };
+}
+
+PIXEL_T PPU::blend(PIXEL_T &p1, PIXEL_T &p2){
+    Word coefA = std::min((unsigned int)ALPHA_BLENDING.state.coefA, 16u);
+    Word coefB = std::min((unsigned int)ALPHA_BLENDING.state.coefB, 16u);
+    PIXEL_T res = p1;
+    p1.red >>= 3; p1.green >>= 3; p1.blue >>= 3;
+    p2.red >>= 3; p2.green >>= 3; p2.blue >>= 3;
+    Word red = (Word(p1.red) * coefA + Word(p2.red) * coefB + 8u) >> 4;
+    Word green = (Word(p1.green) * coefA + Word(p2.green) * coefB + 8u) >> 4;
+    Word blue = (Word(p1.blue) * coefA + Word(p2.blue) * coefB + 8u) >> 4;
+    res.red = std::min(red << 3, 255u);
+    res.green = std::min(green << 3, 255u);
+    res.blue = std::min(blue << 3, 255u);
+    return res;
+}
+
+PIXEL_T PPU::brighten(const PIXEL_T &p){
+    Word coef = std::min((unsigned int)BRIGHTNESS_FADE.state.coef, 16u);
+    PIXEL_T res = p;
+    res.red >>= 3; res.green >>= 3; res.blue >>= 3;
+    res.red += ((31 - res.red) * coef + 8) / 16;
+    res.green += ((31 - res.green) * coef + 8) / 16;
+    res.blue += ((31 - res.blue) * coef + 8) / 16;
+    res.red <<= 3; res.green <<= 3; res.blue <<= 3;
+    return res;
+}
+
+PIXEL_T PPU::darken(const PIXEL_T &p){
+    Word coef = std::min((unsigned int)BRIGHTNESS_FADE.state.coef, 16u);
+    PIXEL_T res = p;
+    res.red >>= 3; res.green >>= 3; res.blue >>= 3;
+    res.red -= (res.red * coef + 7) / 16;
+    res.green -= (res.green * coef + 7) / 16;
+    res.blue -= (res.blue * coef + 7) / 16;
+    res.red <<= 3; res.green <<= 3; res.blue <<= 3;
+    return res;
 }
 
 bool gba::PPU::hasFrame() {
@@ -382,8 +476,8 @@ void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 
 
 // Pixel Reihenfolge: https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html
-// Ist aktuell noch falsch
 void gba::PPU::drawPixelMode0() {
+    layerOrderSize = 0;
     if(currentCycle == 0){
         this->detectSpritesOnScanline();
     }
@@ -402,27 +496,52 @@ void gba::PPU::drawPixelMode0() {
         if(LCDCONTROL.state.displayWin0 && insideWindow0()) actives = getActives(0);
     }
 
-    std::array<PIXEL_T, 4> bgPixels = {{{.priority = 99}, {.priority = 99}, {.priority = 99}, {.priority = 99}}}; // pixel in bg-Reihenfolge
-    PIXEL_T objPixel = LCDCONTROL.state.displayOBJ ? this->drawSprites() : PIXEL_T{.priority = 99};
     PIXEL_T output_color;
     output_color.priority = 99;
+    PIXEL_T target_a;
+    target_a.priority = 99;
+    PIXEL_T target_b;
+    target_b.priority = 99;
+    
+    std::array<PIXEL_T, 4> bgPixels = {{{.priority = 99}, {.priority = 99}, {.priority = 99}, {.priority = 99}}}; // pixel in bg-Reihenfolge
 
+    PIXEL_T bd = getBackdrop();
+    PIXEL_T objPixel = LCDCONTROL.state.displayOBJ ? this->drawSprites() : PIXEL_T{.priority = 99, .layerIndex = 0};
     for(int i = 0; i < 4; i++){
         if(displayBG(i)){
-            bgPixels[i] = drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i]);
+            bgPixels[i] = drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i], i);
         }
     }
-    if(false){//actives.enableSpecialFX && SPECIAL_EFFECTS.state.specialEffect > 0){
-        output_color = {.pixel = 1, .red = 255, .green = 0, .blue = 0, .priority = 0};
+    insertIntoSorted(layerOrder, bd, layerOrderSize); // niedrigste Prio
+    for(int i = 3; i >= 0; i--){
+        if(displayBG(i) && actives.bgActive(i) && bgPixels[i].priority < 99)
+            insertIntoSorted(layerOrder, bgPixels[i], layerOrderSize); // Dann alle Hintergründe
     }
-    else{
-        for(int i = 0; i < 4; i++){
-            int bg = bgOrder[i];
-            if(displayBG(bg) && actives.bgActive(bg) && bgPixels[bg].priority < 99)
-                output_color = bgPixels[bg];
+    if(actives.enableObj)
+        insertIntoSorted(layerOrder, objPixel, layerOrderSize); // höchste prio
+
+    output_color = layerOrder[layerOrderSize - 1];
+
+    if(layerOrderSize > 1){
+        target_a = layerOrder[layerOrderSize - 1];
+        target_b = layerOrder[layerOrderSize - 2];
+        output_color = target_a;
+
+                                        // target a ist transparenter sprite
+        if(actives.enableSpecialFX || (spriteAlphaOverride && target_a.layerIndex == 0 && hasTargetB(target_b.layerIndex))){
+            if(spriteAlphaOverride && target_a.layerIndex == 0 && hasTargetB(target_b.layerIndex)){
+                output_color = blend(target_a, target_b);
+            }
+            else if(SPECIAL_EFFECTS.state.specialEffect == 1 && hasTargetA(target_a.layerIndex) && hasTargetB(target_b.layerIndex)){
+                output_color = blend(target_a, target_b);
+            }
+            else if(SPECIAL_EFFECTS.state.specialEffect == 2 && hasTargetA(target_a.layerIndex)){
+                output_color = brighten(target_a);
+            }
+            else if(SPECIAL_EFFECTS.state.specialEffect == 3 && hasTargetA(target_a.layerIndex)){
+                output_color = darken(target_a);
+            }
         }
-        if(objPixel.priority <= output_color.priority && actives.enableObj)
-            output_color = objPixel;
     }
 
     setPixel(currentCycle, currentScanline, output_color.red, output_color.green, output_color.blue);
