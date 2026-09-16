@@ -26,7 +26,7 @@ std::string GbaImplementation::getConsoleName(){
     return "Nintendo Gameboy Advance";
 }
 
-GbaImplementation::GbaImplementation(const char *path)
+GbaImplementation::GbaImplementation(const char *path) : Console(path)
 {
     load(path);
 

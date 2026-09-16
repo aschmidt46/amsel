@@ -56,11 +56,23 @@ WINDOW_ACTIVES_T PPU::getActives(int window){
 }
 
 bool PPU::insideWindow0(){
+    if(WINDOW_0_H.state.leftMost > WINDOW_0_H.state.rightMostPlus1
+        && (currentCycle < WINDOW_0_H.state.rightMostPlus1 || currentCycle >= WINDOW_0_H.state.leftMost)
+        && currentScanline >= WINDOW_0_V.state.topMost && currentScanline < WINDOW_0_V.state.bottomMostPlus1
+    ){
+        return true;
+    }
     return currentCycle >= WINDOW_0_H.state.leftMost && currentCycle < WINDOW_0_H.state.rightMostPlus1
     && currentScanline >= WINDOW_0_V.state.topMost && currentScanline < WINDOW_0_V.state.bottomMostPlus1;
 }
 
 bool PPU::insideWindow1(){
+    if(WINDOW_1_H.state.leftMost > WINDOW_1_H.state.rightMostPlus1
+        && (currentCycle < WINDOW_1_H.state.rightMostPlus1 || currentCycle >= WINDOW_1_H.state.leftMost)
+        && currentScanline >= WINDOW_1_V.state.topMost && currentScanline < WINDOW_1_V.state.bottomMostPlus1
+    ){
+        return true;
+    }
     return currentCycle >= WINDOW_1_H.state.leftMost && currentCycle < WINDOW_1_H.state.rightMostPlus1
     && currentScanline >= WINDOW_1_V.state.topMost && currentScanline < WINDOW_1_V.state.bottomMostPlus1;
 }
