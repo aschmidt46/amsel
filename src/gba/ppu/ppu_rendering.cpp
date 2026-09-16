@@ -15,10 +15,54 @@ void insertIntoSorted(std::vector<T> &sorted, const T &element, size_t &oldSize)
     sorted[oldSize] = element;
     size_t i = oldSize;
     oldSize++;
-    while(sorted[i] < sorted[i-1] && i > 0){
+    while(i > 0 && sorted[i] < sorted[i-1]){
         std::swap(sorted[i], sorted[i-1]);
         i--;
     }
+}
+
+// Alternative: Index-basiert für Hintergründe
+void PPU::insertBGIntoSorted(std::vector<int> &sorted, const int &element, int &oldSize){
+    sorted[oldSize] = element;
+    size_t i = oldSize;
+    oldSize++;
+    while(i > 0 && BG_CNT[sorted[i]] < BG_CNT[sorted[i-1]]){
+        std::swap(sorted[i], sorted[i-1]);
+        i--;
+    }
+}
+
+WINDOW_ACTIVES_T PPU::getActives(int window){
+    HalfWord currentWindowHW = 0;
+    if(window < 2)
+        currentWindowHW = WININ.raw;
+    else
+        currentWindowHW = WINOUT.raw;
+
+    size_t offset = 0;
+    if(window % 2 != 0)
+        offset = 8;
+    
+    currentWindowHW >>= offset;
+
+    return WINDOW_ACTIVES_T{
+        .enableBG0 = (currentWindowHW & 1) > 0,
+        .enableBG1 = (currentWindowHW & 2) > 0,
+        .enableBG2 = (currentWindowHW & 4) > 0,
+        .enableBG3 = (currentWindowHW & 8) > 0,
+        .enableObj = (currentWindowHW & 16) > 0,
+        .enableSpecialFX = (currentWindowHW & 32) > 0
+    };
+}
+
+bool PPU::insideWindow0(){
+    return currentCycle >= WINDOW_0_H.state.leftMost && currentCycle < WINDOW_0_H.state.rightMostPlus1
+    && currentScanline >= WINDOW_0_V.state.topMost && currentScanline < WINDOW_0_V.state.bottomMostPlus1;
+}
+
+bool PPU::insideWindow1(){
+    return currentCycle >= WINDOW_1_H.state.leftMost && currentCycle < WINDOW_1_H.state.rightMostPlus1
+    && currentScanline >= WINDOW_1_V.state.topMost && currentScanline < WINDOW_1_V.state.bottomMostPlus1;
 }
 
 uint32_t *gba::PPU::accessFramebuffer()
@@ -136,8 +180,12 @@ bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
     return false;
 }
 
-void PPU::drawSprites(){
+PIXEL_T PPU::drawSprites(){
+    PIXEL_T result;
+    result.priority = 99;
     bool spriteMappingMode1D = LCDCONTROL.state.ObjCharVRAMMapping;
+    insideObjectWindow = false;
+
 
     OAMAttribs* oamMap = this->oamAttribsCurrentLine.data();
     const size_t oamSize = oamAttribsCurrentLineSize;
@@ -150,9 +198,14 @@ void PPU::drawSprites(){
 
             if(sprite.attr0.state.objectMode > 0){
                 // affine oder versteckt
-                setPixel(currentCycle, currentScanline, 0, 255, 0);
+                // setPixel(currentCycle, currentScanline, 0, 255, 0);
                 continue;
             }
+            spriteAlphaOverride = false;
+            if(sprite.attr0.state.gfxMode == 1)
+                spriteAlphaOverride = true;
+            if(sprite.attr0.state.gfxMode == 2)
+                continue;
     
             const bool bpp8 = sprite.attr0.state.colorMode;
             const Word tileOffset =  0x20; // egal ob 8bbp oder 4bbp
@@ -205,7 +258,7 @@ void PPU::drawSprites(){
         
             // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
             const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-            if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return;
+            if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return result;
             Byte pixel = *(tileStart + pixelIndex);
             if(!bpp8){
                 if((inTileX & 1) ^ sprite.attr1.state.getHorizontalFlip()) pixel >>= 4;
@@ -215,13 +268,17 @@ void PPU::drawSprites(){
             HalfWord colorLow = paletteRam[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
             HalfWord colorHigh = paletteRam[2 * Word(paletteIndex) + 0x201];
             HalfWord color = colorLow | (colorHigh << 8);
-            HalfWord red = color & 0b11111;
-            HalfWord green = (color >> 5) & 0b11111;
-            HalfWord blue = (color >> 10) & 0b11111;
-            if(pixel > 0)
-                setPixel(currentCycle, currentScanline, red << 3, green << 3, blue << 3);
+            Byte red = color & 0b11111;
+            Byte green = (color >> 5) & 0b11111;
+            Byte blue = (color >> 10) & 0b11111;
+            if(pixel > 0){
+                insideObjectWindow = true;
+                result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)sprite.attr2.state.priority};
+            }
         }
     }
+
+    return result;
 }
 
 // https://www.coranac.com/tonc/text/regbg.htm
@@ -240,7 +297,9 @@ Word PPU::seIndexFast(Word tx, Word ty, BGCNT_T bgcnt)
 constexpr std::array<std::pair<Word, Word>, 4> regularBgrSizes = {std::pair{256,256}, std::pair{512,256}, std::pair{256,512}, std::pair{512,512}};
 
 
-void PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY){
+PIXEL_T PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY){
+    PIXEL_T result;
+    result.priority = 99;
     const int pixelX = currentCycle;
     const int pixelY = currentScanline;
 //    Memory	0600:0000	0600:4000	0600:8000	0600:C000
@@ -285,7 +344,7 @@ void PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BG
 
     // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
     const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-    if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return;
+    if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return result;
     Byte pixel = *(tileStart + pixelIndex);
     if(!bpp8){
         if((inTileX & 1) ^ entry.state.flipHorizontal) pixel >>= 4;
@@ -295,11 +354,13 @@ void PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BG
     HalfWord colorLow = paletteRam[2 * Word(paletteIndex)]; // Byte adressiert
     HalfWord colorHigh = paletteRam[2 * Word(paletteIndex) + 1];
     HalfWord color = colorLow | (colorHigh << 8);
-    HalfWord red = color & 0b11111;
-    HalfWord green = (color >> 5) & 0b11111;
-    HalfWord blue = (color >> 10) & 0b11111;
+    Byte red = color & 0b11111;
+    Byte green = (color >> 5) & 0b11111;
+    Byte blue = (color >> 10) & 0b11111;
     if(pixel > 0)
-        setPixel(pixelX, pixelY, red << 3, green << 3, blue << 3);
+        result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)CONTROL.state.BGPriority};
+
+    return result;
 }
 
 bool gba::PPU::hasFrame() {
@@ -327,19 +388,44 @@ void gba::PPU::drawPixelMode0() {
         this->detectSpritesOnScanline();
     }
     setPixel(currentCycle, currentScanline, 0, 0, 0);
-    std::array<Word, 4> bgOrder = {0, 1, 2, 3};
-    std::stable_sort(std::begin(bgOrder), std::end(bgOrder), [this](const auto &a, const auto &b){
-        return BG_CNT[a].state.BGPriority < BG_CNT[b].state.BGPriority;
-    });
+    bgOrderSize = 0;
+    for(int i = 3; i >= 0; i--){
+        insertBGIntoSorted(bgOrder, i, bgOrderSize);
+    }
+
+    WINDOW_ACTIVES_T actives = WINDOW_ACTIVES_T{.enableBG0 = true, .enableBG1 = true, .enableBG2 = true, .enableBG3 = true, .enableObj = true, .enableSpecialFX = true};
     
-    for(const auto &i : bgOrder){
+    if(LCDCONTROL.state.displayWin0 || LCDCONTROL.state.displayWin1 || LCDCONTROL.state.displayObjWindow){
+        actives = getActives(2); // Win outside
+        if(LCDCONTROL.state.displayObjWindow && insideObjectWindow) actives = getActives(3);
+        if(LCDCONTROL.state.displayWin1 && insideWindow1()) actives = getActives(1);
+        if(LCDCONTROL.state.displayWin0 && insideWindow0()) actives = getActives(0);
+    }
+
+    std::array<PIXEL_T, 4> bgPixels = {{{.priority = 99}, {.priority = 99}, {.priority = 99}, {.priority = 99}}}; // pixel in bg-Reihenfolge
+    PIXEL_T objPixel = LCDCONTROL.state.displayOBJ ? this->drawSprites() : PIXEL_T{.priority = 99};
+    PIXEL_T output_color;
+    output_color.priority = 99;
+
+    for(int i = 0; i < 4; i++){
         if(displayBG(i)){
-            drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i]);
+            bgPixels[i] = drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i]);
         }
     }
-    if(LCDCONTROL.state.displayOBJ){
-        this->drawSprites();
+    if(false){//actives.enableSpecialFX && SPECIAL_EFFECTS.state.specialEffect > 0){
+        output_color = {.pixel = 1, .red = 255, .green = 0, .blue = 0, .priority = 0};
     }
+    else{
+        for(int i = 0; i < 4; i++){
+            int bg = bgOrder[i];
+            if(displayBG(bg) && actives.bgActive(bg) && bgPixels[bg].priority < 99)
+                output_color = bgPixels[bg];
+        }
+        if(objPixel.priority <= output_color.priority && actives.enableObj)
+            output_color = objPixel;
+    }
+
+    setPixel(currentCycle, currentScanline, output_color.red, output_color.green, output_color.blue);
 }
 
 void gba::PPU::drawPixelMode1() {

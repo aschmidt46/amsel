@@ -59,6 +59,123 @@ namespace gba{
             HalfWord screenSize : 2;
         } state;
         HalfWord raw;
+
+        auto operator<=>(const BGCNT_T& b) const{
+            return b.state.BGPriority <=> state.BGPriority;
+        }
+    };
+
+    union WIN_H_T { // werte >240 bedeutet wert=240
+        struct{
+            HalfWord rightMostPlus1 : 8; //lsb
+            HalfWord leftMost : 8;
+        } state;
+        HalfWord raw;
+    };
+
+    union WIN_V_T { // werte >160 bedeutet wert=160
+        struct{
+            HalfWord bottomMostPlus1 : 8; //lsb
+            HalfWord topMost : 8;
+        } state;
+        HalfWord raw;
+    };
+
+    union WININ_T {
+        struct{
+            HalfWord win0BGEnableBits : 4; //lsb
+            HalfWord win0ObjEnable : 1;
+            HalfWord win0ColorSpecialEffect : 1;
+            HalfWord _fill0 : 2;
+            HalfWord win1BGEnableBits : 4;
+            HalfWord win1ObjEnable : 1;
+            HalfWord win1ColorSpecialEffect : 1;
+            HalfWord _fill1 : 2;
+        } state;
+        HalfWord raw;
+    };
+
+    union WINOUT_T {
+        struct{
+            HalfWord winOutBGEnableBits : 4; //lsb
+            HalfWord winOutObjEnable : 1;
+            HalfWord winOutColorSpecialEffect : 1;
+            HalfWord _fill0 : 2;
+            HalfWord winObjBGEnableBits : 4;
+            HalfWord winObjObjEnable : 1;
+            HalfWord winObjColorSpecialEffect : 1;
+            HalfWord _fill1 : 2;
+        } state;
+        HalfWord raw;
+    };
+
+    struct WINDOW_ACTIVES_T{
+        bool enableBG0;
+        bool enableBG1;
+        bool enableBG2;
+        bool enableBG3;
+        bool enableObj;
+        bool enableSpecialFX;
+        bool bgActive(int i){
+            switch(i){
+                case 0:
+                    return enableBG0;
+                case 1:
+                    return enableBG1;
+                case 2:
+                    return enableBG2;
+                case 3:
+                    return enableBG3;
+                default:
+                    return false;
+            }
+        }
+    };
+
+    union SPECIAL_EFFECTS_T {
+        struct{
+            HalfWord targetA_bg0 : 1;
+            HalfWord targetA_bg1 : 1;
+            HalfWord targetA_bg2 : 1;
+            HalfWord targetA_bg3 : 1;
+            HalfWord targetA_obj : 1;
+            HalfWord targetA_bd : 1;
+            HalfWord specialEffect : 2;
+            HalfWord targetB_bg0 : 1;
+            HalfWord targetB_bg1 : 1;
+            HalfWord targetB_bg2 : 1;
+            HalfWord targetB_bg3 : 1;
+            HalfWord targetB_obj : 1;
+            HalfWord targetB_bd : 1;
+            HalfWord _fill1 : 2;
+        } state;
+        HalfWord raw;
+    };
+
+    union ALPHA_BLEND_COEF_T {
+        struct{
+            HalfWord coefA : 5;
+            HalfWord _fill0 : 3;
+            HalfWord coefB : 5;
+            HalfWord _fill1 : 3;
+        } state;
+        HalfWord raw;
+    };
+
+    union BRIGHTNESS_FADE_T {
+        struct{
+            Word coef : 5;
+            Word _fill : 27;
+        } state;
+        Word raw;
+    };
+
+    struct PIXEL_T{
+        Byte pixel = 0; // 0 == BD
+        Byte red = 0;
+        Byte green = 0;
+        Byte blue = 0;
+        Byte priority = 0;
     };
 
     union ScreenEntry {

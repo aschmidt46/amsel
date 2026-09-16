@@ -17,9 +17,20 @@ namespace gba{
         std::vector<Byte> paletteRam;
         std::vector<Byte> vRam;
         std::vector<Byte> oamAttribs;
+        bool spriteAlphaOverride = false;
         // Aktuelle Sprites
         std::vector<OAMAttribs> oamAttribsCurrentLine;
         size_t oamAttribsCurrentLineSize = 0; // neu-Allokation verhindern größe von oamAttribsCurrentLine ist konstant
+
+        // BG Priorität
+        std::vector<int> bgOrder = std::vector<int>(4, 0);
+        int bgOrderSize = 0;
+
+        WINDOW_ACTIVES_T getActives(int window);
+        bool insideObjectWindow = false;
+        bool insideWindow0();
+        bool insideWindow1();
+        
 
         std::weak_ptr<Bus> bus;
 
@@ -48,17 +59,17 @@ namespace gba{
         Word     BG3_REFERENCE_X = 0;
         Word     BG3_REFERENCE_Y = 0;
 
-        HalfWord WINDOW_0_HORIZONTAL_DIM = 0;
-        HalfWord WINDOW_1_HORIZONTAL_DIM = 0;
-        HalfWord WINDOW_0_VERTICAL_DIM = 0;
-        HalfWord WINDOW_1_VERTICAL_DIM = 0;
-        HalfWord WININ = 0;
-        HalfWord WINOUT = 0;
+        WIN_H_T WINDOW_0_H = {.raw = 0};
+        WIN_H_T WINDOW_1_H = {.raw = 0};
+        WIN_V_T WINDOW_0_V = {.raw = 0};
+        WIN_V_T WINDOW_1_V = {.raw = 0};
+        WININ_T WININ = {.raw = 0};
+        WINOUT_T WINOUT = {.raw = 0};
         HalfWord MOSAIC = 0;
     
-        HalfWord SPECIAL_EFFECTS = 0;
-        HalfWord ALPHA_BLENDING = 0;
-        HalfWord BRIGHTNESS_FADE = 0;
+        SPECIAL_EFFECTS_T SPECIAL_EFFECTS = {.raw = 0};
+        ALPHA_BLEND_COEF_T ALPHA_BLENDING = {.raw = 0};
+        BRIGHTNESS_FADE_T BRIGHTNESS_FADE = {.raw = 0};
 
         Word currentCycle = 0;
 
@@ -96,8 +107,10 @@ namespace gba{
         void detectSpritesOnScanline();
         bool spriteCollidesCurrentPixel(const OAMAttribs &attrs);
 
-        void drawSprites();
-        void drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY);
+        PIXEL_T drawSprites();
+        PIXEL_T drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY);
+
+        void insertBGIntoSorted(std::vector<int> &sorted, const int &element, int &oldSize);
 
         void drawPixelMode0();
         void drawPixelMode1();

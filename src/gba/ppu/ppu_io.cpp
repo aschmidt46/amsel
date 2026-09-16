@@ -97,6 +97,71 @@ void gba::PPU::writePPURegister(Word addr, Byte val) {
     else if(addr == 0x0400001F){
         BG_Y_OFFSET[3] = (BG_Y_OFFSET[3] & 0xFF) | (HalfWord(val) << 8);
     }
+
+
+
+    else if(addr == 0x04000040){
+        WINDOW_0_H.raw = (WINDOW_0_H.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x04000041){
+        WINDOW_0_H.raw = (WINDOW_0_H.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000042){
+        WINDOW_1_H.raw = (WINDOW_1_H.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x04000043){
+        WINDOW_1_H.raw = (WINDOW_1_H.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000044){
+        WINDOW_0_V.raw = (WINDOW_0_V.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x04000045){
+        WINDOW_0_V.raw = (WINDOW_0_V.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000046){
+        WINDOW_1_V.raw = (WINDOW_1_V.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x04000047){
+        WINDOW_1_V.raw = (WINDOW_1_V.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x04000048){
+        WININ.raw = (WININ.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x04000049){
+        WININ.raw = (WININ.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x0400004A){
+        WINOUT.raw = (WINOUT.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x0400004B){
+        WINOUT.raw = (WINOUT.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x04000050){
+        SPECIAL_EFFECTS.raw = (SPECIAL_EFFECTS.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x04000051){
+        SPECIAL_EFFECTS.raw = (SPECIAL_EFFECTS.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000052){
+        ALPHA_BLENDING.raw = (ALPHA_BLENDING.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x04000053){
+        ALPHA_BLENDING.raw = (ALPHA_BLENDING.raw & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000054){
+        BRIGHTNESS_FADE.raw = (BRIGHTNESS_FADE.raw & 0xFFFFFF00) | val;
+    }
+    else if(addr == 0x04000055){
+        BRIGHTNESS_FADE.raw = (BRIGHTNESS_FADE.raw & 0xFFFF00FF) | (Word(val) << 8);
+    }
+    else if(addr == 0x04000056){
+        BRIGHTNESS_FADE.raw = (BRIGHTNESS_FADE.raw & 0xFF00FFFF) | (Word(val) << 16);
+    }
+    else if(addr == 0x04000057){
+        BRIGHTNESS_FADE.raw = (BRIGHTNESS_FADE.raw & 0x00FFFFFF) | (Word(val) << 24);
+    }
 }
 
 gba::Byte gba::PPU::readPPURegister(Word addr)
@@ -130,6 +195,32 @@ gba::Byte gba::PPU::readPPURegister(Word addr)
             return BG_CNT[3].raw;
         case 0x0400000F:
             return BG_CNT[3].raw >> 8;
+        
+        case 0x04000048:
+            return WININ.raw;
+        case 0x04000049:
+            return WININ.raw >> 8;
+        case 0x0400004A:
+            return WINOUT.raw;
+        case 0x0400004B:
+            return WINOUT.raw >> 8;
+
+        case 0x04000050:
+            return SPECIAL_EFFECTS.raw;
+        case 0x04000051:
+            return SPECIAL_EFFECTS.raw >> 8;
+        case 0x04000052:
+            return ALPHA_BLENDING.raw;
+        case 0x04000053:
+            return ALPHA_BLENDING.raw >> 8;
+        case 0x04000054:
+            return BRIGHTNESS_FADE.raw;
+        case 0x04000055:
+            return BRIGHTNESS_FADE.raw >> 8;
+        case 0x04000056:
+            return BRIGHTNESS_FADE.raw >> 16;
+        case 0x04000057:
+            return BRIGHTNESS_FADE.raw >> 24;
     }
 
     std::cout << "Unbekannter PPU Register read: "<< getHex0x(addr, 8) << "\n";
