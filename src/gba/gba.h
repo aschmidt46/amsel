@@ -24,12 +24,16 @@ namespace gba{
         void clockUntilSampleReady();
         bool hasFrame();
         bool hasSample();
+        bool canSave();
+        std::vector<uint8_t> getSaveData();
+        size_t getSaveSize();
+        void loadSave(const std::vector<uint8_t> &saveData);
         std::pair<float, float> getSample();
         void press(int i);
         void release(int i);
 
         void loadBios(const std::vector<uint8_t> &content);
-        void setBios(std::string path);
+        // void setBios(std::string path);
 
         void setHalt(bool to);
         bool isHalted();

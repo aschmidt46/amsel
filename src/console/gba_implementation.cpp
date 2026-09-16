@@ -3,6 +3,7 @@
 #include "framework/global.h"
 #include "framework/stringlib.h"
 #ifdef BUILD_DESKTOP
+#include "framework/file_io.h"
 #include <imgui.h>
 #endif
 #include "../framework/stringlib.h"
@@ -28,11 +29,43 @@ std::string GbaImplementation::getConsoleName(){
 GbaImplementation::GbaImplementation(const char *path)
 {
     load(path);
+
+    #ifdef BUILD_DESKTOP
+    if(gba->canSave()){
+      if(!FileIO::getInstance().createSave(this->loadedGame)){
+        size_t size = gba->getSaveSize();
+        std::vector<uint8_t> saveData(size);
+        FileIO::getInstance().loadSave(this->loadedGame, saveData.data(), size);
+        gba->loadSave(saveData);
+      }
+    }
+    #endif
 }
 
 GbaImplementation::GbaImplementation(std::vector<uint8_t> &rom)
 {
     gba = std::make_shared<gba::GBA>(rom);
+
+    #ifdef BUILD_DESKTOP
+    if(gba->canSave()){
+      if(!FileIO::getInstance().createSave(this->loadedGame)){
+        size_t size = gba->getSaveSize();
+        std::vector<uint8_t> saveData(size);
+        FileIO::getInstance().loadSave(this->loadedGame, saveData.data(), size);
+        gba->loadSave(saveData);
+      }
+    }
+    #endif
+}
+
+GbaImplementation::~GbaImplementation()
+{
+    #ifdef BUILD_DESKTOP
+    if(gba->canSave()){
+      auto data = gba->getSaveData();
+      FileIO::getInstance().saveData(this->loadedGame, data.data(), data.size());
+    }
+    #endif
 }
 
 void GbaImplementation::load(const char *path)
@@ -117,12 +150,12 @@ void GbaImplementation::setController2Key(bool gamepad, int key, int action) {
 
 bool GbaImplementation::canSave()
 {
-    return false;
+    return gba->canSave();
 }
 
 std::vector<uint8_t> GbaImplementation::getSaveData()
 {
-    return std::vector<uint8_t>();
+    return gba->getSaveData();
 }
 
 std::vector<std::string> GbaImplementation::getRequiredFiles() {

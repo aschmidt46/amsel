@@ -13,7 +13,7 @@ class GbaImplementation : public Console{
     GbaImplementation() = delete;
     GbaImplementation(const char* path);
     GbaImplementation(std::vector<uint8_t> &rom);
-    ~GbaImplementation() = default;
+    ~GbaImplementation();
     void load(const char* path) override;
     void clock() override;
     void clockUntilSampleReady() override;

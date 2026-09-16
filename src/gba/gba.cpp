@@ -46,6 +46,26 @@ bool gba::GBA::hasSample(){
     return tmp;
 }
 
+bool gba::GBA::canSave()
+{
+    return bus->canSave();
+}
+
+std::vector<uint8_t> gba::GBA::getSaveData()
+{
+    return bus->getSaveData();
+}
+
+size_t gba::GBA::getSaveSize()
+{
+    return bus->getSaveSize();
+}
+
+void gba::GBA::loadSave(const std::vector<uint8_t> &saveData)
+{
+    bus->loadSave(saveData);
+}
+
 std::pair<float, float> gba::GBA::getSample(){
     return {0,0};
 }

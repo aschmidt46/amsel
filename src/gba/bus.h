@@ -10,6 +10,14 @@
 #include <array>
 #include <cstring>
 
+enum BackupType{
+    BACKUP_EEPROM,
+    BACKUP_SRAM,
+    BACKUP_FLASH_64,
+    BACKUP_FLASH_128,
+    BACKUP_NO_BACKUP
+};
+
 namespace gba{
     class Bus final : public IBus, virtual public std::enable_shared_from_this<Bus>{
 
@@ -46,6 +54,8 @@ namespace gba{
         std::vector<std::string> breakpointsOP;
         std::vector<uint64_t> breakpoints;
 
+        BackupType backupType = BACKUP_NO_BACKUP;
+
 
         public:
         HalfWord getIE() override;
@@ -60,6 +70,11 @@ namespace gba{
             delete wramChip;
             delete cartRam;
         };
+        void determineBackup();
+        bool canSave();
+        std::vector<uint8_t> getSaveData();
+        size_t getSaveSize();
+        void loadSave(const std::vector<uint8_t> &saveData);
         // Adressen vorher noch alignen?
         void writeByte(Word addr, Byte val) override;
         void writeByteFromWide(Word addr, Byte val);

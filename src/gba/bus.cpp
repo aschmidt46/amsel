@@ -94,7 +94,88 @@ void Bus::PPULeftVBlank(){
     }
 }
 
-void gba::Bus::writeByte(Word addr, Byte val){
+void gba::Bus::determineBackup()
+{
+    auto find = [](char* buffer, int bufferSize, const char* needle, int needleSize){
+        char* pBufferLast = buffer + bufferSize;
+        const char* pPatternLast = needle + needleSize;
+
+        char* pOccurrence = std::search(buffer, pBufferLast, needle, pPatternLast);
+
+        bool found = (pOccurrence != pBufferLast);
+        return found;
+    };
+    const char* eeprom = "EEPROM_";
+    const char* sram = "SRAM_";
+    const char* flash = "FLASH_";
+    const char* flash512 = "FLASH512_";
+    const char* flash1m = "FLASH1M_";
+    char* buffer = (char*)this->gamePak.data();
+    int bufferSize = this->gamePak.size();
+
+    if(find(buffer, bufferSize, eeprom, 7)){
+        std::cout << "detected EEPROM\n";
+        backupType = BACKUP_EEPROM;
+    }
+    if(find(buffer, bufferSize, sram, 5)){
+        std::cout << "detected SRAM\n";
+        backupType = BACKUP_SRAM;
+    }
+    if(find(buffer, bufferSize, flash, 6)){
+        std::cout << "detected FLASH 64kb\n";
+        backupType = BACKUP_FLASH_64;
+    }
+    if(find(buffer, bufferSize, flash512, 9)){
+        std::cout << "detected FLASH 64kb\n";
+        backupType = BACKUP_FLASH_64;
+    }
+    if(find(buffer, bufferSize, flash1m, 8)){
+        std::cout << "detected FLASH 128kb\n";
+        backupType = BACKUP_FLASH_128;
+    }
+}
+
+bool gba::Bus::canSave()
+{
+    return backupType != BACKUP_NO_BACKUP;
+}
+
+std::vector<uint8_t> gba::Bus::getSaveData()
+{
+    switch(backupType){
+        case BACKUP_SRAM:{
+            std::vector<uint8_t> saveData(0x8000, 0);
+            for(size_t i = 0; i < 0x8000; i++){
+                saveData[i] = (*cartRam)[i];
+            }
+            return saveData;
+        }
+    }
+    return std::vector<uint8_t>();
+}
+
+size_t gba::Bus::getSaveSize()
+{
+    switch(backupType){
+        case BACKUP_SRAM:
+            return 0x8000;
+    }
+    return 0;
+}
+
+void gba::Bus::loadSave(const std::vector<uint8_t> &saveData)
+{
+    switch(backupType){
+        case BACKUP_SRAM:{
+            for(size_t i = 0; i < 0x8000; i++){
+                (*cartRam)[i] = saveData[i];
+            }
+        }
+    }
+}
+
+void gba::Bus::writeByte(Word addr, Byte val)
+{
     if(addr >= 0x05000000 && addr < 0x08000000){
         Word modAddr = addr & ~1u;
         // Byte wird in beide Bytes des Halbworts gespiegelt
@@ -407,6 +488,7 @@ gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
 
     this->gamePak = contents;
     stream.close();
+    determineBackup();
 
     #ifdef BUILD_DESKTOP
     std::ifstream bstream(biosPath, std::ios::in | std::ios::binary);
@@ -420,6 +502,7 @@ gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
 
 gba::Bus::Bus(const std::vector<Byte> &bytes)  : Bus(){
     this->gamePak = bytes;
+    determineBackup();
 };
 
 void gba::Bus::press(int i){
