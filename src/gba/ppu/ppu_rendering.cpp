@@ -197,9 +197,13 @@ constexpr std::array<std::array<std::pair<size_t, size_t>, 4>, 3> spriteShapeSiz
     {std::pair{8,16}, std::pair{8,32}, std::pair{16,32}, std::pair{32,64}}
 }};
 
+std::pair<size_t, size_t> getCenter(int x, int y, int sizeX, int sizeY){
+    return std::pair<size_t, size_t>{x + (sizeX / 2), y + (sizeY / 2)};
+}
+
 void PPU::detectSpritesOnScanline(){
     this->oamAttribsCurrentLineSize = 0;
-    const Word y = currentScanline;
+    const int y = currentScanline;
 
     // sicher?
     OAMAttribs* oamMap = (OAMAttribs*)this->oamAttribs.data();
@@ -209,8 +213,14 @@ void PPU::detectSpritesOnScanline(){
         OAMAttribs current = oamMap[i];
         auto [sizeX, sizeY] = spriteShapeSizeTable[current.attr0.state.spriteShape][current.attr1.state.spriteSize];
         (void)sizeX;
-        const int yEnd = current.attr0.state.yCoord + sizeY;
-        if((current.attr0.state.yCoord <= y && yEnd > int(y)) || (current.attr0.state.yCoord > 160 && (yEnd - 256) > int(y))){
+        int yStart = current.attr0.state.yCoord;
+        int extraSize = 0;
+        if(current.attr0.state.objectMode == 3){ // affine doppelt so groß
+            yStart -= sizeY;
+            extraSize = sizeY;
+        }
+        const int yEnd = current.attr0.state.yCoord + sizeY + extraSize;
+        if((yStart <= y && yEnd > y) || (yStart > 160 && (yEnd - 256) > y)){
             //push
             insertIntoSorted(oamAttribsCurrentLine, current, oamAttribsCurrentLineSize);
         }
@@ -218,19 +228,26 @@ void PPU::detectSpritesOnScanline(){
 }
 
 bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
-    const Word x = currentCycle;
-    const Word y = currentScanline;
+    const int x = currentCycle;
+    const int y = currentScanline;
 
     auto [sizeX, sizeY] = spriteShapeSizeTable[current.attr0.state.spriteShape][current.attr1.state.spriteSize];
-    const int xEnd = current.attr1.state.xCoord + sizeX;
-    const int yEnd = current.attr0.state.yCoord + sizeY;
-    if(
-        ((current.attr0.state.yCoord <= y && yEnd > int(y)) || (current.attr0.state.yCoord > 160 && (yEnd - 256) > int(y)))
-        && ((current.attr1.state.xCoord <= x && xEnd > int(x)) || (current.attr1.state.xCoord > 240 && (xEnd - 512) > int(x)))
-    ){
-        return true;
+    int xStart = current.attr1.state.xCoord;
+    int yStart = current.attr0.state.yCoord;
+    int extraX = 0;
+    int extraY = 0;
+    if(current.attr0.state.objectMode == 3){ // affine doppelt so groß
+        xStart -= sizeX;
+        extraX = sizeX;
+
+        yStart -= sizeY;
+        extraY = sizeY;
     }
-    return false;
+    const int xEnd = current.attr1.state.xCoord + sizeX + extraX;
+    const int yEnd = current.attr0.state.yCoord + sizeY + extraY;
+    return
+        ((yStart <= y && yEnd > y) || (yStart > 160 && (yEnd - 256) > y))
+        && ((xStart <= x && xEnd > x) || (xStart > 240 && (xEnd - 512) > x));
 }
 
 PIXEL_T PPU::drawSprites(){
@@ -241,18 +258,15 @@ PIXEL_T PPU::drawSprites(){
     insideObjectWindow = false;
 
 
-    OAMAttribs* oamMap = this->oamAttribsCurrentLine.data();
+    const OAMAttribs* oamMap = this->oamAttribsCurrentLine.data();
     const size_t oamSize = oamAttribsCurrentLineSize;
-
-    OAMAttribs sprite = {};
 
     for(size_t i = 0; i < oamSize; i++){
         if(spriteCollidesCurrentPixel(oamMap[i])){
-            sprite = oamMap[i];
+            const OAMAttribs sprite = oamMap[i];
 
-            if(sprite.attr0.state.objectMode > 0){
-                // affine oder versteckt
-                // setPixel(currentCycle, currentScanline, 0, 255, 0);
+            if(sprite.attr0.state.objectMode == 2){
+                // versteckt
                 continue;
             }
             spriteAlphaOverride = false;
@@ -269,11 +283,40 @@ PIXEL_T PPU::drawSprites(){
             int spriteY = sprite.attr0.state.yCoord;
             if(spriteY > 160)
                 spriteY -= 256;
-            const auto [sizeX, sizeY] = spriteShapeSizeTable[sprite.attr0.state.spriteShape][sprite.attr1.state.spriteSize];
+            auto [sizeX, sizeY] = spriteShapeSizeTable[sprite.attr0.state.spriteShape][sprite.attr1.state.spriteSize];
+            const Word sizeXHalf = sizeX / 2 - 1;
+            const Word sizeYHalf = sizeY / 2 - 1;
+
             Word tileSizeX = sizeX / 8;
             const Word tileSizeY = sizeY / 8;
-            const Word xOffset = currentCycle - spriteX;
-            const Word yOffset = currentScanline - spriteY;
+            Word xOffset;
+            Word yOffset;
+
+            // Affine sprite oder 2x affine sprite
+            if(sprite.attr0.state.objectMode == 1 || sprite.attr0.state.objectMode == 3){
+                auto [centerX, centerY] = getCenter(spriteX, spriteY, sizeX, sizeY);
+                if(sprite.attr0.state.objectMode == 3){
+                    centerX += sizeXHalf;
+                    centerY += sizeYHalf;
+                }
+                const Word affineIndex = sprite.attr1.state.affineIndex;
+                const AffineAttribs affineMatrix = *(((AffineAttribs*)this->oamAttribs.data()) + affineIndex);
+
+                xOffset = sizeXHalf + ((int(centerX - currentCycle) * affineMatrix.pa + int(centerY - currentScanline) * affineMatrix.pb) >> 8);
+                yOffset = sizeYHalf + ((int(centerX - currentCycle) * affineMatrix.pc + int(centerY - currentScanline) * affineMatrix.pd) >> 8);
+                
+                // Ist aus irgendeinem Grund gespiegelt
+                xOffset = sizeX - xOffset - 1;
+                yOffset = sizeY - yOffset - 1;
+            }
+            else{
+                xOffset = currentCycle - spriteX;
+                yOffset = currentScanline - spriteY;
+            }
+
+            // Außerhalb von Sprite, wichtig bei affinen
+            if(xOffset >= sizeX || yOffset >= sizeY)
+                continue;
     
             const Word baseTileIndex = sprite.attr2.state.baseTileIndex;
     
@@ -282,11 +325,16 @@ PIXEL_T PPU::drawSprites(){
             Byte* vRamTiles = vRam.data() + 0x00010000;
     
             Word currentTileX = xOffset / 8;
-            if(sprite.attr1.state.getHorizontalFlip()){
+            Word currentTileY = yOffset / 8;
+
+            // Nur nicht affine Sprites!
+            const bool flipH = sprite.attr0.state.objectMode == 0 && sprite.attr1.state.getHorizontalFlip();
+            const bool flipV = sprite.attr0.state.objectMode == 0 && sprite.attr1.state.getVerticalFlip();
+
+            if(flipH){
                 currentTileX = tileSizeX - 1 - currentTileX;
             }
-            Word currentTileY = yOffset / 8;
-            if(sprite.attr1.state.getVerticalFlip()){
+            if(flipV){
                 currentTileY = tileSizeY - 1 - currentTileY;
             }
             const Word inTileX = xOffset % 8;
@@ -302,11 +350,11 @@ PIXEL_T PPU::drawSprites(){
         
             Byte* tileStart = vRamTiles + tileOffset * tileIndex;
         
-            const Word verticalFactor = sprite.attr1.state.getVerticalFlip() ? -1 : 1;
-            const Word horizontalFactor = sprite.attr1.state.getHorizontalFlip() ? -1 : 1;
+            const Word verticalFactor = flipV ? -1 : 1;
+            const Word horizontalFactor = flipH ? -1 : 1;
         
-            const Word verticalWidth = sprite.attr1.state.getVerticalFlip() ? 7 * tileWidthByte : 0;
-            const Word horizontalWidth = sprite.attr1.state.getHorizontalFlip() ? (bpp8 ? 7 : 3) : 0;
+            const Word verticalWidth = flipV ? 7 * tileWidthByte : 0;
+            const Word horizontalWidth = flipH ? (bpp8 ? 7 : 3) : 0;
         
             const Word bitWidthInTile = bpp8 ? inTileX : inTileX / 2;
         
@@ -315,7 +363,7 @@ PIXEL_T PPU::drawSprites(){
             if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return result;
             Byte pixel = *(tileStart + pixelIndex);
             if(!bpp8){
-                if((inTileX & 1) ^ sprite.attr1.state.getHorizontalFlip()) pixel >>= 4;
+                if((inTileX & 1) ^ flipH) pixel >>= 4;
                 pixel &= 0xF;
             }
             Byte paletteIndex =  bpp8 ? pixel : pixel | (paletteBank << 4);

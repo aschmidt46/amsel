@@ -222,10 +222,10 @@ namespace gba{
             HalfWord affineIndex : 5;
             HalfWord spriteSize : 2;
             // Mehrdeutig, nur gültig falls der Sprite nicht affin ist
-            inline HalfWord getHorizontalFlip(){
+            inline HalfWord getHorizontalFlip() const{
                 return (affineIndex >> 3) & 1;
             }
-            inline HalfWord getVerticalFlip(){
+            inline HalfWord getVerticalFlip() const{
                 return (affineIndex >> 4) & 1;
             }
         } state;
