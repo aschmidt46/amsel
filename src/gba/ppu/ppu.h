@@ -47,9 +47,9 @@ namespace gba{
         std::weak_ptr<Bus> bus;
 
         // Register
-        LCDCONTROL_T LCDCONTROL = {.raw = 0};
+        LCDCONTROL_T LCDCONTROL = {.raw = 0}; // aka dispcnt
         HalfWord GREENSWAP = 0; // Undokumentiert
-        LCDSTATUS_T LCDSTATUS = {.raw = 0};
+        LCDSTATUS_T LCDSTATUS = {.raw = 0}; // aka dispstat
         HalfWord currentScanline = 0; //VCOUNT
 
         BGCNT_T BG_CNT[4] = {{.raw = 0}, {.raw = 0}, {.raw = 0}, {.raw = 0}};
@@ -64,12 +64,22 @@ namespace gba{
         Word     BG2_REFERENCE_X = 0;
         Word     BG2_REFERENCE_Y = 0;
 
+        uint16_t BG2_PA = 0;
+        uint16_t BG2_PB = 0;
+        uint16_t BG2_PC = 0;
+        uint16_t BG2_PD = 0;
+
         HalfWord BG3_DX = 0;
         HalfWord BG3_DMX = 0;
         HalfWord BG3_DY = 0;
         HalfWord BG3_DMY = 0;
         Word     BG3_REFERENCE_X = 0;
         Word     BG3_REFERENCE_Y = 0;
+
+        uint16_t BG3_PA = 0;
+        uint16_t BG3_PB = 0;
+        uint16_t BG3_PC = 0;
+        uint16_t BG3_PD = 0;
 
         WIN_H_T WINDOW_0_H = {.raw = 0};
         WIN_H_T WINDOW_1_H = {.raw = 0};
@@ -120,7 +130,8 @@ namespace gba{
         bool spriteCollidesCurrentPixel(const OAMAttribs &attrs);
 
         PIXEL_T drawSprites();
-        PIXEL_T drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY, const int index);
+        template<bool isAffine>
+        PIXEL_T drawBG(const int index);
 
         void drawPixelMode0();
         void drawPixelMode1();

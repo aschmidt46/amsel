@@ -276,7 +276,7 @@ PIXEL_T PPU::drawSprites(){
                 continue;
     
             const bool bpp8 = sprite.attr0.state.colorMode;
-            const Word tileOffset =  0x20; // egal ob 8bbp oder 4bbp
+            const Word tileOffset =  bpp8 ? 0x40 : 0x20;
             int spriteX = sprite.attr1.state.xCoord;
             if(spriteX > 240)
                 spriteX -= 512;
@@ -344,11 +344,11 @@ PIXEL_T PPU::drawSprites(){
                 tileSizeX = 32; // 32 Tiles in Folge, dann kommt die nächste Zeile
             }
         
-            const Word tileIndex = baseTileIndex + currentTileX + currentTileY * tileSizeX;
+            const Word tileIndex = currentTileX + currentTileY * tileSizeX;
         
             const Word tileWidthByte = bpp8 ? 8 : 4;
         
-            Byte* tileStart = vRamTiles + tileOffset * tileIndex;
+            Byte* tileStart = vRamTiles + 0x20 * baseTileIndex + tileOffset * tileIndex;
         
             const Word verticalFactor = flipV ? -1 : 1;
             const Word horizontalFactor = flipH ? -1 : 1;
@@ -398,8 +398,11 @@ Word PPU::seIndexFast(Word tx, Word ty, BGCNT_T bgcnt)
 
 constexpr std::array<std::pair<Word, Word>, 4> regularBgrSizes = {std::pair{256,256}, std::pair{512,256}, std::pair{256,512}, std::pair{512,512}};
 
-
-PIXEL_T PPU::drawBG(const BGCNT_T &CONTROL, const HalfWord &BGX, const HalfWord &BGY, const int index){
+template<bool isAffine>
+PIXEL_T PPU::drawBG(const int index){
+    const BGCNT_T &CONTROL = BG_CNT[index];
+    const HalfWord BGX = this->BG_X_OFFSET[index];
+    const HalfWord BGY = this->BG_Y_OFFSET[index];
     PIXEL_T result;
     result.priority = 99;
     result.layerIndex = index + 1;
@@ -588,7 +591,7 @@ void gba::PPU::drawPixelMode0() {
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
     for(int i = 3; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
-            PIXEL_T bg = drawBG(BG_CNT[i], BG_X_OFFSET[i], BG_Y_OFFSET[i], i);
+            PIXEL_T bg = drawBG<false>(i);
             if(bg.priority < 99)
                 insertIntoSorted(layerOrder, bg, layerOrderSize);
         }
@@ -601,11 +604,64 @@ void gba::PPU::drawPixelMode0() {
 }
 
 void gba::PPU::drawPixelMode1() {
-    setPixel(currentCycle, currentScanline, 0, 0, 255);
+    layerOrderSize = 0;
+    if(currentCycle == 0){
+        this->detectSpritesOnScanline();
+    }
+
+    WINDOW_ACTIVES_T actives = getActives();
+
+    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
+
+    //affine
+    if(displayBG(2) && actives.bgActive(2)){
+        PIXEL_T bg = drawBG<true>(2);
+        if(bg.priority < 99)
+            insertIntoSorted(layerOrder, bg, layerOrderSize);
+    }
+
+    for(int i = 1; i >= 0; i--){
+        if(displayBG(i) && actives.bgActive(i)){
+            PIXEL_T bg = drawBG<false>(i);
+            if(bg.priority < 99)
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
+        }
+    }
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
+        insertIntoSorted(layerOrder, this->drawSprites(), layerOrderSize); // höchste prio
+    }
+
+    setColorFromLayerOrder(actives);
 }
 
 void gba::PPU::drawPixelMode2() {
-    setPixel(currentCycle, currentScanline, 255, 255, 255);
+    layerOrderSize = 0;
+    if(currentCycle == 0){
+        this->detectSpritesOnScanline();
+    }
+
+    WINDOW_ACTIVES_T actives = getActives();
+
+    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
+
+    //affine
+    if(displayBG(3) && actives.bgActive(3)){
+        PIXEL_T bg = drawBG<true>(3);
+        if(bg.priority < 99)
+            insertIntoSorted(layerOrder, bg, layerOrderSize);
+    }
+
+    if(displayBG(2) && actives.bgActive(2)){
+        PIXEL_T bg = drawBG<true>(2);
+        if(bg.priority < 99)
+            insertIntoSorted(layerOrder, bg, layerOrderSize);
+    }
+
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
+        insertIntoSorted(layerOrder, this->drawSprites(), layerOrderSize); // höchste prio
+    }
+
+    setColorFromLayerOrder(actives);
 }
 
 void gba::PPU::drawPixelMode3() {

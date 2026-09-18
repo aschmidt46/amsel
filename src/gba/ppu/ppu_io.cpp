@@ -98,6 +98,108 @@ void gba::PPU::writePPURegister(Word addr, Byte val) {
         BG_Y_OFFSET[3] = (BG_Y_OFFSET[3] & 0xFF) | (HalfWord(val) << 8);
     }
 
+    else if(addr == 0x04000020){
+        BG2_PA = (BG2_PA & 0xFF00) | val;
+    }
+    else if(addr == 0x04000021){
+        BG2_PA = (BG2_PA & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000022){
+        BG2_PB = (BG2_PB & 0xFF00) | val;
+    }
+    else if(addr == 0x04000023){
+        BG2_PB = (BG2_PB & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000024){
+        BG2_PC = (BG2_PC & 0xFF00) | val;
+    }
+    else if(addr == 0x04000025){
+        BG2_PC = (BG2_PC & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000026){
+        BG2_PD = (BG2_PD & 0xFF00) | val;
+    }
+    else if(addr == 0x04000027){
+        BG2_PD = (BG2_PD & 0xFF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x04000028){
+        BG2_DX = (BG2_DX & 0xFF00) | val;
+    }
+    else if(addr == 0x04000029){
+        BG2_DX = (BG2_DX & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x0400002A){
+        BG2_DMX = (BG2_DMX & 0xFF00) | val;
+    }
+    else if(addr == 0x0400002B){
+        BG2_DMX = (BG2_DMX & 0xFF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x0400002C){
+        BG2_DY = (BG2_DY & 0xFF00) | val;
+    }
+    else if(addr == 0x0400002D){
+        BG2_DY = (BG2_DY & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x0400002E){
+        BG2_DMY = (BG2_DMY & 0xFF00) | val;
+    }
+    else if(addr == 0x0400002F){
+        BG2_DMY = (BG2_DMY & 0xFF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x04000020){
+        BG3_PA = (BG3_PA & 0xFF00) | val;
+    }
+    else if(addr == 0x04000021){
+        BG3_PA = (BG3_PA & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000022){
+        BG3_PB = (BG3_PB & 0xFF00) | val;
+    }
+    else if(addr == 0x04000023){
+        BG3_PB = (BG3_PB & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000024){
+        BG3_PC = (BG3_PC & 0xFF00) | val;
+    }
+    else if(addr == 0x04000025){
+        BG3_PC = (BG3_PC & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x04000026){
+        BG3_PD = (BG3_PD & 0xFF00) | val;
+    }
+    else if(addr == 0x04000027){
+        BG3_PD = (BG3_PD & 0xFF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x04000028){
+        BG3_DX = (BG3_DX & 0xFF00) | val;
+    }
+    else if(addr == 0x04000029){
+        BG3_DX = (BG3_DX & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x0400002A){
+        BG3_DMX = (BG3_DMX & 0xFF00) | val;
+    }
+    else if(addr == 0x0400002B){
+        BG3_DMX = (BG3_DMX & 0xFF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x0400002C){
+        BG3_DY = (BG3_DY & 0xFF00) | val;
+    }
+    else if(addr == 0x0400002D){
+        BG3_DY = (BG3_DY & 0xFF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x0400002E){
+        BG3_DMY = (BG3_DMY & 0xFF00) | val;
+    }
+    else if(addr == 0x0400002F){
+        BG3_DMY = (BG3_DMY & 0xFF) | (HalfWord(val) << 8);
+    }
+
 
 
     else if(addr == 0x04000040){
