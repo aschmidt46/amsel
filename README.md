@@ -19,9 +19,8 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 - Link Cable Implementation over TCP, Master Gameboy experiences audio glitches because of latency
 ### Nintendo Gameboy Advance (incomplete)
 - Passes ARMWrestler, arm.gba and thumb.gba by jsmolka, most SingleStepTests
-- PPU mode 0, 3 and 4 working
+- PPU mostly working
 - mosaic missing
-- affine backgrounds and sprites missing
 - No audio yet
 - Timings, Waitstates not implemented
 - EEPROM, Flash not implemented

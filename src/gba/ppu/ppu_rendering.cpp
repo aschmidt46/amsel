@@ -772,5 +772,32 @@ void gba::PPU::drawPixelMode4() {
 }
 
 void gba::PPU::drawPixelMode5() {
-    setPixel(currentCycle, currentScanline, 0, 255, 0);
+    layerOrderSize = 0;
+    if(currentCycle == 0){
+        this->detectSpritesOnScanline();
+    }
+    PIXEL_T bg2;
+    if(currentCycle < 160 && currentScanline < 128){
+        int index = currentCycle + 160 * currentScanline;
+        size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
+        HalfWord pixel = HalfWord(vRam[page + 2 * index]) | (HalfWord(vRam[page + 2 * index + 1]) << 8);
+        HalfWord red = pixel & 0b11111;
+        HalfWord green = (pixel >> 5) & 0b11111;
+        HalfWord blue = (pixel >> 10) & 0b11111;
+        bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = BG_CNT[2].state.BGPriority, .layerIndex = 3};
+    }
+    else{
+        bg2 = PIXEL_T{.pixel = 0, .priority = 99};
+    }
+    WINDOW_ACTIVES_T actives = getActives();
+
+    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
+
+    if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
+        insertIntoSorted(layerOrder, bg2, layerOrderSize);
+        
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ)
+        insertIntoSorted(layerOrder, drawSprites(), layerOrderSize);
+    
+    setColorFromLayerOrder(actives);
 }
