@@ -57,29 +57,22 @@ namespace gba{
         HalfWord BG_X_OFFSET[4] = {0, 0, 0, 0};
         HalfWord BG_Y_OFFSET[4] = {0, 0, 0, 0};
 
-        HalfWord BG2_DX = 0;
-        HalfWord BG2_DMX = 0;
-        HalfWord BG2_DY = 0;
-        HalfWord BG2_DMY = 0;
-        Word     BG2_REFERENCE_X = 0;
-        Word     BG2_REFERENCE_Y = 0;
+        // BG2 und BG3
+        HalfWord BG_DXL[2] = {0, 0};
+        HalfWord BG_DXH[2] = {0, 0};
+        HalfWord BG_DYL[2] = {0, 0};
+        HalfWord BG_DYH[2] = {0, 0};
+        int32_t     BG_REFERENCE_X[2] = {0, 0};
+        int32_t     BG_REFERENCE_Y[2] = {0, 0};
+        int32_t     BG_REFERENCE_LINE_X[2] = {0, 0};
+        int32_t     BG_REFERENCE_LINE_Y[2] = {0, 0};
 
-        uint16_t BG2_PA = 0;
-        uint16_t BG2_PB = 0;
-        uint16_t BG2_PC = 0;
-        uint16_t BG2_PD = 0;
+        HalfWord BG_PA[2] = {0, 0};
+        HalfWord BG_PB[2] = {0, 0};
+        HalfWord BG_PC[2] = {0, 0};
+        HalfWord BG_PD[2] = {0, 0};
 
-        HalfWord BG3_DX = 0;
-        HalfWord BG3_DMX = 0;
-        HalfWord BG3_DY = 0;
-        HalfWord BG3_DMY = 0;
-        Word     BG3_REFERENCE_X = 0;
-        Word     BG3_REFERENCE_Y = 0;
-
-        uint16_t BG3_PA = 0;
-        uint16_t BG3_PB = 0;
-        uint16_t BG3_PC = 0;
-        uint16_t BG3_PD = 0;
+        void updateAffineScroll(int32_t &Reference, HalfWord low, HalfWord high);
 
         WIN_H_T WINDOW_0_H = {.raw = 0};
         WIN_H_T WINDOW_1_H = {.raw = 0};

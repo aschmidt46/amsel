@@ -183,8 +183,8 @@ namespace gba{
         
         
         public:
-        CPU();
-        CPU(IBus* bus) : CPU(){
+        CPU(bool skipBios = true);
+        CPU(IBus* bus, bool skipBios = true) : CPU(skipBios){
             this->bus = bus;
         };
         

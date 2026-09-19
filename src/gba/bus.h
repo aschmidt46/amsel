@@ -62,7 +62,7 @@ namespace gba{
         HalfWord getIF() override;
         bool hasIME() override;
         unsigned int getCyclesForAccess(Word addr, bool sequential);
-        void init();
+        void init(bool skipBios);
         Bus(const char *path, const char* biosPath);
         Bus(const std::vector<Byte> &bytes);
         ~Bus(){

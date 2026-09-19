@@ -1,6 +1,13 @@
 #include "ppu.h"
 #include "framework/stringlib.h"
 #include <iostream>
+#include "../arm/arm7tdmi.h"
+
+void gba::PPU::updateAffineScroll(int32_t &Reference, HalfWord low, HalfWord high)
+{
+    Word ref = 0x0FFFFFFF & ((Word(high) << 16) | low); 
+    Reference = sign_extend_n_32(ref, 28);
+}
 
 void gba::PPU::writePPURegister(Word addr, Byte val) {
     if(addr == 0x04000000){
@@ -99,105 +106,121 @@ void gba::PPU::writePPURegister(Word addr, Byte val) {
     }
 
     else if(addr == 0x04000020){
-        BG2_PA = (BG2_PA & 0xFF00) | val;
+        BG_PA[0] = (BG_PA[0] & 0xFF00) | val;
     }
     else if(addr == 0x04000021){
-        BG2_PA = (BG2_PA & 0xFF) | (HalfWord(val) << 8);
+        BG_PA[0] = (BG_PA[0] & 0xFF) | (HalfWord(val) << 8);
     }
     else if(addr == 0x04000022){
-        BG2_PB = (BG2_PB & 0xFF00) | val;
+        BG_PB[0] = (BG_PB[0] & 0xFF00) | val;
     }
     else if(addr == 0x04000023){
-        BG2_PB = (BG2_PB & 0xFF) | (HalfWord(val) << 8);
+        BG_PB[0] = (BG_PB[0] & 0xFF) | (HalfWord(val) << 8);
     }
     else if(addr == 0x04000024){
-        BG2_PC = (BG2_PC & 0xFF00) | val;
+        BG_PC[0] = (BG_PC[0] & 0xFF00) | val;
     }
     else if(addr == 0x04000025){
-        BG2_PC = (BG2_PC & 0xFF) | (HalfWord(val) << 8);
+        BG_PC[0] = (BG_PC[0] & 0xFF) | (HalfWord(val) << 8);
     }
     else if(addr == 0x04000026){
-        BG2_PD = (BG2_PD & 0xFF00) | val;
+        BG_PD[0] = (BG_PD[0] & 0xFF00) | val;
     }
     else if(addr == 0x04000027){
-        BG2_PD = (BG2_PD & 0xFF) | (HalfWord(val) << 8);
+        BG_PD[0] = (BG_PD[0] & 0xFF) | (HalfWord(val) << 8);
     }
 
     else if(addr == 0x04000028){
-        BG2_DX = (BG2_DX & 0xFF00) | val;
+        BG_DXL[0] = (BG_DXL[0] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_X[0], BG_DXL[0], BG_DXH[0]);
     }
     else if(addr == 0x04000029){
-        BG2_DX = (BG2_DX & 0xFF) | (HalfWord(val) << 8);
+        BG_DXL[0] = (BG_DXL[0] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_X[0], BG_DXL[0], BG_DXH[0]);
     }
     else if(addr == 0x0400002A){
-        BG2_DMX = (BG2_DMX & 0xFF00) | val;
+        BG_DXH[0] = (BG_DXH[0] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_X[0], BG_DXL[0], BG_DXH[0]);
     }
     else if(addr == 0x0400002B){
-        BG2_DMX = (BG2_DMX & 0xFF) | (HalfWord(val) << 8);
+        BG_DXH[0] = (BG_DXH[0] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_X[0], BG_DXL[0], BG_DXH[0]);
     }
 
     else if(addr == 0x0400002C){
-        BG2_DY = (BG2_DY & 0xFF00) | val;
+        BG_DYL[0] = (BG_DYL[0] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_Y[0], BG_DYL[0], BG_DYH[0]);
     }
     else if(addr == 0x0400002D){
-        BG2_DY = (BG2_DY & 0xFF) | (HalfWord(val) << 8);
+        BG_DYL[0] = (BG_DYL[0] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_Y[0], BG_DYL[0], BG_DYH[0]);
     }
     else if(addr == 0x0400002E){
-        BG2_DMY = (BG2_DMY & 0xFF00) | val;
+        BG_DYH[0] = (BG_DYH[0] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_Y[0], BG_DYL[0], BG_DYH[0]);
     }
     else if(addr == 0x0400002F){
-        BG2_DMY = (BG2_DMY & 0xFF) | (HalfWord(val) << 8);
+        BG_DYH[0] = (BG_DYH[0] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_Y[0], BG_DYL[0], BG_DYH[0]);
     }
 
-    else if(addr == 0x04000020){
-        BG3_PA = (BG3_PA & 0xFF00) | val;
+    else if(addr == 0x04000030){
+        BG_PA[1] = (BG_PA[1] & 0xFF00) | val;
     }
-    else if(addr == 0x04000021){
-        BG3_PA = (BG3_PA & 0xFF) | (HalfWord(val) << 8);
+    else if(addr == 0x04000031){
+        BG_PA[1] = (BG_PA[1] & 0xFF) | (HalfWord(val) << 8);
     }
-    else if(addr == 0x04000022){
-        BG3_PB = (BG3_PB & 0xFF00) | val;
+    else if(addr == 0x04000032){
+        BG_PB[1] = (BG_PB[1] & 0xFF00) | val;
     }
-    else if(addr == 0x04000023){
-        BG3_PB = (BG3_PB & 0xFF) | (HalfWord(val) << 8);
+    else if(addr == 0x04000033){
+        BG_PB[1] = (BG_PB[1] & 0xFF) | (HalfWord(val) << 8);
     }
-    else if(addr == 0x04000024){
-        BG3_PC = (BG3_PC & 0xFF00) | val;
+    else if(addr == 0x04000034){
+        BG_PC[1] = (BG_PC[1] & 0xFF00) | val;
     }
-    else if(addr == 0x04000025){
-        BG3_PC = (BG3_PC & 0xFF) | (HalfWord(val) << 8);
+    else if(addr == 0x04000035){
+        BG_PC[1] = (BG_PC[1] & 0xFF) | (HalfWord(val) << 8);
     }
-    else if(addr == 0x04000026){
-        BG3_PD = (BG3_PD & 0xFF00) | val;
+    else if(addr == 0x04000036){
+        BG_PD[1] = (BG_PD[1] & 0xFF00) | val;
     }
-    else if(addr == 0x04000027){
-        BG3_PD = (BG3_PD & 0xFF) | (HalfWord(val) << 8);
-    }
-
-    else if(addr == 0x04000028){
-        BG3_DX = (BG3_DX & 0xFF00) | val;
-    }
-    else if(addr == 0x04000029){
-        BG3_DX = (BG3_DX & 0xFF) | (HalfWord(val) << 8);
-    }
-    else if(addr == 0x0400002A){
-        BG3_DMX = (BG3_DMX & 0xFF00) | val;
-    }
-    else if(addr == 0x0400002B){
-        BG3_DMX = (BG3_DMX & 0xFF) | (HalfWord(val) << 8);
+    else if(addr == 0x04000037){
+        BG_PD[1] = (BG_PD[1] & 0xFF) | (HalfWord(val) << 8);
     }
 
-    else if(addr == 0x0400002C){
-        BG3_DY = (BG3_DY & 0xFF00) | val;
+    else if(addr == 0x04000038){
+        BG_DXL[1] = (BG_DXL[1] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_X[1], BG_DXL[1], BG_DXH[1]);
     }
-    else if(addr == 0x0400002D){
-        BG3_DY = (BG3_DY & 0xFF) | (HalfWord(val) << 8);
+    else if(addr == 0x04000039){
+        BG_DXL[1] = (BG_DXL[1] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_X[1], BG_DXL[1], BG_DXH[1]);
     }
-    else if(addr == 0x0400002E){
-        BG3_DMY = (BG3_DMY & 0xFF00) | val;
+    else if(addr == 0x0400003A){
+        BG_DXH[1] = (BG_DXH[1] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_X[1], BG_DXL[1], BG_DXH[1]);
     }
-    else if(addr == 0x0400002F){
-        BG3_DMY = (BG3_DMY & 0xFF) | (HalfWord(val) << 8);
+    else if(addr == 0x0400003B){
+        BG_DXH[1] = (BG_DXH[1] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_X[1], BG_DXL[1], BG_DXH[1]);
+    }
+
+    else if(addr == 0x0400003C){
+        BG_DYL[1] = (BG_DYL[1] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_Y[1], BG_DYL[1], BG_DYH[1]);
+    }
+    else if(addr == 0x0400003D){
+        BG_DYL[1] = (BG_DYL[1] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_Y[1], BG_DYL[1], BG_DYH[1]);
+    }
+    else if(addr == 0x0400003E){
+        BG_DYH[1] = (BG_DYH[1] & 0xFF00) | val;
+        updateAffineScroll(BG_REFERENCE_Y[1], BG_DYL[1], BG_DYH[1]);
+    }
+    else if(addr == 0x0400003F){
+        BG_DYH[1] = (BG_DYH[1] & 0xFF) | (HalfWord(val) << 8);
+        updateAffineScroll(BG_REFERENCE_Y[1], BG_DYL[1], BG_DYH[1]);
     }
 
 

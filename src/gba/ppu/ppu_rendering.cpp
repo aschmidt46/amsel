@@ -128,8 +128,19 @@ void gba::PPU::clock() {
     if(currentCycle == 1004){
         // Hblank
         LCDSTATUS.state.hBlankFlag = 1;
-        if(LCDSTATUS.state.hBlankIE && currentScanline < 160){
-            bus.lock()->setIF(1, true);
+        if(currentScanline < 160){
+            // dmx, dmy increment affine bg
+            for(int i = 0; i < 2; i++){
+                BG_REFERENCE_X[i] += sign_extend_n_32(BG_PB[i], 16);
+                BG_REFERENCE_Y[i] += sign_extend_n_32(BG_PD[i], 16);
+
+                BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
+                BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
+            }
+
+            if(LCDSTATUS.state.hBlankIE){
+                bus.lock()->setIF(1, true);
+            }
         }
         bus.lock()->PPUEnteredHBlank();
     }
@@ -151,6 +162,17 @@ void gba::PPU::clock() {
             bus.lock()->setIF(0, true);
         }
         hasframe = true;
+        for(int i = 0; i < 2; i++){
+            // 20.8 bit signed
+            Word refX = 0x0FFFFFFF & ((Word(BG_DXH[i]) << 16) | BG_DXL[i]);
+            Word refY = 0x0FFFFFFF & ((Word(BG_DYH[i]) << 16) | BG_DYL[i]);
+            
+            BG_REFERENCE_X[i] = sign_extend_n_32(refX, 28);
+            BG_REFERENCE_Y[i] = sign_extend_n_32(refY, 28);
+
+            BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
+            BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
+        }
         bus.lock()->PPUEnteredVBlank();
     }
     else if(currentScanline >= 228){
@@ -182,6 +204,12 @@ void gba::PPU::clock() {
             case 5:
                 drawPixelMode5();
                 break;
+        }
+
+        // Affine bg matrix
+        for(int i = 0; i < 2; i++){
+            BG_REFERENCE_LINE_X[i] += sign_extend_n_32(BG_PA[i], 16);
+            BG_REFERENCE_LINE_Y[i] += sign_extend_n_32(BG_PC[i], 16);
         }
     }
 }
@@ -397,12 +425,15 @@ Word PPU::seIndexFast(Word tx, Word ty, BGCNT_T bgcnt)
 
 
 constexpr std::array<std::pair<Word, Word>, 4> regularBgrSizes = {std::pair{256,256}, std::pair{512,256}, std::pair{256,512}, std::pair{512,512}};
+constexpr std::array<std::pair<Word, Word>, 4> affineBgrSizes =  {std::pair{128,128}, std::pair{256,256}, std::pair{512,512}, std::pair{1024,1024}};
 
-template<bool isAffine>
-PIXEL_T PPU::drawBG(const int index){
+template <bool isAffine>
+PIXEL_T PPU::drawBG(const int index)
+{
     const BGCNT_T &CONTROL = BG_CNT[index];
-    const HalfWord BGX = this->BG_X_OFFSET[index];
-    const HalfWord BGY = this->BG_Y_OFFSET[index];
+    const int affineIndex = index - 2;
+    const bool affineWrapping = CONTROL.state.DisplayAreaOverflowBG2BG3;
+
     PIXEL_T result;
     result.priority = 99;
     result.layerIndex = index + 1;
@@ -416,35 +447,59 @@ PIXEL_T PPU::drawBG(const int index){
     const Word chrblockSize = 0x4000;
     const Word screenBaseBlock = CONTROL.state.screenBaseBlock;
     const Word characterBaseBlock = CONTROL.state.CHRBaseBlock;
-    auto [bgrX, bgrY] = regularBgrSizes[CONTROL.state.screenSize];
+    auto [bgrX, bgrY] = isAffine ? affineBgrSizes[CONTROL.state.screenSize] : regularBgrSizes[CONTROL.state.screenSize];
     Byte* entries = vRam.data() + (screenBaseBlock * screenblockSize);
     Byte* chrEntries = vRam.data() + (characterBaseBlock * chrblockSize);
-    bool bpp8 = CONTROL.state.colorsPalettes;
+    bool bpp8 = isAffine ? true : CONTROL.state.colorsPalettes;
     const Word tileWidth = bpp8 ? 0x40 : 0x20;
     const Word tileWidthByte = bpp8 ? 8 : 4;
-    Word mapX = pixelX + (BGX & 0x1FF);
-    Word mapY = pixelY + (BGY & 0x1FF);
-    mapX %= bgrX;
-    mapY %= bgrY;
+    Word mapX;
+    Word mapY;
+
+    if(isAffine){
+
+        mapX = BG_REFERENCE_LINE_X[affineIndex] >> 8;
+        mapY = BG_REFERENCE_LINE_Y[affineIndex] >> 8;
+
+        if(affineWrapping){
+            mapX %= bgrX;
+            mapY %= bgrY;
+        }
+        else if(mapX < 0 || mapX >= bgrX || mapY < 0 || mapY >= bgrY){
+            return result;
+        }
+
+    }
+    else{
+        mapX = pixelX + (this->BG_X_OFFSET[index] & 0x1FF);
+        mapY = pixelY + (this->BG_Y_OFFSET[index] & 0x1FF);
+        mapX %= bgrX;
+        mapY %= bgrY;
+    }
+
     Word tileCoordX = mapX / 8;
     Word tileCoordY = mapY / 8;
-    Word sbb= seIndexFast(tileCoordX, tileCoordY, CONTROL);
+
+    Word sbb = isAffine ? tileCoordX + tileCoordY * (bgrX / 8) : seIndexFast(tileCoordX, tileCoordY, CONTROL);
     Word inTileX = mapX % 8;
     Word inTileY = mapY % 8;
     Word screenIndex = sbb;
-    Byte entryLow = entries[screenIndex * 2];
-    Byte entryHigh = entries[screenIndex * 2 + 1];
+    const Word screenEntrySize = isAffine ? 1 : 2;
+    Byte entryLow = entries[screenIndex * screenEntrySize];
+    Byte entryHigh = isAffine ? 0 : entries[screenIndex * screenEntrySize + 1];
     ScreenEntry entry;
     entry.raw = entryLow | (HalfWord(entryHigh) << 8);
-    Word tileID = entry.state.TileID;
+    Word tileID = isAffine ? entryLow : entry.state.TileID;
     Byte* tileStart = chrEntries + tileWidth * tileID;
     // Flipping:
+    bool flipH = !isAffine && entry.state.flipHorizontal;
+    bool flipV = !isAffine && entry.state.flipVertical;
 
-    const Word verticalFactor = entry.state.flipVertical ? -1 : 1;
-    const Word horizontalFactor = entry.state.flipHorizontal ? -1 : 1;
+    const Word verticalFactor =     flipV ? -1 : 1;
+    const Word horizontalFactor =   flipH ? -1 : 1;
 
-    const Word verticalWidth = entry.state.flipVertical ? 7 * tileWidthByte : 0;
-    const Word horizontalWidth = entry.state.flipHorizontal ? (bpp8 ? 7 : 3) : 0;
+    const Word verticalWidth = flipV ? 7 * tileWidthByte : 0;
+    const Word horizontalWidth = flipH ? (bpp8 ? 7 : 3) : 0;
 
     const Word bitWidthInTile = bpp8 ? inTileX : inTileX / 2;
 
@@ -453,7 +508,7 @@ PIXEL_T PPU::drawBG(const int index){
     if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return result;
     Byte pixel = *(tileStart + pixelIndex);
     if(!bpp8){
-        if((inTileX & 1) ^ entry.state.flipHorizontal) pixel >>= 4;
+        if((inTileX & 1) ^ flipH) pixel >>= 4;
         pixel &= 0xF;
     }
     Byte paletteIndex =  bpp8 ? pixel : pixel | (entry.state.paletteBank << 4);

@@ -468,7 +468,7 @@ void gba::Bus::setIF(int bit, bool value) {
     IF = (IF & ~(1u << bit)) | (value << bit);
 }
 
-gba::Bus::Bus() : IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KEYCNT(0x04000132), InternalMemoryControl(0x800)
+gba::Bus::Bus() : cpu(false), IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KEYCNT(0x04000132), InternalMemoryControl(0x800)
 {
     KEYINPUT.raw = 0b1111111111;
     InternalMemoryControl.raw = 0x0D000020;
@@ -481,13 +481,13 @@ gba::Bus::Bus() : IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KE
     std::memset(&((*cartRam)[0]), 0, 0x10000);
 }
 
-void gba::Bus::init() {
+void gba::Bus::init(bool skipBios) {
     for(int i = 0; i < 4; i++){
         timers[i] = Timer(i, this);
         dma[i] = DMAChannel(i, this);
     }
     ppu = PPU(shared_from_this());
-    new (&cpu) CPU(this);
+    new (&cpu) CPU(this, skipBios);
 }
 
 gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {

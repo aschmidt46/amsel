@@ -16,8 +16,8 @@ namespace gba{
 
 
         public:
-        GBA(const char* path, const char* biosPath);
-        GBA(const std::vector<uint8_t> &bytes);
+        GBA(const char* path, const char* biosPath, bool skipBios = true);
+        GBA(const std::vector<uint8_t> &bytes, bool skipBios = true);
 
         uint8_t* accessFramebuffer();
         void clock();

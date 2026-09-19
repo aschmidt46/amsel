@@ -677,7 +677,7 @@ InstructionInfo gba::CPU::decodeInstructionTHUMB(Word code)
     return InstructionInfo{.type = UnimplementedInstruction, .code = code};
 }
 
-gba::CPU::CPU()
+gba::CPU::CPU(bool skipBios)
 {
     // Init Status
     _CPSR.raw = 0;
@@ -689,11 +689,14 @@ gba::CPU::CPU()
 
     _CPSR.state.mode_bits = 31;
 
-    _R13_SP = 0x03007F00;
-    _R13_SVC = 0x03007FE0;
-    _R13_irq = 0x03007FA0;
-    _R14_L_R = 0x08000000; 
-    _R15_PC = 0x08000000;
+    if(skipBios){
+        _R13_SP = 0x03007F00;
+        _R13_SVC = 0x03007FE0;
+        _R13_irq = 0x03007FA0;
+        _R14_L_R = 0x08000000; 
+        _R15_PC = 0x08000000;
+    }
+
 }
 
 bool gba::CPU::checkCondition(Condition c) const

@@ -1,15 +1,15 @@
 #include "gba.h"
 
-gba::GBA::GBA(const char *path, const char* biosPath)
+gba::GBA::GBA(const char *path, const char* biosPath, bool skipBios)
 {
     bus = std::make_shared<Bus>(path, biosPath);
-    bus->init();
+    bus->init(skipBios);
 }
 
-gba::GBA::GBA(const std::vector<uint8_t> &bytes)
+gba::GBA::GBA(const std::vector<uint8_t> &bytes, bool skipBios)
 {
     bus = std::make_shared<Bus>(bytes);
-    bus->init();
+    bus->init(skipBios);
 }
 
 uint8_t *gba::GBA::accessFramebuffer()
