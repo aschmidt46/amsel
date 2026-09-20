@@ -13,6 +13,13 @@
   #include <Windows.h>
 #endif
 
+#ifdef PROFILE_MODE
+#include <chrono>
+#include <cmath>
+using std::chrono::high_resolution_clock;
+using std::chrono::milliseconds;
+#endif
+
 
 
 // Globale Variablen
@@ -90,7 +97,18 @@ int run(int argc, wchar_t** argv)
     }
   }
   #else
+  int fps = 0;
+  auto t1 = high_resolution_clock::now();
+  glfwSwapInterval(0);
   while(!glfwWindowShouldClose(window)){
+    auto t2 = high_resolution_clock::now() - t1;
+    if(std::chrono::duration_cast<milliseconds>(t2).count() >= 1000){
+      float speed = float(fps) / 59.73f;
+      speed = std::floorf(speed * 100.0f) / 100.0f;
+      std::cout << "FPS: " << fps << " (" << speed << "x)\n";
+      t1 = high_resolution_clock::now();
+      fps = 0;
+    }
     while(!console->frameIsReady()){
       console->clockUntilSampleReady();
     }
@@ -99,6 +117,7 @@ int run(int argc, wchar_t** argv)
     screen->present();
     gui.render();
     glfwSwapBuffers(window);
+    fps++;
     updateOtherViewports();
   }
   #endif
