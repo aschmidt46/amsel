@@ -99,6 +99,7 @@ namespace gba{
 
         uint32_t* accessFramebuffer();
         bool hasFrame();
+        void setDebug(bool to);
         void setHalt(bool to);
         bool isHalted();
         void addStep();

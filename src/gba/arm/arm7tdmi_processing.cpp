@@ -103,8 +103,11 @@ void gba::CPU::writeWordUnaligned(Word addr, Word val)
 void gba::CPU::advanceCPU()
 {
     // Die Pipeline MUSS gefüllt sein, bevor IRQ beginnt
-    if((pipelineDecoded.type == PipelineEmpty) || (pipelineRead < 0)){
-        advancePipeline();
+    if((pipeline[0].type == PipelineEmpty) || (pipeline[1].type == PipelineEmpty)){
+        if(state() == ARM)
+            advancePipeline<true>();
+        else
+            advancePipeline<false>();
         return;
     }
     if(pollInterrupts()){
@@ -117,7 +120,12 @@ void gba::CPU::advanceCPU()
         if(jump){
             flushPipeline();
         }
-        else advancePipeline();
+        else{
+            if(state() == ARM)
+                advancePipeline<true>();
+            else
+                advancePipeline<false>();
+        }
     }
 }
 
@@ -131,16 +139,23 @@ void gba::CPU::advanceCPUToNextValidState()
         if(jump){
             flushPipeline();
         }
-        else advancePipeline();
+        else{
+            if(state() == ARM)
+                advancePipeline<true>();
+            else
+                advancePipeline<false>();
+        }
     } while(!pipelineIsSaturated());
 }
 
 void gba::CPU::clock() {
     if(this->remainingCycles <= 0){
         //Debugging
-        if(pipelineDecoded.type != PipelineEmpty){
-            circular[circularIndex] = {_R15_PC - (state() == ARM ? 8 : 4), state()};
-            incrementCircular();
+        if(debug){
+            if(pipeline[0].type != PipelineEmpty){
+                circular[circularIndex] = {_R15_PC - (state() == ARM ? 8 : 4), state()};
+                incrementCircular();
+            }
         }
         
         
@@ -166,24 +181,85 @@ bool gba::CPU::pollInterrupts()
 
 bool gba::CPU::pipelineIsSaturated()
 {
-    return pipelineDecoded.type != PipelineEmpty && pipelineRead >= 0;
+    return pipeline[0].type != PipelineEmpty && pipeline[1].type != PipelineEmpty;
 }
 
 void gba::CPU::flushPipeline()
 {
-    this->pipelineRead = -1;
-    this->pipelineDecoded = {PipelineEmpty, 0};
+    this->pipeline[1] = {PipelineEmpty, 0};
+    this->pipeline[0] = {PipelineEmpty, 0};
 }
 
+template<bool isARM>
 void gba::CPU::advancePipeline()
 {
-    if(pipelineRead >= 0){
-        pipelineDecoded = decodeInstruction(Word(pipelineRead));
+    if(pipeline[1].type != PipelineEmpty){
+        pipeline[0] = pipeline[1];
     }
-    else pipelineDecoded = {PipelineEmpty, 0};
+    else pipeline[0] = {PipelineEmpty, 0};
 
-    pipelineRead = this->state() == ARM ? this->readWord(_R15_PC) : this->readHalfWord(_R15_PC);
-    _R15_PC += this->state() == ARM ? 4 : 2;
+    // vllt jetzt falsch, weil ich schon im Read cycle dekodiere?
+    if(_R15_PC < 0x08000000 && _R15_PC >= 0x4000){
+        pipeline[1] = isARM ? decodeInstruction(this->readWord(_R15_PC)) : decodeInstruction(this->readHalfWord(_R15_PC));
+        _R15_PC += isARM ? 4 : 2;
+        return;
+    }
+    Word altPC = _R15_PC - 0x08000000;
+    if(isARM){
+        if(altPC >> 2 >= armCacheSize){
+            altPC -= 0x02000000;
+        }
+        if(altPC >> 2 >= armCacheSize){
+            altPC -= 0x02000000;
+        }
+        std::vector<InstructionInfo>* cache = &this->bus->armCache;
+        Word cacheSize = armCacheSize;
+        if(_R15_PC < 0x4000){
+            cache = &this->bus->armCacheBIOS;
+            cacheSize = armCacheSizeBIOS;
+            altPC = _R15_PC;
+        }
+        altPC >>= 2;
+
+        if(altPC < cacheSize &&  (*cache)[altPC].type != PipelineEmpty){
+            pipeline[1] = (*cache)[altPC];    
+        }
+        else{
+            pipeline[1] = decodeInstruction(this->readWord(_R15_PC));
+            if(altPC < cacheSize){
+                // std::cout << "gecacht\n";
+                (*cache)[altPC] = pipeline[1];
+            }
+        }
+    }
+    else{
+        if(altPC >> 1 >= thumbCacheSize){
+            altPC -= 0x02000000;
+        }
+        if(altPC >> 1 >= thumbCacheSize){
+            altPC -= 0x02000000;
+        }
+        std::vector<InstructionInfo>* cache = &this->bus->thumbCache;
+        Word cacheSize = thumbCacheSize;
+        if(_R15_PC < 0x4000){
+            cache = &this->bus->thumbCacheBIOS;
+            cacheSize = thumbCacheSizeBIOS;
+            altPC = _R15_PC;
+        }
+        altPC >>= 1;
+
+        if(altPC < cacheSize && (*cache)[altPC].type != PipelineEmpty){
+            pipeline[1] = (*cache)[altPC];    
+        }
+        else{
+            pipeline[1] = decodeInstruction(this->readHalfWord(_R15_PC));
+            if(altPC < cacheSize){
+                // std::cout << "gecacht\n";
+                (*cache)[altPC] = pipeline[1];
+            }
+        }
+    }
+    _R15_PC += isARM ? 4 : 2;
 }
 
 bool gba::CPU::advancedThisClock() {
@@ -191,7 +267,7 @@ bool gba::CPU::advancedThisClock() {
 }
 
 bool gba::CPU::pipelineHasValue(){
-    return pipelineDecoded.type != PipelineEmpty;
+    return pipeline[0].type != PipelineEmpty;
 }
 
 std::pair<std::string, std::vector<int>> CPU::getNextNInstructions(int n)
@@ -286,10 +362,10 @@ std::string gba::CPU::getCurrentOpcode() {
     ARMSTATE s;
     disasm_init(&s, 0);
     if(state()==ARM){
-        disasm_arm(&s, pipelineDecoded.code);
+        disasm_arm(&s, pipeline[0].code);
     }
     else{
-        auto code = pipelineDecoded.code;
+        auto code = pipeline[0].code;
         disasm_thumb(&s, HalfWord(code), HalfWord(code >> 16));
     }
     std::string text = s.text;

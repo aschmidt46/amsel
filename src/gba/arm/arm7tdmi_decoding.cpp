@@ -400,8 +400,8 @@ bool gba::CPU::executeInstruction()
     //     std::cout << std::bitset<32>(pipelineDecoded.value().code) << "\n";
     //     bus->setHalt();
     // };
-    if(this->pipelineDecoded.type != PipelineEmpty){
-        InstructionInfo info = this->pipelineDecoded;
+    if(this->pipeline[0].type != PipelineEmpty){
+        InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
 
         // auto iInfo = info;

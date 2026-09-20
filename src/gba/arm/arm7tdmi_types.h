@@ -239,7 +239,7 @@ namespace gba{
     
     
     
-        enum InstructionType {
+        enum InstructionType : Word {
             TypeBranchAndExchange,
             TypeSingleDataSwap,
             TypeBranchLink,
@@ -279,7 +279,7 @@ namespace gba{
         };
     
         struct InstructionInfo {
-            InstructionType type;
+            InstructionType type = PipelineEmpty;
             Word code;
         };
 }

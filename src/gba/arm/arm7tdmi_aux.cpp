@@ -51,8 +51,8 @@ CpuRegisterState gba::CPU::getRegisterState() const
     state.SPSR[3] = _SPSR_irq.raw;
     state.SPSR[4] = _SPSR_und.raw;
 
-    state.Pipeline[0] = pipelineDecoded.code;
-    state.Pipeline[1] = pipelineRead;
+    state.Pipeline[0] = pipeline[0].code;
+    state.Pipeline[1] = pipeline[1].code;
 
     return state;
 }
@@ -104,13 +104,13 @@ void gba::CPU::setRegisterState(CpuRegisterState state)
     _SPSR_irq.raw = state.SPSR[3];
     _SPSR_und.raw = state.SPSR[4];
 
-    pipelineDecoded = {decodeInstruction(state.Pipeline[0])};
-    pipelineRead = {state.Pipeline[1]};
+    pipeline[0] = {decodeInstruction(state.Pipeline[0])};
+    pipeline[1] = {decodeInstruction(state.Pipeline[1])};
 }
 
 InstructionInfo gba::CPU::getInstructionInPipeline()
 {
-    return this->pipelineDecoded;
+    return this->pipeline[0];
 }
 
 std::string gba::CPU::printCPSR()

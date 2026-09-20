@@ -190,7 +190,7 @@ bool GbaImplementation::isHalted()
 }
 
 void GbaImplementation::produceDisassembly(bool val) {
-    (void)val;
+    gba->setDebug(val);
 }
 
 int GbaImplementation::addressBytes() {

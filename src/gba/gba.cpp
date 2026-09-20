@@ -82,7 +82,13 @@ void gba::GBA::loadBios(const std::vector<uint8_t> &content) {
     this->bus->loadBios(content);
 }
 
-void gba::GBA::setHalt(bool to) {
+void gba::GBA::setDebug(bool to)
+{
+    this->bus->setDebug(to);
+}
+
+void gba::GBA::setHalt(bool to)
+{
     bus->setHalt(to);
 }
 

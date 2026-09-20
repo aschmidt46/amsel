@@ -112,8 +112,7 @@ namespace gba{
         
         
         // Pipeline Zustand
-        int64_t pipelineRead = -1;
-        InstructionInfo pipelineDecoded = {PipelineEmpty, 0};
+        InstructionInfo pipeline[2] = {};
         
         size_t remainingCycles = 0; // Extreme Vereinfachung, muss ich ändern
 
@@ -198,10 +197,16 @@ namespace gba{
 
         bool pipelineIsSaturated();
         void flushPipeline();
+        template<bool isARM>
         void advancePipeline();
+        size_t armCacheSize = 0;
+        size_t thumbCacheSize = 0;
+        size_t armCacheSizeBIOS = 0;
+        size_t thumbCacheSizeBIOS = 0;
 
 
         // Debug
+        bool debug = false;
         bool pipelineHasValue();
         bool advancedThisClock();
         std::pair<std::string, std::vector<int>> getNextNInstructions(int n);

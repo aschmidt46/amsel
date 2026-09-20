@@ -488,6 +488,10 @@ void gba::Bus::init(bool skipBios) {
     }
     ppu = PPU(shared_from_this());
     new (&cpu) CPU(this, skipBios);
+    cpu.armCacheSize = this->gamePak.size() / 4;
+    cpu.thumbCacheSize = this->gamePak.size() / 2;
+    cpu.armCacheSizeBIOS = this->bios.size() / 4;
+    cpu.thumbCacheSizeBIOS = this->bios.size() / 2;
 }
 
 gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
@@ -498,6 +502,10 @@ gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
                                   std::istreambuf_iterator<char>());
 
     this->gamePak = contents;
+    this->armCache = std::vector<InstructionInfo>(gamePak.size() / 4);
+    this->thumbCache = std::vector<InstructionInfo>(gamePak.size() / 2);
+    this->cpu.armCacheSize = armCache.size();
+    this->cpu.thumbCacheSize = thumbCache.size();
     stream.close();
     determineBackup();
 
@@ -508,11 +516,19 @@ gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
 
     this->bios = bcontents;
     bstream.close();
+    this->armCacheBIOS = std::vector<InstructionInfo>(bios.size() / 4);
+    this->thumbCacheBIOS = std::vector<InstructionInfo>(bios.size() / 2);
+    this->cpu.armCacheSizeBIOS = armCacheBIOS.size();
+    this->cpu.thumbCacheSizeBIOS = thumbCacheBIOS.size();
     #endif
 }
 
 gba::Bus::Bus(const std::vector<Byte> &bytes)  : Bus(){
     this->gamePak = bytes;
+    this->armCache = std::vector<InstructionInfo>(gamePak.size() / 4);
+    this->thumbCache = std::vector<InstructionInfo>(gamePak.size() / 2);
+    this->cpu.armCacheSize = armCache.size();
+    this->cpu.thumbCacheSize = thumbCache.size();
     determineBackup();
 };
 
@@ -587,6 +603,11 @@ uint32_t *gba::Bus::accessFramebuffer()
 
 bool gba::Bus::hasFrame() {
     return ppu.hasFrame();
+}
+
+void gba::Bus::setDebug(bool to)
+{
+    this->cpu.debug = to;
 }
 
 void gba::Bus::setHalt(bool to) {
@@ -738,4 +759,8 @@ std::tuple<std::string, std::string, std::string> gba::Bus::getLastTransaction()
 
 void gba::Bus::loadBios(const std::vector<uint8_t> &content) {
     this->bios = content;
+    this->armCacheBIOS = std::vector<InstructionInfo>(bios.size() / 4);
+    this->thumbCacheBIOS = std::vector<InstructionInfo>(bios.size() / 2);
+    this->cpu.armCacheSizeBIOS = armCacheBIOS.size();
+    this->cpu.thumbCacheSizeBIOS = thumbCacheBIOS.size();
 }

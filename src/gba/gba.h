@@ -35,6 +35,7 @@ namespace gba{
         void loadBios(const std::vector<uint8_t> &content);
         // void setBios(std::string path);
 
+        void setDebug(bool to);
         void setHalt(bool to);
         bool isHalted();
         void addClock();
