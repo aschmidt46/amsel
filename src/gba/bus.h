@@ -4,6 +4,7 @@
 #include "ibus.h"
 #include "arm/arm7tdmi.h"
 #include "ppu/ppu.h"
+#include "apu.h"
 #include <vector>
 #include "register/general_purpose.h"
 #include "timer.h"
@@ -23,9 +24,13 @@ namespace gba{
 
         PPU ppu;
         CPU cpu;
+        APU apu;
         std::array<Timer, 4> timers; // 0,1,2,3
+        public:
         std::array<DMAChannel, 4> dma; // 0,1,2,3
+        private:
         std::vector<Byte> bios;
+        size_t clocks = 0;
 
         // Register
         HalfWord IF = 0;
@@ -56,8 +61,11 @@ namespace gba{
 
         BackupType backupType = BACKUP_NO_BACKUP;
 
-
+        
+        
         public:
+        void timerOverflowed(int number);
+        std::pair<float, float> getSample();
         HalfWord getIE() override;
         HalfWord getIF() override;
         bool hasIME() override;

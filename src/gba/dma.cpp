@@ -101,11 +101,11 @@ DMAChannel::DMAChannel(int index, Bus* busPtr) : bus(busPtr), dmaIndex(index), S
 
 bool DMAChannel::clock(){
     // muss ich noch implementieren, kann problematisch werden, wenn IO Register überschrieben werden
-    if(startTiming == DMA_SOUND_FIFO){
-        isActive = false;
-        Control.raw &= ~(1u << 15);
-        return false;
-    }
+    // if(startTiming == DMA_SOUND_FIFO){
+    //     isActive = false;
+    //     Control.raw &= ~(1u << 15);
+    //     return false;
+    // }
     if(remainingCycles > 0){
         remainingCycles--;
         if(remainingCycles==0){
@@ -147,7 +147,8 @@ bool DMAChannel::clock(){
             bus->writeHalfWord(currentDestAddr, data);
         }
 
-        currentDestAddr += destIncrement;
+        if(startTiming != DMA_SOUND_FIFO)
+            currentDestAddr += destIncrement;
         currentSourceAddr += sourceIncrement;
 
         currentCount++;

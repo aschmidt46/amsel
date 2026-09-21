@@ -70,5 +70,6 @@ void gba::Timer::onIncrement() {
         if(control.raw & 64){ // IRQ Enable
             bus->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
         }
+        bus->timerOverflowed(number);
     }
 }

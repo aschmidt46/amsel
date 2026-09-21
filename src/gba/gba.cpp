@@ -1,4 +1,5 @@
 #include "gba.h"
+#include <iostream>
 
 gba::GBA::GBA(const char *path, const char* biosPath, bool skipBios)
 {
@@ -67,7 +68,7 @@ void gba::GBA::loadSave(const std::vector<uint8_t> &saveData)
 }
 
 std::pair<float, float> gba::GBA::getSample(){
-    return {0,0};
+    return bus->getSample();
 }
 
 void gba::GBA::press(int i){

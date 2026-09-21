@@ -28,6 +28,8 @@ src/gba/timer.h
 src/gba/timer.cpp
 src/gba/dma.h
 src/gba/dma.cpp
+src/gba/apu.h
+src/gba/apu.cpp
 src/gba/gba.h src/gba/gba.cpp
 src/gba/test/logging.h src/gba/test/logging.cpp
 src/console/console.h

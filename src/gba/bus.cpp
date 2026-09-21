@@ -48,7 +48,20 @@ unsigned int Bus::getCyclesForAccess(Word addr, bool sequential){
     return 1;
 }
 
-HalfWord Bus::getIE(){
+void gba::Bus::timerOverflowed(int number)
+{
+    if(number <= 1){
+        apu.onTimerOverflow(number);
+    }
+}
+
+std::pair<float, float> gba::Bus::getSample()
+{
+    return apu.getSample();
+}
+
+HalfWord Bus::getIE()
+{
     return IE;
 }
 
@@ -286,7 +299,7 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
     }
     else if(addr >= 0x04000060 && addr < 0x040000A8){
         //Audio Register
-        return;
+        apu.onWrite(addr, val);
     }
 
     // else std::cout << "Unbekannter Write: " << getHex0x(addr, 8) << std::endl;
@@ -421,7 +434,7 @@ Byte gba::Bus::readByteFromWide(Word addr)
     }
     if(addr >= 0x04000060 && addr < 0x040000A8){
         //Audio Register
-        return 0;
+        return apu.onRead(addr);
     }
 
     // std::cout << "Unbekannter Read: " << getHex0x(addr, 8) << std::endl;
@@ -468,7 +481,7 @@ void gba::Bus::setIF(int bit, bool value) {
     IF = (IF & ~(1u << bit)) | (value << bit);
 }
 
-gba::Bus::Bus() : cpu(false), IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KEYCNT(0x04000132), InternalMemoryControl(0x800)
+gba::Bus::Bus() : cpu(false), apu(nullptr), IME(0x04000208), waitCNT(0x04000204), KEYINPUT(0x04000130), KEYCNT(0x04000132), InternalMemoryControl(0x800)
 {
     KEYINPUT.raw = 0b1111111111;
     InternalMemoryControl.raw = 0x0D000020;
@@ -488,6 +501,7 @@ void gba::Bus::init(bool skipBios) {
     }
     ppu = PPU(shared_from_this());
     new (&cpu) CPU(this, skipBios);
+    apu = APU(this);
     cpu.armCacheSize = this->gamePak.size() / 4;
     cpu.thumbCacheSize = this->gamePak.size() / 2;
     cpu.armCacheSizeBIOS = this->bios.size() / 4;
@@ -565,6 +579,19 @@ void gba::Bus::clock() {
 
 
     if(!halted || steps > 0 || !cpu.pipelineHasValue()){
+        apu.clockPCM();
+        if(clocks % 4 == 0){
+            apu.clockPSG();
+        }
+        if(clocks % 0x10000 == 0){
+            apu.clockLengthCounters();
+        }
+        if(clocks % 0x20000 == 0){
+            apu.clockSweep();
+        }
+        if(clocks % 0x40000 == 0){
+            apu.clockEnvelopes();
+        }
         // Timers
         for(int i = 0; i < 4; i++){
             if(timers[i].usesPreviousTimer()){ // Bei t0 immer falsch

@@ -36,8 +36,8 @@ namespace gba{
         int dmaIndex;
 
         GeneralPurpose32 SourceAddress;
-        GeneralPurpose32 DestinationAddress;
-        GeneralPurpose16 WordCount;
+        public: GeneralPurpose32 DestinationAddress;
+        private: GeneralPurpose16 WordCount;
         public: GeneralPurpose16 Control;
         
         private:
