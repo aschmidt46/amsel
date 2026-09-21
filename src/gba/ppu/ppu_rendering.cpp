@@ -146,12 +146,8 @@ void gba::PPU::clock() {
     }
     else if(currentCycle >= 1232){
         currentCycle = 0;
-        currentScanline++;
         LCDSTATUS.state.hBlankFlag = 0;
-        if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
-            bus.lock()->setIF(2, true);
-            LCDSTATUS.state.vCounterFlag = 1;
-        }
+        currentScanline++;
         bus.lock()->PPULeftHBlank();
     }
     if(currentScanline == 160 && currentCycle == 0){
@@ -178,6 +174,10 @@ void gba::PPU::clock() {
     else if(currentScanline >= 228){
         currentScanline = 0;
         LCDSTATUS.state.vCounterFlag = 0;
+    }
+    if(currentCycle == 0 && currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
+        bus.lock()->setIF(2, true);
+        LCDSTATUS.state.vCounterFlag = 1;
     }
     if(currentScanline >= 227){
         LCDSTATUS.state.vBlankFlag = 0;
