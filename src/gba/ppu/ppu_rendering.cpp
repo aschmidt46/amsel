@@ -284,6 +284,7 @@ PIXEL_T PPU::drawSprites(){
     result.layerIndex = 0;
     bool spriteMappingMode1D = LCDCONTROL.state.ObjCharVRAMMapping;
     insideObjectWindow = false;
+    spriteAlphaOverride = false;
 
 
     const OAMAttribs* oamMap = this->oamAttribsCurrentLine.data();
@@ -291,15 +292,18 @@ PIXEL_T PPU::drawSprites(){
 
     for(size_t i = 0; i < oamSize; i++){
         if(spriteCollidesCurrentPixel(oamMap[i])){
+            bool currentSpriteHasOverride = false;
             const OAMAttribs sprite = oamMap[i];
 
             if(sprite.attr0.state.objectMode == 2){
                 // versteckt
                 continue;
             }
-            spriteAlphaOverride = false;
             if(sprite.attr0.state.gfxMode == 1)
-                spriteAlphaOverride = true;
+                currentSpriteHasOverride = true;
+            else if(sprite.attr0.state.gfxMode == 0)
+                currentSpriteHasOverride = false;
+
             if(sprite.attr0.state.gfxMode == 2)
                 continue;
     
@@ -388,7 +392,8 @@ PIXEL_T PPU::drawSprites(){
         
             // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
             const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-            if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return result;
+            if(tileStart + pixelIndex >= vRam.data() + vRam.size())
+                continue;
             Byte pixel = *(tileStart + pixelIndex);
             if(!bpp8){
                 if((inTileX & 1) ^ flipH) pixel >>= 4;
@@ -403,7 +408,10 @@ PIXEL_T PPU::drawSprites(){
             Byte blue = (color >> 10) & 0b11111;
             if(pixel > 0){
                 insideObjectWindow = true;
-                result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)sprite.attr2.state.priority, .layerIndex = 0};
+                if(sprite.attr2.state.priority <= result.priority){
+                    result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)sprite.attr2.state.priority, .layerIndex = 0};
+                    spriteAlphaOverride = currentSpriteHasOverride;
+                }
             }
         }
     }
@@ -601,7 +609,7 @@ void PPU::mixFinalColor(const WINDOW_ACTIVES_T &actives, PIXEL_T &targetA, PIXEL
 {
     // target a ist transparenter sprite
     if(actives.enableSpecialFX || (spriteAlphaOverride && targetA.layerIndex == 0 && hasTargetB(targetB.layerIndex))){
-        if(spriteAlphaOverride && targetB.layerIndex == 0 && hasTargetB(targetB.layerIndex)){
+        if(spriteAlphaOverride && targetA.layerIndex == 0 && hasTargetB(targetB.layerIndex)){
             output = blend(targetA, targetB);
         }
         else if(SPECIAL_EFFECTS.state.specialEffect == 1 && hasTargetA(targetA.layerIndex) && hasTargetB(targetB.layerIndex)){
@@ -729,7 +737,7 @@ void gba::PPU::drawPixelMode3() {
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
-    PIXEL_T bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = BG_CNT[2].state.BGPriority, .layerIndex = 3};
+    PIXEL_T bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
     WINDOW_ACTIVES_T actives = getActives();
 
@@ -756,7 +764,7 @@ void gba::PPU::drawPixelMode4() {
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
-    PIXEL_T bg2 = {.pixel = paletteIndex, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = BG_CNT[2].state.BGPriority, .layerIndex = 3};
+    PIXEL_T bg2 = {.pixel = paletteIndex, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
     WINDOW_ACTIVES_T actives = getActives();
 
@@ -784,7 +792,7 @@ void gba::PPU::drawPixelMode5() {
         HalfWord red = pixel & 0b11111;
         HalfWord green = (pixel >> 5) & 0b11111;
         HalfWord blue = (pixel >> 10) & 0b11111;
-        bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = BG_CNT[2].state.BGPriority, .layerIndex = 3};
+        bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
     }
     else{
         bg2 = PIXEL_T{.pixel = 0, .priority = 99};
