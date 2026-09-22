@@ -75,18 +75,18 @@ bool Bus::hasIME(){
 
 void Bus::PPUEnteredHBlank(){
     for(auto &d : dma){
-        if(d.getStartTiming() == DMA_HBLANK)
+        if(d.getStartTiming() == DMA_HBLANK && d.isEnabled())
             d.isActive = true;
     }
     if(ppu.getVCount() >= 2 && ppu.getVCount() < 162){
-        if(dma[3].getStartTiming() == DMA_VIDEO_CAPTURE) dma[3].isActive = true;
+        if(dma[3].getStartTiming() == DMA_VIDEO_CAPTURE && dma[3].isEnabled()) dma[3].isActive = true;
     }
 }
 
 void Bus::PPULeftHBlank(){
     for(auto &d : dma){
-        if(d.getStartTiming() == DMA_HBLANK || d.getStartTiming() == DMA_VIDEO_CAPTURE)
-            d.isActive = false;
+        // if(d.getStartTiming() == DMA_HBLANK || d.getStartTiming() == DMA_VIDEO_CAPTURE)
+        //     d.isActive = false;
     }
     if(ppu.getVCount() == 162 && dma[3].getStartTiming() == DMA_VIDEO_CAPTURE){
         dma[3].Control.raw &= ~(1u << 15);
@@ -95,16 +95,16 @@ void Bus::PPULeftHBlank(){
 
 void Bus::PPUEnteredVBlank(){
     for(auto &d : dma){
-        if(d.getStartTiming() == DMA_VBLANK)
+        if(d.getStartTiming() == DMA_VBLANK && d.isEnabled())
             d.isActive = true;
     }
 }
 
 void Bus::PPULeftVBlank(){
-    for(auto &d : dma){
-        if(d.getStartTiming() == DMA_VBLANK)
-            d.isActive = false;
-    }
+    // for(auto &d : dma){
+    //     if(d.getStartTiming() == DMA_VBLANK)
+    //         d.isActive = false;
+    // }
 }
 
 void gba::Bus::determineBackup()

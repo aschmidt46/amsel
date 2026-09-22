@@ -125,7 +125,7 @@ uint32_t *gba::PPU::accessFramebuffer()
 
 void gba::PPU::clock() {
     currentCycle++;
-    if(currentCycle == 1004){
+    if(currentCycle == 1006){
         // Hblank
         LCDSTATUS.state.hBlankFlag = 1;
         if(currentScanline < 160){
@@ -141,8 +141,8 @@ void gba::PPU::clock() {
             if(LCDSTATUS.state.hBlankIE){
                 bus.lock()->setIF(1, true);
             }
+            bus.lock()->PPUEnteredHBlank();
         }
-        bus.lock()->PPUEnteredHBlank();
     }
     else if(currentCycle >= 1232){
         currentCycle = 0;
