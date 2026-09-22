@@ -579,6 +579,7 @@ void gba::Bus::clock() {
 
 
     if(!halted || steps > 0 || !cpu.pipelineHasValue()){
+        clocks++;
         apu.clockPCM();
         if(clocks % 4 == 0){
             apu.clockPSG();
