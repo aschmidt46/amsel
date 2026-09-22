@@ -400,6 +400,27 @@ void gba::DMASoundChannel::onClockAPU()
     }
 }
 
+void gba::DMASoundChannel::reset()
+{
+    queue = std::queue<Byte>();
+    FIFOData0 = 0;
+    FIFOData1 = 0;
+    FIFOData2 = 0;
+    FIFOData3 = 0;
+}
+
+void gba::APU::onSOUNDCNT_H_Write()
+{
+    if(SOUNDCNT_H.state.resetFIFOA){
+        SOUNDCNT_H.state.resetFIFOA = 0;
+        A.reset();
+    }
+    if(SOUNDCNT_H.state.resetFIFOB){
+        SOUNDCNT_H.state.resetFIFOB = 0;
+        B.reset();
+    }
+}
+
 void gba::APU::clockPSG()
 {
     total_clocks += 1;
@@ -526,12 +547,24 @@ void gba::APU::onWrite(Word addr, Byte val)
     }
     else if(addr == 0x4000082){
         SOUNDCNT_H.raw = (SOUNDCNT_H.raw & 0xFF00) | val;
+        onSOUNDCNT_H_Write();
     }
     else if(addr == 0x4000083){
         SOUNDCNT_H.raw = (SOUNDCNT_H.raw & 0x00FF) | (HalfWord(val) << 8);
+        onSOUNDCNT_H_Write();
     }
     else if(addr == 0x4000084){
-        SOUNDCNT_X.raw = val;
+        psgFIFOMasterEnable = val & 128;
+        if(!psgFIFOMasterEnable){
+            SOUNDCNT_L = {};
+            pulse1 = PulseChannel(true);
+            pulse2 = PulseChannel(false);
+            noise = NoiseChannel();
+            wave = WaveChannel();
+            waveStub = 0;
+            A = DMASoundChannel(bus, 0x040000A0);
+            B = DMASoundChannel(bus, 0x040000A4);
+        }
     }
     else if(addr == 0x4000088){
         SOUNDBIAS.raw = (SOUNDBIAS.raw & 0xFF00) | val;
@@ -652,7 +685,7 @@ Byte gba::APU::onRead(Word addr)
         return (SOUNDCNT_H.raw >> 8) & 0xFF;
     }
     else if(addr == 0x4000084){
-        return SOUNDCNT_X.raw & 0xFF;
+        return (Byte(psgFIFOMasterEnable) << 7) | pulse1.active() | (pulse2.active() << 1) | (wave.active() << 2) | (noise.active() << 3);
     }
     else if(addr == 0x4000088){
         return SOUNDBIAS.raw & 0xFF;
@@ -670,8 +703,43 @@ Byte gba::APU::onRead(Word addr)
 
 std::pair<float, float> gba::APU::getSample()
 {
-    if(SOUNDCNT_X.state.soundMasterEnable){
-        return {float(A.dac) / 128.0f, float(B.dac) / 128.0f};
+    if(psgFIFOMasterEnable){
+        int16_t pcmOutLeft = (A.dac << (1 + SOUNDCNT_H.state.volumeA)) * SOUNDCNT_H.state.enableALeft + (B.dac << (1 + SOUNDCNT_H.state.volumeB)) * SOUNDCNT_H.state.enableBLeft;
+        pcmOutLeft = std::clamp(pcmOutLeft, (int16_t)-0x200, (int16_t)0x1FF);
+
+        int16_t pcmOutRight = (A.dac << (1 + SOUNDCNT_H.state.volumeA)) * SOUNDCNT_H.state.enableARight + (B.dac << (1 + SOUNDCNT_H.state.volumeB)) * SOUNDCNT_H.state.enableBRight;
+        pcmOutRight = std::clamp(pcmOutRight, (int16_t)-0x200, (int16_t)0x1FF);
+
+        int16_t pulse1Sample = 2 * pulse1_sample - int16_t(pulse1.volume);
+        int16_t pulse2Sample = 2 * pulse2_sample - int16_t(pulse2.volume);
+        int16_t noiseSample = 2 * noise_sample - int16_t(noise.volume);
+        int16_t waveSample = 2 * wave_sample - int16_t(15);
+
+        const int16_t pulse1SampleLeft = SOUNDCNT_L.state.enablePulse1Left ? pulse1Sample : 0;
+        const int16_t pulse2SampleLeft = SOUNDCNT_L.state.enablePulse2Left ? pulse2Sample : 0;
+        const int16_t noiseSampleLeft = SOUNDCNT_L.state.enableNoiseLeft ? noiseSample : 0;
+        const int16_t waveSampleLeft = SOUNDCNT_L.state.enableWaveLeft ? waveSample : 0;
+
+        int16_t psgSampleLeft = (pulse1SampleLeft + pulse2SampleLeft + noiseSampleLeft + waveSampleLeft) * SOUNDCNT_L.state.psgVolumeLeft;
+
+        psgSampleLeft >>= 2 - (SOUNDCNT_H.state.psgVolumeMaster % 3);
+
+        const int16_t pulse1SampleRight = SOUNDCNT_L.state.enablePulse1Right ? pulse1Sample : 0;
+        const int16_t pulse2SampleRight = SOUNDCNT_L.state.enablePulse2Right ? pulse2Sample : 0;
+        const int16_t noiseSampleRight = SOUNDCNT_L.state.enableNoiseRight ? noiseSample : 0;
+        const int16_t waveSampleRight = SOUNDCNT_L.state.enableWaveRight ? waveSample : 0;
+
+        int16_t psgSampleRight = (pulse1SampleRight + pulse2SampleRight + noiseSampleRight + waveSampleRight) * SOUNDCNT_L.state.psgVolumeRight;
+
+        psgSampleRight >>= 2 - (SOUNDCNT_H.state.psgVolumeMaster % 3);
+
+        const int16_t signedOutLeft = std::clamp(pcmOutLeft + psgSampleLeft, -0x200, 0x1FF);
+        const int finalOutLeft = std::clamp(signedOutLeft + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
+
+        const int16_t signedOutRight = std::clamp(pcmOutRight + psgSampleRight, -0x200, 0x1FF);
+        const int finalOutRight = std::clamp(signedOutRight + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
+
+        return {float(signedOutLeft) / 512.0f, float(signedOutRight) / 512.0f};
     }
     else{
         return {0,0};
@@ -686,7 +754,7 @@ void gba::APU::clockPCM()
 
 void gba::APU::onTimerOverflow(int index)
 {
-    if(SOUNDCNT_X.state.soundMasterEnable){
+    if(psgFIFOMasterEnable){
         if(index == 0 && !SOUNDCNT_H.state.useTimer1A) A.onTimerOverflow();
         if(index == 1 && SOUNDCNT_H.state.useTimer1A) A.onTimerOverflow();
         if(index == 0 && !SOUNDCNT_H.state.useTimer1B) B.onTimerOverflow();

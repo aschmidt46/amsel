@@ -46,19 +46,6 @@ namespace gba{
         HalfWord raw;
     };
 
-    union SOUNDCNT_X_T {
-        struct{
-            Word enablePulse1Master : 1;
-            Word enablePulse2Master : 1;
-            Word enableWaveMaster : 1;
-            Word enableNoiseMaster : 1;
-            Word _fill : 3;
-            Word soundMasterEnable : 1;
-            Word _fill2 : 24;
-        } state;
-        Word raw;
-    };
-
     union SOUNDBIAS_T {
         struct{
             Word _fill0 : 1;
@@ -201,6 +188,7 @@ namespace gba{
 
         void onTimerOverflow();
         void onClockAPU();
+        void reset();
     };
     
     class APU{
@@ -213,18 +201,21 @@ namespace gba{
         Byte waveStub = 0;
         size_t total_clocks = 0;
 
-        Byte pulse1_sample = 0;
-        Byte pulse2_sample = 0;
-        Byte wave_sample = 0;
-        Byte noise_sample = 0;
+        int16_t pulse1_sample = 0;
+        int16_t pulse2_sample = 0;
+        int16_t wave_sample = 0;
+        int16_t noise_sample = 0;
+
+        bool psgFIFOMasterEnable = false;
 
         DMASoundChannel A;
         DMASoundChannel B;
 
         SOUNDCNT_L_T SOUNDCNT_L = {};
         SOUNDCNT_H_T SOUNDCNT_H = {};
-        SOUNDCNT_X_T SOUNDCNT_X = {};
         SOUNDBIAS_T SOUNDBIAS = {.state = {.biasLevel = 0x100}};
+
+        void onSOUNDCNT_H_Write();
 
         public:
         APU(Bus* bus) : bus(bus), A(bus, 0x040000A0), B(bus, 0x040000A4){};
