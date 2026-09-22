@@ -86,6 +86,8 @@ void DMAChannel::resetInternalCounters(bool SAD, bool DAD){
         maxCount &= 0x3FFF; // 14 bit
         if(maxCount == 0) maxCount = 0x4000;
     }
+    if(startTiming == DMA_SOUND_FIFO)
+        maxCount = 4;
 }
 
 Byte DMAChannel::onRead(Word addr){
