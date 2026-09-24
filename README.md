@@ -5,6 +5,7 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 ## <a href="https://aschmidt46.github.io/amsel/">Web-Demo</a>
 
 <img src="resources/crystal.png" width="48%">   <img src="resources/zelda.png" width="48%">
+<img src="resources/super-circuit.png" width="48%">   <img src="resources/emerald.png" width="48%">
 
 ## Systems and Compatibility
 ### Nintendo Entertainment System
@@ -17,13 +18,11 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 - RTC is missing
 - Some games require very strict DMA timing and don't work correctly because of it
 - Link Cable Implementation over TCP, Master Gameboy experiences audio glitches because of latency
-### Nintendo Gameboy Advance (incomplete)
+### Nintendo Gameboy Advance
 - Passes ARMWrestler, arm.gba and thumb.gba by jsmolka, most SingleStepTests
-- PPU mostly working
-- mosaic missing
-- No audio yet
+- mosaic effect missing, graphical issues in some games
+- Sound PSG Channels don't all work correctly
 - Timings, Waitstates not implemented
-- EEPROM, Flash not implemented
 - Performance is weak
 
 ## Features

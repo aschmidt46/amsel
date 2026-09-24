@@ -5,6 +5,7 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 ## <a href="https://aschmidt46.github.io/amsel/">Web-Demo</a>
 
 <img src="resources/crystal.png" width="48%">   <img src="resources/zelda.png" width="48%">
+<img src="resources/super-circuit.png" width="48%">   <img src="resources/emerald.png" width="48%">
 
 ## Systeme und Kompatibilität
 ### Nintendo Entertainment System
@@ -17,12 +18,11 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - Die Echtzeituhr von entsprechenden Cartridges ist aktuell noch nicht implementiert
 - Einige wenige Spiele funktionieren aufgrund von obskuren DMA Timings nicht korrekt
 - Link Cable Emulation via TCP, das Master-Gerät hat aufgrund von Latenz Audio Glitches
-### Nintendo Gameboy Advance (in Arbeit)
+### Nintendo Gameboy Advance
 - Besteht ARMWrestler, arm.gba und thumb.gba von jsmolka, die meisten SingleStepTests
-- PPU größtenteils implementiert, mosaic fehlt
-- Kein Ton
+- PPU größtenteils implementiert, mosaic fehlt, grafische Fehler in einigen Spielen
+- PSG Audio Kanäle haben Probleme
 - Timings, Waitstates nicht implementiert
-- EEPROM, Flash nicht implementiert
 - Performance schwach
 
 ## Features
