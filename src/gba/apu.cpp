@@ -734,10 +734,10 @@ std::pair<float, float> gba::APU::getSample()
         psgSampleRight >>= 2 - (SOUNDCNT_H.state.psgVolumeMaster % 3);
 
         const int16_t signedOutLeft = std::clamp(pcmOutLeft + psgSampleLeft, -0x200, 0x1FF);
-        const int finalOutLeft = std::clamp(signedOutLeft + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
+        // const int finalOutLeft = std::clamp(signedOutLeft + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
 
         const int16_t signedOutRight = std::clamp(pcmOutRight + psgSampleRight, -0x200, 0x1FF);
-        const int finalOutRight = std::clamp(signedOutRight + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
+        // const int finalOutRight = std::clamp(signedOutRight + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
 
         return {float(signedOutLeft) / 512.0f, float(signedOutRight) / 512.0f};
     }

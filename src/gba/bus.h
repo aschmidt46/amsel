@@ -10,6 +10,7 @@
 #include "timer.h"
 #include <array>
 #include <cstring>
+#include "peripheral/flash.h"
 
 enum BackupType{
     BACKUP_EEPROM,
@@ -31,6 +32,9 @@ namespace gba{
         private:
         std::vector<Byte> bios;
         size_t clocks = 0;
+
+        // Nicht immer vorhanden
+        std::unique_ptr<Flash> flash = nullptr;
 
         // Register
         HalfWord IF = 0;

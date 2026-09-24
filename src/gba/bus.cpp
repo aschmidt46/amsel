@@ -84,10 +84,10 @@ void Bus::PPUEnteredHBlank(){
 }
 
 void Bus::PPULeftHBlank(){
-    for(auto &d : dma){
-        // if(d.getStartTiming() == DMA_HBLANK || d.getStartTiming() == DMA_VIDEO_CAPTURE)
-        //     d.isActive = false;
-    }
+    // for(auto &d : dma){
+    //     // if(d.getStartTiming() == DMA_HBLANK || d.getStartTiming() == DMA_VIDEO_CAPTURE)
+    //     //     d.isActive = false;
+    // }
     if(ppu.getVCount() == 162 && dma[3].getStartTiming() == DMA_VIDEO_CAPTURE){
         dma[3].Control.raw &= ~(1u << 15);
     }
@@ -163,6 +163,15 @@ std::vector<uint8_t> gba::Bus::getSaveData()
             }
             return saveData;
         }
+        case BACKUP_FLASH_64:{
+            return flash->getSaveData();
+        }
+        case BACKUP_FLASH_128:{
+            return flash->getSaveData();
+        }
+        case BACKUP_NO_BACKUP:{
+            break;
+        }
     }
     return std::vector<uint8_t>();
 }
@@ -172,6 +181,12 @@ size_t gba::Bus::getSaveSize()
     switch(backupType){
         case BACKUP_SRAM:
             return 0x8000;
+        case BACKUP_FLASH_64:
+            return 0x10000;
+        case BACKUP_FLASH_128:
+            return 0x20000;
+        case BACKUP_NO_BACKUP:
+            return 0;
     }
     return 0;
 }
@@ -183,6 +198,18 @@ void gba::Bus::loadSave(const std::vector<uint8_t> &saveData)
             for(size_t i = 0; i < 0x8000; i++){
                 (*cartRam)[i] = saveData[i];
             }
+            return;
+        }
+        case BACKUP_FLASH_64:{
+            flash->loadSave(saveData);
+            return;
+        }
+        case BACKUP_FLASH_128:{
+            flash->loadSave(saveData);
+            return;
+        }
+        case BACKUP_NO_BACKUP:{
+            return;
         }
     }
 }
@@ -292,10 +319,17 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
 
     // Cart Ram
     else if(addr >= 0x0E000000 && addr < 0x0E010000){
-        (*cartRam)[addr - 0x0E000000] = val;
+        if(backupType == BACKUP_SRAM){
+            (*cartRam)[addr - 0x0E000000] = val;
+        }
+        else if(flash != nullptr){
+            flash->OnWrite(addr, val);
+        }
     }
     else if(addr >= 0x0F000000 && addr < 0x0F010000){
-        (*cartRam)[addr - 0x0F000000] = val;
+        if(backupType == BACKUP_SRAM){
+            (*cartRam)[addr - 0x0F000000] = val;
+        }
     }
     else if(addr >= 0x04000060 && addr < 0x040000A8){
         //Audio Register
@@ -308,12 +342,6 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
 Byte gba::Bus::readByteFromWide(Word addr)
 {
     (void)addr;
-
-    // stub flash
-    if(backupType == BACKUP_FLASH_128){
-        if(addr == 0x0E000000) return 0x62;
-        if(addr == 0x0E000001) return 0x13;
-    }
     
     if(addr < 0x4000){
         return bios[addr];
@@ -427,10 +455,16 @@ Byte gba::Bus::readByteFromWide(Word addr)
 
     // Cart Ram
     if(addr >= 0x0E000000 && addr < 0x0E010000){
-        return (*cartRam)[addr - 0x0E000000];
+        if(backupType == BACKUP_SRAM){
+            return (*cartRam)[addr - 0x0E000000];
+        }
+        if(flash != nullptr){
+            return flash->OnRead(addr);
+        }
     }
     if(addr >= 0x0F000000 && addr < 0x0F010000){
-        return (*cartRam)[addr - 0x0F000000];
+        if(backupType == BACKUP_SRAM)
+            return (*cartRam)[addr - 0x0F000000];
     }
     if(addr >= 0x04000060 && addr < 0x040000A8){
         //Audio Register
@@ -506,6 +540,18 @@ void gba::Bus::init(bool skipBios) {
     cpu.thumbCacheSize = this->gamePak.size() / 2;
     cpu.armCacheSizeBIOS = this->bios.size() / 4;
     cpu.thumbCacheSizeBIOS = this->bios.size() / 2;
+    switch(backupType){
+        case BACKUP_FLASH_64:
+            flash = std::make_unique<Flash>(0x10000);
+            break;
+        case BACKUP_FLASH_128:
+            flash = std::make_unique<Flash>(0x20000);
+            break;
+        case BACKUP_SRAM:
+            break;
+        case BACKUP_NO_BACKUP:
+            break;
+    }
 }
 
 gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
