@@ -169,6 +169,9 @@ std::vector<uint8_t> gba::Bus::getSaveData()
         case BACKUP_FLASH_128:{
             return flash->getSaveData();
         }
+        case BACKUP_EEPROM:{
+            return eeprom->getSaveData();
+        }
         case BACKUP_NO_BACKUP:{
             break;
         }
@@ -185,6 +188,10 @@ size_t gba::Bus::getSaveSize()
             return 0x10000;
         case BACKUP_FLASH_128:
             return 0x20000;
+        case BACKUP_EEPROM:
+            if(eeprom != nullptr)
+                return eeprom->getSaveDataSize();
+            break;
         case BACKUP_NO_BACKUP:
             return 0;
     }
@@ -206,6 +213,10 @@ void gba::Bus::loadSave(const std::vector<uint8_t> &saveData)
         }
         case BACKUP_FLASH_128:{
             flash->loadSave(saveData);
+            return;
+        }
+        case BACKUP_EEPROM:{
+            eeprom->loadSave(saveData);
             return;
         }
         case BACKUP_NO_BACKUP:{
@@ -311,11 +322,6 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
     else if(addr >= 0x05000000 && addr < 0x08000000){
         ppu.writePPUMemory(addr, val);
     }
-
-    // else if(addr >= 0x0D000000 && addr < 0x0E000000){
-    //     Word modAddr = (addr - 0xD000000) % 0x2000;
-    //     eeprom[modAddr] = val;
-    // }
 
     // Cart Ram
     else if(addr >= 0x0E000000 && addr < 0x0E010000){
@@ -448,10 +454,6 @@ Byte gba::Bus::readByteFromWide(Word addr)
     if(addr >= 0x0C000000 && addr - 0x0C000000 < gamePak.size()){
         return gamePak[addr - 0x0C000000];
     }
-    // if(addr >= 0x0D000000 && addr < 0x0E000000){
-    //     Word modAddr = (addr - 0xD000000) % 0x2000;
-    //     return eeprom[modAddr];
-    // }
 
     // Cart Ram
     if(addr >= 0x0E000000 && addr < 0x0E010000){
@@ -483,12 +485,52 @@ Byte gba::Bus::readByte(Word addr)
 
 void gba::Bus::writeHalfWord(Word addr, HalfWord val)
 {
+    if(backupType == BACKUP_EEPROM){
+        if(addr >= 0x09FF'FF00){
+            eeprom->OnWrite(val);
+            return;
+        }
+    
+        else if(addr >= 0x0BFF'FF00){
+            eeprom->OnWrite(val);
+            return;
+        }
+    
+    
+        else if(addr >= 0x0DFF'FF00){
+            eeprom->OnWrite(val);
+            return;
+        }
+    
+        else if(addr >= 0x0D00'0000 && addr < 0x0E00'0000 && gamePak.size() < 0x1000000){ // gamepak < 16MB
+            eeprom->OnWrite(val);
+            return;
+        }
+    }
     writeByteFromWide(addr, val & 0xFF);
     writeByteFromWide(addr + 1, (val & (0xFF << 8)) >> 8);
 }
 
 HalfWord gba::Bus::readHalfWord(Word addr)
 {
+    if(backupType == BACKUP_EEPROM){
+        if(addr >= 0x09FF'FF00){
+            return eeprom->OnRead();
+        }
+    
+        else if(addr >= 0x0BFF'FF00){
+            return eeprom->OnRead();
+        }
+    
+    
+        else if(addr >= 0x0DFF'FF00){
+            return eeprom->OnRead();
+        }
+    
+        else if(addr >= 0x0D00'0000 && addr < 0x0E00'0000 && gamePak.size() < 0x1000000){ // gamepak < 16MB
+            return eeprom->OnRead();
+        }
+    }
     HalfWord A1 = readByteFromWide(addr);
     HalfWord A2 = readByteFromWide(addr + 1);
     return A1 | (A2 << 8);
@@ -496,6 +538,28 @@ HalfWord gba::Bus::readHalfWord(Word addr)
 
 void gba::Bus::writeWord(Word addr, Word val)
 {
+    if(backupType == BACKUP_EEPROM){
+        if(addr >= 0x09FF'FF00){
+            eeprom->OnWrite(val);
+            return;
+        }
+    
+        else if(addr >= 0x0BFF'FF00){
+            eeprom->OnWrite(val);
+            return;
+        }
+    
+    
+        else if(addr >= 0x0DFF'FF00){
+            eeprom->OnWrite(val);
+            return;
+        }
+    
+        else if(addr >= 0x0D00'0000 && addr < 0x0E00'0000 && gamePak.size() < 0x1000000){ // gamepak < 16MB
+            eeprom->OnWrite(val);
+            return;
+        }
+    }
     writeByteFromWide(addr, val & 0xFF);
     writeByteFromWide(addr + 1, (val & (0xFF << 8)) >> 8);
     writeByteFromWide(addr + 2, (val & (0xFF << 16)) >> 16);
@@ -504,6 +568,24 @@ void gba::Bus::writeWord(Word addr, Word val)
 
 Word gba::Bus::readWord(Word addr)
 {
+    if(backupType == BACKUP_EEPROM){
+        if(addr >= 0x09FF'FF00){
+            return eeprom->OnRead();
+        }
+    
+        else if(addr >= 0x0BFF'FF00){
+            return eeprom->OnRead();
+        }
+    
+    
+        else if(addr >= 0x0DFF'FF00){
+            return eeprom->OnRead();
+        }
+    
+        else if(addr >= 0x0D00'0000 && addr < 0x0E00'0000 && gamePak.size() < 0x1000000){ // gamepak < 16MB
+            return eeprom->OnRead();
+        }
+    }
     Word A1 = readByteFromWide(addr);
     Word A2 = readByteFromWide(addr + 1);
     Word A3 = readByteFromWide(addr + 2);
@@ -546,6 +628,9 @@ void gba::Bus::init(bool skipBios) {
             break;
         case BACKUP_FLASH_128:
             flash = std::make_unique<Flash>(0x20000);
+            break;
+        case BACKUP_EEPROM:
+            eeprom = std::make_unique<EEPROM>(this);
             break;
         case BACKUP_SRAM:
             break;

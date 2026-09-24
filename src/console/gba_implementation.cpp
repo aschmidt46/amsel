@@ -35,7 +35,7 @@ GbaImplementation::GbaImplementation(const char *path) : Console(path)
       if(!FileIO::getInstance().createSave(this->loadedGame)){
         size_t size = gba->getSaveSize();
         std::vector<uint8_t> saveData(size);
-        FileIO::getInstance().loadSave(this->loadedGame, saveData.data(), size);
+        FileIO::getInstance().loadSave(this->loadedGame, saveData, size);
         gba->loadSave(saveData);
       }
     }
@@ -51,7 +51,7 @@ GbaImplementation::GbaImplementation(std::vector<uint8_t> &rom)
       if(!FileIO::getInstance().createSave(this->loadedGame)){
         size_t size = gba->getSaveSize();
         std::vector<uint8_t> saveData(size);
-        FileIO::getInstance().loadSave(this->loadedGame, saveData.data(), size);
+        FileIO::getInstance().loadSave(this->loadedGame, saveData, size);
         gba->loadSave(saveData);
       }
     }

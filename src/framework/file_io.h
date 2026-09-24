@@ -22,6 +22,7 @@ class FileIO{
     bool createSave(std::string romName);
     void saveData(std::string romName, uint8_t* data, int size);
     void loadSave(std::string romName, uint8_t* destination, int size);
+    void loadSave(std::string romName, std::vector<uint8_t> &destination, int size);
 
     SettingsConfig loadSettings(int posX, int posY);
     void saveSettings(const SettingsConfig &config);

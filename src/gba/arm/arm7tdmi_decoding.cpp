@@ -491,7 +491,8 @@ bool gba::CPU::executeInstruction()
                     case TypePSRTransfer:
                         return this->executePSRTransfer(info.code);
                     default:
-                        std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
+                        std::cout << "Unimplementierte Instruktion (ARM) ausgeführt : " << getHex0x(info.code, 8) << std::endl;
+                        std::cout << getDisassembly(info.code) << "\n";
                         bus->setHalt();
                         // throw "error";
                         return false;
@@ -540,7 +541,8 @@ bool gba::CPU::executeInstruction()
                 case ThumbLongBranchWithLink:
                     return this->executeThumbLongBranchWithLink(info.code);
                 default:
-                    std::cout << "Unimplementierte Instruktion ausgeführt" << std::endl;
+                    std::cout << "Unimplementierte Instruktion (THUMB) ausgeführt : " << getHex0x(info.code, 8) << std::endl;
+                    std::cout << getDisassembly(info.code) << "\n";
                     // throw "error";
                     bus->setHalt();
                     return false;

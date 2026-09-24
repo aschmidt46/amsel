@@ -11,6 +11,7 @@
 #include <array>
 #include <cstring>
 #include "peripheral/flash.h"
+#include "peripheral/eeprom.h"
 
 enum BackupType{
     BACKUP_EEPROM,
@@ -35,6 +36,7 @@ namespace gba{
 
         // Nicht immer vorhanden
         std::unique_ptr<Flash> flash = nullptr;
+        std::unique_ptr<EEPROM> eeprom = nullptr;
 
         // Register
         HalfWord IF = 0;

@@ -70,6 +70,16 @@ void FileIO::loadSave(std::string romName, uint8_t *destination, int size)
     f.close();
 }
 
+void FileIO::loadSave(std::string romName, std::vector<uint8_t> &destination, int size)
+{
+    size_t usize = size;
+    if(size == 0){
+        usize = std::filesystem::file_size(saveDirectory / (romName + ".sav"));
+        destination.resize(usize);
+    }
+    loadSave(romName, destination.data(), (int)usize);
+}
+
 SettingsConfig FileIO::loadSettings(int posX, int posY)
 {
     if(!std::filesystem::exists(workDirectory / "settings.ini")){

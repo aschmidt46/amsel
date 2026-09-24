@@ -40,11 +40,11 @@ namespace gba{
         private: GeneralPurpose16 WordCount;
         public: GeneralPurpose16 Control;
         
+        Word maxCount = 0;
         private:
         Word currentSourceAddr = 0;
         Word currentDestAddr = 0;
         Word currentCount = 0;
-        Word maxCount = 0;
 
         int remainingCycles = 0;
 

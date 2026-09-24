@@ -1,3 +1,4 @@
+#pragma once
 #include "../arm/bus_types.h"
 #include <array>
 #include <vector>

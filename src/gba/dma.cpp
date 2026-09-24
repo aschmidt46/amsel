@@ -88,6 +88,15 @@ void DMAChannel::resetInternalCounters(bool SAD, bool DAD){
     }
     if(startTiming == DMA_SOUND_FIFO)
         maxCount = 4;
+    
+    if(dmaTransferIs32Bit()){
+        currentSourceAddr &= ~3u;
+        currentDestAddr &= ~3u;
+    }
+    else{
+        currentSourceAddr &= ~1u;
+        currentDestAddr &= ~1u;
+    }
 }
 
 Byte DMAChannel::onRead(Word addr){
