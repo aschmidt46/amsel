@@ -632,6 +632,11 @@ Word gba::Bus::readWord(Word addr)
     return A1 | (A2 << 8) | (A3 << 16) | (A4 << 24);
 }
 
+size_t gba::Bus::getClocks() const
+{
+    return clocks;
+}
+
 void gba::Bus::setIF(int bit, bool value) {
     IF = (IF & ~(1u << bit)) | (value << bit);
 }

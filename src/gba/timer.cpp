@@ -1,6 +1,7 @@
 #include "timer.h"
 #include "bus.h"
 #include <iostream>
+#include <bitset>
 
 void gba::Timer::onWrite(gba::Word addr, gba::Byte val){
     if(addr < 2){
@@ -11,7 +12,6 @@ void gba::Timer::onWrite(gba::Word addr, gba::Byte val){
         control.OnWriteByte(addr,val);
         if(!startBitWasSet && (control.raw & (1u << 7))){
             value = reload.raw;
-            dividerValue = 0;
             if(!usesPreviousTimer()){
                 reschedule();
             }
@@ -20,11 +20,19 @@ void gba::Timer::onWrite(gba::Word addr, gba::Byte val){
 }
 
 gba::Byte gba::Timer::onRead(gba::Word addr){
+    const size_t clocksPassed = bus->getClocks() - clocksStart;
+    const size_t valueIncrement = clocksPassed / timerDividers[control.raw & 0b11];
     if(addr == 0){
-        return value & 0xFF;
+        if(usesPreviousTimer())
+            return value & 0xFF;
+        else
+            return (value + valueIncrement) & 0xFF;
     }
     else if(addr == 1){
-        return value >> 8;
+        if(usesPreviousTimer())
+            return value >> 8;
+        else
+            return (value + valueIncrement) >> 8;
     }
     else if(addr < 4){
         return control.OnReadByte(addr);
@@ -35,13 +43,20 @@ gba::Byte gba::Timer::onRead(gba::Word addr){
 void gba::Timer::reschedule()
 {
     Word divider = control.raw & 0b11;
+    numStart++;
+    clocksStart = bus->getClocks();
     bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider] * (0xFFFF - reload.raw), .type = EVENT_TimerOverflow, .args = {.index = number}});
 }
 
 void gba::Timer::overflowTimer()
 {
-    if(control.raw & 128){
-        overflow = true;
+    if(!usesPreviousTimer()){
+        const size_t clocksPassed = bus->getClocks() - clocksStart;
+        const size_t valueIncrement = clocksPassed / timerDividers[control.raw & 0b11];
+        if(value + valueIncrement < 0xFFFF) // Timer wurde später erneut gesetzt
+            return;
+    }
+    if(control.raw & 128){ // sicherstellen, dass dieses Timerevent vom letzten Stellen des Timers kam
         this->value = reload.raw;
         if(control.raw & 64){ // IRQ Enable
             bus->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
@@ -58,36 +73,7 @@ bool gba::Timer::usesPreviousTimer()
     return (control.raw & 4u) && number > 0; // Geht nur, wenn das nicht der erste Timer (t0) ist
 }
 
-// 16.78 MHz
-void gba::Timer::clock() {
-    overflow = false;
-    if(control.raw & 128){ // Start bit
-        Word divider = control.raw & 0b11;
-        this->dividerValue++;
-        if(dividerValue >= timerDividers[divider]){
-            this->dividerValue = 0;
-            onIncrement();
-        }
-    }
-}
-
 void gba::Timer::clockWithPrevious() {
-    overflow = false;
-    if(control.raw & 128){
-        onIncrement();
-    }
-}
-
-bool gba::Timer::justOverflowed()
-{
-    bool tmp = overflow;
-    overflow = false;
-    return tmp;
-}
-
-void gba::Timer::increment()
-{
-    overflow = false;
     if(control.raw & 128){
         onIncrement();
     }

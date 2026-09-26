@@ -1,6 +1,7 @@
 #pragma once
 #include <queue>
 #include <optional>
+#include "arm/bus_types.h"
 
 namespace gba{
     class Bus;
@@ -8,7 +9,6 @@ namespace gba{
     enum EventType{
         EVENT_None,
         EVENT_DmaTransfer,
-        EVENT_TimerIncrement,
         EVENT_APU_PSG,
         EVENT_APU_LengthCounters,
         EVENT_APU_Sweep,

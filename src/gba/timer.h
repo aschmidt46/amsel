@@ -11,14 +11,14 @@ namespace gba{
     static const unsigned int timerDividers[4] = {1, 64, 256, 1024};
     class Timer{
         private:
+        size_t numStart = 0;
         Word value;
-        Word dividerValue;
         int number;
+        size_t clocksStart = 0;
 
         Bus* bus;
 
         void onIncrement();
-        bool overflow = false;
 
         public:
         Timer() : reload(0), control(0){};
@@ -34,9 +34,6 @@ namespace gba{
 
         bool usesPreviousTimer();
 
-        void clock(); // Count erhöhen anhand Prescaler
         void clockWithPrevious(); // Count erhöhen durch anderen Timer
-        bool justOverflowed();
-        void increment();
     };
 }

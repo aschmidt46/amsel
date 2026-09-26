@@ -111,6 +111,7 @@ namespace gba{
         HalfWord readHalfWord(Word addr) override;
         void writeWord(Word addr, Word val) override;
         Word readWord(Word addr) override;
+        size_t getClocks() const;
 
         void press(int i);
         void release(int i);
