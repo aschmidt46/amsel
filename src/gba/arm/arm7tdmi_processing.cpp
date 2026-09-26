@@ -190,6 +190,11 @@ void gba::CPU::flushPipeline()
     this->pipeline[0] = {PipelineEmpty, 0};
 }
 
+void gba::CPU::addCycles(size_t cycles)
+{
+    remainingCycles += cycles;
+}
+
 template<bool isARM>
 void gba::CPU::advancePipeline()
 {

@@ -7,6 +7,8 @@
 
 using namespace gba;
 
+APU::APU(Bus* bus) : bus(bus), A(bus, 0x040000A0), B(bus, 0x040000A4){};
+
 gba::PulseChannel::PulseChannel(bool has_sweep) :
 dac(0), sweep(0), length_duty(0), vol_env(0), period_low(0), period_high_control(0), has_sweep(false), period_divider(0), waveform_counter(0), volume(0)
 ,envelope_counter(0), sweep_enabled(false), sweep_timer(0), shadow_register(0), length_timer(0), disabled_by_sweep(false), length_enabled(false), sweep_pace(0)
@@ -377,10 +379,10 @@ void gba::DMASoundChannel::onTimerOverflow()
     if(queue.size() <= 16){
         // Timing stimmt nicht ganz, sollte in den meisten Spielen passen
         if(bus->dma[1].DestinationAddress.raw == startAddress){
-            bus->dma[1].isActive = true;
+            bus->scheduler->scheduleEvent({.timePoint = 3, .type = EVENT_DmaTransfer, .args={.index = 1}});
         }
         else if(bus->dma[2].DestinationAddress.raw == startAddress){
-            bus->dma[2].isActive = true;
+            bus->scheduler->scheduleEvent({.timePoint = 3, .type = EVENT_DmaTransfer, .args={.index = 2}});
         }
     }
 }
@@ -470,6 +472,12 @@ void gba::APU::clockLengthCounters()
 void gba::APU::clockSweep()
 {
     pulse1.clock_sweep();
+}
+
+void gba::APU::clockFromDMA()
+{
+    A.onClockAPU();
+    B.onClockAPU();
 }
 
 void gba::APU::onWrite(Word addr, Byte val)

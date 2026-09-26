@@ -99,7 +99,8 @@ bool GbaImplementation::audioSampleReady()
 
 std::pair<double, double> GbaImplementation::getSample()
 {
-    return gba->getSample();
+    auto [l, r] = gba->getSample();
+    return {this->volume * l, this->volume * r};
 }
 
 bool GbaImplementation::isLoaded()

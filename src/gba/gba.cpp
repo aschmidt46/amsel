@@ -24,8 +24,9 @@ void gba::GBA::clock() {
     audioTime += audioTimePerGBAClock;
     if(audioTime >= audioTimePerSystemSample){
         audioTime -= audioTimePerSystemSample;
-        audioSampleL = 0;//apu->getSample(true);
-        audioSampleR = 0;//apu->getSample(true);
+        auto [l, r] = bus->getSample();
+        audioSampleL = l;
+        audioSampleR = r;
         audioSampleReady = true;
     }
 
@@ -68,7 +69,7 @@ void gba::GBA::loadSave(const std::vector<uint8_t> &saveData)
 }
 
 std::pair<float, float> gba::GBA::getSample(){
-    return bus->getSample();
+    return {audioSampleL, audioSampleR};
 }
 
 void gba::GBA::press(int i){

@@ -199,6 +199,7 @@ namespace gba{
         void flushPipeline();
         template<bool isARM>
         void advancePipeline();
+        void addCycles(size_t cycles);
         size_t armCacheSize = 0;
         size_t thumbCacheSize = 0;
         size_t armCacheSizeBIOS = 0;

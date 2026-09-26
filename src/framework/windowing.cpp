@@ -2,9 +2,15 @@
 
 #include <iostream>
 
+#ifdef BUILD_CGB
 #include "console/cgb_implementation.h"
+#endif
+#ifdef BUILD_GBA
 #include "console/gba_implementation.h"
+#endif
+#ifdef BUILD_NES
 #include "console/nes_implementation.h"
+#endif
 #include "global.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"

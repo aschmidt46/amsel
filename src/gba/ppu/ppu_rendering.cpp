@@ -124,54 +124,7 @@ uint32_t *gba::PPU::accessFramebuffer()
 }
 
 void gba::PPU::clock() {
-    currentCycle++;
-    if(currentCycle == 1006){
-        // Hblank
-        LCDSTATUS.state.hBlankFlag = 1;
-        if(currentScanline < 160){
-            // dmx, dmy increment affine bg
-            for(int i = 0; i < 2; i++){
-                BG_REFERENCE_X[i] += sign_extend_n_32(BG_PB[i], 16);
-                BG_REFERENCE_Y[i] += sign_extend_n_32(BG_PD[i], 16);
-
-                BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
-                BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
-            }
-
-            if(LCDSTATUS.state.hBlankIE){
-                bus.lock()->setIF(1, true);
-            }
-            bus.lock()->PPUEnteredHBlank();
-        }
-    }
-    else if(currentCycle >= 1232){
-        currentCycle = 0;
-        LCDSTATUS.state.hBlankFlag = 0;
-        currentScanline++;
-        bus.lock()->PPULeftHBlank();
-    }
-    if(currentScanline == 160 && currentCycle == 0){
-        // Vblank
-        LCDSTATUS.state.vBlankFlag = 1;
-        if(LCDSTATUS.state.vBlankIE){
-            // std::cout << "Vblank IRQ" << std::endl;
-            bus.lock()->setIF(0, true);
-        }
-        hasframe = true;
-        for(int i = 0; i < 2; i++){
-            // 20.8 bit signed
-            Word refX = 0x0FFFFFFF & ((Word(BG_DXH[i]) << 16) | BG_DXL[i]);
-            Word refY = 0x0FFFFFFF & ((Word(BG_DYH[i]) << 16) | BG_DYL[i]);
-            
-            BG_REFERENCE_X[i] = sign_extend_n_32(refX, 28);
-            BG_REFERENCE_Y[i] = sign_extend_n_32(refY, 28);
-
-            BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
-            BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
-        }
-        bus.lock()->PPUEnteredVBlank();
-    }
-    else if(currentScanline >= 228){
+    if(currentScanline >= 228){
         currentScanline = 0;
         LCDSTATUS.state.vCounterFlag = 0;
     }
@@ -183,35 +136,93 @@ void gba::PPU::clock() {
         LCDSTATUS.state.vBlankFlag = 0;
         bus.lock()->PPULeftVBlank();
     }
+}
 
-    if(currentCycle < 240 && currentScanline < 160){ // Bis jetzt k.A. wie das Timing wirklich ist
-        switch(LCDCONTROL.state.bgMode){
-            case 0:
-                drawPixelMode0();
-                break;
-            case 1:
-                drawPixelMode1();
-                break;
-            case 2:
-                drawPixelMode2();
-                break;
-            case 3:
-                drawPixelMode3();
-                break;
-            case 4:
-                drawPixelMode4();
-                break;
-            case 5:
-                drawPixelMode5();
-                break;
-        }
-
-        // Affine bg matrix
-        for(int i = 0; i < 2; i++){
-            BG_REFERENCE_LINE_X[i] += sign_extend_n_32(BG_PA[i], 16);
-            BG_REFERENCE_LINE_Y[i] += sign_extend_n_32(BG_PC[i], 16);
+void gba::PPU::renderScanline()
+{
+    currentCycle = 0;
+    if(currentScanline < 160){
+        detectSpritesOnScanline();
+        for(; currentCycle < 240; currentCycle++){
+            switch(LCDCONTROL.state.bgMode){
+                case 0:
+                    drawPixelMode0();
+                    break;
+                case 1:
+                    drawPixelMode1();
+                    break;
+                case 2:
+                    drawPixelMode2();
+                    break;
+                case 3:
+                    drawPixelMode3();
+                    break;
+                case 4:
+                    drawPixelMode4();
+                    break;
+                case 5:
+                    drawPixelMode5();
+                    break;
+            }
+    
+            // Affine bg matrix
+            for(int i = 0; i < 2; i++){
+                BG_REFERENCE_LINE_X[i] += sign_extend_n_32(BG_PA[i], 16);
+                BG_REFERENCE_LINE_Y[i] += sign_extend_n_32(BG_PC[i], 16);
+            }
         }
     }
+}
+
+void gba::PPU::onHBlank()
+{
+    LCDSTATUS.state.hBlankFlag = 1;
+    if(currentScanline < 160){
+        // dmx, dmy increment affine bg
+        for(int i = 0; i < 2; i++){
+            BG_REFERENCE_X[i] += sign_extend_n_32(BG_PB[i], 16);
+            BG_REFERENCE_Y[i] += sign_extend_n_32(BG_PD[i], 16);
+
+            BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
+            BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
+        }
+
+        if(LCDSTATUS.state.hBlankIE){
+            bus.lock()->setIF(1, true);
+        }
+        bus.lock()->PPUEnteredHBlank();
+    }
+}
+
+void gba::PPU::onVBlank()
+{
+    // Vblank
+    LCDSTATUS.state.vBlankFlag = 1;
+    if(LCDSTATUS.state.vBlankIE){
+        // std::cout << "Vblank IRQ" << std::endl;
+        bus.lock()->setIF(0, true);
+    }
+    hasframe = true;
+    for(int i = 0; i < 2; i++){
+        // 20.8 bit signed
+        Word refX = 0x0FFFFFFF & ((Word(BG_DXH[i]) << 16) | BG_DXL[i]);
+        Word refY = 0x0FFFFFFF & ((Word(BG_DYH[i]) << 16) | BG_DYL[i]);
+        
+        BG_REFERENCE_X[i] = sign_extend_n_32(refX, 28);
+        BG_REFERENCE_Y[i] = sign_extend_n_32(refY, 28);
+
+        BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
+        BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
+    }
+    bus.lock()->PPUEnteredVBlank();
+}
+
+void gba::PPU::increment()
+{
+    currentCycle = 0;
+    LCDSTATUS.state.hBlankFlag = 0;
+    currentScanline++;
+    bus.lock()->PPULeftHBlank();
 }
 
 gba::Word gba::PPU::getVCount(){
@@ -645,9 +656,9 @@ void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 // Pixel Reihenfolge: https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html
 void gba::PPU::drawPixelMode0() {
     layerOrderSize = 0;
-    if(currentCycle == 0){
-        this->detectSpritesOnScanline();
-    }
+    // if(currentCycle == 0){
+    //     this->detectSpritesOnScanline();
+    // }
 
     WINDOW_ACTIVES_T actives = getActives();
 
@@ -668,9 +679,9 @@ void gba::PPU::drawPixelMode0() {
 
 void gba::PPU::drawPixelMode1() {
     layerOrderSize = 0;
-    if(currentCycle == 0){
-        this->detectSpritesOnScanline();
-    }
+    // if(currentCycle == 0){
+    //     this->detectSpritesOnScanline();
+    // }
 
     WINDOW_ACTIVES_T actives = getActives();
 
@@ -699,9 +710,9 @@ void gba::PPU::drawPixelMode1() {
 
 void gba::PPU::drawPixelMode2() {
     layerOrderSize = 0;
-    if(currentCycle == 0){
-        this->detectSpritesOnScanline();
-    }
+    // if(currentCycle == 0){
+    //     this->detectSpritesOnScanline();
+    // }
 
     WINDOW_ACTIVES_T actives = getActives();
 
@@ -729,9 +740,9 @@ void gba::PPU::drawPixelMode2() {
 
 void gba::PPU::drawPixelMode3() {
     layerOrderSize = 0;
-    if(currentCycle == 0){
-        this->detectSpritesOnScanline();
-    }
+    // if(currentCycle == 0){
+    //     this->detectSpritesOnScanline();
+    // }
     int index = currentCycle + 240 * currentScanline;
     HalfWord pixel = HalfWord(vRam[2 * index]) | (HalfWord(vRam[2 * index + 1]) << 8);
     HalfWord red = pixel & 0b11111;
@@ -754,9 +765,9 @@ void gba::PPU::drawPixelMode3() {
 
 void gba::PPU::drawPixelMode4() {
     layerOrderSize = 0;
-    if(currentCycle == 0){
-        this->detectSpritesOnScanline();
-    }
+    // if(currentCycle == 0){
+    //     this->detectSpritesOnScanline();
+    // }
     int index = currentCycle + 240 * currentScanline;
     size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
     Byte paletteIndex = vRam[index + page];
@@ -781,9 +792,9 @@ void gba::PPU::drawPixelMode4() {
 
 void gba::PPU::drawPixelMode5() {
     layerOrderSize = 0;
-    if(currentCycle == 0){
-        this->detectSpritesOnScanline();
-    }
+    // if(currentCycle == 0){
+    //     this->detectSpritesOnScanline();
+    // }
     PIXEL_T bg2;
     if(currentCycle < 160 && currentScanline < 128){
         int index = currentCycle + 160 * currentScanline;

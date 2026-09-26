@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include "framework/global.h"
 extern "C"{
     #include <armdisasm.h>
 }
@@ -48,11 +49,41 @@ unsigned int Bus::getCyclesForAccess(Word addr, bool sequential){
     return 1;
 }
 
+void gba::Bus::worker()
+{
+    while(ppuCondition >= 0){
+        // ppuCondition.wait(0);
+        // if(ppuCondition < 0) return;
+        if(ppuCondition > 0){
+            ppu.renderScanline();
+            ppuCondition = 0;
+        }
+    }
+}
+
 void gba::Bus::timerOverflowed(int number)
 {
     if(number <= 1){
         apu.onTimerOverflow(number);
     }
+    // if(number < 3){
+    //     if(timers[number + 1].usesPreviousTimer()){
+    //         timers[number + 1].clockWithPrevious();
+    //     }
+    // }
+}
+
+void gba::Bus::drawScanline()
+{
+    // ppuCondition = 1;
+    // ppuCondition.notify_all();
+    ppu.renderScanline();
+
+}
+
+void gba::Bus::addCPUCycles(size_t cycles)
+{
+    cpu.addCycles(cycles);
 }
 
 std::pair<float, float> gba::Bus::getSample()
@@ -74,12 +105,20 @@ bool Bus::hasIME(){
 }
 
 void Bus::PPUEnteredHBlank(){
-    for(auto &d : dma){
-        if(d.getStartTiming() == DMA_HBLANK && d.isEnabled())
-            d.isActive = true;
+    int block = 5;
+    for(int i = 0; i < 4; i++){
+        if(dma[i].getStartTiming() == DMA_HBLANK && dma[i].isEnabled()){
+            block = i;
+            break;
+        }
     }
     if(ppu.getVCount() >= 2 && ppu.getVCount() < 162){
-        if(dma[3].getStartTiming() == DMA_VIDEO_CAPTURE && dma[3].isEnabled()) dma[3].isActive = true;
+        if(dma[3].getStartTiming() == DMA_VIDEO_CAPTURE && dma[3].isEnabled() && block > 3){
+            block = 3;
+        }
+    }
+    if(block < 5){
+        dma[block].commenceTransfer();
     }
 }
 
@@ -95,8 +134,10 @@ void Bus::PPULeftHBlank(){
 
 void Bus::PPUEnteredVBlank(){
     for(auto &d : dma){
-        if(d.getStartTiming() == DMA_VBLANK && d.isEnabled())
-            d.isActive = true;
+        if(d.getStartTiming() == DMA_VBLANK && d.isEnabled()){
+            d.commenceTransfer();
+            return;
+        }
     }
 }
 
@@ -611,6 +652,9 @@ gba::Bus::Bus() : cpu(false), apu(nullptr), IME(0x04000208), waitCNT(0x04000204)
 }
 
 void gba::Bus::init(bool skipBios) {
+    // ppuWorker = std::thread(&Bus::worker, this);
+    scheduler = std::make_unique<Scheduler>(this);
+    scheduler->init();
     for(int i = 0; i < 4; i++){
         timers[i] = Timer(i, this);
         dma[i] = DMAChannel(i, this);
@@ -661,6 +705,11 @@ gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
 
     this->bios = bcontents;
     bstream.close();
+    if(bcontents.size() == 0){
+        MessageStruct m = {.type = MT_ERROR, .title = "Error", .content = "GBA Emulation requires valid gba bios file.\nVisit settings -> system options."};
+        messageQueue.enqueue(m);
+        missingBios = true;
+    }
     this->armCacheBIOS = std::vector<InstructionInfo>(bios.size() / 4);
     this->thumbCacheBIOS = std::vector<InstructionInfo>(bios.size() / 2);
     this->cpu.armCacheSizeBIOS = armCacheBIOS.size();
@@ -699,6 +748,8 @@ void gba::Bus::release(int i){
 
 void gba::Bus::clock() {
 
+    [[unlikely]]if(missingBios) return;
+
     if(watchBreakpoints){
         if(std::find(breakpoints.begin(), breakpoints.end(), cpu.getRegisterState().R[15] - (cpu.state() == ARM ? 8 : 4)) != breakpoints.end()){
             halted = true;
@@ -712,18 +763,8 @@ void gba::Bus::clock() {
     if(!halted || steps > 0 || !cpu.pipelineHasValue()){
         clocks++;
         apu.clockPCM();
-        if(clocks % 4 == 0){
-            apu.clockPSG();
-        }
-        if(clocks % 0x10000 == 0){
-            apu.clockLengthCounters();
-        }
-        if(clocks % 0x20000 == 0){
-            apu.clockSweep();
-        }
-        if(clocks % 0x40000 == 0){
-            apu.clockEnvelopes();
-        }
+        scheduler->clock();
+        
         // Timers
         for(int i = 0; i < 4; i++){
             if(timers[i].usesPreviousTimer()){ // Bei t0 immer falsch
@@ -737,16 +778,7 @@ void gba::Bus::clock() {
         }
     
         ppu.clock();
-        bool cpuBlocked = false;
-        for(size_t i = 0; i < 4; i++){
-            if(dma[i].clock()){
-                cpuBlocked = true;
-                break;
-            }
-        }
-        if(!cpuBlocked){
-            cpu.clock();
-        }
+        cpu.clock();
 
         if(steps > 0 && cpu.advancedThisClock()){
             steps--;

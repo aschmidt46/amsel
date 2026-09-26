@@ -46,7 +46,7 @@ namespace gba{
         Word currentDestAddr = 0;
         Word currentCount = 0;
 
-        int remainingCycles = 0;
+        // int remainingCycles = 0;
 
         // Vorberechnete Derivate
         DMAStartTiming startTiming = DMA_IMMEDIATE;
@@ -57,7 +57,7 @@ namespace gba{
         void printStartTiming();
     
         public:
-        bool isActive = false;
+        // bool isActive = false;
         DMAChannel() : SourceAddress(0), DestinationAddress(0), WordCount(0), Control(0){};
         DMAChannel(int index, Bus* busPtr);
         void onWrite(Word addr, Byte val);
@@ -65,6 +65,8 @@ namespace gba{
 
         // war aktiv / hat etwas getan
         bool clock();
+
+        void commenceTransfer();
 
         inline DestAddrControl getDestAddrControl() const{
             return DestAddrControl((Control.raw >> 5) & 0b11u);

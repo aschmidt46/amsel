@@ -113,6 +113,12 @@ namespace gba{
         uint32_t* accessFramebuffer();
 
         void clock();
+        void renderScanline();
+        
+        void onHBlank();
+        void onVBlank();
+        void increment();
+
         Word getVCount();
 
         bool hasFrame();

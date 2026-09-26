@@ -17,7 +17,7 @@ namespace gba{
 
         Bus* bus;
 
-        void onIncrement();
+        void onIncrement(bool reinsert = true);
         bool overflow = false;
 
         public:
@@ -34,5 +34,6 @@ namespace gba{
         void clock(); // Count erhöhen anhand Prescaler
         void clockWithPrevious(); // Count erhöhen durch anderen Timer
         bool justOverflowed();
+        void increment();
     };
 }

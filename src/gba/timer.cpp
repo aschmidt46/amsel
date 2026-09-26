@@ -12,6 +12,8 @@ void gba::Timer::onWrite(gba::Word addr, gba::Byte val){
         if(!startBitWasSet && (control.raw & (1u << 7))){
             value = reload.raw;
             dividerValue = 0;
+            // Word divider = control.raw & 0b11;
+            // bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider], .type = EVENT_TimerIncrement, .args = {.index = number}});
         }
     }
 }
@@ -50,7 +52,7 @@ void gba::Timer::clock() {
 void gba::Timer::clockWithPrevious() {
     overflow = false;
     if(control.raw & 128){
-        onIncrement();
+        onIncrement(false);
     }
 }
 
@@ -61,7 +63,15 @@ bool gba::Timer::justOverflowed()
     return tmp;
 }
 
-void gba::Timer::onIncrement() {
+void gba::Timer::increment()
+{
+    overflow = false;
+    if(control.raw & 128){
+        onIncrement();
+    }
+}
+
+void gba::Timer::onIncrement(bool reinsert) {
     this->value++;
     if(this->value > 0xFFFF){ // Overflow
         // std::cout << "Timer " << number << " overflowed!\n";
@@ -72,4 +82,8 @@ void gba::Timer::onIncrement() {
         }
         bus->timerOverflowed(number);
     }
+    // if(reinsert){
+    //     Word divider = control.raw & 0b11;
+    //     bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider], .type = EVENT_TimerIncrement, .args = {.index = number}});
+    // }
 }

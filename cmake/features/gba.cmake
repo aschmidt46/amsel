@@ -30,6 +30,8 @@ src/gba/dma.h
 src/gba/dma.cpp
 src/gba/apu.h
 src/gba/apu.cpp
+src/gba/scheduler.h
+src/gba/scheduler.cpp
 src/gba/peripheral/flash.h
 src/gba/peripheral/flash.cpp
 src/gba/peripheral/eeprom.h

@@ -218,11 +218,12 @@ namespace gba{
         void onSOUNDCNT_H_Write();
 
         public:
-        APU(Bus* bus) : bus(bus), A(bus, 0x040000A0), B(bus, 0x040000A4){};
+        APU(Bus* bus);
         void clockPSG();
         void clockEnvelopes();
         void clockLengthCounters();
         void clockSweep();
+        void clockFromDMA();
 
         void onWrite(Word addr, Byte val);
         Byte onRead(Word addr);

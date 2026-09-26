@@ -54,11 +54,13 @@ void DMAChannel::onWrite(Word addr, Byte val){
             // printStartTiming();
             // std::cout << "src: " << getHex0x(SourceAddress.raw, 8) << ", dst: " << getHex0x(DestinationAddress.raw, 8) << ", count: " << WordCount.raw << "\n";
             resetInternalCounters(true, true);
-            remainingCycles += 2; // 2I, Achtung kann auch 4 sein (nicht implementiert)
-            if(startTiming == DMA_IMMEDIATE) isActive = true;
+            // remainingCycles += 2; // 2I, Achtung kann auch 4 sein (nicht implementiert)
+            if(startTiming == DMA_IMMEDIATE){
+                bus->scheduler->scheduleEvent({.timePoint = 3, .type = EVENT_DmaTransfer, .args={.index = this->dmaIndex}});
+            }
         }
         else if(enabledBefore && !isEnabled()){
-            isActive = false;
+            // isActive = false;
         }
     }
 }
@@ -110,45 +112,76 @@ Byte DMAChannel::onRead(Word addr){
 
 DMAChannel::DMAChannel(int index, Bus* busPtr) : bus(busPtr), dmaIndex(index), SourceAddress(0), DestinationAddress(4), WordCount(8), Control(10){}
 
+
+
 bool DMAChannel::clock(){
-    // muss ich noch implementieren, kann problematisch werden, wenn IO Register überschrieben werden
-    // if(startTiming == DMA_SOUND_FIFO){
-    //     isActive = false;
-    //     Control.raw &= ~(1u << 15);
+    // if(remainingCycles > 0){
+    //     remainingCycles--;
+    //     if(remainingCycles==0){
+    //         // Am Ende
+    //         if(currentCount >= maxCount){
+    //             isActive = false; // Wird bei Reload wieder aktiv, wenn Bedingung eintritt
+    //             if(doesRepeat()){
+    //                 bool reloadDAD = getDestAddrControl() == DEST_INCREMENT_RELOAD;
+    //                 resetInternalCounters(false, reloadDAD);
+    //                 if(startTiming == DMA_IMMEDIATE) isActive = true;
+    //             }
+    //             else{
+    //                 Control.raw &= ~(1u << 15);
+    //             }
+
+    //             if(irqOnEnd()){
+    //                 bus->setIF(8 + dmaIndex, true);
+    //             }
+    //         }
+    //     }
+    //     return true;
+    // }
+    // else if(isEnabled() && isActive){
+    //     if(currentCount == 0){
+    //         remainingCycles += bus->getCyclesForAccess(currentSourceAddr, false);
+    //         remainingCycles += bus->getCyclesForAccess(currentDestAddr, false);
+    //     }
+    //     else{
+    //         remainingCycles += bus->getCyclesForAccess(currentSourceAddr, true);
+    //         remainingCycles += bus->getCyclesForAccess(currentDestAddr, true);
+    //     }
+
+    //     if(dmaTransferIs32Bit()){
+    //         const Word data = bus->readWord(currentSourceAddr);
+    //         bus->writeWord(currentDestAddr, data);
+    //     }
+    //     else{
+    //         const HalfWord data = bus->readHalfWord(currentSourceAddr);
+    //         bus->writeHalfWord(currentDestAddr, data);
+    //     }
+
+    //     if(startTiming != DMA_SOUND_FIFO)
+    //         currentDestAddr += destIncrement;
+    //     currentSourceAddr += sourceIncrement;
+
+    //     currentCount++;
+    //     return true;
+    // }
+    // else{
     //     return false;
     // }
-    if(remainingCycles > 0){
-        remainingCycles--;
-        if(remainingCycles==0){
-            // Am Ende
-            if(currentCount >= maxCount){
-                isActive = false; // Wird bei Reload wieder aktiv, wenn Bedingung eintritt
-                if(doesRepeat()){
-                    bool reloadDAD = getDestAddrControl() == DEST_INCREMENT_RELOAD;
-                    resetInternalCounters(false, reloadDAD);
-                    if(startTiming == DMA_IMMEDIATE) isActive = true;
-                }
-                else{
-                    Control.raw &= ~(1u << 15);
-                }
+    return false;
+}
 
-                if(irqOnEnd()){
-                    bus->setIF(8 + dmaIndex, true);
-                }
-            }
-        }
-        return true;
-    }
-    else if(isEnabled() && isActive){
+void gba::DMAChannel::commenceTransfer()
+{
+    size_t remaining = 0;
+    while(currentCount < maxCount){
         if(currentCount == 0){
-            remainingCycles += bus->getCyclesForAccess(currentSourceAddr, false);
-            remainingCycles += bus->getCyclesForAccess(currentDestAddr, false);
+            remaining += bus->getCyclesForAccess(currentSourceAddr, false);
+            remaining += bus->getCyclesForAccess(currentDestAddr, false);
         }
         else{
-            remainingCycles += bus->getCyclesForAccess(currentSourceAddr, true);
-            remainingCycles += bus->getCyclesForAccess(currentDestAddr, true);
+            remaining += bus->getCyclesForAccess(currentSourceAddr, true);
+            remaining += bus->getCyclesForAccess(currentDestAddr, true);
         }
-
+        
         if(dmaTransferIs32Bit()){
             const Word data = bus->readWord(currentSourceAddr);
             bus->writeWord(currentDestAddr, data);
@@ -157,17 +190,34 @@ bool DMAChannel::clock(){
             const HalfWord data = bus->readHalfWord(currentSourceAddr);
             bus->writeHalfWord(currentDestAddr, data);
         }
-
+    
         if(startTiming != DMA_SOUND_FIFO)
             currentDestAddr += destIncrement;
+        else{
+            bus->apu.clockFromDMA();
+        }
         currentSourceAddr += sourceIncrement;
-
+        
         currentCount++;
-        return true;
+    }
+
+    // Ende
+    if(doesRepeat()){
+        bool reloadDAD = getDestAddrControl() == DEST_INCREMENT_RELOAD;
+        resetInternalCounters(false, reloadDAD);
+        if(startTiming == DMA_IMMEDIATE){
+            bus->scheduler->scheduleEvent({.timePoint = remaining + 3, .type = EVENT_DmaTransfer, .args={.index = this->dmaIndex}});
+        }
     }
     else{
-        return false;
+        Control.raw &= ~(1u << 15);
     }
+    
+    if(irqOnEnd()){
+        bus->setIF(8 + dmaIndex, true);
+    }
+
+    bus->addCPUCycles(remaining);
 }
 
 void DMAChannel::printStartTiming(){

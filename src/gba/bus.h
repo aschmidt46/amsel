@@ -12,6 +12,9 @@
 #include <cstring>
 #include "peripheral/flash.h"
 #include "peripheral/eeprom.h"
+#include "scheduler.h"
+#include <thread>
+#include <atomic>
 
 enum BackupType{
     BACKUP_EEPROM,
@@ -24,13 +27,15 @@ enum BackupType{
 namespace gba{
     class Bus final : public IBus, virtual public std::enable_shared_from_this<Bus>{
 
+        bool missingBios = false;
+
+        public:
         PPU ppu;
         CPU cpu;
         APU apu;
+        std::unique_ptr<Scheduler> scheduler = 0;
         std::array<Timer, 4> timers; // 0,1,2,3
-        public:
         std::array<DMAChannel, 4> dma; // 0,1,2,3
-        private:
         std::vector<Byte> bios;
         size_t clocks = 0;
 
@@ -67,10 +72,16 @@ namespace gba{
 
         BackupType backupType = BACKUP_NO_BACKUP;
 
+        // std::thread ppuWorker;
+        void worker();
+        std::atomic_int ppuCondition;
+
         
         
         public:
         void timerOverflowed(int number);
+        void drawScanline();
+        void addCPUCycles(size_t cycles);
         std::pair<float, float> getSample();
         HalfWord getIE() override;
         HalfWord getIF() override;
@@ -80,6 +91,9 @@ namespace gba{
         Bus(const char *path, const char* biosPath);
         Bus(const std::vector<Byte> &bytes);
         ~Bus(){
+            ppuCondition = -1;
+            ppuCondition.notify_all();
+            // ppuWorker.join();
             delete wramBoard;
             delete wramChip;
             delete cartRam;
