@@ -135,22 +135,22 @@ void gba::PPU::renderScanline()
         void (gba::PPU::*fun)() = nullptr;
         switch(LCDCONTROL.state.bgMode){
             case 0:
-                fun = &drawPixelMode0;
+                fun = &PPU::drawPixelMode0;
                 break;
             case 1:
-                fun = &drawPixelMode1;
+                fun = &PPU::drawPixelMode1;
                 break;
             case 2:
-                fun = &drawPixelMode2;
+                fun = &PPU::drawPixelMode2;
                 break;
             case 3:
-                fun = &drawPixelMode3;
+                fun = &PPU::drawPixelMode3;
                 break;
             case 4:
-                fun = &drawPixelMode4;
+                fun = &PPU::drawPixelMode4;
                 break;
             case 5:
-                fun = &drawPixelMode5;
+                fun = &PPU::drawPixelMode5;
                 break;
         }
         for(; currentCycle < 240; currentCycle++){
