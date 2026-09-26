@@ -14,6 +14,9 @@ void gba::Scheduler::handleEvent()
         case EVENT_TimerIncrement:
             bus->timers[e.args.index].increment();
             return;
+        case EVENT_TimerOverflow:
+            bus->timers[e.args.index].overflowTimer();
+            return;
         case EVENT_APU_PSG:
             bus->apu.clockPSG();
             scheduleEvent({4, EVENT_APU_PSG});

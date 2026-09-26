@@ -123,19 +123,8 @@ uint32_t *gba::PPU::accessFramebuffer()
     return framebuffer.data();
 }
 
-void gba::PPU::clock() {
-    if(currentScanline >= 228){
-        currentScanline = 0;
-        LCDSTATUS.state.vCounterFlag = 0;
-    }
-    if(currentCycle == 0 && currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
-        bus.lock()->setIF(2, true);
-        LCDSTATUS.state.vCounterFlag = 1;
-    }
-    if(currentScanline >= 227){
-        LCDSTATUS.state.vBlankFlag = 0;
-        bus.lock()->PPULeftVBlank();
-    }
+void gba::PPU::clock()
+{
 }
 
 void gba::PPU::renderScanline()
@@ -143,27 +132,30 @@ void gba::PPU::renderScanline()
     currentCycle = 0;
     if(currentScanline < 160){
         detectSpritesOnScanline();
+        void (gba::PPU::*fun)() = nullptr;
+        switch(LCDCONTROL.state.bgMode){
+            case 0:
+                fun = &drawPixelMode0;
+                break;
+            case 1:
+                fun = &drawPixelMode1;
+                break;
+            case 2:
+                fun = &drawPixelMode2;
+                break;
+            case 3:
+                fun = &drawPixelMode3;
+                break;
+            case 4:
+                fun = &drawPixelMode4;
+                break;
+            case 5:
+                fun = &drawPixelMode5;
+                break;
+        }
         for(; currentCycle < 240; currentCycle++){
-            switch(LCDCONTROL.state.bgMode){
-                case 0:
-                    drawPixelMode0();
-                    break;
-                case 1:
-                    drawPixelMode1();
-                    break;
-                case 2:
-                    drawPixelMode2();
-                    break;
-                case 3:
-                    drawPixelMode3();
-                    break;
-                case 4:
-                    drawPixelMode4();
-                    break;
-                case 5:
-                    drawPixelMode5();
-                    break;
-            }
+            layerOrderSize = 0;
+            (this->*fun)();
     
             // Affine bg matrix
             for(int i = 0; i < 2; i++){
@@ -222,6 +214,22 @@ void gba::PPU::increment()
     currentCycle = 0;
     LCDSTATUS.state.hBlankFlag = 0;
     currentScanline++;
+    if(currentScanline >= 228){
+        currentScanline = 0;
+        LCDSTATUS.state.vCounterFlag = 0;
+        if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
+            bus.lock()->setIF(2, true);
+            LCDSTATUS.state.vCounterFlag = 1;
+        }
+    }
+    else if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
+        bus.lock()->setIF(2, true);
+        LCDSTATUS.state.vCounterFlag = 1;
+    }
+    if(currentScanline >= 227){
+        LCDSTATUS.state.vBlankFlag = 0;
+        bus.lock()->PPULeftVBlank();
+    }
     bus.lock()->PPULeftHBlank();
 }
 
@@ -446,7 +454,7 @@ Word PPU::seIndexFast(Word tx, Word ty, BGCNT_T bgcnt)
 constexpr std::array<std::pair<Word, Word>, 4> regularBgrSizes = {std::pair{256,256}, std::pair{512,256}, std::pair{256,512}, std::pair{512,512}};
 constexpr std::array<std::pair<Word, Word>, 4> affineBgrSizes =  {std::pair{128,128}, std::pair{256,256}, std::pair{512,512}, std::pair{1024,1024}};
 
-template <bool isAffine>
+template <bool isAffine, bool bpp8>
 PIXEL_T PPU::drawBG(const int index)
 {
     const BGCNT_T &CONTROL = BG_CNT[index];
@@ -469,7 +477,6 @@ PIXEL_T PPU::drawBG(const int index)
     auto [bgrX, bgrY] = isAffine ? affineBgrSizes[CONTROL.state.screenSize] : regularBgrSizes[CONTROL.state.screenSize];
     Byte* entries = vRam.data() + (screenBaseBlock * screenblockSize);
     Byte* chrEntries = vRam.data() + (characterBaseBlock * chrblockSize);
-    bool bpp8 = isAffine ? true : CONTROL.state.colorsPalettes;
     const Word tileWidth = bpp8 ? 0x40 : 0x20;
     const Word tileWidthByte = bpp8 ? 8 : 4;
     Word mapX;
@@ -655,17 +662,13 @@ void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 
 // Pixel Reihenfolge: https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html
 void gba::PPU::drawPixelMode0() {
-    layerOrderSize = 0;
-    // if(currentCycle == 0){
-    //     this->detectSpritesOnScanline();
-    // }
 
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
     for(int i = 3; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
-            PIXEL_T bg = drawBG<false>(i);
+            PIXEL_T bg = BG_CNT[i].state.colorsPalettes ? drawBG<false, true>(i) : drawBG<false, false>(i);
             if(bg.priority < 99)
                 insertIntoSorted(layerOrder, bg, layerOrderSize);
         }
@@ -678,10 +681,6 @@ void gba::PPU::drawPixelMode0() {
 }
 
 void gba::PPU::drawPixelMode1() {
-    layerOrderSize = 0;
-    // if(currentCycle == 0){
-    //     this->detectSpritesOnScanline();
-    // }
 
     WINDOW_ACTIVES_T actives = getActives();
 
@@ -689,14 +688,14 @@ void gba::PPU::drawPixelMode1() {
 
     //affine
     if(displayBG(2) && actives.bgActive(2)){
-        PIXEL_T bg = drawBG<true>(2);
+        PIXEL_T bg = drawBG<true, true>(2);
         if(bg.priority < 99)
             insertIntoSorted(layerOrder, bg, layerOrderSize);
     }
 
     for(int i = 1; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
-            PIXEL_T bg = drawBG<false>(i);
+            PIXEL_T bg = BG_CNT[i].state.colorsPalettes ? drawBG<false, true>(i) : drawBG<false, false>(i);
             if(bg.priority < 99)
                 insertIntoSorted(layerOrder, bg, layerOrderSize);
         }
@@ -709,10 +708,6 @@ void gba::PPU::drawPixelMode1() {
 }
 
 void gba::PPU::drawPixelMode2() {
-    layerOrderSize = 0;
-    // if(currentCycle == 0){
-    //     this->detectSpritesOnScanline();
-    // }
 
     WINDOW_ACTIVES_T actives = getActives();
 
@@ -720,13 +715,13 @@ void gba::PPU::drawPixelMode2() {
 
     //affine
     if(displayBG(3) && actives.bgActive(3)){
-        PIXEL_T bg = drawBG<true>(3);
+        PIXEL_T bg = drawBG<true, true>(3);
         if(bg.priority < 99)
             insertIntoSorted(layerOrder, bg, layerOrderSize);
     }
 
     if(displayBG(2) && actives.bgActive(2)){
-        PIXEL_T bg = drawBG<true>(2);
+        PIXEL_T bg = drawBG<true, true>(2);
         if(bg.priority < 99)
             insertIntoSorted(layerOrder, bg, layerOrderSize);
     }
@@ -739,10 +734,6 @@ void gba::PPU::drawPixelMode2() {
 }
 
 void gba::PPU::drawPixelMode3() {
-    layerOrderSize = 0;
-    // if(currentCycle == 0){
-    //     this->detectSpritesOnScanline();
-    // }
     int index = currentCycle + 240 * currentScanline;
     HalfWord pixel = HalfWord(vRam[2 * index]) | (HalfWord(vRam[2 * index + 1]) << 8);
     HalfWord red = pixel & 0b11111;
@@ -764,10 +755,6 @@ void gba::PPU::drawPixelMode3() {
 }
 
 void gba::PPU::drawPixelMode4() {
-    layerOrderSize = 0;
-    // if(currentCycle == 0){
-    //     this->detectSpritesOnScanline();
-    // }
     int index = currentCycle + 240 * currentScanline;
     size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
     Byte paletteIndex = vRam[index + page];
@@ -791,10 +778,6 @@ void gba::PPU::drawPixelMode4() {
 }
 
 void gba::PPU::drawPixelMode5() {
-    layerOrderSize = 0;
-    // if(currentCycle == 0){
-    //     this->detectSpritesOnScanline();
-    // }
     PIXEL_T bg2;
     if(currentCycle < 160 && currentScanline < 128){
         int index = currentCycle + 160 * currentScanline;

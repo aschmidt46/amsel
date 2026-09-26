@@ -129,7 +129,7 @@ namespace gba{
         bool spriteCollidesCurrentPixel(const OAMAttribs &attrs);
 
         PIXEL_T drawSprites();
-        template<bool isAffine>
+        template<bool isAffine, bool bpp8>
         PIXEL_T drawBG(const int index);
 
         void drawPixelMode0();

@@ -12,8 +12,9 @@ void gba::Timer::onWrite(gba::Word addr, gba::Byte val){
         if(!startBitWasSet && (control.raw & (1u << 7))){
             value = reload.raw;
             dividerValue = 0;
-            // Word divider = control.raw & 0b11;
-            // bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider], .type = EVENT_TimerIncrement, .args = {.index = number}});
+            if(!usesPreviousTimer()){
+                reschedule();
+            }
         }
     }
 }
@@ -29,6 +30,27 @@ gba::Byte gba::Timer::onRead(gba::Word addr){
         return control.OnReadByte(addr);
     }
     return 0;
+}
+
+void gba::Timer::reschedule()
+{
+    Word divider = control.raw & 0b11;
+    bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider] * (0xFFFF - reload.raw), .type = EVENT_TimerOverflow, .args = {.index = number}});
+}
+
+void gba::Timer::overflowTimer()
+{
+    if(control.raw & 128){
+        overflow = true;
+        this->value = reload.raw;
+        if(control.raw & 64){ // IRQ Enable
+            bus->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
+        }
+        bus->timerOverflowed(number);
+        if(!usesPreviousTimer()){
+            reschedule();
+        }
+    }
 }
 
 bool gba::Timer::usesPreviousTimer()
@@ -52,7 +74,7 @@ void gba::Timer::clock() {
 void gba::Timer::clockWithPrevious() {
     overflow = false;
     if(control.raw & 128){
-        onIncrement(false);
+        onIncrement();
     }
 }
 
@@ -71,19 +93,9 @@ void gba::Timer::increment()
     }
 }
 
-void gba::Timer::onIncrement(bool reinsert) {
+void gba::Timer::onIncrement() {
     this->value++;
     if(this->value > 0xFFFF){ // Overflow
-        // std::cout << "Timer " << number << " overflowed!\n";
-        overflow = true;
-        this->value = reload.raw;
-        if(control.raw & 64){ // IRQ Enable
-            bus->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
-        }
-        bus->timerOverflowed(number);
+        overflowTimer();
     }
-    // if(reinsert){
-    //     Word divider = control.raw & 0b11;
-    //     bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider], .type = EVENT_TimerIncrement, .args = {.index = number}});
-    // }
 }

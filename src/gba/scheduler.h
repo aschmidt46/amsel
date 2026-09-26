@@ -17,6 +17,7 @@ namespace gba{
         EVENT_PPU_HBLANK,
         EVENT_PPU_VBLANK,
         EVENT_PPU_IncrementScanline,
+        EVENT_TimerOverflow,
     };
 
     struct Event{

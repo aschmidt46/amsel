@@ -17,7 +17,7 @@ namespace gba{
 
         Bus* bus;
 
-        void onIncrement(bool reinsert = true);
+        void onIncrement();
         bool overflow = false;
 
         public:
@@ -28,6 +28,9 @@ namespace gba{
 
         void onWrite(Word addr, Byte val);
         Byte onRead(Word addr);
+
+        void reschedule();
+        void overflowTimer();
 
         bool usesPreviousTimer();
 

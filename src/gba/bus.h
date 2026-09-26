@@ -92,7 +92,6 @@ namespace gba{
         Bus(const std::vector<Byte> &bytes);
         ~Bus(){
             ppuCondition = -1;
-            ppuCondition.notify_all();
             // ppuWorker.join();
             delete wramBoard;
             delete wramChip;

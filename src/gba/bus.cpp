@@ -52,8 +52,6 @@ unsigned int Bus::getCyclesForAccess(Word addr, bool sequential){
 void gba::Bus::worker()
 {
     while(ppuCondition >= 0){
-        // ppuCondition.wait(0);
-        // if(ppuCondition < 0) return;
         if(ppuCondition > 0){
             ppu.renderScanline();
             ppuCondition = 0;
@@ -66,11 +64,11 @@ void gba::Bus::timerOverflowed(int number)
     if(number <= 1){
         apu.onTimerOverflow(number);
     }
-    // if(number < 3){
-    //     if(timers[number + 1].usesPreviousTimer()){
-    //         timers[number + 1].clockWithPrevious();
-    //     }
-    // }
+    if(number < 3){
+        if(timers[number + 1].usesPreviousTimer()){
+            timers[number + 1].clockWithPrevious();
+        }
+    }
 }
 
 void gba::Bus::drawScanline()
@@ -652,7 +650,6 @@ gba::Bus::Bus() : cpu(false), apu(nullptr), IME(0x04000208), waitCNT(0x04000204)
 }
 
 void gba::Bus::init(bool skipBios) {
-    // ppuWorker = std::thread(&Bus::worker, this);
     scheduler = std::make_unique<Scheduler>(this);
     scheduler->init();
     for(int i = 0; i < 4; i++){
@@ -764,20 +761,7 @@ void gba::Bus::clock() {
         clocks++;
         apu.clockPCM();
         scheduler->clock();
-        
-        // Timers
-        for(int i = 0; i < 4; i++){
-            if(timers[i].usesPreviousTimer()){ // Bei t0 immer falsch
-                if(timers[i-1].justOverflowed()){
-                    timers[i].clockWithPrevious();
-                }
-            }
-            else{
-                timers[i].clock();
-            }
-        }
-    
-        ppu.clock();
+
         cpu.clock();
 
         if(steps > 0 && cpu.advancedThisClock()){
