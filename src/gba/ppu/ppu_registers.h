@@ -152,6 +152,30 @@ namespace gba{
         HalfWord raw;
     };
 
+    union MOSAIC_T { // jeweils minus 1
+        struct{
+            Word bgHSize : 4;
+            Word bgVSize : 4;
+            Word objHSize : 4;
+            Word objVSize : 4;
+            Word _fill : 16;
+        } state;
+        Word raw;
+
+        Word getBgH() const{
+            return state.bgHSize + 1;
+        };
+        Word getBgV() const{
+            return state.bgVSize + 1;
+        };
+        Word getObjH() const{
+            return state.objHSize + 1;
+        };
+        Word getObjV() const{
+            return state.objVSize + 1;
+        };
+    };
+
     union ALPHA_BLEND_COEF_T {
         struct{
             HalfWord coefA : 5;
@@ -177,6 +201,7 @@ namespace gba{
         Byte blue = 0;
         Byte priority = 0;
         Byte layerIndex = 99; // 0=sprite, 1-4 = bg0-3, 5 = bd
+        bool mosaic = false;
 
         auto operator<=>(const PIXEL_T& b) const{
             return b.priority <=> priority;

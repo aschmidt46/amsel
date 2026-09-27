@@ -262,6 +262,12 @@ void gba::PPU::writePPURegister(Word addr, Byte val) {
     else if(addr == 0x0400004B){
         WINOUT.raw = (WINOUT.raw & 0xFF) | (HalfWord(val) << 8);
     }
+    else if(addr == 0x0400004C){
+        MOSAIC.raw = (MOSAIC.raw & 0xFF00) | val;
+    }
+    else if(addr == 0x0400004D){
+        MOSAIC.raw = (MOSAIC.raw & 0xFF) | (HalfWord(val) << 8);
+    }
 
     else if(addr == 0x04000050){
         SPECIAL_EFFECTS.raw = (SPECIAL_EFFECTS.raw & 0xFF00) | val;

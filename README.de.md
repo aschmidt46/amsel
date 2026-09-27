@@ -20,7 +20,6 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - Link Cable Emulation via TCP, das Master-Gerät hat aufgrund von Latenz Audio Glitches
 ### Nintendo Gameboy Advance
 - Besteht ARMWrestler, arm.gba und thumb.gba von jsmolka, die meisten SingleStepTests
-- PPU größtenteils implementiert, mosaic fehlt, grafische Fehler in einigen Spielen
 - PSG Audio Kanäle haben Probleme
 - Timings, Waitstates nicht implementiert
 - Performance schwach

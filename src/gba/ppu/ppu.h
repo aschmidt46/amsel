@@ -80,7 +80,19 @@ namespace gba{
         WIN_V_T WINDOW_1_V = {.raw = 0};
         WININ_T WININ = {.raw = 0};
         WINOUT_T WINOUT = {.raw = 0};
-        HalfWord MOSAIC = 0;
+        MOSAIC_T MOSAIC = {.raw = 0};
+
+        Word mosaicBgYCurrent = 0;
+        Word mosaicBgYCounter = 0;
+        Word mosaicObjYCurrent = 0;
+        Word mosaicObjYCounter = 0;
+        Word mosaicBgXCurrent = 0;
+        Word mosaicBgXCounter = 0;
+        Word mosaicObjXCurrent = 0;
+        Word mosaicObjXCounter = 0;
+
+        PIXEL_T latchedObj = {};
+        std::array<PIXEL_T, 4> latchedBg = {};
     
         SPECIAL_EFFECTS_T SPECIAL_EFFECTS = {.raw = 0};
         ALPHA_BLEND_COEF_T ALPHA_BLENDING = {.raw = 0};
@@ -128,9 +140,9 @@ namespace gba{
         void detectSpritesOnScanline();
         bool spriteCollidesCurrentPixel(const OAMAttribs &attrs);
 
-        PIXEL_T drawSprites();
+        void drawSprites();
         template<bool isAffine, bool bpp8>
-        PIXEL_T drawBG(const int index);
+        void drawBG(const int index);
 
         void drawPixelMode0();
         void drawPixelMode1();

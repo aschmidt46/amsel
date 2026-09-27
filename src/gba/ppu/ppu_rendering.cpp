@@ -154,8 +154,20 @@ void gba::PPU::renderScanline()
                 break;
         }
         for(; currentCycle < 240; currentCycle++){
+
             layerOrderSize = 0;
             (this->*fun)();
+
+            if(mosaicBgXCounter == 0){
+                mosaicBgXCurrent += MOSAIC.getBgH();
+                mosaicBgXCounter = MOSAIC.getBgH();
+            }
+            mosaicBgXCounter--;
+            if(mosaicObjXCounter == 0){
+                mosaicObjXCurrent += MOSAIC.getObjH();
+                mosaicObjXCounter = MOSAIC.getObjH();
+            }
+            mosaicObjXCounter--;
     
             // Affine bg matrix
             for(int i = 0; i < 2; i++){
@@ -212,10 +224,34 @@ void gba::PPU::onVBlank()
 void gba::PPU::increment()
 {
     currentCycle = 0;
+
+    mosaicBgXCurrent = 0;
+    mosaicBgXCounter = 0;
+    mosaicObjXCurrent = 0;
+    mosaicObjXCounter = 0;
+
     LCDSTATUS.state.hBlankFlag = 0;
     currentScanline++;
+
+    if(mosaicBgYCounter == 0){
+        mosaicBgYCurrent += MOSAIC.getBgV();
+        mosaicBgYCounter = MOSAIC.getBgV();
+    }
+    mosaicBgYCounter--;
+    if(mosaicObjYCounter == 0){
+        mosaicObjYCurrent += MOSAIC.getObjV();
+        mosaicObjYCounter = MOSAIC.getObjV();
+    }
+    mosaicObjYCounter--;
+
     if(currentScanline >= 228){
         currentScanline = 0;
+
+        mosaicBgYCurrent = 0;
+        mosaicBgYCounter = 0;
+        mosaicObjYCurrent = 0;
+        mosaicObjYCounter = 0;
+
         LCDSTATUS.state.vCounterFlag = 0;
         if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
             bus.lock()->setIF(2, true);
@@ -297,7 +333,7 @@ bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
         && ((xStart <= x && xEnd > x) || (xStart > 240 && (xEnd - 512) > x));
 }
 
-PIXEL_T PPU::drawSprites(){
+void PPU::drawSprites(){
     PIXEL_T result;
     result.priority = 99;
     result.layerIndex = 0;
@@ -312,7 +348,9 @@ PIXEL_T PPU::drawSprites(){
     for(size_t i = 0; i < oamSize; i++){
         if(spriteCollidesCurrentPixel(oamMap[i])){
             bool currentSpriteHasOverride = false;
+            bool useSpriteAsObjWindow = false;
             const OAMAttribs sprite = oamMap[i];
+            const Word y = sprite.attr0.state.mosaic > 0 ? mosaicObjYCurrent : currentScanline;
 
             if(sprite.attr0.state.objectMode == 2){
                 // versteckt
@@ -322,9 +360,8 @@ PIXEL_T PPU::drawSprites(){
                 currentSpriteHasOverride = true;
             else if(sprite.attr0.state.gfxMode == 0)
                 currentSpriteHasOverride = false;
-
-            if(sprite.attr0.state.gfxMode == 2)
-                continue;
+            else if(sprite.attr0.state.gfxMode == 2)
+                useSpriteAsObjWindow = true;
     
             const bool bpp8 = sprite.attr0.state.colorMode;
             const Word tileOffset =  bpp8 ? 0x40 : 0x20;
@@ -353,8 +390,8 @@ PIXEL_T PPU::drawSprites(){
                 const Word affineIndex = sprite.attr1.state.affineIndex;
                 const AffineAttribs affineMatrix = *(((AffineAttribs*)this->oamAttribs.data()) + affineIndex);
 
-                xOffset = sizeXHalf + ((int(centerX - currentCycle) * affineMatrix.pa + int(centerY - currentScanline) * affineMatrix.pb) >> 8);
-                yOffset = sizeYHalf + ((int(centerX - currentCycle) * affineMatrix.pc + int(centerY - currentScanline) * affineMatrix.pd) >> 8);
+                xOffset = sizeXHalf + ((int(centerX - currentCycle) * affineMatrix.pa + int(centerY - y) * affineMatrix.pb) >> 8);
+                yOffset = sizeYHalf + ((int(centerX - currentCycle) * affineMatrix.pc + int(centerY - y) * affineMatrix.pd) >> 8);
                 
                 // Ist aus irgendeinem Grund gespiegelt
                 xOffset = sizeX - xOffset - 1;
@@ -362,7 +399,7 @@ PIXEL_T PPU::drawSprites(){
             }
             else{
                 xOffset = currentCycle - spriteX;
-                yOffset = currentScanline - spriteY;
+                yOffset = y - spriteY;
             }
 
             // Außerhalb von Sprite, wichtig bei affinen
@@ -392,7 +429,7 @@ PIXEL_T PPU::drawSprites(){
             const Word inTileY = yOffset % 8;
         
             if(!spriteMappingMode1D){
-                tileSizeX = 32; // 32 Tiles in Folge, dann kommt die nächste Zeile
+                tileSizeX = bpp8 ? 16 : 32; // 32 Tiles in Folge, dann kommt die nächste Zeile
             }
         
             const Word tileIndex = currentTileX + currentTileY * tileSizeX;
@@ -425,17 +462,24 @@ PIXEL_T PPU::drawSprites(){
             Byte red = color & 0b11111;
             Byte green = (color >> 5) & 0b11111;
             Byte blue = (color >> 10) & 0b11111;
+            if(sprite.attr2.state.priority <= result.priority){ // Immer, auch bei durchsichtigen Pixeln Mosaic und Prio überschreiben
+                // result.priority = sprite.attr2.state.priority;
+                result.mosaic = sprite.attr0.state.mosaic > 0;
+            }
             if(pixel > 0){
-                insideObjectWindow = true;
-                if(sprite.attr2.state.priority <= result.priority){
-                    result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)sprite.attr2.state.priority, .layerIndex = 0};
+                if(useSpriteAsObjWindow)
+                    insideObjectWindow = true;
+                else if(sprite.attr2.state.priority <= result.priority){
+                    result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)sprite.attr2.state.priority, .layerIndex = 0, .mosaic = sprite.attr0.state.mosaic > 0};
                     spriteAlphaOverride = currentSpriteHasOverride;
                 }
             }
         }
     }
 
-    return result;
+    if(!latchedObj.mosaic || !result.mosaic || (mosaicObjXCounter == 0)){
+        latchedObj = result;
+    }
 }
 
 // https://www.coranac.com/tonc/text/regbg.htm
@@ -455,7 +499,7 @@ constexpr std::array<std::pair<Word, Word>, 4> regularBgrSizes = {std::pair{256,
 constexpr std::array<std::pair<Word, Word>, 4> affineBgrSizes =  {std::pair{128,128}, std::pair{256,256}, std::pair{512,512}, std::pair{1024,1024}};
 
 template <bool isAffine, bool bpp8>
-PIXEL_T PPU::drawBG(const int index)
+void PPU::drawBG(const int index)
 {
     const BGCNT_T &CONTROL = BG_CNT[index];
     const int affineIndex = index - 2;
@@ -465,7 +509,7 @@ PIXEL_T PPU::drawBG(const int index)
     result.priority = 99;
     result.layerIndex = index + 1;
     const int pixelX = currentCycle;
-    const int pixelY = currentScanline;
+    const int pixelY = CONTROL.state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
 //    Memory	0600:0000	0600:4000	0600:8000	0600:C000
 // charblock        0	        1	        2	        3
 // screenblock	0	…	7	8	…	15	16	…	23	24	…	31
@@ -492,7 +536,9 @@ PIXEL_T PPU::drawBG(const int index)
             mapY %= bgrY;
         }
         else if(mapX < 0 || mapX >= bgrX || mapY < 0 || mapY >= bgrY){
-            return result;
+            if(!CONTROL.state.mosaic || mosaicBgXCounter == 0)
+                latchedBg[index] = result;
+            return;
         }
 
     }
@@ -531,7 +577,11 @@ PIXEL_T PPU::drawBG(const int index)
 
     // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
     const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-    if(tileStart + pixelIndex >= vRam.data() + vRam.size()) return result;
+    if(tileStart + pixelIndex >= vRam.data() + vRam.size()){
+        if(!CONTROL.state.mosaic || mosaicBgXCounter == 0)
+            latchedBg[index] = result;
+        return;
+    }
     Byte pixel = *(tileStart + pixelIndex);
     if(!bpp8){
         if((inTileX & 1) ^ flipH) pixel >>= 4;
@@ -547,7 +597,8 @@ PIXEL_T PPU::drawBG(const int index)
     if(pixel > 0)
         result = {.pixel = pixel, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)CONTROL.state.BGPriority, .layerIndex = Byte(index + 1)};
 
-    return result;
+    if(!CONTROL.state.mosaic || mosaicBgXCounter == 0)
+        latchedBg[index] = result;
 }
 
 PIXEL_T PPU::getBackdrop(){
@@ -663,18 +714,21 @@ void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 // Pixel Reihenfolge: https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html
 void gba::PPU::drawPixelMode0() {
 
+    this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
     for(int i = 3; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
-            PIXEL_T bg = BG_CNT[i].state.colorsPalettes ? drawBG<false, true>(i) : drawBG<false, false>(i);
-            if(bg.priority < 99)
-                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            if(BG_CNT[i].state.colorsPalettes)
+                drawBG<false, true>(i);
+            else drawBG<false, false>(i);
+            if(latchedBg[i].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
     }
     if(actives.enableObj && LCDCONTROL.state.displayOBJ){
-        insertIntoSorted(layerOrder, this->drawSprites(), layerOrderSize); // höchste prio
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
 
     setColorFromLayerOrder(actives);
@@ -682,26 +736,29 @@ void gba::PPU::drawPixelMode0() {
 
 void gba::PPU::drawPixelMode1() {
 
+    this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
 
     //affine
     if(displayBG(2) && actives.bgActive(2)){
-        PIXEL_T bg = drawBG<true, true>(2);
-        if(bg.priority < 99)
-            insertIntoSorted(layerOrder, bg, layerOrderSize);
+        drawBG<true, true>(2);
+        if(latchedBg[2].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
     }
 
     for(int i = 1; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
-            PIXEL_T bg = BG_CNT[i].state.colorsPalettes ? drawBG<false, true>(i) : drawBG<false, false>(i);
-            if(bg.priority < 99)
-                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            if(BG_CNT[i].state.colorsPalettes)
+                drawBG<false, true>(i);
+            else drawBG<false, false>(i);
+            if(latchedBg[i].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
     }
     if(actives.enableObj && LCDCONTROL.state.displayOBJ){
-        insertIntoSorted(layerOrder, this->drawSprites(), layerOrderSize); // höchste prio
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
 
     setColorFromLayerOrder(actives);
@@ -709,25 +766,26 @@ void gba::PPU::drawPixelMode1() {
 
 void gba::PPU::drawPixelMode2() {
 
+    this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
 
     //affine
     if(displayBG(3) && actives.bgActive(3)){
-        PIXEL_T bg = drawBG<true, true>(3);
-        if(bg.priority < 99)
-            insertIntoSorted(layerOrder, bg, layerOrderSize);
+        drawBG<true, true>(3);
+        if(latchedBg[3].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
 
     if(displayBG(2) && actives.bgActive(2)){
-        PIXEL_T bg = drawBG<true, true>(2);
-        if(bg.priority < 99)
-            insertIntoSorted(layerOrder, bg, layerOrderSize);
+        drawBG<true, true>(2);
+        if(latchedBg[2].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
     }
 
     if(actives.enableObj && LCDCONTROL.state.displayOBJ){
-        insertIntoSorted(layerOrder, this->drawSprites(), layerOrderSize); // höchste prio
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
 
     setColorFromLayerOrder(actives);
@@ -741,6 +799,8 @@ void gba::PPU::drawPixelMode3() {
     HalfWord blue = (pixel >> 10) & 0b11111;
     PIXEL_T bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
+    this->drawSprites(); // Für Obj Window zuerst
+
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
@@ -749,7 +809,7 @@ void gba::PPU::drawPixelMode3() {
         insertIntoSorted(layerOrder, bg2, layerOrderSize);
         
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
-        insertIntoSorted(layerOrder, drawSprites(), layerOrderSize);
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
     
     setColorFromLayerOrder(actives);
 }
@@ -764,6 +824,7 @@ void gba::PPU::drawPixelMode4() {
     HalfWord blue = (pixel >> 10) & 0b11111;
     PIXEL_T bg2 = {.pixel = paletteIndex, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
+    this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
@@ -772,7 +833,7 @@ void gba::PPU::drawPixelMode4() {
         insertIntoSorted(layerOrder, bg2, layerOrderSize);
         
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
-        insertIntoSorted(layerOrder, drawSprites(), layerOrderSize);
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
     
     setColorFromLayerOrder(actives);
 }
@@ -791,6 +852,7 @@ void gba::PPU::drawPixelMode5() {
     else{
         bg2 = PIXEL_T{.pixel = 0, .priority = 99};
     }
+    this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
@@ -799,7 +861,7 @@ void gba::PPU::drawPixelMode5() {
         insertIntoSorted(layerOrder, bg2, layerOrderSize);
         
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
-        insertIntoSorted(layerOrder, drawSprites(), layerOrderSize);
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
     
     setColorFromLayerOrder(actives);
 }
