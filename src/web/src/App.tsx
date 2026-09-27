@@ -85,7 +85,7 @@ function App() {
       bytes.forEach(element => {
         vec.push_back(element)
       });
-      emu?.loadSpecialFile(name, vec);
+      emu?.loadSpecialFile(getFileName(name), vec);
 
       const newRequiredFiles = requiredFiles.filter((s:string) => (s != name));
       if(newRequiredFiles.length == 0){
@@ -134,12 +134,19 @@ function App() {
     return <div className='p-1'>{gameTitle}</div>;
   }
 
+  const getFileName = (file: string) => {
+    return file.split("{delim}")[0];
+  }
+  const getFileExtension = (file: string) => {
+    return file.split("{delim}")[1];
+  }
+
   function printFileList(): import("react").ReactNode {
     const listItems = requiredFiles.map(file =>
       <li className='list-row' key={file}>
-        <div className='text-xl'>{file}</div>
-        <input type='file' id='filespecial' ref={inputSpecialFile} onChange={(e) => {handleSpecialFile(e, file);}} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
-        <button onClick={() => inputSpecialFile.current?.click()} onKeyDown={preventInput} onKeyUp={preventInput} className='btn  btn-square btn-soft btn-primary right-0'>
+        <div className='text-xl'>{getFileName(file)}</div>
+        <input type='file' accept={getFileExtension(file)} id={'filespecial##'+file} ref={inputSpecialFile} onChange={(e) => {handleSpecialFile(e, file);}} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
+        <button onClick={() => {document.getElementById('filespecial##'+file)?.click()}} onKeyDown={preventInput} onKeyUp={preventInput} className='btn  btn-square btn-soft btn-primary right-0'>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
           </svg>

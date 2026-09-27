@@ -118,7 +118,9 @@ export enum GameInput {
     GameA,
     GameB,
     GameStart,
-    GameSelect
+    GameSelect,
+    GameL,
+    GameR
 }
 
 
@@ -179,6 +181,14 @@ export class InputHandler{
             }
             case GameInput.GameSelect:{
                 key = "Backspace";
+                break;
+            }
+            case GameInput.GameL:{
+                key = "KeyQ";
+                break;
+            }
+            case GameInput.GameR:{
+                key = "KeyW";
                 break;
             }
         }

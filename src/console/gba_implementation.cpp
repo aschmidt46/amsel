@@ -160,7 +160,7 @@ std::vector<uint8_t> GbaImplementation::getSaveData()
 }
 
 std::vector<std::string> GbaImplementation::getRequiredFiles() {
-  return {"GBA Bios"};
+  return {"GBA Bios{delim}.bin"};
 }
 
 void GbaImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> content) {

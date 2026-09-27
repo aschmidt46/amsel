@@ -11,8 +11,6 @@ class AudioQueueProcessor extends AudioWorkletProcessor {
     this.queue0 = new CBuffer(2048);
     this.queue1 = new CBuffer(2048);
     this.port.onmessage = e => {
-      // this.queue0.push(e.data.left);
-      // this.queue1.push(e.data.right);
       e.data.left.forEach((element : number) => {
         this.queue0.push(element);
       });

@@ -203,9 +203,8 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
     }, [emuObject, fragmentCode, vertexCode, actx, anode]);
 
     const style : CSSProperties = {
-      imageRendering: 'pixelated',
-      overflow: 'hidden',
-      zIndex: 1
+      maxWidth: "100%",
+      height: "auto"
     }
 
     function getHeight(){
@@ -235,9 +234,8 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
     }
 
     return (
-        // Unschön, da bei Smartphones das Seitenverhältnis nicht ganz stimmt, ich finde keine andere funktionierende Lösung
-        <div className='flex grow justify-center h-screen w-screen max-h-dvw'>
-            <canvas ref={emuCanvas} width={getWidth()} style={style} height={getHeight()} className={getAspectRatio()} ></canvas>
+        <div style={style} className={'flex grow justify-center '+getAspectRatio()}>
+            <canvas ref={emuCanvas} width={getWidth()} height="auto" style={{imageRendering: 'pixelated', overflow: 'hidden',zIndex: 1, objectFit: "contain"}} ></canvas>
             {maybeRenderMoody()}
         </div>
 

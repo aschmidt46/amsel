@@ -51,6 +51,23 @@ export function GameController ({inp} : {inp : InputHandler}){
 
     return(
         <div className="grid grid-cols-9 gap-2 m-10">
+            <div>
+                <button className="btn rounded-xl w-30 btn-xl" onContextMenu={pctx} 
+                onTouchStart={ () => maybePress(GameInput.GameL)} onTouchEnd={ () => maybeUnpress(GameInput.GameL)}>
+                    L</button>
+            </div>
+            <div style={{pointerEvents: "none"}}></div>
+            <div style={{pointerEvents: "none"}}></div>
+            <div style={{pointerEvents: "none"}}></div>
+            <div style={{pointerEvents: "none"}}></div>
+            <div style={{pointerEvents: "none"}}></div>
+            <div style={{pointerEvents: "none"}}></div>
+            <div>
+                <button className="btn rounded-xl w-30 btn-xl align-right" onContextMenu={pctx} 
+                onTouchStart={ () => maybePress(GameInput.GameR)} onTouchEnd={ () => maybeUnpress(GameInput.GameR)}>
+                    R</button>
+            </div>
+            <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
             <div>
                 <button className="btn btn-square btn-xl" onContextMenu={pctx} 
