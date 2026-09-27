@@ -30,13 +30,9 @@ void gba::Scheduler::handleEvent()
             bus->apu.clockEnvelopes();
             scheduleEvent({0x40000, EVENT_APU_Envelopes});
             return;
-        case EVENT_PPU_DrawScanline:
-            bus->drawScanline();
-            scheduleEvent({1232, EVENT_PPU_DrawScanline});
-            return;
         case EVENT_PPU_HBLANK:
             bus->ppu.onHBlank();
-            scheduleEvent({1232, EVENT_PPU_HBLANK});
+            scheduleEvent({226, EVENT_PPU_IncrementScanline});
             return;
         case EVENT_PPU_VBLANK:
             bus->ppu.onVBlank();
@@ -44,7 +40,9 @@ void gba::Scheduler::handleEvent()
             return;
         case EVENT_PPU_IncrementScanline:
             bus->ppu.increment();
-            scheduleEvent({1232, EVENT_PPU_IncrementScanline});
+            if(bus->ppu.currentScanline < 160)
+                bus->drawScanline();
+            scheduleEvent({1006, EVENT_PPU_HBLANK});
             return;
     }
     // std::cout << "dealt.\n";
@@ -56,9 +54,7 @@ void gba::Scheduler::init()
     heap.push({0x10000, EVENT_APU_LengthCounters});
     heap.push({0x20000, EVENT_APU_Sweep});
     heap.push({0x40000, EVENT_APU_Envelopes});
-    heap.push({1, EVENT_PPU_DrawScanline}); // Cycle 1
     heap.push({1006, EVENT_PPU_HBLANK});
-    heap.push({1232, EVENT_PPU_IncrementScanline});
     heap.push({197120, EVENT_PPU_VBLANK});
 }
 

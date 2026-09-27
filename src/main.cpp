@@ -80,7 +80,7 @@ int run(int argc, wchar_t** argv)
     }
   });
 
-
+  glfwSwapInterval(0);
   while(!glfwWindowShouldClose(window)){
       do {
       onWindowUpdate();

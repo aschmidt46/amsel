@@ -50,7 +50,9 @@ namespace gba{
         LCDCONTROL_T LCDCONTROL = {.raw = 0}; // aka dispcnt
         HalfWord GREENSWAP = 0; // Undokumentiert
         LCDSTATUS_T LCDSTATUS = {.raw = 0}; // aka dispstat
+        public:
         HalfWord currentScanline = 0; //VCOUNT
+        private:
 
         BGCNT_T BG_CNT[4] = {{.raw = 0}, {.raw = 0}, {.raw = 0}, {.raw = 0}};
 

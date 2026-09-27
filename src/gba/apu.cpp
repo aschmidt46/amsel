@@ -10,7 +10,7 @@ using namespace gba;
 APU::APU(Bus* bus) : bus(bus), A(bus, 0x040000A0), B(bus, 0x040000A4){};
 
 gba::PulseChannel::PulseChannel(bool has_sweep) :
-dac(0), sweep(0), length_duty(0), vol_env(0), period_low(0), period_high_control(0), has_sweep(false), period_divider(0), waveform_counter(0), volume(0)
+dac(0), sweep(0), length_duty(0), vol_env(0), period_low(0), period_high_control(0), has_sweep(has_sweep), period_divider(0), waveform_counter(0), volume(0)
 ,envelope_counter(0), sweep_enabled(false), sweep_timer(0), shadow_register(0), length_timer(0), disabled_by_sweep(false), length_enabled(false), sweep_pace(0)
 {}
 
@@ -165,7 +165,7 @@ void gba::PulseChannel::on_divider_clock()
         period_divider = HalfWord(period_low) | ((HalfWord(period_high_control) & 0b111) << 8);
         waveform_counter += 1;
         if(waveform_counter >= 8) waveform_counter -= 8;
-        dac = WAVEFORM_PULSE[duty()][waveform_counter];
+        dac = WAVEFORM_PULSE[duty()][waveform_counter] * volume;
     }
     else{
         period_divider += 1;
@@ -355,7 +355,7 @@ void gba::NoiseChannel::on_divider_clock()
 {
     internal_divider += 1;
     float divider = get_clock_divider() > 0 ? float(get_clock_divider()) : 0.5f;
-    size_t division = size_t(std::ceilf(divider * std::ceilf(powf(2.0f, float(get_clock_shift())))));
+    size_t division = size_t(std::ceilf(divider * powf(2.0f, float(get_clock_shift()))));
     if (internal_divider % division == 0){
         lfsr_clock();
     }
@@ -363,13 +363,15 @@ void gba::NoiseChannel::on_divider_clock()
 
 void gba::NoiseChannel::lfsr_clock()
 {
-    const bool shifted_out = (lfsr & 1) == ((lfsr & 2) >> 1);
+    if(get_clock_shift() >= 14) return;
+
+    const bool shifted_out = (lfsr & 1) == ((lfsr >> 1) & 1);
     lfsr = (lfsr & ~0x8000u) | (HalfWord(shifted_out) << 15);
     if(get_lfsr_width()){
         lfsr = (lfsr & ~128u) | (HalfWord(shifted_out) << 7);
     }
     lfsr >>= 1;
-    dac = Byte(shifted_out);
+    dac = shifted_out ? volume : 0;
 }
 
 void gba::DMASoundChannel::onTimerOverflow()
@@ -668,7 +670,7 @@ Byte gba::APU::onRead(Word addr)
     }
 
     else if(addr == 0x4000078){
-        return 0xFF;
+        return 0;
     }
     else if(addr == 0x4000079){
         return noise.vol_env;
@@ -723,31 +725,31 @@ std::pair<float, float> gba::APU::getSample()
         int16_t noiseSample = 2 * noise_sample - int16_t(noise.volume);
         int16_t waveSample = 2 * wave_sample - int16_t(15);
 
-        const int16_t pulse1SampleLeft = SOUNDCNT_L.state.enablePulse1Left ? pulse1Sample : 0;
-        const int16_t pulse2SampleLeft = SOUNDCNT_L.state.enablePulse2Left ? pulse2Sample : 0;
-        const int16_t noiseSampleLeft = SOUNDCNT_L.state.enableNoiseLeft ? noiseSample : 0;
-        const int16_t waveSampleLeft = SOUNDCNT_L.state.enableWaveLeft ? waveSample : 0;
+        const int16_t pulse1SampleLeft = SOUNDCNT_L.state.enablePulse1Left ?    pulse1Sample : 0;
+        const int16_t pulse2SampleLeft = SOUNDCNT_L.state.enablePulse2Left ?    pulse2Sample : 0;
+        const int16_t noiseSampleLeft =  SOUNDCNT_L.state.enableNoiseLeft ?     noiseSample : 0;
+        const int16_t waveSampleLeft =   SOUNDCNT_L.state.enableWaveLeft ?      waveSample : 0;
 
-        int16_t psgSampleLeft = (pulse1SampleLeft + pulse2SampleLeft + noiseSampleLeft + waveSampleLeft) * SOUNDCNT_L.state.psgVolumeLeft;
+        int16_t psgSampleLeft = (pulse1SampleLeft + pulse2SampleLeft + waveSampleLeft + noiseSampleLeft) * SOUNDCNT_L.state.psgVolumeLeft;
 
         psgSampleLeft >>= 2 - (SOUNDCNT_H.state.psgVolumeMaster % 3);
 
-        const int16_t pulse1SampleRight = SOUNDCNT_L.state.enablePulse1Right ? pulse1Sample : 0;
-        const int16_t pulse2SampleRight = SOUNDCNT_L.state.enablePulse2Right ? pulse2Sample : 0;
-        const int16_t noiseSampleRight = SOUNDCNT_L.state.enableNoiseRight ? noiseSample : 0;
-        const int16_t waveSampleRight = SOUNDCNT_L.state.enableWaveRight ? waveSample : 0;
+        const int16_t pulse1SampleRight = SOUNDCNT_L.state.enablePulse1Right ?  pulse1Sample : 0;
+        const int16_t pulse2SampleRight = SOUNDCNT_L.state.enablePulse2Right ?  pulse2Sample : 0;
+        const int16_t noiseSampleRight =  SOUNDCNT_L.state.enableNoiseRight ?   noiseSample : 0;
+        const int16_t waveSampleRight =   SOUNDCNT_L.state.enableWaveRight ?    waveSample : 0;
 
-        int16_t psgSampleRight = (pulse1SampleRight + pulse2SampleRight + noiseSampleRight + waveSampleRight) * SOUNDCNT_L.state.psgVolumeRight;
+        int16_t psgSampleRight = (pulse1SampleRight + pulse2SampleRight + waveSampleRight + noiseSampleRight) * SOUNDCNT_L.state.psgVolumeRight;
 
         psgSampleRight >>= 2 - (SOUNDCNT_H.state.psgVolumeMaster % 3);
 
         const int16_t signedOutLeft = std::clamp(pcmOutLeft + psgSampleLeft, -0x200, 0x1FF);
-        // const int finalOutLeft = std::clamp(signedOutLeft + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
+        const int finalOutLeft = std::clamp(signedOutLeft + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
 
         const int16_t signedOutRight = std::clamp(pcmOutRight + psgSampleRight, -0x200, 0x1FF);
-        // const int finalOutRight = std::clamp(signedOutRight + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
+        const int finalOutRight = std::clamp(signedOutRight + int(SOUNDBIAS.state.biasLevel), 0, 0x3FF);
 
-        return {float(signedOutLeft) / 512.0f, float(signedOutRight) / 512.0f};
+        return {float(finalOutLeft) / 1024.0f, float(finalOutRight) / 1024.0f};
     }
     else{
         return {0,0};

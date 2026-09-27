@@ -13,7 +13,6 @@ namespace gba{
         EVENT_APU_LengthCounters,
         EVENT_APU_Sweep,
         EVENT_APU_Envelopes,
-        EVENT_PPU_DrawScanline,
         EVENT_PPU_HBLANK,
         EVENT_PPU_VBLANK,
         EVENT_PPU_IncrementScanline,
