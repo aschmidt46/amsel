@@ -3,7 +3,7 @@
 #include <vector>
 #include <filesystem>
 
-enum LocalizedString{
+enum LocalizedString : size_t{
     ChooseRom = 0,
     RomFilter = 1,
 
@@ -131,10 +131,26 @@ enum LocalizedString{
     SettingsSystemOptions = 107,
     BindingLButton = 108,
     BindingRButton = 109,
-
+    LinkCable = 110,
+    BiosFile = 111,
+    SkipBios = 112,
+    LinkCableListening = 113,
+    LinkCableConnected = 114,
+    LinkCableIdle = 115,
+    LinkCableHostSection = 116,
+    LinkCablePort = 117,
+    LinkCableHostButon = 118,
+    LinkCableError = 119,
+    LinkCableInvalidPortNumber = 120,
+    LinkCableDisconnectButton = 121,
+    LinkCableConnectClient = 122,
+    LinkCableConnectClientButton = 123,
+    LinkCableConnectHostAddress = 124,
+    LinkCableConnecting = 125,
+    GBAMissingBios = 126,
 };
 
-constexpr size_t NUM_STRINGS = 110;
+constexpr size_t NUM_STRINGS = 127;
 
 class Locale{
     private:

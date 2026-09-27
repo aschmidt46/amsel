@@ -110,6 +110,23 @@
         "Es werden zusätzliche Dateien benötigt:",
         "System-Optionen",
         "L-Taste",
-        "R-Taste"
+        "R-Taste",
+        "Link-Kabel",
+        "Bios Datei",
+        "Bios-Startvorgang überspringen?",
+        "Warte auf Verbindung...",
+        "Verbunden.",
+        "Bereit.",
+        "Hosting",
+        "Port",
+        "host",
+        "Link-Kabel Fehler",
+        "Ungültige Portnummer!",
+        "Verbindung trennen",
+        "Verbindung aufbauen",
+        "verbinden",
+        "Host-Adresse",
+        "Stelle Verbindung her...",
+        "GBA Emulator benötigt gültiges Bios.\nBesuche Einstellungen -> System-Optionen."
     ]
 }

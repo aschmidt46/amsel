@@ -156,12 +156,12 @@ void FileIO::saveSystemSettings(const std::vector<std::pair<std::string, std::ve
 
         auto visitor = overload{
             [&](const RequiredFile &f){
-                std::string optName = f.name;
+                std::string optName = f.id;
                 optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
                 ini["General"][optName] = f.path;        
             },
             [&](const Toggle &t){
-                std::string optName = t.name;
+                std::string optName = t.id;
                 optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
                 ini["General"][optName] = t.value;
             },
@@ -194,12 +194,12 @@ void FileIO::loadSystemSettings(const std::vector<std::pair<std::string, std::ve
 
         auto visitor = overload{
             [&](RequiredFile &f){
-                std::string optName = f.name;
+                std::string optName = f.id;
                 optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
                 f.path = ini["General"][optName].as<std::string>();
             },
             [&](Toggle &t){
-                std::string optName = t.name;
+                std::string optName = t.id;
                 optName.erase(remove_if(optName.begin(), optName.end(), isspace), optName.end());
                 t.value = ini["General"][optName].as<bool>();
             },

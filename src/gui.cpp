@@ -617,10 +617,10 @@ void Gui::drawSystemOptions(){
       ImGui::TableNextColumn();
       auto visitor = overload{
         [&](RequiredFile& f){
-          ImGui::Text("%s", f.name.c_str());
+          ImGui::Text("%s", locale.getTranslation(f.name).c_str());
           ImGui::SameLine();
           if(ImGui::Button("...")){
-            auto result = pfd::open_file(f.name, globalConfig.directory, {f.extensions, f.extensions}, pfd::opt::none);
+            auto result = pfd::open_file(locale.getTranslation(f.name), globalConfig.directory, {f.extensions, f.extensions}, pfd::opt::none);
             auto res = result.result();
             if(res.size()>0){
               std::replace(res[0].begin(), res[0].end(), '\\', '/');
@@ -632,12 +632,12 @@ void Gui::drawSystemOptions(){
           ImGui::InputText("", f.path.data(), 1024);
         },
         [&](Toggle& t){
-          if(ImGui::Checkbox(t.name.c_str(), &t.value)){
+          if(ImGui::Checkbox(locale.getTranslation(t.name).c_str(), &t.value)){
             FileIO::getInstance().saveSystemSettings(systemOptions);
           }
         },
         [&](CustomMenu& m){
-          if(ImGui::MenuItemEx(m.name.c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", m.visible)){
+          if(ImGui::MenuItemEx(locale.getTranslation(m.name).c_str(), ICON_FA_UP_RIGHT_FROM_SQUARE, "", m.visible)){
             m.visible = !m.visible;
           }
           if(m.visible){

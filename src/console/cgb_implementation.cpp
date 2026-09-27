@@ -470,4 +470,4 @@ void CgbImplementation::transferSent(){
   completed_send(cgb);
 }
 
-std::vector<SystemOption> CgbImplementation::options = {CustomMenu{"Link Cable"}};
+std::vector<SystemOption> CgbImplementation::options = {CustomMenu{LinkCable}};

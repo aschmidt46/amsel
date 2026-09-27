@@ -10,19 +10,23 @@
 using namespace emscripten;
 #endif
 
+enum LocalizedString : size_t;
+
 struct RequiredFile{
-    std::string name;
+    LocalizedString name;
+    std::string id;
     std::string extensions;
     std::string path;
 };
 
 struct Toggle{
-    std::string name;
+    LocalizedString name;
+    std::string id;
     bool value;
 };
 
 struct CustomMenu{
-    std::string name;
+    LocalizedString name;
     bool visible = false;
 };
 

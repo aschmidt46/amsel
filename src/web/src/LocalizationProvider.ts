@@ -110,7 +110,24 @@ const localStrings = [
     "AdditionalRequiredFiles",
     "SettingsSystemOptions",
     "BindingLButton",
-    "BindingRButton"
+    "BindingRButton",
+    "LinkCable",
+    "BiosFile",
+    "SkipBios",
+    "LinkCableListening",
+    "LinkCableConnected",
+    "LinkCableIdle",
+    "LinkCableHostSection",
+    "LinkCablePort",
+    "LinkCableHostButon",
+    "LinkCableError",
+    "LinkCableInvalidPortNumber",
+    "LinkCableDisconnectButton",
+    "LinkCableConnectClient",
+    "LinkCableConnectClientButton",
+    "LinkCableConnectHostAddress",
+    "LinkCableConnecting",
+    "GBAMissingBios"
 ];
 
 import german from './assets/locales/de.json'

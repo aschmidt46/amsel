@@ -3,6 +3,8 @@
 #include <memory>
 #ifdef BUILD_DESKTOP
   #include <imgui.h>
+  #include "framework/global.h"
+  #include "framework/locale.h"
 #endif
 #include "cgb_implementation.h"
 
@@ -61,19 +63,19 @@ void NetworkState::renderMenuDesktop(CgbImplementation* cgb){
   std::string errorText = "";
   bool allowDisconnect = false;
   if(acceptor.has_value() && acceptor->is_open()){
-    errorText = "Listening...";
+    errorText = locale.getTranslation(LinkCableListening);
     allowDisconnect = true;
     if(connectionReady)
-      errorText = "connected.";
+      errorText = locale.getTranslation(LinkCableConnected);
   }
   else{
-    errorText = "idle.";
+    errorText = locale.getTranslation(LinkCableIdle);
   }
-  ImGui::Begin("Link Cable");
-    ImGui::SeparatorText("Host");
-    ImGui::InputText("Port", portBuffer, 6);
+  ImGui::Begin(locale.getTranslation(LinkCable).c_str());
+    ImGui::SeparatorText(locale.getTranslation(LinkCableHostSection).c_str());
+    ImGui::InputText(locale.getTranslation(LinkCablePort).c_str(), portBuffer, 6);
     ImGui::SameLine();
-    if(ImGui::Button("Host")){
+    if(ImGui::Button(locale.getTranslation(LinkCableHostButon).c_str())){
       try{
         int port = std::stoi(portBuffer);
         if(port > std::numeric_limits<uint16_t>::max())
@@ -87,15 +89,15 @@ void NetworkState::renderMenuDesktop(CgbImplementation* cgb){
         acceptor = {};
         messageQueue.enqueue(MessageStruct{
           MessageType::MT_ERROR,
-          {"Link Cable Error"},
-          "Invalid Port Number"
+          {locale.getTranslation(LinkCableError)},
+          locale.getTranslation(LinkCableInvalidPortNumber)
         });
       }
       catch(std::exception &e){
         acceptor = {};
         messageQueue.enqueue(MessageStruct{
           MessageType::MT_ERROR,
-          {"Link Cable Error"},
+          {locale.getTranslation(LinkCableError)},
           e.what()
         });
       }
@@ -103,7 +105,8 @@ void NetworkState::renderMenuDesktop(CgbImplementation* cgb){
     ImGui::Text("%s", errorText.c_str());
     if(allowDisconnect){
       ImGui::SameLine();
-      if(ImGui::Button("Disconnect##server")){
+      std::string disconnectServer = locale.getTranslation(LinkCableDisconnectButton) + "##server";
+      if(ImGui::Button(disconnectServer.c_str())){
         acceptor->close();
         acceptor = {};
         connection.value()->socket_.close();
@@ -111,10 +114,12 @@ void NetworkState::renderMenuDesktop(CgbImplementation* cgb){
         connectionReady = false;
       }
     }
-    ImGui::SeparatorText("Connect");
-    ImGui::InputText("Host##2", hostBuffer, 200);
-    ImGui::InputText("Port##2", portBufferClient, 6);
-    if(ImGui::Button("Connect")){
+    ImGui::SeparatorText(locale.getTranslation(LinkCableConnectClient).c_str());
+    std::string hostClient = locale.getTranslation(LinkCableConnectHostAddress) + "##2";
+    std::string clientPort = locale.getTranslation(LinkCablePort) + "##2";
+    ImGui::InputText(hostClient.c_str(), hostBuffer, 200);
+    ImGui::InputText(clientPort.c_str(), portBufferClient, 6);
+    if(ImGui::Button(locale.getTranslation(LinkCableConnectClientButton).c_str())){
       try{
         asio::ip::tcp::resolver resolver(io_context);
         connection = TCPConnection::create(io_context, cgb);
@@ -128,21 +133,22 @@ void NetworkState::renderMenuDesktop(CgbImplementation* cgb){
         connection = {};
         messageQueue.enqueue(MessageStruct{
           MessageType::MT_ERROR,
-          {"Link Cable Error"},
+          {locale.getTranslation(LinkCableError)},
           e.what()
         });
       }
     }
     if(connectionReady){
-      ImGui::Text("Connected");
+      ImGui::Text(locale.getTranslation(LinkCableConnected).c_str());
     }
     else if(connection.has_value()){
-      ImGui::Text("Connecting...");
+      ImGui::Text(locale.getTranslation(LinkCableConnecting).c_str());
     }
     else{
-      ImGui::Text("idle.");
+      ImGui::Text(locale.getTranslation(LinkCableIdle).c_str());
     }
-    if(ImGui::Button("Disconnect##client")){
+    std::string disconnectClientButton = locale.getTranslation(LinkCableDisconnectButton) + "##client";
+    if(ImGui::Button(disconnectClientButton.c_str())){
         connection = {};
         connectionReady = false;
       }

@@ -110,6 +110,23 @@
         "The following additional files are required:",
         "System options",
         "L-Button",
-        "R-Button"
+        "R-Button",
+        "Link Cable",
+        "Bios File",
+        "Skip Bios (Intro)",
+        "Listening...",
+        "Connected.",
+        "Idle.",
+        "Host",
+        "Port",
+        "Host",
+        "Link Cable Error",
+        "Invalid Port number!",
+        "Disconnect",
+        "Connect",
+        "Connect",
+        "Host",
+        "Connecting...",
+        "GBA Emulation requires valid gba bios file.\nVisit settings -> system options."
     ]
 }

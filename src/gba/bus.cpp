@@ -708,7 +708,7 @@ gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
     this->bios = bcontents;
     bstream.close();
     if(bcontents.size() == 0){
-        MessageStruct m = {.type = MT_ERROR, .title = "Error", .content = "GBA Emulation requires valid gba bios file.\nVisit settings -> system options."};
+        MessageStruct m = {.type = MT_ERROR, .title = {}, .content = locale.getTranslation(GBAMissingBios)};
         messageQueue.enqueue(m);
         missingBios = true;
     }

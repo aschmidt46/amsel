@@ -6,6 +6,7 @@
 #include "framework/file_io.h"
 #include <imgui.h>
 #endif
+#include "framework/locale.h"
 #include "../framework/stringlib.h"
 //           0  1   2     3      4     5    6    7    8  9
 // KEYINPUT: A, B, SEL, START, Right, Left, Up, Down, R, L
@@ -306,4 +307,4 @@ void GbaImplementation::displayRegisters() {
     #endif
 }
 
-std::vector<SystemOption> GbaImplementation::options = {RequiredFile{"Bios Location", "*.bin", ""}, Toggle{.name = "Bios Skip", .value = true}};
+std::vector<SystemOption> GbaImplementation::options = {RequiredFile{BiosFile, "BiosFile", "*.bin", ""}, Toggle{.name = SkipBios, .id="SkipBios", .value = true}};
