@@ -46,6 +46,8 @@ namespace gba{
         Word currentDestAddr = 0;
         Word currentCount = 0;
 
+        Word lastRead = 0;
+
         // int remainingCycles = 0;
 
         // Vorberechnete Derivate

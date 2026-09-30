@@ -272,6 +272,9 @@ void gba::Bus::writeByte(Word addr, Byte val)
         writeByteFromWide(modAddr, val);
         writeByteFromWide(modAddr + 1, val);
     }
+    else if(addr >= 0x07000000 && addr <= 0x070003FF){
+        return; // Keine Byte writes in OAM
+    }
     else writeByteFromWide(addr, val);
 }
 
@@ -495,7 +498,8 @@ Byte gba::Bus::readByteFromWide(Word addr)
     }
 
     // Cart Ram
-    if(addr >= 0x0E000000 && addr < 0x0E010000){
+    if(addr >= 0x0E000000 && addr < 0x0F000000){ // + mirrors (nur sram?)
+        addr = 0x0E000000 + (addr % 0x10000);
         if(backupType == BACKUP_SRAM){
             return (*cartRam)[addr - 0x0E000000];
         }
@@ -570,6 +574,12 @@ HalfWord gba::Bus::readHalfWord(Word addr)
             return eeprom->OnRead();
         }
     }
+    if(addr >= 0x0E000000 && addr < 0x0F000000){
+        if(backupType == BACKUP_SRAM){
+            HalfWord val = readByteFromWide(addr);
+            return val | (val << 8);
+        }
+    }
     HalfWord A1 = readByteFromWide(addr);
     HalfWord A2 = readByteFromWide(addr + 1);
     return A1 | (A2 << 8);
@@ -623,6 +633,12 @@ Word gba::Bus::readWord(Word addr)
     
         else if(addr >= 0x0D00'0000 && addr < 0x0E00'0000 && gamePak.size() < 0x1000000){ // gamepak < 16MB
             return eeprom->OnRead();
+        }
+    }
+    if(addr >= 0x0E000000 && addr < 0x0F000000){
+        if(backupType == BACKUP_SRAM){
+            HalfWord val = readByteFromWide(addr);
+            return val | (val << 8) | (val << 16) | (val << 24);
         }
     }
     Word A1 = readByteFromWide(addr);

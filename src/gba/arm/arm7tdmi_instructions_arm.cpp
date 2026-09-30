@@ -90,6 +90,10 @@ bool gba::CPU::executeBlockDataTransfer(Word instruction)
     bool transferCPSR = L && S && R15InTransferList;
     Word origAddr = *registerMap[actualMode][Rn];
     Word addr = origAddr;
+
+    if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
+        addr &= ~3u;
+    }
     
     for(int i=0; i < 16; i++){
         bool useRegister = instruction & (1u << i);
@@ -161,6 +165,23 @@ bool gba::CPU::executeSoftwareInterrupt(Word instruction)
     _CPSR.state.I = 1; // IRQs ausschalten
     _CPSR.state.T = 0; // Zurück zu ARM Modus
     remainingCycles += 3; // 2S + 1N
+
+    // if((instruction & 0xFFFF) == 0x0B){
+    //     std::cout << "Swi CPUSET\n";
+    //     if(_R2 & (1u << 26)){
+    //         _R0 &= ~3u;
+    //         _R1 &= ~3u;
+    //     }
+    //     else{
+    //         _R0 &= ~1u;
+    //         _R1 &= ~1u;
+    //     }
+    // }
+    // if((instruction & 0xFFFF) == 0x0C){
+    //     std::cout << "Swi CPUFASTSET\n";
+    //     _R0 &= ~3u;
+    //     _R1 &= ~3u;
+    // }
     return true;
 }
 

@@ -42,7 +42,7 @@ void gba::PPU::writePPURegister(Word addr, Byte val)
         LCDCONTROL.state.cgbMode = 0;
     }
     else if(addr == 0x04000004){
-        LCDSTATUS.raw = (LCDSTATUS.raw & 0xFF00) | val;
+        LCDSTATUS.raw = (LCDSTATUS.raw & 0xFF07) | (val & 0b11111000); // untere 3 bits read only
     }
     else if(addr == 0x04000005){
         LCDSTATUS.raw = (LCDSTATUS.raw & 0x00FF) | (HalfWord(val) << 8);
@@ -385,17 +385,20 @@ gba::Byte gba::PPU::readPPURegister(Word addr)
 void gba::PPU::writePPUMemory(Word addr, Byte value) {
     if(addr >= 0x05000000 && addr < 0x06000000){
         auto mod = (addr - 0x05000000) % 0x400;
-        paletteRam[mod] = value;
+        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
+            paletteRam[mod] = value;
     }
     else if(addr >= 0x06000000 && addr < 0x07000000){
         // auto relAddr = (addr - 0x06000000);
         auto mod = addr % 0x20000;
         if(mod >= 0x18000) mod -= 0x8000;
-        vRam[mod] = value;
+        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
+            vRam[mod] = value;
     }
     else if(addr >= 0x07000000 && addr < 0x08000000){
         auto mod = (addr - 0x07000000) % 0x400;
-        oamAttribs[mod] = value;
+        // if(LCDSTATUS.state.vBlankFlag || (LCDSTATUS.state.hBlankFlag && LCDCONTROL.state.hblankIntervalFree))
+            oamAttribs[mod] = value;
     }
 }
 
@@ -403,17 +406,23 @@ gba::Byte gba::PPU::readPPUMemory(Word addr)
 {
     if(addr >= 0x05000000 && addr < 0x06000000){
         auto mod = (addr - 0x05000000) % 0x400;
-        return paletteRam[mod];
+        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
+            return paletteRam[mod];
+        // else return 0;
     }
     else if(addr >= 0x06000000 && addr < 0x07000000){
         // auto relAddr = (addr - 0x06000000);
         auto mod = addr % 0x20000;
         if(mod >= 0x18000) mod -= 0x8000;
-        return vRam[mod];
+        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
+            return vRam[mod];
+        // else return 0;
     }
     else if(addr >= 0x07000000 && addr < 0x08000000){
         auto mod = (addr - 0x07000000) % 0x400;
-        return oamAttribs[mod];
+        // if(LCDSTATUS.state.vBlankFlag || (LCDSTATUS.state.hBlankFlag && LCDCONTROL.state.hblankIntervalFree))
+            return oamAttribs[mod];
+        // else return 0;
     }
     std::cout << "Unbekannter PPU mem read\n";
     return 0;

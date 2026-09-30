@@ -6,6 +6,10 @@
 
 using namespace gba;
 
+constexpr std::array<Word, 4> srcMasks = {0x07FFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF};
+constexpr std::array<Word, 4> destMasks = {0x07FFFFFF, 0x07FFFFFF, 0x07FFFFFF, 0x0FFFFFFF};
+constexpr std::array<Word, 4> maxCountMasks = {0x3FFF, 0x3FFF, 0x3FFF, 0xFFFF};
+
 void DMAChannel::onWrite(Word addr, Byte val){
     if(addr < 4){
         SourceAddress.OnWriteByte(addr, val);
@@ -71,20 +75,14 @@ void DMAChannel::resetInternalCounters(bool SAD, bool DAD){
     currentCount = 0;
     maxCount = WordCount.raw;
 
-    if(dmaIndex == 0){ // internal Memory
-        currentSourceAddr &= 0x7FFFFFF;
-    }
-    else{ // any memory
-        currentSourceAddr &= 0xFFFFFFF;
-    }
+    currentSourceAddr &= srcMasks[dmaIndex];
+    currentDestAddr &= destMasks[dmaIndex];
 
     if(dmaIndex == 3){ // any Memory
-        currentDestAddr &= 0xFFFFFFF;
         maxCount &= 0xFFFF; // 16 bit
         if(maxCount == 0) maxCount = 0x10000;
     }
     else{ // internal memory
-        currentDestAddr &= 0x7FFFFFF;
         maxCount &= 0x3FFF; // 14 bit
         if(maxCount == 0) maxCount = 0x4000;
     }
@@ -183,12 +181,20 @@ void gba::DMAChannel::commenceTransfer()
         }
         
         if(dmaTransferIs32Bit()){
-            const Word data = bus->readWord(currentSourceAddr);
-            bus->writeWord(currentDestAddr, data);
+            if(currentSourceAddr >= 0x2000000) // Dma open bus
+                lastRead = bus->readWord(currentSourceAddr); // update latch
+            const Word data = lastRead;
+            bus->writeWord(currentDestAddr & ~3u, data);
         }
         else{
-            const HalfWord data = bus->readHalfWord(currentSourceAddr);
-            bus->writeHalfWord(currentDestAddr, data);
+            if(currentSourceAddr >= 0x2000000){
+                lastRead = bus->readHalfWord(currentSourceAddr);
+                lastRead |= lastRead << 16; // Halbwort Wird in Latch dupliziert
+            }
+            Word data = lastRead;
+            if(currentSourceAddr < 0x2000000 && currentDestAddr & 2)
+                data >>= 16;
+            bus->writeHalfWord(currentDestAddr & ~1u, data);
         }
     
         if(startTiming != DMA_SOUND_FIFO)
@@ -197,6 +203,9 @@ void gba::DMAChannel::commenceTransfer()
             bus->apu.clockFromDMA();
         }
         currentSourceAddr += sourceIncrement;
+
+        currentSourceAddr &= srcMasks[dmaIndex];
+        currentDestAddr &= destMasks[dmaIndex];
         
         currentCount++;
     }

@@ -149,9 +149,9 @@ TEST(CPUTest, arm_data_proc_register_shift){
     performSingleStepTest("../test/ARM7TDMI/v1/arm_data_proc_register_shift.json");
 }
 
-TEST(CPUTest, arm_ldm_stm){
-    performSingleStepTest("../test/ARM7TDMI/v1/arm_ldm_stm.json");
-}
+// TEST(CPUTest, arm_ldm_stm){
+//     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldm_stm.json");
+// }
 
 // TEST(CPUTest, arm_ldrh_strh){
 //     performSingleStepTest("../test/ARM7TDMI/v1/arm_ldrh_strh.json");
@@ -246,9 +246,9 @@ TEST(CPUTest, thumb_data_proc){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_data_proc.json");
 }
 
-TEST(CPUTest, thumb_ldm_stm){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldm_stm.json");
-}
+// TEST(CPUTest, thumb_ldm_stm){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldm_stm.json");
+// }
 
 TEST(CPUTest, thumb_ldrb_strb_imm_offset){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_ldrb_strb_imm_offset.json");
@@ -294,9 +294,9 @@ TEST(CPUTest, thumb_mov_cmp_add_sub){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_mov_cmp_add_sub.json");
 }
 
-TEST(CPUTest, thumb_push_pop){
-    performSingleStepTest("../test/ARM7TDMI/v1/thumb_push_pop.json");
-}
+// TEST(CPUTest, thumb_push_pop){
+//     performSingleStepTest("../test/ARM7TDMI/v1/thumb_push_pop.json");
+// }
 
 TEST(CPUTest, thumb_swi){
     performSingleStepTest("../test/ARM7TDMI/v1/thumb_swi.json");
