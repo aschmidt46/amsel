@@ -793,12 +793,16 @@ PIXEL_T gba::PPU::drawPixelMode2() {
 }
 
 PIXEL_T gba::PPU::drawPixelMode3() {
-    int index = currentCycle + 240 * currentScanline;
+    const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
+    int index = currentCycle + 240 * pixelY;
     HalfWord pixel = HalfWord(vRam[2 * index]) | (HalfWord(vRam[2 * index + 1]) << 8);
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
     PIXEL_T bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
+
+    if(!BG_CNT[2].state.mosaic || mosaicBgXCounter == 0)
+        latchedBg[2] = bg2;
 
     this->drawSprites(); // Für Obj Window zuerst
 
@@ -807,7 +811,7 @@ PIXEL_T gba::PPU::drawPixelMode3() {
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
 
     if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
-        insertIntoSorted(layerOrder, bg2, layerOrderSize);
+        insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
         
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
@@ -816,7 +820,8 @@ PIXEL_T gba::PPU::drawPixelMode3() {
 }
 
 PIXEL_T gba::PPU::drawPixelMode4() {
-    int index = currentCycle + 240 * currentScanline;
+    const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
+    int index = currentCycle + 240 * pixelY;
     size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
     Byte paletteIndex = vRam[index + page];
     HalfWord pixel = HalfWord(paletteRam[2 * paletteIndex]) | (HalfWord(paletteRam[2 * paletteIndex + 1]) << 8);
@@ -825,13 +830,16 @@ PIXEL_T gba::PPU::drawPixelMode4() {
     HalfWord blue = (pixel >> 10) & 0b11111;
     PIXEL_T bg2 = {.pixel = paletteIndex, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
+    if(!BG_CNT[2].state.mosaic || mosaicBgXCounter == 0)
+        latchedBg[2] = bg2;
+
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
 
     if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
-        insertIntoSorted(layerOrder, bg2, layerOrderSize);
+        insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
         
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
@@ -840,9 +848,10 @@ PIXEL_T gba::PPU::drawPixelMode4() {
 }
 
 PIXEL_T gba::PPU::drawPixelMode5() {
+    const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
     PIXEL_T bg2;
     if(currentCycle < 160 && currentScanline < 128){
-        int index = currentCycle + 160 * currentScanline;
+        int index = currentCycle + 160 * pixelY;
         size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
         HalfWord pixel = HalfWord(vRam[page + 2 * index]) | (HalfWord(vRam[page + 2 * index + 1]) << 8);
         HalfWord red = pixel & 0b11111;
@@ -853,13 +862,15 @@ PIXEL_T gba::PPU::drawPixelMode5() {
     else{
         bg2 = PIXEL_T{.pixel = 0, .priority = 99};
     }
+    if(!BG_CNT[2].state.mosaic || mosaicBgXCounter == 0)
+        latchedBg[2] = bg2;
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
     insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
 
     if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
-        insertIntoSorted(layerOrder, bg2, layerOrderSize);
+        insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
         
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
