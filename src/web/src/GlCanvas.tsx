@@ -204,7 +204,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
 
     const style : CSSProperties = {
       maxWidth: "100%",
-      height: "auto"
+      height: "100%"
     }
 
     function getHeight(){
@@ -235,7 +235,7 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
 
     return (
         <div style={style} className={'flex grow justify-center '+getAspectRatio()}>
-            <canvas ref={emuCanvas} width={getWidth()} height="auto" style={{imageRendering: 'pixelated', overflow: 'hidden',zIndex: 1, objectFit: "contain"}} ></canvas>
+            <canvas ref={emuCanvas} width={getWidth()} height={getHeight()} style={{imageRendering: 'pixelated', overflow: 'hidden',zIndex: 1, objectFit: "contain"}} ></canvas>
             {maybeRenderMoody()}
         </div>
 
