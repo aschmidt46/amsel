@@ -2,7 +2,6 @@
 #include "console.h"
 #include "framework/global.h"
 #include "framework/stringlib.h"
-#define BUILD_DESKTOP
 #ifdef BUILD_DESKTOP
 #include "framework/file_io.h"
 #include "framework/screen.h"
