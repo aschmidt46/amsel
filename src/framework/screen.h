@@ -1,7 +1,7 @@
 #pragma once
-#include <glad/gl.h>
 #include <vector>
 #include "vector.h"
+#include <cstdint>
 
 constexpr const char* vs = 
     "#version 460\n"
@@ -137,12 +137,14 @@ class Screen{
 
     void recreateTexture(int width, int height);
 
+    
     public:
     Screen();
     ~Screen(){
-
+        
     };
-
+    
+    unsigned int getScreenTexture() const;
     vec4 computeRect(int x, int y);
     void onSwitchConsole();
     void present();

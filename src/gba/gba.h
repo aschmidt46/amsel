@@ -4,8 +4,7 @@
 
 namespace gba{
     class GBA{
-        std::shared_ptr<Bus> bus;
-
+        
         double audioTime = 0;
         const double sampleRate = 20000;
         const double audioTimePerGBAClock = 1.0 / 16777918.08;
@@ -13,9 +12,10 @@ namespace gba{
         double audioSampleL = 0;
         double audioSampleR = 0;
         bool audioSampleReady = false;
-
-
+        
+        
         public:
+        std::shared_ptr<Bus> bus;
         GBA(const char* path, const char* biosPath, bool skipBios = true);
         GBA(const std::vector<uint8_t> &bytes, bool skipBios = true);
 

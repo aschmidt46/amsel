@@ -2,6 +2,7 @@
 #include <iostream>
 #include "global.h"
 #include "nes/nes.h"
+#include <glad/gl.h>
 
 void Screen::setQSize(float x0, float x1, float y0, float y1)
 {
@@ -150,6 +151,11 @@ void Screen::setPixelColor(int x, int y, vec3 c)
 void Screen::copyBufferToScreen(const uint8_t *buffer)
 {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, console->getX(), console->getY(), GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+}
+
+unsigned int Screen::getScreenTexture() const
+{
+    return screenTexture;
 }
 
 // Abbildung des Konsolen-Seitenverhätnisses auf den Bildschirm

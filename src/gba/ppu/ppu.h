@@ -29,7 +29,7 @@ namespace gba{
 
         PIXEL_T getBackdrop();
 
-        void setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives);
+        PIXEL_T setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives);
         void mixFinalColor(const WINDOW_ACTIVES_T &actives, PIXEL_T &targetA, PIXEL_T &targetB, PIXEL_T &output);
 
         WINDOW_ACTIVES_T getActives(int window);
@@ -146,12 +146,17 @@ namespace gba{
         template<bool isAffine, bool bpp8>
         void drawBG(const int index);
 
-        void drawPixelMode0();
-        void drawPixelMode1();
-        void drawPixelMode2();
-        void drawPixelMode3();
-        void drawPixelMode4();
-        void drawPixelMode5();
+        PIXEL_T drawPixelMode0();
+        PIXEL_T drawPixelMode1();
+        PIXEL_T drawPixelMode2();
+        PIXEL_T drawPixelMode3();
+        PIXEL_T drawPixelMode4();
+        PIXEL_T drawPixelMode5();
+
+        PIXEL_T debugPixel = {};
+        Word debugX = 0, debugY = 0;
+        void setLatchPixel(unsigned int x, unsigned int y);
+        std::string getDebugOutput();
         
         void writePPURegister(Word addr, Byte val);
         Byte readPPURegister(Word addr);

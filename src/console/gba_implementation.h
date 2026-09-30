@@ -2,8 +2,15 @@
 #include "console.h"
 #include "../gba/gba.h"
 
+struct GfxDebuggerState{
+    unsigned int coordX = 0;
+    unsigned int coordY = 0;
+};
+
 class GbaImplementation : public Console{
     private:
+    bool showGraphicsDebugger = false;
+    GfxDebuggerState debuggerState = {};
     std::shared_ptr<gba::GBA> gba;
     void setAddressOf(int i, int to);
     // void setAddressOf(int i, int to);

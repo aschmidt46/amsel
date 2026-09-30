@@ -132,7 +132,7 @@ void gba::PPU::renderScanline()
     currentCycle = 0;
     if(currentScanline < 160){
         detectSpritesOnScanline();
-        void (gba::PPU::*fun)() = nullptr;
+        PIXEL_T (gba::PPU::*fun)() = nullptr;
         switch(LCDCONTROL.state.bgMode){
             case 0:
                 fun = &PPU::drawPixelMode0;
@@ -156,7 +156,12 @@ void gba::PPU::renderScanline()
         for(; currentCycle < 240; currentCycle++){
 
             layerOrderSize = 0;
-            (this->*fun)();
+            auto output = (this->*fun)();
+            setPixel(currentCycle, currentScanline, output.red, output.green, output.blue);
+            
+            if(currentCycle == debugX && currentScanline == debugY){
+                debugPixel = output;
+            }
 
             if(mosaicBgXCounter == 0){
                 mosaicBgXCurrent += MOSAIC.getBgH();
@@ -655,7 +660,7 @@ PIXEL_T PPU::darken(const PIXEL_T &p){
     return res;
 }
 
-void gba::PPU::setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives)
+PIXEL_T gba::PPU::setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives)
 {
     PIXEL_T output_color{.priority = 99};
     PIXEL_T target_a{.priority = 99};
@@ -671,7 +676,7 @@ void gba::PPU::setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives)
         mixFinalColor(actives, target_a, target_b, output_color);
     }
 
-    setPixel(currentCycle, currentScanline, output_color.red, output_color.green, output_color.blue);
+    return output_color;
 }
 
 void PPU::mixFinalColor(const WINDOW_ACTIVES_T &actives, PIXEL_T &targetA, PIXEL_T &targetB, PIXEL_T &output)
@@ -712,7 +717,7 @@ void gba::PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 
 
 // Pixel Reihenfolge: https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html
-void gba::PPU::drawPixelMode0() {
+PIXEL_T gba::PPU::drawPixelMode0() {
 
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
@@ -731,10 +736,10 @@ void gba::PPU::drawPixelMode0() {
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
 
-    setColorFromLayerOrder(actives);
+    return setColorFromLayerOrder(actives);
 }
 
-void gba::PPU::drawPixelMode1() {
+PIXEL_T gba::PPU::drawPixelMode1() {
 
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
@@ -761,10 +766,10 @@ void gba::PPU::drawPixelMode1() {
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
 
-    setColorFromLayerOrder(actives);
+    return setColorFromLayerOrder(actives);
 }
 
-void gba::PPU::drawPixelMode2() {
+PIXEL_T gba::PPU::drawPixelMode2() {
 
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
@@ -788,10 +793,10 @@ void gba::PPU::drawPixelMode2() {
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
 
-    setColorFromLayerOrder(actives);
+    return setColorFromLayerOrder(actives);
 }
 
-void gba::PPU::drawPixelMode3() {
+PIXEL_T gba::PPU::drawPixelMode3() {
     int index = currentCycle + 240 * currentScanline;
     HalfWord pixel = HalfWord(vRam[2 * index]) | (HalfWord(vRam[2 * index + 1]) << 8);
     HalfWord red = pixel & 0b11111;
@@ -811,10 +816,10 @@ void gba::PPU::drawPixelMode3() {
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
     
-    setColorFromLayerOrder(actives);
+    return setColorFromLayerOrder(actives);
 }
 
-void gba::PPU::drawPixelMode4() {
+PIXEL_T gba::PPU::drawPixelMode4() {
     int index = currentCycle + 240 * currentScanline;
     size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
     Byte paletteIndex = vRam[index + page];
@@ -835,10 +840,10 @@ void gba::PPU::drawPixelMode4() {
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
     
-    setColorFromLayerOrder(actives);
+    return setColorFromLayerOrder(actives);
 }
 
-void gba::PPU::drawPixelMode5() {
+PIXEL_T gba::PPU::drawPixelMode5() {
     PIXEL_T bg2;
     if(currentCycle < 160 && currentScanline < 128){
         int index = currentCycle + 160 * currentScanline;
@@ -863,5 +868,5 @@ void gba::PPU::drawPixelMode5() {
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
     
-    setColorFromLayerOrder(actives);
+    return setColorFromLayerOrder(actives);
 }

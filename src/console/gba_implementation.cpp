@@ -2,8 +2,10 @@
 #include "console.h"
 #include "framework/global.h"
 #include "framework/stringlib.h"
+#define BUILD_DESKTOP
 #ifdef BUILD_DESKTOP
 #include "framework/file_io.h"
+#include "framework/screen.h"
 #include <imgui.h>
 #endif
 #include "framework/locale.h"
@@ -246,7 +248,6 @@ uint8_t GbaImplementation::readCpuBus(uint64_t addr)
 }
 
 
-
 void GbaImplementation::displayRegisters() {
     #ifdef BUILD_DESKTOP
     gba::CpuRegisterState state = gba->getRegs();
@@ -295,6 +296,9 @@ void GbaImplementation::displayRegisters() {
     ImGui::EndTable();
 
     ImGui::Separator();
+    if(ImGui::Button("Gfx Debugger")){
+        showGraphicsDebugger = !showGraphicsDebugger;
+    }
     auto stack = gba->getStack();
     std::vector<char*> cstrings;
     cstrings.reserve(stack.size());
@@ -305,6 +309,24 @@ void GbaImplementation::displayRegisters() {
     ImGui::ListBox("Stack", &select, cstrings.data(), stack.size());
 
     #endif
+
+    if(showGraphicsDebugger){
+        ImGui::Begin("Graphics Debugger", &showGraphicsDebugger, ImGuiWindowFlags_NoCollapse);
+        ImGui::ImageButton("tbutton", (ImTextureID)screen->getScreenTexture(), ImVec2(960,640)); // 4x
+        auto iv = ImGui::GetItemRectMin();
+        if(ImGui::IsItemActive() && ImGui::IsItemHovered()) {
+            debuggerState.coordX = (ImGui::GetMousePos().x - iv.x) / 960 * 240;
+            debuggerState.coordY = (ImGui::GetMousePos().y - iv.y) / 640 * 160;
+            debuggerState.coordX = std::clamp(debuggerState.coordX, 0u, 239u);
+            debuggerState.coordY = std::clamp(debuggerState.coordY, 0u, 159u);
+            gba->bus->ppu.setLatchPixel(debuggerState.coordX, debuggerState.coordY);
+        }
+        ImGui::Text(gba->bus->ppu.getDebugOutput().c_str());
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 loc = ImVec2(iv.x + 4 * debuggerState.coordX, iv.y + 4 * debuggerState.coordY);
+        drawList->AddRectFilled(loc, ImVec2(loc.x + 4, loc.y + 4), 0xFF0000FFu);
+        ImGui::End();
+    }
 }
 
 std::vector<SystemOption> GbaImplementation::options = {RequiredFile{BiosFile, "BiosFile", "*.bin", ""}, Toggle{.name = SkipBios, .id="SkipBios", .value = true}};

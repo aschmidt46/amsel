@@ -19,6 +19,7 @@ set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 
 
+
 include(FetchContent)
 
 # Schnellere Konfiguration
@@ -53,6 +54,11 @@ cmake_dependent_option(FEATURE_NES_NTSC "NTSC Region" ON FEATURE_NES OFF)
 cmake_dependent_option(FEATURE_LOCAL_MULTIPLAYER "Add local Multiplayer support" ON FEATURE_NES OFF)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
+
+if(FEATURE_DEBUGGER)
+# Fehlerhafte asserts in arm_disasm
+add_compile_definitions(NDEBUG)
+endif()
 
 if(FEATURE_NES_NTSC)
   add_compile_definitions(FEATURE_NTSC)

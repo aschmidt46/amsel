@@ -9,7 +9,30 @@ void gba::PPU::updateAffineScroll(int32_t &Reference, HalfWord low, HalfWord hig
     Reference = sign_extend_n_32(ref, 28);
 }
 
-void gba::PPU::writePPURegister(Word addr, Byte val) {
+void gba::PPU::setLatchPixel(unsigned int x, unsigned int y)
+{
+    debugX = x;
+    debugY = y;
+}
+
+std::string gba::PPU::getDebugOutput()
+{
+    std::string output = "";
+    std::string layer = "?";
+    if(debugPixel.layerIndex == 0) layer = "Obj";
+    if(debugPixel.layerIndex >= 1 && debugPixel.layerIndex < 5) layer = "BG" + std::to_string(debugPixel.layerIndex - 1);
+    if(debugPixel.layerIndex == 5) layer = "Backdrop";
+
+    output += "x: " + std::to_string(debugX) + ", y: " + std::to_string(debugY) + "\n";
+    output += "Layer: " + layer + "\n";
+    output += "Priority: " + std::to_string(Word(debugPixel.priority)) + "\n";
+    output += "PaletteIndex: " + std::to_string(Word(debugPixel.pixel)) + "\n";
+    output += "r: " + std::to_string(Word(debugPixel.red)) + ", g: " + std::to_string(Word(debugPixel.green)) + ", b: " + std::to_string(Word(debugPixel.blue)) + "\n";
+    return output;
+}
+
+void gba::PPU::writePPURegister(Word addr, Byte val)
+{
     if(addr == 0x04000000){
         LCDCONTROL.raw = (LCDCONTROL.raw & 0xFF00) | val;
         LCDCONTROL.state.cgbMode = 0;
