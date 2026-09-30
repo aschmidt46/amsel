@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <bit>
 #include "framework/global.h"
 extern "C"{
     #include <armdisasm.h>

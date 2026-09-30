@@ -201,7 +201,7 @@ namespace gba{
 
         bool pipelineIsSaturated();
         void flushPipeline();
-        template<bool isARM>
+        template<bool isARM, bool testMode>
         void advancePipeline();
         void addCycles(size_t cycles);
         size_t armCacheSize = 0;

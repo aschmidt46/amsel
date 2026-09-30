@@ -105,9 +105,9 @@ void gba::CPU::advanceCPU()
     // Die Pipeline MUSS gefüllt sein, bevor IRQ beginnt
     if((pipeline[0].type == PipelineEmpty) || (pipeline[1].type == PipelineEmpty)){
         if(state() == ARM)
-            advancePipeline<true>();
+            advancePipeline<true, false>();
         else
-            advancePipeline<false>();
+            advancePipeline<false, false>();
         return;
     }
     if(pollInterrupts()){
@@ -122,9 +122,9 @@ void gba::CPU::advanceCPU()
         }
         else{
             if(state() == ARM)
-                advancePipeline<true>();
+                advancePipeline<true, false>();
             else
-                advancePipeline<false>();
+                advancePipeline<false, false>();
         }
     }
 }
@@ -141,9 +141,9 @@ void gba::CPU::advanceCPUToNextValidState()
         }
         else{
             if(state() == ARM)
-                advancePipeline<true>();
+                advancePipeline<true, true>();
             else
-                advancePipeline<false>();
+                advancePipeline<false, true>();
         }
     } while(!pipelineIsSaturated());
 }
@@ -195,7 +195,7 @@ void gba::CPU::addCycles(size_t cycles)
     remainingCycles += cycles;
 }
 
-template<bool isARM>
+template<bool isARM, bool testMode>
 void gba::CPU::advancePipeline()
 {
     if(pipeline[1].type != PipelineEmpty){
@@ -264,34 +264,38 @@ void gba::CPU::advancePipeline()
             }
         }
     }
+
     _R15_PC += isARM ? 4 : 2;
-    if(_R15_PC < 0x4000){
-        bus->openBus.lastBiosOpcode = this->readWord(_R15_PC);
-        bus->openBus.lastBiosLocation = _R15_PC;
-    }
-    if(state() == ARM){
-        bus->openBus.prefetchedOpcode = this->readWord(_R15_PC);
-    }
-    else{
-        if((_R15_PC >= 0x02000000 && _R15_PC < 0x02040000) || (_R15_PC >= 0x05000000 && _R15_PC < 0x05000400) || (_R15_PC >= 0x06000000 && _R15_PC < 0x06018000) || (_R15_PC >= 0x08000000 && _R15_PC < 0x0E000000)){
-            bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC)) | (Word(this->readHalfWord(_R15_PC)) << 16);
+
+    if(!testMode){ // Ausschalten während SSTs, weil zusätzliche Reads im Bus gemacht werden, die nicht vorgesehen sind
+        if(_R15_PC < 0x4000){
+            bus->openBus.lastBiosOpcode = this->readWord(_R15_PC);
+            bus->openBus.lastBiosLocation = _R15_PC;
         }
-        else if((_R15_PC < 0x4000) || (_R15_PC >= 0x07000000 && _R15_PC < 0x07000400)){
-            if(_R15_PC & 2u){ // 4 Byte alignment
-                bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC)) | (Word(this->readHalfWord(_R15_PC + 2)) << 16);
-            }
-            else{
-                bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC - 2)) | (Word(this->readHalfWord(_R15_PC)) << 16);
-            }
+        if(state() == ARM){
+            bus->openBus.prefetchedOpcode = this->readWord(_R15_PC);
         }
-        else if(_R15_PC >= 0x03000000 && _R15_PC < 0x03008000){
-            Word oldLO = _R15_PC - 2;
-            Word oldHI = _R15_PC - 2;
-            if(_R15_PC & 2u){ // 4 Byte alignment
-                bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC)) | (Word(this->readHalfWord(oldHI)) << 16);
+        else{
+            if((_R15_PC >= 0x02000000 && _R15_PC < 0x02040000) || (_R15_PC >= 0x05000000 && _R15_PC < 0x05000400) || (_R15_PC >= 0x06000000 && _R15_PC < 0x06018000) || (_R15_PC >= 0x08000000 && _R15_PC < 0x0E000000)){
+                bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC)) | (Word(this->readHalfWord(_R15_PC)) << 16);
             }
-            else{
-                bus->openBus.prefetchedOpcode = Word(this->readHalfWord(oldLO)) | (Word(this->readHalfWord(_R15_PC)) << 16);
+            else if((_R15_PC < 0x4000) || (_R15_PC >= 0x07000000 && _R15_PC < 0x07000400)){
+                if(_R15_PC & 2u){ // 4 Byte alignment
+                    bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC)) | (Word(this->readHalfWord(_R15_PC + 2)) << 16);
+                }
+                else{
+                    bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC - 2)) | (Word(this->readHalfWord(_R15_PC)) << 16);
+                }
+            }
+            else if(_R15_PC >= 0x03000000 && _R15_PC < 0x03008000){
+                Word oldLO = _R15_PC - 2;
+                Word oldHI = _R15_PC - 2;
+                if(_R15_PC & 2u){ // 4 Byte alignment
+                    bus->openBus.prefetchedOpcode = Word(this->readHalfWord(_R15_PC)) | (Word(this->readHalfWord(oldHI)) << 16);
+                }
+                else{
+                    bus->openBus.prefetchedOpcode = Word(this->readHalfWord(oldLO)) | (Word(this->readHalfWord(_R15_PC)) << 16);
+                }
             }
         }
     }
