@@ -7,8 +7,15 @@
 namespace gba{
     struct InstructionInfo;
 
+    struct OpenBusData{
+        Word lastBiosOpcode = 0;
+        Word lastBiosLocation = 0;
+        Word prefetchedOpcode = 0;
+    };
+
     class IBus{
         public:
+        OpenBusData openBus = {};
         std::vector<InstructionInfo> armCache;
         std::vector<InstructionInfo> thumbCache;
         std::vector<InstructionInfo> armCacheBIOS;

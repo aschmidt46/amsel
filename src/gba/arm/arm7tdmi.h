@@ -192,6 +192,10 @@ namespace gba{
         // Führt eine Instruktion aus und clockt die CPU so oft, bis sie erneut eine Instruktion ausführen kann
         void advanceCPUToNextValidState();
 
+        Word getPC() const{
+            return _R15_PC;
+        };
+
         void clock();
         bool pollInterrupts();
 

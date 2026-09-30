@@ -392,7 +392,15 @@ Byte gba::Bus::readByteFromWide(Word addr)
     (void)addr;
     
     if(addr < 0x4000){
-        return bios[addr];
+        if(cpu.getPC() < 0x4000){
+            return bios[addr];
+        }
+        else{
+            return std::rotr(openBus.lastBiosOpcode, 8 * (addr & 3u));
+        }
+    }
+    if(addr >= 0x4000 && addr < 0x02000000){
+        return std::rotr(openBus.prefetchedOpcode, 8 * (addr & 3u));
     }
     if(addr >= 0x02000000 && addr < 0x03000000){
         // WRAM (board) + Mirror
@@ -497,6 +505,10 @@ Byte gba::Bus::readByteFromWide(Word addr)
         return gamePak[addr - 0x0C000000];
     }
 
+    if(addr >= 0x08000000 && addr < 0x0E000000){
+        return std::rotr((addr >> 1) & 0xFFFF, 8 * (addr & 3u));
+    }
+
     // Cart Ram
     if(addr >= 0x0E000000 && addr < 0x0F000000){ // + mirrors (nur sram?)
         addr = 0x0E000000 + (addr % 0x10000);
@@ -514,6 +526,10 @@ Byte gba::Bus::readByteFromWide(Word addr)
     if(addr >= 0x04000060 && addr < 0x040000A8){
         //Audio Register
         return apu.onRead(addr);
+    }
+
+    if(addr >= 10000000){
+        return std::rotr(openBus.prefetchedOpcode, 8 * (addr & 3u));
     }
 
     // std::cout << "Unbekannter Read: " << getHex0x(addr, 8) << std::endl;
@@ -640,6 +656,12 @@ Word gba::Bus::readWord(Word addr)
             HalfWord val = readByteFromWide(addr);
             return val | (val << 8) | (val << 16) | (val << 24);
         }
+    }
+    if(addr >= 0x08000000 && addr < 0x0E000000){
+        if((addr >= 0x08000000 && addr < 0x0A000000 && addr - 0x08000000 > gamePak.size()) // Schlecht.
+            || (addr >= 0x0A000000 &&  addr < 0x0C000000 && addr - 0x0A000000 > gamePak.size())
+            || (addr >= 0x0C000000 &&  addr < 0x0E000000 && addr - 0x0C000000 > gamePak.size()))
+        return ((addr >> 1) & 0xFFFF) | ((((addr >> 1) + 1) & 0xFFFF) << 16);
     }
     Word A1 = readByteFromWide(addr);
     Word A2 = readByteFromWide(addr + 1);
