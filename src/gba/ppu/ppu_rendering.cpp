@@ -662,19 +662,15 @@ PIXEL_T PPU::darken(const PIXEL_T &p){
 
 PIXEL_T gba::PPU::setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives)
 {
-    PIXEL_T output_color{.priority = 99};
-    PIXEL_T target_a{.priority = 99};
-    PIXEL_T target_b{.priority = 99};
-
-    output_color = layerOrder[layerOrderSize - 1];
+    PIXEL_T output_color = layerOrder[layerOrderSize - 1]; // Backdrop ist immer enthalten
+    PIXEL_T target_a = layerOrder[layerOrderSize - 1];
+    PIXEL_T target_b{.priority = 99, .layerIndex = 99};
 
     if(layerOrderSize > 1){
-        target_a = layerOrder[layerOrderSize - 1];
         target_b = layerOrder[layerOrderSize - 2];
-        output_color = target_a;
-
-        mixFinalColor(actives, target_a, target_b, output_color);
     }
+
+    mixFinalColor(actives, target_a, target_b, output_color);
 
     return output_color;
 }
