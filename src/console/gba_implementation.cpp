@@ -307,8 +307,6 @@ void GbaImplementation::displayRegisters() {
     int select = 1;
     ImGui::ListBox("Stack", &select, cstrings.data(), stack.size());
 
-    #endif
-
     if(showGraphicsDebugger){
         ImGui::Begin("Graphics Debugger", &showGraphicsDebugger, ImGuiWindowFlags_NoCollapse);
         ImGui::ImageButton("tbutton", (ImTextureID)screen->getScreenTexture(), ImVec2(960,640)); // 4x
@@ -326,6 +324,7 @@ void GbaImplementation::displayRegisters() {
         drawList->AddRectFilled(loc, ImVec2(loc.x + 4, loc.y + 4), 0xFF0000FFu);
         ImGui::End();
     }
+    #endif
 }
 
 std::vector<SystemOption> GbaImplementation::options = {RequiredFile{BiosFile, "BiosFile", "*.bin", ""}, Toggle{.name = SkipBios, .id="SkipBios", .value = true}};
