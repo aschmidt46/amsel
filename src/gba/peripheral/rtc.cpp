@@ -63,7 +63,11 @@ void gba::RTC::putOnReadQueue()
 {
     registerQueue = std::vector<Byte>(0);
 
-    auto tp = zoned_time{current_zone(), system_clock::now()}.get_local_time();
+    #ifdef BUILD_DESKTOP
+    auto tp = std::chrono::zoned_time{current_zone(), system_clock::now()}.get_local_time();
+    #else
+    auto tp = system_clock::now();
+    #endif
     auto dp = floor<days>(tp);
     year_month_day ymd{dp};
     hh_mm_ss time{floor<milliseconds>(tp-dp)};
