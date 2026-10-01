@@ -12,6 +12,17 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
     const [aspect, setAspect] = useState(1)
     const [anode, setAnode] = useState<{audioNode: AudioWorkletNode | null}>({audioNode: null});
 
+    const [margin, setMargin] = useState("");
+
+    window.addEventListener("resize", () => {
+        if(window.innerHeight > window.innerWidth){
+            setMargin("mb-80");
+        }
+        else{
+            setMargin("");
+        }
+    });
+
     const vertexCode = `#version 300 es
         in vec3 aPos;
         in vec2 aTex;
@@ -217,7 +228,13 @@ export function GlCanvas({emuObject, moodLighting} : {emuObject : CXXConsole, mo
     }
 
     function getAspectRatio(){
-        return "aspect-["+aspect.toString()+"] flex";
+        if(window.innerHeight <= window.innerWidth && margin.length > 0){
+            setMargin("");
+        }
+        else if(window.innerHeight > window.innerWidth && margin.length == 0){
+            setMargin("mb-80");
+        }
+        return "aspect-["+aspect.toString()+"] " + margin;
     }
 
     function maybeRenderMoody(){

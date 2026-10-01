@@ -50,7 +50,7 @@ export function GameController ({inp} : {inp : InputHandler}){
     }
 
     return(
-        <div className="grid grid-cols-9 gap-2 m-10">
+        <div className="grid grid-cols-9 gap-2 m-10" style={{position: "absolute", bottom: 0}}>
             <div>
                 <button className="btn rounded-xl w-30 btn-xl" onContextMenu={pctx} 
                 onTouchStart={ () => maybePress(GameInput.GameL)} onTouchEnd={ () => maybeUnpress(GameInput.GameL)}>
@@ -61,12 +61,12 @@ export function GameController ({inp} : {inp : InputHandler}){
             <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
-            <div style={{pointerEvents: "none"}}></div>
             <div>
                 <button className="btn rounded-xl w-30 btn-xl align-right" onContextMenu={pctx} 
                 onTouchStart={ () => maybePress(GameInput.GameR)} onTouchEnd={ () => maybeUnpress(GameInput.GameR)}>
                     R</button>
             </div>
+            <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
             <div>
@@ -97,7 +97,7 @@ export function GameController ({inp} : {inp : InputHandler}){
             <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
-            <div><button className="btn btn-square btn-xl btn-circle" onContextMenu={pctx}
+            <div><button className="btn btn-square btn-xl btn-circle w-15 h-15" onContextMenu={pctx}
             onTouchStart={ () => maybePress(GameInput.GameA)} onTouchEnd={ () => maybeUnpress(GameInput.GameA)}>
                 A</button></div>
             <div style={{pointerEvents: "none"}}></div>
@@ -109,7 +109,7 @@ export function GameController ({inp} : {inp : InputHandler}){
             <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
             <div style={{pointerEvents: "none"}}></div>
-            <div><button className="btn btn-square btn-xl btn-circle" onContextMenu={pctx}
+            <div><button className="btn btn-square btn-xl btn-circle w-15 h-15" onContextMenu={pctx}
             onTouchStart={ () => maybePress(GameInput.GameB)} onTouchEnd={ () => maybeUnpress(GameInput.GameB)}>
                 B</button></div>
             <div style={{pointerEvents: "none"}}></div>
