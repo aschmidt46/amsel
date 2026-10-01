@@ -46,7 +46,7 @@ GbaImplementation::GbaImplementation(const char *path) : Console(path)
 
 GbaImplementation::GbaImplementation(std::vector<uint8_t> &rom)
 {
-    gba = std::make_shared<gba::GBA>(rom, std::get<Toggle>(options[1]).value);
+    gba = std::make_shared<gba::GBA>(rom, std::get<Toggle>(options[1]).value, std::get<Toggle>(options[2]).value);
 
     #ifdef BUILD_DESKTOP
     if(gba->canSave()){
@@ -73,7 +73,7 @@ GbaImplementation::~GbaImplementation()
 void GbaImplementation::load(const char *path)
 {
     std::string biosFile = std::get<RequiredFile>(options[0]).path;
-    gba = std::make_shared<gba::GBA>(path, biosFile.c_str(), std::get<Toggle>(options[1]).value);
+    gba = std::make_shared<gba::GBA>(path, biosFile.c_str(), std::get<Toggle>(options[1]).value, std::get<Toggle>(options[2]).value);
 }
 
 void GbaImplementation::clock() {
@@ -327,4 +327,4 @@ void GbaImplementation::displayRegisters() {
     #endif
 }
 
-std::vector<SystemOption> GbaImplementation::options = {RequiredFile{BiosFile, "BiosFile", "*.bin", ""}, Toggle{.name = SkipBios, .id="SkipBios", .value = true}};
+std::vector<SystemOption> GbaImplementation::options = {RequiredFile{BiosFile, "BiosFile", "*.bin", ""}, Toggle{.name = SkipBios, .id="SkipBios", .value = true}, Toggle{.name = RTCString, .id="RTC", .value = true}};

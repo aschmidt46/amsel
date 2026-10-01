@@ -16,8 +16,8 @@ namespace gba{
         
         public:
         std::shared_ptr<Bus> bus;
-        GBA(const char* path, const char* biosPath, bool skipBios = true);
-        GBA(const std::vector<uint8_t> &bytes, bool skipBios = true);
+        GBA(const char* path, const char* biosPath, bool skipBios = true, bool useRTC = true);
+        GBA(const std::vector<uint8_t> &bytes, bool skipBios = true, bool useRTC = true);
 
         uint8_t* accessFramebuffer();
         void clock();

@@ -148,9 +148,10 @@ enum LocalizedString : size_t{
     LinkCableConnectHostAddress = 124,
     LinkCableConnecting = 125,
     GBAMissingBios = 126,
+    RTCString = 127,
 };
 
-constexpr size_t NUM_STRINGS = 127;
+constexpr size_t NUM_STRINGS = 128;
 
 class Locale{
     private:

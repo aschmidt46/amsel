@@ -127,7 +127,8 @@ const localStrings = [
     "LinkCableConnectClientButton",
     "LinkCableConnectHostAddress",
     "LinkCableConnecting",
-    "GBAMissingBios"
+    "GBAMissingBios",
+    "RTCString"
 ];
 
 import german from './assets/locales/de.json'

@@ -127,6 +127,7 @@
         "verbinden",
         "Host-Adresse",
         "Stelle Verbindung her...",
-        "GBA Emulator benötigt gültiges Bios.\nBesuche Einstellungen -> System-Optionen."
+        "GBA Emulator benötigt gültiges Bios.\nBesuche Einstellungen -> System-Optionen.",
+        "Echtzeituhr (RTC)"
     ]
 }

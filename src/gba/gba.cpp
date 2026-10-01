@@ -1,16 +1,16 @@
 #include "gba.h"
 #include <iostream>
 
-gba::GBA::GBA(const char *path, const char* biosPath, bool skipBios)
+gba::GBA::GBA(const char *path, const char* biosPath, bool skipBios, bool useRTC)
 {
     bus = std::make_shared<Bus>(path, biosPath);
-    bus->init(skipBios);
+    bus->init(skipBios, useRTC);
 }
 
-gba::GBA::GBA(const std::vector<uint8_t> &bytes, bool skipBios)
+gba::GBA::GBA(const std::vector<uint8_t> &bytes, bool skipBios, bool useRTC)
 {
     bus = std::make_shared<Bus>(bytes);
-    bus->init(skipBios);
+    bus->init(skipBios, useRTC);
 }
 
 uint8_t *gba::GBA::accessFramebuffer()

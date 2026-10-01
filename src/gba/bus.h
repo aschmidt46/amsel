@@ -15,6 +15,7 @@
 #include "scheduler.h"
 #include <thread>
 #include <atomic>
+#include "peripheral/rtc.h"
 
 enum BackupType{
     BACKUP_EEPROM,
@@ -42,6 +43,7 @@ namespace gba{
         // Nicht immer vorhanden
         std::unique_ptr<Flash> flash = nullptr;
         std::unique_ptr<EEPROM> eeprom = nullptr;
+        std::unique_ptr<GPIO> gpio = nullptr;
 
         // Register
         HalfWord IF = 0;
@@ -87,7 +89,7 @@ namespace gba{
         HalfWord getIF() override;
         bool hasIME() override;
         unsigned int getCyclesForAccess(Word addr, bool sequential);
-        void init(bool skipBios);
+        void init(bool skipBios, bool rtc = true);
         Bus(const char *path, const char* biosPath);
         Bus(const std::vector<Byte> &bytes);
         ~Bus(){

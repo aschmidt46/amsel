@@ -127,6 +127,7 @@
         "Connect",
         "Host",
         "Connecting...",
-        "GBA Emulation requires valid gba bios file.\nVisit settings -> system options."
+        "GBA Emulation requires valid gba bios file.\nVisit settings -> system options.",
+        "Real time clock (RTC)"
     ]
 }

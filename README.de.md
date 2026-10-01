@@ -20,7 +20,8 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - Link Cable Emulation via TCP, das Master-Gerät hat aufgrund von Latenz Audio Glitches
 ### Nintendo Gameboy Advance
 - Besteht ARMWrestler, arm.gba und thumb.gba von jsmolka, die meisten SingleStepTests
-- Die meisten Spiele, welche nicht präzise Timings und open bus benötigen, laufen
+- Echtzeituhr implementiert
+- Die meisten Spiele, welche nicht präzise Timings oder obskures Verhalten benötigen, laufen
 - Timings, Waitstates nicht implementiert
 - Performance schwach
 

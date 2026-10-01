@@ -365,6 +365,15 @@ void gba::Bus::writeByteFromWide(Word addr, Byte val)
     else if(addr >= 0x05000000 && addr < 0x08000000){
         ppu.writePPUMemory(addr, val);
     }
+    else if(addr == 0x080000C4 && gpio != nullptr){
+        gpio->onWrite(0, val);
+    }
+    else if(addr == 0x080000C6 && gpio != nullptr){
+        gpio->onWrite(1, val);
+    }
+    else if(addr == 0x080000C8 && gpio != nullptr){
+        gpio->onWrite(2, val);
+    }
 
     // Cart Ram
     else if(addr >= 0x0E000000 && addr < 0x0E010000){
@@ -489,6 +498,16 @@ Byte gba::Bus::readByteFromWide(Word addr)
     // Ppu
     if(addr >= 0x05000000 && addr < 0x08000000){
         return ppu.readPPUMemory(addr);
+    }
+
+    if(addr == 0x080000C4 && gpio != nullptr){
+        return gpio->onRead(0);
+    }
+    if(addr == 0x080000C6 && gpio != nullptr){
+        return gpio->onRead(1);
+    }
+    if(addr == 0x080000C8 && gpio != nullptr){
+        return gpio->onRead(2);
     }
 
     // Rom Waitstate 0
@@ -693,7 +712,7 @@ gba::Bus::Bus() : cpu(false), apu(nullptr), IME(0x04000208), waitCNT(0x04000204)
     std::memset(&((*cartRam)[0]), 0, 0x10000);
 }
 
-void gba::Bus::init(bool skipBios) {
+void gba::Bus::init(bool skipBios, bool rtc) {
     scheduler = std::make_unique<Scheduler>(this);
     scheduler->init();
     for(int i = 0; i < 4; i++){
@@ -722,6 +741,8 @@ void gba::Bus::init(bool skipBios) {
         case BACKUP_NO_BACKUP:
             break;
     }
+    if(rtc)
+        gpio = std::make_unique<RTC>(this);
 }
 
 gba::Bus::Bus(const char *path, const char* biosPath) : Bus() {
