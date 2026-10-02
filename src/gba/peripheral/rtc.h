@@ -27,6 +27,7 @@ namespace gba{
 
         virtual void onWrite(Word addr, Byte val);
         virtual Byte onRead(Word addr);
+        virtual ~GPIO(){};
     };
 
     enum RTCMode{
