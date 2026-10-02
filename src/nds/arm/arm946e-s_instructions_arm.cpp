@@ -1,0 +1,969 @@
+#include "arm946e-s.h"
+#include <bitset>
+#include <iostream>
+#include <bit>
+#include <algorithm>
+
+using namespace nds;
+
+bool CPU::executeBranchExchange(Word instruction)
+{
+    Word Rn = instruction & 0b1111;
+    // Der Inhalt des Registers?
+    CpuState nextState = (*registerMap[mode()][Rn] & 1) > 0 ? THUMB : ARM;
+    Word jumpTarget = *registerMap[mode()][Rn] & ~(1u);
+
+    *registerMap[mode()][R15] = jumpTarget;
+    this->_CPSR.state.T = nextState;
+    this->remainingCycles += 3; //2S + 1N
+    return true;
+}
+
+bool CPU::executeSingleDataSwap(Word instruction)
+{
+    Word Rm = instruction & 0b1111; // source
+    Word Rn = (instruction & (0b1111u << 16)) >> 16; // adresse
+    Word address = *registerMap[mode()][Rn];
+    Word Rd = (instruction & (0b1111u << 12)) >> 12; // dest
+    bool swapByteOnly = instruction & (1u << 22);
+    if (swapByteOnly){
+        Byte contents = readByte(address);
+        writeByte(address, *registerMap[mode()][Rm]);
+        *registerMap[mode()][Rd] = contents;
+    }
+    else{
+        uint64_t contents = readWord(address);
+        Word shift = 8 * (address & 3);
+        contents = (contents >> shift) | (contents << (32 - shift));
+        writeWord(address, *registerMap[mode()][Rm]);
+        *registerMap[mode()][Rd] = Word(contents);
+    }
+    remainingCycles += 4; // 1S + 2N + 1I
+    return false;
+}
+
+bool CPU::executeBranchLink(Word instruction)
+{
+    bool L = instruction & (1u << 24);
+    Word jumpRaw = (instruction & 0x00FFFFFF) << (state() == ARM ? 2 : 0);
+    int32_t relJump;
+    if(state()==ARM) relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 26));
+    else relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 24));
+
+    if(L){
+        *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus) ACHTUNG WAR 2, ist das so richtig?? PC + 4
+    }
+    _R15_PC += relJump;
+    remainingCycles += 3; //2S + 1N
+    return true;
+}
+
+
+// Verhalten mit S gesetzt unklar, mögliche Fehlerquelle
+// Verhalten mit R15 als Basis unklar, mögliche Fehlerquelle, sollte aber eigentlich nicht benutzt werden
+bool CPU::executeBlockDataTransfer(Word instruction)
+{
+    Word Rn = (instruction & (0b1111u << 16)) >> 16;
+    const bool L = instruction & (1u << 20);
+    const bool W = instruction & (1u << 21);
+    const bool S = instruction & (1u << 22);
+    const bool U = instruction & (1u << 23);
+    const bool P = instruction & (1u << 24);
+    const int incr = 4;
+    bool firstRegister = true;
+    int numberOfRegs = std::popcount(instruction & 0xFFFF);
+    int downOffset = !U ? (numberOfRegs+1) * 4 : 0; // Wortgröße 4
+    downOffset -= !U && !P ? 8 : 0; // Magie, empirisch bestimmt
+    bool emptyRegList = false;
+
+    if(W){
+        if((instruction & 0xFFFF) == 0){ // Leere Registerliste
+            instruction |= 1u << 15;
+            numberOfRegs = 16;
+            emptyRegList = true;
+        }
+    }
+    
+    bool baseInRegisterList = instruction & (1u << Rn);
+    bool R15InTransferList = instruction & (1u << 15);
+    int actualMode = (S && !L && R15InTransferList) || (!R15InTransferList && S) ? User : mode();
+    bool transferCPSR = L && S && R15InTransferList;
+    Word origAddr = *registerMap[actualMode][Rn];
+    Word addr = origAddr;
+
+    if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
+        addr &= ~3u;
+    }
+    
+    for(int i=0; i < 16; i++){
+        bool useRegister = instruction & (1u << i);
+        if(useRegister){
+            if((unsigned int)i<Rn) firstRegister = false; 
+        }
+    }
+
+    if(W){ // Aufpassen, überprüfen
+        if(!baseInRegisterList || (!L || !firstRegister))
+            *registerMap[actualMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+    }
+
+    for(unsigned int i=0; i < 16; i++){
+        bool useRegister = instruction & (1u << i);
+        if(useRegister){
+            if(P) addr += incr;
+            
+            if(L){ // Aus Speicher laden LDM
+                *registerMap[actualMode][i] = readWordUnaligned(addr - downOffset);
+            }
+            else{ // In Speicher schreiben STM
+                // Spezialfall für leere Registerliste
+                if(emptyRegList && i==15 && !U) addr -= incr * 16;
+
+                if(i==Rn && baseInRegisterList && firstRegister){
+                    writeWordUnaligned(addr - downOffset, origAddr);
+                }
+                else{
+                    if(i!=15) writeWordUnaligned(addr - downOffset, *registerMap[actualMode][i]);
+                    else writeWordUnaligned(addr - downOffset, *registerMap[actualMode][i] + 4); // Adresse der Anweisung + 12
+                }
+            }
+            
+            if(!P) addr += incr;
+
+            if(transferCPSR && i==15){
+                if(actualMode != User && actualMode != System){
+                    *registerMap[actualMode][CPSR] = *registerMap[actualMode][SPSR];
+                } // else?
+            }
+        }
+    }
+    bool pcAsBase = false;
+    if(Rn==15){
+        pcAsBase = true;
+    }
+
+    if(L){
+        remainingCycles += numberOfRegs + 2; // LDM: n*S + 1N + 1I
+    }
+    else{
+        remainingCycles += (numberOfRegs-1) + 2; //STM: (n-1)*S + 2N
+    }
+    if((L && (instruction & (1u << 15))) || pcAsBase){ // LDM PC
+        return true;
+    }
+    return false;
+}
+
+bool CPU::executeSoftwareInterrupt(Word instruction)
+{
+    (void)instruction;
+    // bus->setHalt();
+    _R14_SVC = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
+    *registerMap[mode()][R15] = 0x08;
+    _SPSR_SVC.raw = *registerMap[mode()][CPSR];
+    _CPSR.state.mode_bits = 19; // Supervisor
+    _CPSR.state.I = 1; // IRQs ausschalten
+    _CPSR.state.T = 0; // Zurück zu ARM Modus
+    remainingCycles += 3; // 2S + 1N
+
+    // if((instruction & 0xFFFF) == 0x0B){
+    //     std::cout << "Swi CPUSET\n";
+    //     if(_R2 & (1u << 26)){
+    //         _R0 &= ~3u;
+    //         _R1 &= ~3u;
+    //     }
+    //     else{
+    //         _R0 &= ~1u;
+    //         _R1 &= ~1u;
+    //     }
+    // }
+    // if((instruction & 0xFFFF) == 0x0C){
+    //     std::cout << "Swi CPUFASTSET\n";
+    //     _R0 &= ~3u;
+    //     _R1 &= ~3u;
+    // }
+    return true;
+}
+
+void CPU::executeHardwareInterrupt(){
+    // bus->setHalt();
+    // std::cout << "IRQ, IF: " << std::bitset<16>(bus->readByte(0x04000202)) << std::endl;
+    // std::cout << "IE: " << std::bitset<16>(bus->readByte(0x04000200)) << std::endl;
+    _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 0);
+    // std::cout << getHex(_R14_irq, 8) << std::endl;
+    _R15_PC = 0x18; // BIOS Interrupt Vector
+    _SPSR_irq.raw = *registerMap[mode()][CPSR];
+    _CPSR.state.mode_bits = 18; // IRQ
+    _CPSR.state.I = 1; // IRQs ausschalten
+    _CPSR.state.T = 0; // Zurück zu ARM Modus
+    // bus->setHalt();
+}
+
+bool CPU::executeCoProcDataOperation(Word instruction)
+{
+    std::cout << "Coprozessor-Datenoperation aufgerufen!" << instruction << std::endl;
+    return false;
+}
+
+bool CPU::executeCoProcDataTransfer(Word instruction)
+{
+    std::cout << "Coprozessor-Datentransfer aufgerufen!" << instruction << std::endl;
+    bus->setHalt();
+    return false;
+}
+
+bool CPU::executeCoProcRegTransfer(Word instruction)
+{
+    std::cout << "Coprozessor-Registertransfer aufgerufen!" << instruction << std::endl;
+    return false;
+}
+
+bool CPU::executeUndefined(Word instruction) // Falsch implementiert
+{
+    std::cout << "Undefinierte Instruktion aufgerufen!" << instruction << std::endl;
+    _CPSR.state.mode_bits = 27; // Undefined
+    return false;
+}
+
+namespace nds{
+    // (SUB, RSB, ADD, ADC, SBC, RSC, CMP, CMN)
+    inline bool setCFlag(Word opcode, Word operand1Value, Word operand2Value, uint64_t result, Word op3){
+        switch(opcode){
+            case 0b0010:
+                return operand1Value >= operand2Value;
+            case 0b0011:
+                return operand2Value >= operand1Value;
+            case 0b0100:
+                return (Word)result < operand1Value;
+            case 0b0101:
+                return result >> 32;
+            case 0b0110:
+                return (uint64_t)operand1Value >= (uint64_t)operand2Value + (uint64_t)op3;
+            case 0b0111:
+                return (uint64_t)operand2Value >= (uint64_t)operand1Value + (uint64_t)op3;
+            case 0b1010:
+                return operand1Value >= operand2Value;
+            case 0b1011:
+                return (Word)result < operand1Value;
+            default:
+                return false;
+        }
+    }
+    inline bool setVFlag(Word opcode, Word operand1Value, Word operand2Value, uint64_t result){
+        switch(opcode){
+            case 0b0010:
+                return ((operand1Value ^ operand2Value) & (operand1Value ^ result)) >> 31;
+            case 0b0011:
+                return ((operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            case 0b0100:
+                return (~(operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            case 0b0101:
+                return (~(operand1Value ^ operand2Value) & (operand2Value ^ (Word)result)) >> 31;
+            case 0b0110:
+                return ((operand1Value ^ operand2Value) & (operand1Value ^ result)) >> 31;
+            case 0b0111:
+                return ((operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            case 0b1010:
+                return ((operand1Value ^ operand2Value) & (operand1Value ^ (Word)result)) >> 31;
+            case 0b1011:
+                return (~(operand1Value ^ operand2Value) & (operand2Value ^ result)) >> 31;
+            default:
+                return false;
+        }
+    }
+}
+
+
+enum ShiftType{
+    LogicalLeft = 0b00,
+    LogicalRight = 0b01,
+    ArithmeticRight = 0b10,
+    RotateRight = 0b11,
+};
+
+// Möglicher Fallstrick: 4.5.5 Using R15 as an operand
+// If R15 (the PC) is used as an operand in a data processing instruction the register is
+// used directly.
+// The PC value will be the address of the instruction, plus 8 or 12 bytes due to instruction
+// prefetching. If the shift amount is specified in the instruction, the PC will be 8 bytes
+// ahead. If a register is used to specify the shift amount the PC will be 12 bytes ahead.
+bool CPU::executeDataProc(Word instruction)
+{
+    bool I = instruction & (1u << 25);
+    bool S = instruction & (1u << 20);
+    Word opcode = (instruction & (0b1111 << 21)) >> 21;
+    Word Rn = (instruction & (0b1111 << 16)) >> 16;
+    Word Rd = (instruction & (0b1111 << 12)) >> 12;
+    Word operand1Value = *registerMap[mode()][Rn];
+    Word operand2 = instruction & 0xFFF;
+    Word operand2Value = 0;
+    bool logicalCarry = false; // CPSR-C Wert, falls logische Operation
+    const bool carryBefore = (std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR])).state.C;
+    bool keepOldCarry = false;
+    bool registerSpecifiedShift = false;
+    Word op3 = 0;
+
+    if(I){ // Immediate
+        Word imm = operand2 & 0xFF;
+        Word rotate = (operand2 & (0b1111u << 8)) >> 8;
+        if(rotate > 0){
+            logicalCarry = (imm >> ((2 * rotate) - 1)) & 1u;
+            operand2Value = std::rotr(imm, 2 * rotate);
+        }
+        else{
+            logicalCarry = carryBefore;
+            operand2Value = imm;
+        }
+    }
+    else{ // Register
+        Word op2RegValue = *registerMap[mode()][operand2 & 0xF];
+        ShiftType shift = (ShiftType)((operand2 & (0b11 << 5)) >> 5);
+        Word amount = 0;
+        if(operand2 & (1u << 4)){ // Shift Register
+            Word RsValue = *registerMap[mode()][(operand2 & (0xFu << 8)) >> 8];
+            if(Rn == R15){// Bei Registershift Amount und R15 als Operand ist PC nochmals 4 Bytes voran, nicht für Rs! (aus Testfällen gelernt)
+                operand1Value += pcInterval();
+            }
+            if((operand2 & 0xF) == R15){ // Op2
+                op2RegValue += pcInterval();
+            }
+            amount = RsValue & 0xFF; //Nur unterstes Byte
+            registerSpecifiedShift = true;
+        }
+        else{ // Shift Immediate
+            amount = (operand2 & (0b11111u << 7)) >> 7; // 5 bit unsigned
+        }
+        if(!registerSpecifiedShift || amount > 0){
+            switch(shift){
+                case LogicalLeft:
+                    logicalCarry = amount <= 32 ? op2RegValue & Word((1ull << (32 - amount))) : false; // Unterstes rausgeshiftetes Bit
+                    if(amount==0) logicalCarry = carryBefore; // In diesem Fall bleibt C erhalten
+                    if(amount >= 32){ // UB in C++
+                        operand2Value = 0;
+                    }
+                    else operand2Value = op2RegValue << amount;
+                    break;
+                case LogicalRight:
+                    if(amount == 0) amount = 32;
+                    if(amount >= 32){ // UB in C++
+                        logicalCarry = 0;
+                        if(amount == 32) logicalCarry = op2RegValue & (1u << 31);
+                        operand2Value = 0;
+                    }
+                    else{
+                        logicalCarry = op2RegValue & (1u << (amount - 1));
+                        operand2Value = op2RegValue >> amount;
+                    }
+                    break;
+                case ArithmeticRight:{
+                    if(amount == 0) amount = 32;
+                    if(amount < 32){
+                        logicalCarry = op2RegValue & (1u << (amount - 1));
+                    }
+                    else logicalCarry = op2RegValue & (1u << 31);
+                    operand2Value = op2RegValue;
+                    // Wie langsam ist das?
+                    for(unsigned int i = 0; i < amount; i++){
+                        Word lastbit = operand2Value & (1u << 31);
+                        operand2Value >>= 1;
+                        operand2Value = operand2Value | lastbit;
+                    }
+                    break;}
+                case RotateRight:
+                    if(amount > 0){ // RR
+                        operand2Value = std::rotr(op2RegValue, amount);
+                        logicalCarry = operand2Value & (1u << 31);
+                    }
+                    else{//RRX
+                        logicalCarry = op2RegValue & 1u; // bit 0
+                        operand2Value = (op2RegValue >> 1) | (carryBefore << 31); // Carry bit wird links reingeshiftet
+                    }
+                    break;
+            }
+        }
+        else{
+            operand2Value = op2RegValue;
+            // if(shift == LogicalLeft && amount == 0)
+            keepOldCarry = true;
+        }
+    }
+
+    uint64_t result;
+
+    switch(opcode){
+        case 0b0000: // AND
+            result = operand1Value & operand2Value;
+            break;
+        case 0b0001: // EOR
+            result = operand1Value ^ operand2Value;
+            break;
+        case 0b0010: // SUB
+            result = operand1Value - operand2Value;
+            break;
+        case 0b0011: // RSB
+            result = operand2Value - operand1Value;
+            break;
+        case 0b0100: // ADD
+            result = operand1Value + operand2Value;
+            break;
+        case 0b0101: // ADC
+            result = (uint64_t)operand1Value + (uint64_t)operand2Value + (uint64_t)carryBefore;
+            break;
+        case 0b0110: // SBC
+            op3 =(Word)carryBefore ^ 1;
+            result = operand1Value - operand2Value - op3;
+            break;
+        case 0b0111: // RSC
+            op3 =(Word)carryBefore ^ 1;
+            result = operand2Value - operand1Value - op3;
+            break;
+        case 0b1000: // TST
+            result = operand1Value & operand2Value; // result wird nicht geschrieben
+            break;
+        case 0b1001: // TEQ
+            result = operand1Value ^ operand2Value; // result wird nicht geschrieben
+            break;
+        case 0b1010: // CMP
+            result = operand1Value - operand2Value; // result wird nicht geschrieben
+            break;
+        case 0b1011: // CMN
+            result = operand1Value + operand2Value; // result wird nicht geschrieben
+            break;
+        case 0b1100: // ORR
+            result = operand1Value | operand2Value;
+            break;
+        case 0b1101: // MOV
+            result = operand2Value;
+            break;
+        case 0b1110: // BIC
+            result = operand1Value & ~operand2Value;
+            break;
+        default:     // MVN
+            result = ~operand2Value;
+            break;
+    }
+    Word result32 = (Word)result;
+
+    // Bei Testoperationen nicht Ergebnis schreiben
+    if(opcode < 0b1000 || opcode > 0b1011){
+        *registerMap[mode()][Rd] = result32;
+    }
+
+    if(S){
+        if(Rd==15 && mode() != System && mode() != User && state() == ARM){ // state==ARM experimentell bestimmt (Warum?) (Exceptions sind immer in ARM state?)
+            *registerMap[mode()][CPSR] = *registerMap[mode()][SPSR];
+        }
+        else{
+            //(AND, EOR, TST, TEQ, ORR, MOV, BIC, MVN):
+            // V bleibt
+            // C - Carry out aus dem Barrel Shifter, bzw. bleibt erhalten bei LSL #0
+            // Z - gesetzt, wenn Ergebnis 0
+            // N - Bit 31
+            if(opcode <= 1 || opcode >= 0b1100 || opcode == 0b1000 || opcode == 0b1001){
+                _CPSR.state.C = keepOldCarry ? carryBefore : logicalCarry;
+                _CPSR.state.Z = result32 == 0;
+                _CPSR.state.N = (result32 & (1u << 31)) > 0;
+            }
+    
+            // (SUB, RSB, ADD, ADC, SBC, RSC, CMP, CMN):
+            //  If the S bit is set (and Rd is not R15) the V flag in the CPSR will be set if an overflow occurs into bit 31 of the result
+            // C - Carry out bit aus bit 31 der ALU
+            // Z - gesetzt, wenn Ergebnis 0
+            // N - Bit 31
+            else{
+                _CPSR.state.V = (Word)setVFlag(opcode, operand1Value, operand2Value, result);
+                _CPSR.state.C = (Word)setCFlag(opcode, operand1Value, operand2Value, result, op3);
+                _CPSR.state.Z = result32 == 0;
+                _CPSR.state.N = (result32 & (1ull << 31)) > 0;
+            }
+        }
+    }
+    // Normal Data Processing 1S
+    // Data Processing with register specified shift 1S + 1I
+    // Data Processing with PC written 2S + 1N
+    // Data Processing with register specified shift and PC written 2S + 1N + 1I
+    remainingCycles += 1;
+    if(registerSpecifiedShift) remainingCycles += 1;
+    if(Rd == R15) remainingCycles += 2;
+    if(Rd == R15 && (opcode < 0b1000 || opcode > 0b1011)){ // PC geschrieben
+        return true;
+    }
+    // std::cout << operand1Value << std::endl;
+    // std::cout << operand2Value << std::endl;
+    else return false;
+}
+
+bool CPU::executePSRTransfer(Word instruction)
+{
+    bool opcode = instruction & (1u << 21);
+
+    bool writeF = instruction & (1u << 19);
+    bool writeS = instruction & (1u << 18); //.. eigentlich nicht erlaubt
+    bool writeX = instruction & (1u << 17); //..
+    bool writeC = instruction & (1u << 16);
+    Word writeMask = (writeF ? 0xFFu << 24 : 0) | (writeS ? 0xFFu << 16 : 0) | (writeX ? 0xFFu << 8 : 0) | (writeC ? 0xFFu : 0);
+    
+
+    if(opcode){ // MSR
+        bool destSPSRMode = instruction & (1u << 22);
+        bool I = instruction & (1u << 25);
+        Word val;
+        if(I){
+            val = instruction & 0xFF;
+            // Genau wie in DataProc?
+            Word rotate = (instruction & (0xFu << 8)) >> 8;
+            val = std::rotr(val, 2 * rotate);
+            // val &= 0xFu << 28; // obere Bits maskieren
+        }
+        else{ // Registerinhalt
+            Word sourceReg = instruction & 0xF;
+            val = *registerMap[mode()][sourceReg];
+        }
+
+        if(destSPSRMode){
+            if(mode() != System && mode() != User)
+                *registerMap[mode()][SPSR] =  (*registerMap[mode()][SPSR] & ~writeMask) | (val & writeMask);
+        }
+        else{
+            if(mode()==User) writeMask &= 0xFF000000;
+            if(writeMask & 0xFF) val |=  0x10; // Siehe NanoboyAdvance
+            *registerMap[mode()][CPSR] = (*registerMap[mode()][CPSR] & ~writeMask) | (val & writeMask);
+        }
+        *registerMap[mode()][CPSR] &= ~(1u << 5); // State Bit (ARM / Thumb) rausnehmen, wegen Tests. Nicht klar, ob es in Wirklichkeit einen Effekt hat
+        *registerMap[mode()][CPSR] |= (state() << 5);
+    }
+    else if(!opcode){ //MRS (PSR nach Register)
+        bool sourceSPSRMode = instruction & (1u << 22);
+        Word destReg = (instruction & (0xFu << 12)) >> 12;
+
+        Word val;
+        if(sourceSPSRMode){
+            if(mode() != System && mode() != User)
+                val = *registerMap[mode()][SPSR];
+            else val = *registerMap[mode()][CPSR];
+        }
+        else{
+            val = *registerMap[mode()][CPSR];
+        }
+        *registerMap[mode()][destReg] = val;
+    }
+
+    remainingCycles += 1; // 1S
+    return false;
+}
+
+bool CPU::executeSingleDataTransfer(Word instruction)
+{
+    bool I = instruction & (1u << 25);
+    bool P = instruction & (1u << 24);
+    bool U = instruction & (1u << 23);
+    bool B = instruction & (1u << 22);
+    bool W = instruction & (1u << 21);
+    bool L = instruction & (1u << 20);
+    bool isJump = false;
+    Word baseReg = (instruction & (0xFu << 16)) >> 16;
+    Word sourceDestReg = (instruction & (0xFu << 12)) >> 12;
+    // "In the case of post-indexed addressing, the write back bit is
+    // redundant and must be set to zero, since the old base value can be retained by setting
+    // the offset to zero. Therefore post-indexed data transfers always write back the modified base"
+    // https://iitd-plos.github.io/col718/ref/arm-instructionset.pdf S. 4-27
+    if(!P) W = true;
+    if(baseReg == R15 && W){
+        isJump = true;
+    }
+    // else if(sourceDestReg == R15) *registerMap[mode()][R15] += 4;
+    Word modifiedBase = *registerMap[mode()][baseReg];// + (baseReg == R15 && W ? 4 : 0);
+    const bool carryBefore = (std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR])).state.C;
+
+    Word offset;
+
+
+    auto modifyOffset = [&](){
+        if(U){
+            modifiedBase += offset;
+        }
+        else{
+            modifiedBase -= offset;
+        }
+    };
+
+    if(!I){ // 12 bit immediate
+        offset = instruction & 0xFFF;
+    }
+    else{ // register mit Shift
+        Word reg = instruction & 0xF;
+        Word shift = (instruction & (0xFFu << 4)) >> 4;
+        ShiftType shiftType = (ShiftType) ((shift & 0b110) >> 1);
+        Word amount = (shift & 0b11111000) >> 3;
+        Word regVal = *registerMap[mode()][reg];
+        switch(shiftType){
+            case LogicalLeft:
+                if(amount >= 32){ // UB in C++
+                    offset = 0;
+                }
+                else offset = regVal << amount;
+                break;
+            case LogicalRight:
+                if(amount == 0) amount = 32;
+                if(amount >= 32){ // UB in C++
+                    offset = 0;
+                }
+                else{
+                    offset = regVal >> amount;
+                }
+                break;
+            case ArithmeticRight:{
+                if(amount == 0) amount = 32;
+                offset = regVal;
+                for(unsigned int i = 0; i < amount; i++){
+                    Word lastbit = offset & (1u << 31);
+                    offset >>= 1;
+                    offset = offset | lastbit;
+                }
+                break;}
+            case RotateRight:
+                if(amount > 0){ // RR
+                    offset = std::rotr(regVal, amount);
+                }
+                else{//RRX
+                    offset = (regVal >> 1) | (carryBefore << 31); // Carry bit wird links reingeshiftet
+                }
+                break;
+        }
+    }
+
+    if(P){ // Pre-Inkrement
+        modifyOffset();
+    }
+
+    // Transfer... ANNAHME: GBA ist immer little Endian
+    if(L){ // LDR
+        Word val;
+        if(B){ // Byte
+            val = readByte(modifiedBase);
+        }
+        else{ // Wort
+            if(modifiedBase % 4 == 0){ // Wort alignt
+                val = readWord(modifiedBase);
+            }
+            else if((modifiedBase & 0b11) == 0b11){ // Datasheet S. 4-28      (Verhalten verifizieren!!!!)
+                // val = readWordUnaligned(modifiedBase);
+                Word w = readWord(modifiedBase);
+                val = (w << 8) | (w >> 24);
+            }
+            else if((modifiedBase & 0b11) == 0b10){
+                Word w = readWord(modifiedBase);
+                val = (w << 16) | (w >> 16);
+            }
+            else{
+                // modifiedBase &= ~(0b1); // Halbwort align.
+                Word upper = readWord(modifiedBase); // Ende erstes Wort
+                val = (upper >> 8) | (upper << 24);
+            }
+        }
+        *registerMap[mode()][sourceDestReg] = val;
+    }
+    else{ // STR
+        if(B){
+            writeByte(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
+        }
+        else{
+            modifiedBase &= ~(0b11); // Wort Alignment (Immer)
+            writeWordUnaligned(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
+        }
+    }
+
+    if(!P){ // Post-Inkrement
+        if(modifiedBase != *registerMap[mode()][baseReg])
+            modifiedBase = *registerMap[mode()][baseReg];
+        else modifyOffset();
+    }
+
+    if(W){ // Write back
+        if(baseReg == sourceDestReg && P && L) modifiedBase = *registerMap[mode()][sourceDestReg];
+        *registerMap[mode()][baseReg] = modifiedBase + (baseReg == R15 ? 4 : 0);
+    }
+
+    // Sehr seltsamer Spezialfall, empirisch bestimmt
+    if(W && sourceDestReg == R15 && baseReg == R15 && 
+        L){
+        *registerMap[mode()][R15] -= 4;
+    }
+
+    if(L){ // LDR
+        if(sourceDestReg == R15){ // LDR PC
+            isJump = true;
+            remainingCycles += 5; // 2S + 2N + 1I
+        }
+        else{
+            remainingCycles += 3; // 1S + 1N + 1I
+        }
+    }
+    else{ // STR
+        remainingCycles += 2; // 2N
+    }
+
+    return isJump;
+}
+
+bool CPU::executeDataTransferSignHDW(Word instruction)
+{
+    bool S = instruction & (1u << 6); // Sign
+    bool H = instruction & (1u << 5); // Halbwort
+    Word Rd = (instruction & (0xFu << 12)) >> 12; // Source / Dest
+    Word Rn = (instruction & (0xFu << 16)) >> 16; // Base
+    
+    bool L = instruction & (1u << 20);
+    bool W = instruction & (1u << 21);
+    bool U = instruction & (1u << 23);
+    bool P = instruction & (1u << 24);
+    
+    bool immediate = (instruction & (1u << 22));
+    Word offsetValue;
+    bool isJump = L && Rd == R15;
+
+    
+    Word modifiedBase = *registerMap[mode()][Rn];
+    if(immediate){
+        offsetValue = (instruction & 0xF) | ((instruction & (0xFu << 8)) >> 4);
+    }
+    else{
+        Word Rm = instruction & 0xF; // Offset Register
+        offsetValue = *registerMap[mode()][Rm];
+    }
+
+    if(!P) W = true; // Wie in der anderen
+
+    auto modifyOffset = [&](){
+        if(U){
+            modifiedBase += offsetValue;
+        }
+        else{
+            modifiedBase -= offsetValue;
+        }
+    };
+
+    if(P) modifyOffset();
+
+    // Operation hier:
+    // S==0 und H==0 wird nicht beachtet, weil es sich dann um Single Data Swap handelt
+    if(S){ // Sign extend Halbwort oder Byte
+        Word val;
+        if(H){
+            val = readHalfWord(modifiedBase);
+            // Word signBit = 15;                        <---- NICHT AUF NDS9 ???? nur force align?
+            // if (modifiedBase & 1) {
+            //     val = (val >> 8) | (val << 24);
+            //     signBit = 7;
+            // }
+            // val &= 0xFFFFu;
+            // Word mask = 1u << signBit;
+            // val = (val ^ mask) - mask;
+        }
+        else{
+            val = readByte(modifiedBase);
+            val &= 0xFFu;
+            Word mask = 1u << 7;
+            val = (val ^ mask) - mask;
+        }
+        // ist immer LDR
+        *registerMap[mode()][Rd] = val;
+    }
+    else{ // Unsigned Halbwort
+        if(L){ // LDRH
+            Word val = readHalfWord(modifiedBase);
+            // Siehe gbatek "Alignment"
+            // if (modifiedBase & 1) {             <----- NICHT AUF NDS9
+            //   val = (val >> 8) | (val << 24);
+            // }
+            *registerMap[mode()][Rd] = val;
+        }
+        else{
+            Word R15Offset = Rd == R15 ? 4 : 0;
+            writeHalfWord(modifiedBase, *registerMap[mode()][Rd] + R15Offset);
+        }
+    }
+
+    
+    if(!P){
+        if(modifiedBase != *registerMap[mode()][Rn])
+            modifiedBase = *registerMap[mode()][Rn];
+        else modifyOffset();
+    }
+
+    if(W){
+        if(Rn == R15){
+            modifiedBase += 4;
+            isJump = true;
+        }
+        if(!(L && P) || Rd != Rn)
+            *registerMap[mode()][Rn] = modifiedBase;
+    }
+
+    // Sehr seltsamer Spezialfall, empirisch bestimmt
+    if(W && Rd == R15 && Rn == R15 && 
+        L && !P){
+        *registerMap[mode()][R15] -= 4;
+    }
+    
+
+    if(L){
+        if(Rd == 15){ // LDR PC
+            remainingCycles += 5; // 2S + 2N + 1I
+        }
+        else{
+            remainingCycles += 3; // 1S + 1N + 1I
+        }
+    }
+    else{ // STRH
+        remainingCycles += 2; // 2N
+    }
+
+    return isJump;
+}
+
+bool CPU::executeMultiply(Word instruction)
+{
+    bool A = instruction & (1u << 21);
+    bool S = instruction & (1u << 20);
+    Word Rm = instruction & 0xF;
+    Word Rs = (instruction & (0xFu << 8)) >> 8;
+    Word Rn = (instruction & (0xFu << 12)) >> 12;
+    Word Rd = (instruction & (0xFu << 16)) >> 16;
+
+    Word RsOp = *registerMap[mode()][Rs];
+
+    Word result = (*registerMap[mode()][Rm]) * (*registerMap[mode()][Rs]); // Rd := Rm * Rs
+    if(A){ // Rd := Rm * Rs + Rn
+        result += *registerMap[mode()][Rn];
+    }
+
+    *registerMap[mode()][Rd] = result;
+
+    if(S){
+        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+        cpsr.state.C = 0; // "Meaningless value"
+        cpsr.state.Z = result == 0;
+        cpsr.state.N = (result & (1u << 31)) > 0;
+        *registerMap[mode()][CPSR] = cpsr.raw;
+    }
+
+    Word m; // Spezifiziert durch Rs
+    constexpr Word b_31_8 = (0xFFFFFF << 8);
+    constexpr Word b_31_16 = (0xFFFF << 16);
+    constexpr Word b_31_24 = (0xFF << 24);
+
+    if(((RsOp & b_31_8) == 0 ) || ((RsOp & b_31_8) == b_31_8)){
+        m = 1;
+    }
+    else if(((RsOp & b_31_16) == 0 ) || ((RsOp & b_31_16) == b_31_16)){
+        m = 2;
+    }
+    else if(((RsOp & b_31_24) == 0 ) || ((RsOp & b_31_24) == b_31_24)){
+        m = 3;
+    }
+    else m = 4;
+
+    remainingCycles += 1 + m; // 1S + mI
+    if(A) remainingCycles += 1; // 1S + (m+1)I
+
+    if(Rd == R15) return true;
+    return false;
+}
+
+bool CPU::executeMultiplyLong(Word instruction)
+{
+    Word Rm = instruction & 0xF;
+    Word Rs = (instruction & (0xFu << 8)) >> 8;
+    Word RsOp = *registerMap[mode()][Rs];
+    Word RdLo = (instruction & (0xFu << 12)) >> 12;
+    Word RdHi = (instruction & (0xFu << 16)) >> 16;
+
+    bool S = instruction & (1u << 20);
+    bool A = instruction & (1u << 21);
+    bool U = instruction & (1u << 22);
+
+    uint64_t result;
+    if(A){
+        if(!U){
+            uint64_t rd = ((uint64_t) *registerMap[mode()][RdLo]) | (((uint64_t) *registerMap[mode()][RdHi]) << 32);
+            result = ((uint64_t) *registerMap[mode()][Rm]) * ((uint64_t) *registerMap[mode()][Rs]) + rd;
+        }
+        else{
+            uint64_t wideRm = std::int64_t(std::int32_t(*registerMap[mode()][Rm]));
+            uint64_t wideRs = std::int64_t(std::int32_t(*registerMap[mode()][Rs]));
+            uint64_t rd = ((uint64_t)*registerMap[mode()][RdLo]) | (((uint64_t)*registerMap[mode()][RdHi]) << 32);
+            int64_t sresult = wideRm * wideRs + std::int64_t(rd);
+            result = std::uint64_t(sresult);
+        }
+    }
+    else{
+        if(!U){
+            result = ((uint64_t) *registerMap[mode()][Rm]) * ((uint64_t) *registerMap[mode()][Rs]);
+        }
+        else{
+            int32_t signedRm = std::int32_t(*registerMap[mode()][Rm]);
+            int32_t signedRs = std::int32_t(*registerMap[mode()][Rs]);
+
+            int64_t wideRm = std::int64_t(signedRm);
+            int64_t wideRs = std::int64_t(signedRs);
+            int64_t sresult = wideRm * wideRs;
+            result = std::uint64_t(sresult);
+        }
+    }
+
+    Word resHi = result >> 32;
+    Word resLo = result & 0xFFFFFFFFull;
+
+    *registerMap[mode()][RdLo] = resLo;
+    *registerMap[mode()][RdHi] = resHi;
+
+
+
+    if(S){
+        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+        cpsr.state.C = 0; // "Meaningless value"
+        // v nicht ändern!
+        cpsr.state.Z = result == 0;
+        cpsr.state.N = (result & (1ull << 63)) > 0;
+        *registerMap[mode()][CPSR] = cpsr.raw;
+    }
+
+
+    Word m; // Spezifiziert durch Rs
+    constexpr Word b_31_8 = (0xFFFFFF << 8);
+    constexpr Word b_31_16 = (0xFFFF << 16);
+    constexpr Word b_31_24 = (0xFF << 24);
+
+    if(U){
+        if(((RsOp & b_31_8) == 0 ) || ((RsOp & b_31_8) == b_31_8)){
+            m = 1;
+        }
+        else if(((RsOp & b_31_16) == 0 ) || ((RsOp & b_31_16) == b_31_16)){
+            m = 2;
+        }
+        else if(((RsOp & b_31_24) == 0 ) || ((RsOp & b_31_24) == b_31_24)){
+            m = 3;
+        }
+        else m = 4;
+    }
+    else{
+        if((RsOp & b_31_8) == 0 ){
+            m = 1;
+        }
+        else if((RsOp & b_31_16) == 0){
+            m = 2;
+        }
+        else if((RsOp & b_31_24) == 0){
+            m = 3;
+        }
+        else m = 4;
+    }
+
+
+    remainingCycles += 1 + m + 1; // 1S + (m+1)I
+    if(A) remainingCycles += 1; // 1S + (m+2)I
+
+    if(RdLo == R15 || RdHi == R15) return true;
+    return false;
+}

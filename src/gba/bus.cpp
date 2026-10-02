@@ -90,12 +90,12 @@ std::pair<float, float> gba::Bus::getSample()
     return apu.getSample();
 }
 
-HalfWord Bus::getIE()
+Word Bus::getIE()
 {
     return IE;
 }
 
-HalfWord Bus::getIF(){
+Word Bus::getIF(){
     return IF;
 }
 

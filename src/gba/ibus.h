@@ -27,8 +27,8 @@ namespace gba{
         virtual void writeWord(Word addr, Word val) = 0;
         virtual Word readWord(Word addr) = 0;
 
-        virtual HalfWord getIE() = 0;
-        virtual HalfWord getIF() = 0;
+        virtual Word getIE() = 0;
+        virtual Word getIF() = 0;
         virtual bool hasIME() = 0;
 
         virtual void setHalt(){};

@@ -85,8 +85,8 @@ namespace gba{
         void drawScanline();
         void addCPUCycles(size_t cycles);
         std::pair<float, float> getSample();
-        HalfWord getIE() override;
-        HalfWord getIF() override;
+        Word getIE() override;
+        Word getIF() override;
         bool hasIME() override;
         unsigned int getCyclesForAccess(Word addr, bool sequential);
         void init(bool skipBios, bool rtc = true);

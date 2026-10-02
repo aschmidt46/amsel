@@ -1,0 +1,168 @@
+#pragma once
+
+#include "../bus_types.h"
+#include <utility>
+#include <vector>
+#include <memory>
+#include <array>
+
+#include "ppu_registers.h"
+#include "../../gba/register/general_purpose.h"
+#include "../arm/arm946e-s.h"
+
+namespace nds{
+    class SharedBus;
+    class PPU{
+        std::vector<uint32_t> framebuffer;
+
+        // Vram
+        std::vector<Byte> paletteRam;
+        std::vector<Byte> vRam;
+        std::vector<Byte> oamAttribs;
+        bool spriteAlphaOverride = false;
+        // Aktuelle Sprites
+        std::array<OAMAttribs, 128> oamAttribsCurrentLine = {};
+        size_t oamAttribsCurrentLineSize = 0; // neu-Allokation verhindern größe von oamAttribsCurrentLine ist konstant
+
+        // BG Priorität
+        std::array<PIXEL_T, 6> layerOrder = {};
+        size_t layerOrderSize = 0;
+
+        PIXEL_T getBackdrop();
+
+        PIXEL_T setColorFromLayerOrder(const WINDOW_ACTIVES_T &actives);
+        void mixFinalColor(const WINDOW_ACTIVES_T &actives, PIXEL_T &targetA, PIXEL_T &targetB, PIXEL_T &output);
+
+        WINDOW_ACTIVES_T getActives(int window);
+        WINDOW_ACTIVES_T getActives();
+        bool insideObjectWindow = false;
+        bool insideWindow0();
+        bool insideWindow1();
+        bool hasTargetA(int index);
+        bool hasTargetB(int index);
+        PIXEL_T blend(PIXEL_T &p1, PIXEL_T &p2);
+        PIXEL_T brighten(const PIXEL_T &p);
+        PIXEL_T darken(const PIXEL_T &p);
+        
+
+        std::weak_ptr<SharedBus> bus;
+
+        // Register
+        LCDCONTROL_T LCDCONTROL = {.raw = 0}; // aka dispcnt
+        HalfWord GREENSWAP = 0; // Undokumentiert
+        LCDSTATUS_T LCDSTATUS = {.raw = 0}; // aka dispstat
+        public:
+        HalfWord currentScanline = 0; //VCOUNT
+        private:
+
+        BGCNT_T BG_CNT[4] = {{.raw = 0}, {.raw = 0}, {.raw = 0}, {.raw = 0}};
+
+        HalfWord BG_X_OFFSET[4] = {0, 0, 0, 0};
+        HalfWord BG_Y_OFFSET[4] = {0, 0, 0, 0};
+
+        // BG2 und BG3
+        HalfWord BG_DXL[2] = {0, 0};
+        HalfWord BG_DXH[2] = {0, 0};
+        HalfWord BG_DYL[2] = {0, 0};
+        HalfWord BG_DYH[2] = {0, 0};
+        int32_t     BG_REFERENCE_X[2] = {0, 0};
+        int32_t     BG_REFERENCE_Y[2] = {0, 0};
+        int32_t     BG_REFERENCE_LINE_X[2] = {0, 0};
+        int32_t     BG_REFERENCE_LINE_Y[2] = {0, 0};
+
+        HalfWord BG_PA[2] = {0, 0};
+        HalfWord BG_PB[2] = {0, 0};
+        HalfWord BG_PC[2] = {0, 0};
+        HalfWord BG_PD[2] = {0, 0};
+
+        void updateAffineScroll(int32_t &Reference, HalfWord low, HalfWord high);
+
+        WIN_H_T WINDOW_0_H = {.raw = 0};
+        WIN_H_T WINDOW_1_H = {.raw = 0};
+        WIN_V_T WINDOW_0_V = {.raw = 0};
+        WIN_V_T WINDOW_1_V = {.raw = 0};
+        WININ_T WININ = {.raw = 0};
+        WINOUT_T WINOUT = {.raw = 0};
+        MOSAIC_T MOSAIC = {.raw = 0};
+
+        Word mosaicBgYCurrent = 0;
+        Word mosaicBgYCounter = 0;
+        Word mosaicObjYCurrent = 0;
+        Word mosaicObjYCounter = 0;
+        Word mosaicBgXCurrent = 0;
+        Word mosaicBgXCounter = 0;
+        Word mosaicObjXCurrent = 0;
+        Word mosaicObjXCounter = 0;
+
+        PIXEL_T latchedObj = {};
+        std::array<PIXEL_T, 4> latchedBg = {};
+    
+        SPECIAL_EFFECTS_T SPECIAL_EFFECTS = {.raw = 0};
+        ALPHA_BLEND_COEF_T ALPHA_BLENDING = {.raw = 0};
+        BRIGHTNESS_FADE_T BRIGHTNESS_FADE = {.raw = 0};
+
+        Word currentCycle = 0;
+
+        bool hasframe = false;
+
+        Word seIndexFast(Word tx, Word ty, BGCNT_T bgcnt);
+
+        inline bool displayBG(const int i) const{
+            switch(i){
+                case 0:
+                    return LCDCONTROL.state.displayBG0;
+                case 1:
+                    return LCDCONTROL.state.displayBG1;
+                case 2:
+                    return LCDCONTROL.state.displayBG2;
+                case 3:
+                    return LCDCONTROL.state.displayBG3;
+                default:
+                    std::unreachable();
+            }
+        }
+        
+        public:
+        PPU() = default;
+        PPU(std::weak_ptr<SharedBus> bptr) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), bus(bptr){};
+        uint32_t* accessFramebuffer();
+
+        void clock();
+        void renderScanline();
+        
+        void onHBlank();
+        void onVBlank();
+        void increment();
+
+        Word getVCount();
+
+        bool hasFrame();
+
+        void setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb);
+
+        void detectSpritesOnScanline();
+        bool spriteCollidesCurrentPixel(const OAMAttribs &attrs);
+
+        void drawSprites();
+        template<bool isAffine, bool bpp8>
+        void drawBG(const int index);
+
+        PIXEL_T drawPixelMode0();
+        PIXEL_T drawPixelMode1();
+        PIXEL_T drawPixelMode2();
+        PIXEL_T drawPixelMode3();
+        PIXEL_T drawPixelMode4();
+        PIXEL_T drawPixelMode5();
+
+        PIXEL_T debugPixel = {};
+        Word debugX = 0, debugY = 0;
+        void setLatchPixel(unsigned int x, unsigned int y);
+        std::string getDebugOutput();
+        
+        void writePPURegister(Word addr, Byte val);
+        Byte readPPURegister(Word addr);
+
+        void writePPUMemory(Word addr, Byte value);
+        Byte readPPUMemory(Word addr);
+    };
+}
