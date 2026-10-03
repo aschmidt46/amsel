@@ -168,7 +168,7 @@ function App() {
               </div>
             </div>
             <div>
-              <input type='file' accept='.gb, .gbc, .nes, .gba' id='file' ref={inputFile} onChange={(e) => {handleFileSelected(e); }} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
+              <input type='file' accept='.gb, .gbc, .nes, .gba, .nds' id='file' ref={inputFile} onChange={(e) => {handleFileSelected(e); }} onKeyDown={preventInput} onKeyUp={preventInput} style={{display: 'none'}}/>
               <button onClick={() => inputFile.current?.click()} onKeyDown={preventInput} onKeyUp={preventInput} className='btn btn-ghost'>{lang.getTranslation("ChooseRom")}</button>
             </div>
             <span>{showTitle()}</span>

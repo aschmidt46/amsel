@@ -3,6 +3,15 @@
 #include "bus.h"
 
 namespace nds{
+
+    struct StartInfo{
+        std::vector<Byte> bios7;
+        std::vector<Byte> bios9;
+        std::vector<Byte> firmware;
+    };
+
+    const StartInfo defInfo = {};
+
     class NDS{
         double audioTime = 0;
         const double sampleRate = 20000;
@@ -11,11 +20,19 @@ namespace nds{
         double audioSampleL = 0;
         double audioSampleR = 0;
         bool audioSampleReady = false;
+        bool executionAllowed = true;
+        bool sendMessage = false;
+
+        void checkBios();
     
         public:
         std::shared_ptr<SharedBus> bus;
     
-        NDS(const std::vector<uint8_t> &bytes);
+        NDS(const std::vector<uint8_t> &bytes, const StartInfo &info = defInfo);
+
+        void loadBios7(const std::vector<uint8_t> &content);
+        void loadBios9(const std::vector<uint8_t> &content);
+        void loadFirmware(const std::vector<uint8_t> &content);
 
         uint8_t* accessFramebuffer();
         void clock();

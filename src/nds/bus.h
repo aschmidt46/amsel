@@ -20,6 +20,11 @@ namespace nds{
         std::shared_ptr<LCD> lcd;
         std::shared_ptr<gba::Scheduler<EventType, SharedBus>> scheduler;
 
+
+        std::array<Byte, 0x40'0000> mainMemory = {};
+        std::vector<Byte> firmware;
+
+
         void PPUEnteredHBlank();
         void PPUEnteredVBlank();
         void PPULeftHBlank();

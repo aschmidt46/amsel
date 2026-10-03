@@ -128,6 +128,10 @@
         "Host",
         "Connecting...",
         "GBA Emulation requires valid gba bios file.\nVisit settings -> system options.",
-        "Real time clock (RTC)"
+        "Real time clock (RTC)",
+        "NDS7 Bios",
+        "NDS9 Bios",
+        "NDS Firmware",
+        "NDS Emulation requires valid bios and firmware.\nVisit settings -> system options."
     ]
 }

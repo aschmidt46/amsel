@@ -7,6 +7,7 @@ class NDSImplementation : public Console{
     std::shared_ptr<nds::NDS> nds;
     void setAddressOf(int i, int to);
     static std::vector<SystemOption> options;
+    nds::StartInfo constructStartInfo();
     public:
     std::string getConsoleName() override;
     NDSImplementation() = delete;

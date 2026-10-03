@@ -160,44 +160,22 @@ bool CPU::executeSoftwareInterrupt(Word instruction)
     (void)instruction;
     // bus->setHalt();
     _R14_SVC = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
-    *registerMap[mode()][R15] = 0x08;
+    *registerMap[mode()][R15] = 0xFFFF000F; //                                 <---------- NDS9 Exception Vector Basis ist FFFF0000
     _SPSR_SVC.raw = *registerMap[mode()][CPSR];
     _CPSR.state.mode_bits = 19; // Supervisor
     _CPSR.state.I = 1; // IRQs ausschalten
     _CPSR.state.T = 0; // Zurück zu ARM Modus
     remainingCycles += 3; // 2S + 1N
-
-    // if((instruction & 0xFFFF) == 0x0B){
-    //     std::cout << "Swi CPUSET\n";
-    //     if(_R2 & (1u << 26)){
-    //         _R0 &= ~3u;
-    //         _R1 &= ~3u;
-    //     }
-    //     else{
-    //         _R0 &= ~1u;
-    //         _R1 &= ~1u;
-    //     }
-    // }
-    // if((instruction & 0xFFFF) == 0x0C){
-    //     std::cout << "Swi CPUFASTSET\n";
-    //     _R0 &= ~3u;
-    //     _R1 &= ~3u;
-    // }
     return true;
 }
 
 void CPU::executeHardwareInterrupt(){
-    // bus->setHalt();
-    // std::cout << "IRQ, IF: " << std::bitset<16>(bus->readByte(0x04000202)) << std::endl;
-    // std::cout << "IE: " << std::bitset<16>(bus->readByte(0x04000200)) << std::endl;
     _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 0);
-    // std::cout << getHex(_R14_irq, 8) << std::endl;
-    _R15_PC = 0x18; // BIOS Interrupt Vector
+    _R15_PC = 0xFFFF0018; // BIOS Interrupt Vector //                         <---------- NDS9 Exception Vector Basis ist FFFF0000
     _SPSR_irq.raw = *registerMap[mode()][CPSR];
     _CPSR.state.mode_bits = 18; // IRQ
     _CPSR.state.I = 1; // IRQs ausschalten
     _CPSR.state.T = 0; // Zurück zu ARM Modus
-    // bus->setHalt();
 }
 
 bool CPU::executeCoProcDataOperation(Word instruction)

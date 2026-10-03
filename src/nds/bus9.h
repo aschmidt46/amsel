@@ -11,6 +11,8 @@ namespace nds{
 
         size_t clocks = 0;
 
+        std::vector<Byte> bios9;
+
         public:
         Bus9(SharedBus* sb) : sharedBus(sb){};
         void writeByte(Word addr, Byte val);
@@ -21,6 +23,9 @@ namespace nds{
         Word readWord(Word addr);
 
         void addCPUCycles(size_t num);
+
+        void loadBios(const std::vector<Byte> &content);
+        size_t getBiosSize();
 
         size_t getClocks();
         void timerOverflowed(int index);

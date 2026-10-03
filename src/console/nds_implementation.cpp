@@ -25,6 +25,34 @@ void NDSImplementation::setAddressOf(int i, int to){
     }
 }
 
+nds::StartInfo NDSImplementation::constructStartInfo()
+{
+    std::string pbios7 = std::get<RequiredFile>(options[0]).path;
+    std::string pbios9 = std::get<RequiredFile>(options[0]).path;
+    std::string pfirmware = std::get<RequiredFile>(options[0]).path;
+    std::vector<uint8_t> bios7, bios9, firmware;
+
+    if(pbios7.c_str()){
+        std::ifstream stream(pbios7, std::ios::in | std::ios::binary);
+        bios7 = std::vector<uint8_t>((std::istreambuf_iterator<char>(stream)),
+                              std::istreambuf_iterator<char>());
+    }
+
+    if(pbios9.c_str()){
+        std::ifstream stream(pbios9, std::ios::in | std::ios::binary);
+        bios9 = std::vector<uint8_t>((std::istreambuf_iterator<char>(stream)),
+                              std::istreambuf_iterator<char>());
+    }
+
+    if(pfirmware.c_str()){
+        std::ifstream stream(pfirmware, std::ios::in | std::ios::binary);
+        firmware = std::vector<uint8_t>((std::istreambuf_iterator<char>(stream)),
+                              std::istreambuf_iterator<char>());
+    }
+
+    return nds::StartInfo{.bios7 = bios7, .bios9 = bios9, .firmware = firmware};
+}
+
 std::string NDSImplementation::getConsoleName(){
     return "Nintendo DS";
 }
@@ -47,7 +75,8 @@ NDSImplementation::NDSImplementation(const char *path) : Console(path)
 
 NDSImplementation::NDSImplementation(std::vector<uint8_t> &rom)
 {
-    nds = std::make_shared<nds::NDS>(rom);
+    auto sInfo = constructStartInfo();
+    nds = std::make_shared<nds::NDS>(rom, sInfo);
 
     #ifdef BUILD_DESKTOP
     if(nds->canSave()){
@@ -79,7 +108,8 @@ void NDSImplementation::load(const char *path)
     std::vector<uint8_t> contents((std::istreambuf_iterator<char>(stream)),
                                   std::istreambuf_iterator<char>());
 
-    nds = std::make_shared<nds::NDS>(contents);
+    auto sInfo = constructStartInfo();
+    nds = std::make_shared<nds::NDS>(contents, sInfo);
 }
 
 void NDSImplementation::clock() {
@@ -169,13 +199,19 @@ std::vector<uint8_t> NDSImplementation::getSaveData()
 }
 
 std::vector<std::string> NDSImplementation::getRequiredFiles() {
-  return {};
+  return {"NDS7 Bios{delim}.rom", "NDS9 Bios{delim}.rom", "NDS Firmware{delim}.bin"};
 }
 
 void NDSImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> content) {
-    // if(name == std::string("GBA Bios")){
-    //     nds->loadBios(content);
-    // }
+    if(name == std::string("NDS7 Bios")){
+        nds->loadBios7(content);
+    }
+    else if(name == std::string("NDS9 Bios")){
+        nds->loadBios9(content);
+    }
+    else if(name == std::string("NDS Firmware")){
+        nds->loadFirmware(content);
+    }
 }
 
 std::vector<SystemOption>* NDSImplementation::getSystemOptions(){
@@ -313,4 +349,8 @@ void NDSImplementation::displayRegisters() {
     #endif
 }
 
-std::vector<SystemOption> NDSImplementation::options = {};
+std::vector<SystemOption> NDSImplementation::options = {
+    RequiredFile{NDSBios7, "nds7bios", "*.rom", ""},
+    RequiredFile{NDSBios9, "nds7bios", "*.rom", ""},
+    RequiredFile{NDSFirmware, "ndsfirmware", "*.bin", ""}
+};

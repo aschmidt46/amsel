@@ -35,6 +35,16 @@ void nds::Bus7::addCPUCycles(size_t num)
     cpu.addCycles(num);
 }
 
+void nds::Bus7::loadBios(const std::vector<Byte> &content)
+{
+    bios7 = content;
+}
+
+size_t nds::Bus7::getBiosSize()
+{
+    return bios7.size();
+}
+
 size_t nds::Bus7::getClocks()
 {
     return clocks;

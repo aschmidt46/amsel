@@ -149,9 +149,13 @@ enum LocalizedString : size_t{
     LinkCableConnecting = 125,
     GBAMissingBios = 126,
     RTCString = 127,
+    NDSBios7 = 128,
+    NDSBios9 = 129,
+    NDSFirmware = 130,
+    NDSMissingBios = 131,
 };
 
-constexpr size_t NUM_STRINGS = 128;
+constexpr size_t NUM_STRINGS = 132;
 
 class Locale{
     private:

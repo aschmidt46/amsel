@@ -193,6 +193,8 @@ void DMAChannel<ConcreteBus>::printStartTiming(){
     }
 }
 
-template class DMAChannel<Bus7>;
-template class DMAChannel<Bus9>;
+namespace nds{
+    template class DMAChannel<Bus7>;
+    template class DMAChannel<Bus9>;
+}
 

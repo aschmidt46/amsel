@@ -96,6 +96,7 @@ void Timer<ConcreteBus>::onIncrement() {
         overflowTimer();
     }
 }
-
-template class Timer<Bus7>;
-template class Timer<Bus9>;
+namespace nds{
+    template class Timer<Bus7>;
+    template class Timer<Bus9>;
+}

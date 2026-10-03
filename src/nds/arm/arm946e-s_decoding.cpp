@@ -745,13 +745,15 @@ CPU::CPU(bool skipBios)
 
     _CPSR.state.mode_bits = 31;
 
-    if(skipBios){
-        _R13_SP = 0x03007F00;
-        _R13_SVC = 0x03007FE0;
-        _R13_irq = 0x03007FA0;
-        _R14_L_R = 0x08000000; 
-        _R15_PC = 0x08000000;
-    }
+    _R15_PC = 0xFFFF0000;
+    
+    // if(skipBios){
+    //     _R13_SP = 0x03007F00;
+    //     _R13_SVC = 0x03007FE0;
+    //     _R13_irq = 0x03007FA0;
+    //     _R14_L_R = 0x08000000; 
+    //     _R15_PC = 0x08000000;
+    // }
 
 }
 

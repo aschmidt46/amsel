@@ -1,10 +1,39 @@
 #include "nds.h"
+#include "framework/global.h"
 
 using namespace nds;
 
-nds::NDS::NDS(const std::vector<uint8_t> &bytes)
+void nds::NDS::checkBios()
+{
+    if(bus->firmware.size() == 0 || bus->bus7->getBiosSize() == 0 || bus->bus9->getBiosSize() == 0){
+        executionAllowed = false;
+        sendMessage = true;
+    }
+}
+
+nds::NDS::NDS(const std::vector<uint8_t> &bytes, const StartInfo &info)
 {
     bus = std::make_shared<SharedBus>();
+    bus->init();
+    bus->firmware = info.firmware;
+    loadBios7(info.bios7);
+    loadBios9(info.bios9);
+    checkBios();
+}
+
+void nds::NDS::loadBios7(const std::vector<uint8_t> &content)
+{
+    bus->bus7->loadBios(content);
+}
+
+void nds::NDS::loadBios9(const std::vector<uint8_t> &content)
+{
+    bus->bus9->loadBios(content);
+}
+
+void nds::NDS::loadFirmware(const std::vector<uint8_t> &content)
+{
+    bus->firmware = content;
 }
 
 uint8_t *nds::NDS::accessFramebuffer()
@@ -28,14 +57,21 @@ void nds::NDS::clock()
 
 void nds::NDS::clockUntilSampleReady()
 {
-    while(!hasSample()){
-        clock();
+    if(sendMessage){
+        MessageStruct m = {.type = MT_ERROR, .title = {}, .content = locale.getTranslation(NDSMissingBios)};
+        messageQueue.enqueue(m);
+        sendMessage = false;
+    }
+    if(executionAllowed){
+        while(!hasSample()){
+            clock();
+        }
     }
 }
 
 bool nds::NDS::hasFrame()
 {
-    return false;
+    return true;
 }
 
 bool nds::NDS::hasSample()

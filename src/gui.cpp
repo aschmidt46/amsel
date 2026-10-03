@@ -649,7 +649,9 @@ void Gui::drawSystemOptions(){
         }
       };
       for(auto &option : *systemOptions[state->systemOptionsIndex].second){
+        ImGui::PushID(runningID++);
         std::visit(visitor, option);
+        ImGui::PopID();
       }
       ImGui::EndTable();
     }
