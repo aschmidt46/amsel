@@ -26,22 +26,8 @@ void SharedBus::init()
 
 void nds::SharedBus::setIF(int bit, bool val)
 {
-    IF = (IF & ~(1u << bit)) | (val << bit);
-}
-
-Word nds::SharedBus::getIE()
-{
-    return IE;
-}
-
-Word nds::SharedBus::getIF()
-{
-    return IF;
-}
-
-bool nds::SharedBus::hasIME()
-{
-    return IME.raw & 1u;
+    bus7->setIF(bit, val);   
+    bus9->setIF(bit, val);
 }
 
 void nds::SharedBus::setHalt()

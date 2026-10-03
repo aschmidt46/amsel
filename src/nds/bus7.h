@@ -3,6 +3,7 @@
 #include "gba/arm/arm7tdmi.h"
 #include "bus_types.h"
 #include "arm/arm946e-s_types.h"
+#include "gba/register/general_purpose.h"
 
 namespace nds{
     class SharedBus;
@@ -15,8 +16,12 @@ namespace nds{
 
         std::vector<Byte> bios7;
 
+        Word IE = 0;
+        Word IF = 0;
+        gba::GeneralPurpose32 IME;
+
         public:
-        Bus7(SharedBus* sb) : sharedBus(sb){};
+        Bus7(SharedBus* sb) : sharedBus(sb), IME(0x4000208){};
         void writeByte(Word addr, Byte val);
         Byte readByte(Word addr);
         void writeHalfWord(Word addr, HalfWord val);
@@ -31,6 +36,8 @@ namespace nds{
 
         size_t getClocks();
         void timerOverflowed(int index);
+
+        void setIF(int bit, bool val);
 
         Word getIE();
         Word getIF();

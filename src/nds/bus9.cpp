@@ -54,19 +54,24 @@ void nds::Bus9::timerOverflowed(int index)
 {
 }
 
+void nds::Bus9::setIF(int bit, bool val)
+{
+    IF = (IF & ~(1u << bit)) | (val << bit);
+}
+
 Word nds::Bus9::getIE()
 {
-    return sharedBus->getIE();
+    return IE;
 }
 
 Word nds::Bus9::getIF()
 {
-    return sharedBus->getIF();
+    return IF;
 }
 
 bool nds::Bus9::hasIME()
 {
-    return sharedBus->hasIME();
+    return IME.raw & 1;
 }
 
 void nds::Bus9::setHalt()

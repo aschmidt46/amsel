@@ -67,7 +67,7 @@ void Timer<ConcreteBus>::overflowTimer()
     if(control.raw & 128){ // sicherstellen, dass dieses Timerevent vom letzten Stellen des Timers kam
         this->value = reload.raw;
         if(control.raw & 64){ // IRQ Enable
-            bus->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
+            cbus->setIF(3 + number, true); // Interrupt Flag für Timer 0 startet bei bit 3
         }
         cbus->timerOverflowed(number);
         if(!usesPreviousTimer()){

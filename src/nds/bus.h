@@ -10,11 +10,8 @@ namespace nds{
 
     class SharedBus{
         bool isHalted = false;
-        Word IE = 0;
-        Word IF = 0;
-        gba::GeneralPurpose32 IME;
         public:
-        SharedBus() : IME(0x4000208){};
+        SharedBus(){};
         std::shared_ptr<Bus7> bus7;
         std::shared_ptr<Bus9> bus9;
         std::shared_ptr<LCD> lcd;
@@ -22,6 +19,7 @@ namespace nds{
 
 
         std::array<Byte, 0x40'0000> mainMemory = {};
+        std::array<Byte, 0x8000> sharedWRAM = {};
         std::vector<Byte> firmware;
 
 
@@ -32,10 +30,6 @@ namespace nds{
 
         void init();
         void setIF(int bit, bool val);
-
-        Word getIE();
-        Word getIF();
-        bool hasIME();
 
         void setHalt();
 

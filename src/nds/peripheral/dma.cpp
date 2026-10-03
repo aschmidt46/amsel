@@ -162,7 +162,7 @@ void DMAChannel<ConcreteBus>::commenceTransfer()
     }
     
     if(irqOnEnd()){
-        bus->setIF(8 + dmaIndex, true);
+        cbus->setIF(8 + dmaIndex, true);
     }
 
     cbus->addCPUCycles(remaining);
