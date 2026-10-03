@@ -16,7 +16,7 @@ add_library(nds_dasm
 
 add_library(nds
 src/nds/bus.h src/nds/bus.cpp src/gba/ibus.h src/nds/bus_types.h
-src/nds/nds.h
+src/nds/nds.h src/nds/nds.cpp
 src/nds/bus7.h src/nds/bus7.cpp
 src/nds/bus9.h src/nds/bus9.cpp
 src/nds/arm/arm946e-s_types.h
@@ -51,6 +51,9 @@ src/nds/peripheral/dma.h
 src/nds/peripheral/dma.cpp
 src/nds/peripheral/timer.h
 src/nds/peripheral/timer.cpp
+
+src/console/console.h
+src/console/nds_implementation.h src/console/nds_implementation.cpp
 )
 
 target_compile_options(nds PUBLIC -Wall)

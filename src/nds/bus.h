@@ -14,6 +14,7 @@ namespace nds{
         Word IF = 0;
         gba::GeneralPurpose32 IME;
         public:
+        SharedBus() : IME(0x4000208){};
         std::shared_ptr<Bus7> bus7;
         std::shared_ptr<Bus9> bus9;
         std::shared_ptr<LCD> lcd;
@@ -32,6 +33,12 @@ namespace nds{
         bool hasIME();
 
         void setHalt();
+
+
+        // Interface
+
+        std::pair<float, float> getSample();
+        void clock();
     };
 
 }

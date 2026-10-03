@@ -48,3 +48,12 @@ void nds::SharedBus::setHalt()
 {
     isHalted = true;
 }
+
+std::pair<float, float> nds::SharedBus::getSample()
+{
+    return {0,0};
+}
+
+void nds::SharedBus::clock()
+{
+}

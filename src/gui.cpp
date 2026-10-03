@@ -48,6 +48,9 @@ constexpr std::string getRomFileList(){
   #ifdef BUILD_GBA
   list += "*.gba ";
   #endif
+  #ifdef BUILD_NDS
+  list += "*.nds ";
+  #endif
 
   return list;
 }

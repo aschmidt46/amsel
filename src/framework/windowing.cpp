@@ -8,6 +8,9 @@
 #ifdef BUILD_GBA
 #include "console/gba_implementation.h"
 #endif
+#ifdef BUILD_NDS
+#include "console/nds_implementation.h"
+#endif
 #ifdef BUILD_NES
 #include "console/nes_implementation.h"
 #endif
@@ -152,6 +155,10 @@ void registerConsoles(){
   #ifdef BUILD_GBA
   auto gba = GbaImplementation(dummyrom);
   registeredConsoles.push_back(&gba);
+  #endif
+  #ifdef BUILD_NDS
+  auto nds = NDSImplementation(dummyrom);
+  registeredConsoles.push_back(&nds);
   #endif
 
   for(const auto &cs : registeredConsoles){

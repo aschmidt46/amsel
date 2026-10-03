@@ -2,6 +2,9 @@
 #ifdef BUILD_GBA
 #include "gba_implementation.h"
 #endif
+#ifdef BUILD_NDS
+#include "nds_implementation.h"
+#endif
 #ifdef BUILD_NES
 #include "nes_implementation.h"
 #endif
@@ -36,6 +39,11 @@ void createConsole(const char *path)
         console = new GbaImplementation(filename.c_str());
     }
     #endif
+    #ifdef BUILD_NDS
+    if(filename.substr(filename.find_last_of(".") + 1) == "nds"){
+        console = new NDSImplementation(filename.c_str());
+    }
+    #endif
     if(console == nullptr){
         console = new DummyImplementation();
     }
@@ -61,6 +69,11 @@ std::unique_ptr<Console> createConsoleFromData(std::string filename, std::vector
     #ifdef BUILD_GBA
     if(filename.substr(filename.find_last_of(".") + 1) == "gba"){
         c = std::make_unique<GbaImplementation>(rom);
+    }
+    #endif
+    #ifdef BUILD_NDS
+    if(filename.substr(filename.find_last_of(".") + 1) == "nds"){
+        c = std::make_unique<NDSImplementation>(rom);
     }
     #endif
     c->setName(filename);
