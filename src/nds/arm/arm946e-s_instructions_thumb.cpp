@@ -1,5 +1,6 @@
 #include "arm946e-s.h"
 #include <iostream>
+#include "../ibus.h"
 
 using namespace nds;
 
@@ -274,12 +275,13 @@ bool CPU::executeThumbUnconditionalBranch(Word instruction)
     return executeBranchLink(   (extendedOffset & 0x00FFFFFF)    );
 }
 
-// Zyklen fehlen!
 bool CPU::executeThumbLongBranchWithLink(Word instruction)
 {
     Word offset = instruction & 0b11111111111;
     Word sOffset = sign_extend_n_32(offset, 11);
     bool H = instruction & (1u << 11);
+    bool switchArm = (instruction & (1u << 12)) == 0; // Neu in NDS9
+    remainingCycles += 1; //1S
 
     if(!H){
         *registerMap[mode()][R14] = *registerMap[mode()][R15] + (sOffset << 12);
@@ -290,6 +292,14 @@ bool CPU::executeThumbLongBranchWithLink(Word instruction)
         *registerMap[mode()][R14] += (offset << 1);
         *registerMap[mode()][R15] = (*registerMap[mode()][R14] & ~1u);
         *registerMap[mode()][R14] = tmp | 1;
+        if(switchArm)
+            this->_CPSR.state.T = ARM;
+        remainingCycles += 2; //zweiter Opcode 2S + 1N
         return true;
     }
+}
+
+bool nds::CPU::executeThumbBranchExchange(Word instruction)
+{
+    return executeThumbLongBranchWithLink(instruction);
 }

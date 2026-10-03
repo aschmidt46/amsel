@@ -158,6 +158,31 @@ namespace nds{
         Word form_SoftwareInterrupt =       0b0000'1111'0000'0000'0000'0000'0000'0000;
         static const                    //  ..____'1111'____'____'____'____'____'____
         Word mask_SoftwareInterrupt =       0b0000'1111'0000'0000'0000'0000'0000'0000;
+
+        // ARM 9 FORMATS
+
+        static const
+        Word form_BKPT =                    0b1110'0001'0010'0000'0000'0000'0111'0000; // Breakpoint, nur für Debugging
+        static const                    //  ..1110'0001'0010'____'____'____'0111'____
+        Word mask_BKPT =                    0b1111'1111'1111'0000'0000'0000'1111'0000;
+        static const
+        Word form_CountLeadingZeros =       0b0000'0001'0110'1111'0000'1111'0001'0000;
+        static const                    //  ..____'0001'0110'1111'____'1111'0001'____
+        Word mask_CountLeadingZeros =       0b0000'1111'1111'1111'0000'1111'1111'0000;
+        static const
+        Word form_QALU =                    0b0000'0001'0000'0000'0000'0000'0101'0000;
+        static const                    //  ..____'0001'0__0'____'____'0000'0101'____
+        Word mask_QALU =                    0b0000'1111'1001'0000'0000'1111'1111'0000;
+        static const
+        Word form_MulHalfArm9 =             0b0000'0001'0000'0000'0000'0000'1000'0000;
+        static const                    //  ..____'0001'0__0'____'____'____'1__0'____
+        Word mask_MulHalfArm9 =             0b0000'1111'1001'0000'0000'0000'1001'0000;
+        static const
+        Word form_CoRR_Arm9 =               0b0000'1100'0100'0000'0000'0000'0000'0000;
+        static const                    //  ..____'1100'010_'____'____'____'____'____
+        Word mask_CoRR_Arm9 =               0b0000'1111'1110'0000'0000'0000'0000'0000;
+        
+
     
         // THUMB
         static const
@@ -236,10 +261,31 @@ namespace nds{
         Word formT_LongBranchWithLink =         0b1111'0000'0000'0000;
         static const                    //      ..1111'____'____'____
         Word maskT_LongBranchWithLink =         0b1111'0000'0000'0000;
-    
+
+        // ARM 9 Instructions
+
+        static const
+        Word formT_BKPT =                       0b1011'1110'0000'0000;
+        static const                    //      ..1011'1110'____'____
+        Word maskT_BKPT =                       0b1111'1111'0000'0000;
+        static const
+        Word formT_UndefArm9 =                  0b1101'1110'0000'0000;
+        static const                    //      ..1101'1110'____'____
+        Word maskT_UndefArm9 =                  0b1111'1111'0000'0000;
+        static const
+        Word formT_BLXArm9 =                    0b1110'1000'0000'0000;
+        static const                    //      ..1110'1___'____'___0
+        Word maskT_BLXArm9 =                    0b1111'1000'0000'0001;
+        static const
+        Word formT_UndefArm9_2 =                0b1110'1000'0000'0001;
+        static const                    //      ..1110'1___'____'___1
+        Word maskT_UndefArm9_2 =                0b1111'1000'0000'0001;
     
     
         enum InstructionType : Word {
+            TypeCountLeadingZeros,
+            TypeQALU,
+            TypeMultiplyHalfWord,
             TypeBranchAndExchange,
             TypeSingleDataSwap,
             TypeBranchLink,
@@ -275,6 +321,7 @@ namespace nds{
             ThumbSoftwareInterrupt,
             ThumbUnconditionalBranch,
             ThumbLongBranchWithLink,
+            ThumbBranchExchange,
             PipelineEmpty,
         };
     

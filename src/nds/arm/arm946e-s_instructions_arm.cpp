@@ -3,6 +3,7 @@
 #include <iostream>
 #include <bit>
 #include <algorithm>
+#include "../ibus.h"
 
 using namespace nds;
 
@@ -214,7 +215,37 @@ bool CPU::executeCoProcDataTransfer(Word instruction)
 
 bool CPU::executeCoProcRegTransfer(Word instruction)
 {
-    std::cout << "Coprozessor-Registertransfer aufgerufen!" << instruction << std::endl;
+    Word cpOpcode = (instruction >> 21) & 0b111;
+    bool armOpcode = ((instruction >> 20) & 1u) > 0;
+    Word Cn = (instruction >> 16) & 0xF;
+    Word Rd = (instruction >> 12) & 0xF;
+    Word Pn = (instruction >> 18) & 0xF;
+    Word CP = (instruction >> 5) & 0b111;
+    Word Cm = instruction & 0xF;
+
+    if(Pn == 15){
+        if(armOpcode){ // MRC
+            Word res = cp15.MRC(cpOpcode, Cn, Cm);
+            if(Rd == 15){
+                StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+                *registerMap[mode()][CPSR] = (cpsr.raw & ~(0xFu << 28)) | (res & (0xFu << 28));
+            }
+            else{
+                *registerMap[mode()][Rd] = res;
+            }
+            remainingCycles += 3; // was ist b??
+        }
+        else{ // MCR
+            if(Rd == 15){
+                cp15.MCR(cpOpcode, _R15_PC + 4, Cn, Cm);
+            }
+            else{
+                cp15.MCR(cpOpcode, *registerMap[mode()][Rd], Cn, Cm);
+            }
+            remainingCycles += 2; // was ist b??
+        }
+    }
+
     return false;
 }
 
@@ -842,7 +873,7 @@ bool CPU::executeMultiply(Word instruction)
 
     if(S){
         StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
-        cpsr.state.C = 0; // "Meaningless value"
+        // cpsr.state.C = 0;                                                                <----------- NDS9 "Not affected"
         cpsr.state.Z = result == 0;
         cpsr.state.N = (result & (1u << 31)) > 0;
         *registerMap[mode()][CPSR] = cpsr.raw;
@@ -922,7 +953,7 @@ bool CPU::executeMultiplyLong(Word instruction)
 
     if(S){
         StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
-        cpsr.state.C = 0; // "Meaningless value"
+        // cpsr.state.C = 0;                                                              <--------------------- NDS9 "Not affected"
         // v nicht ändern!
         cpsr.state.Z = result == 0;
         cpsr.state.N = (result & (1ull << 63)) > 0;
@@ -965,5 +996,135 @@ bool CPU::executeMultiplyLong(Word instruction)
     if(A) remainingCycles += 1; // 1S + (m+2)I
 
     if(RdLo == R15 || RdHi == R15) return true;
+    return false;
+}
+
+bool nds::CPU::executeCountLeadingZeros(Word instruction)
+{
+    Word Rd = (instruction >> 12) & 0xF;
+    Word Rm = instruction & 0xF;
+    *registerMap[mode()][Rd] = std::countl_zero(*registerMap[mode()][Rm]);
+    remainingCycles += 1; // 1S
+    return false;
+}
+
+bool nds::CPU::executeQALU(Word instruction)
+{
+    Word opcode = (instruction >> 20) & 0xF;
+    Word Rm = *registerMap[mode()][instruction & 0xF];
+    Word Rn = *registerMap[mode()][(instruction >> 16) & 0xF];
+    Word Rd = (instruction >> 12) & 0xF;
+
+    int64_t m = std::bit_cast<int32_t>(Rm);
+    int64_t n = std::bit_cast<int32_t>(Rn);
+
+    int64_t res = 0;
+
+    switch(opcode){
+        case 0: // qadd
+            res = m + n;
+            break;
+        case 2: // qsub
+            res = m - n;
+            break;
+        case 4: // qdadd
+            {
+                int64_t r1 = n * 2;
+                r1 &= 0xFFFFFFFF;
+                res = m + r1;
+                break;
+            }
+        case 6: // qdsub
+            {
+                int64_t r1 = n * 2;
+                r1 &= 0xFFFFFFFF;
+                res = m - r1;
+                break;
+            }
+    }
+
+    if(res < std::numeric_limits<int32_t>::min() || res > std::numeric_limits<int32_t>::max()){
+        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+        cpsr.state.Q = 1;
+        *registerMap[mode()][CPSR] = cpsr.raw;
+    }
+
+    res &= 0xFFFFFFFF;
+
+    *registerMap[mode()][Rd] = std::bit_cast<uint32_t>((int32_t)res);
+
+    remainingCycles += 1; // 1S + interlock
+    return false;
+}
+
+bool nds::CPU::executeMultiplyHalfWord(Word instruction)
+{
+    Word opcode = (instruction >> 21) & 3u;
+    bool x = ((instruction >> 5) & 1u) > 0;
+    bool y = ((instruction >> 6) & 1u) > 0;
+    Word Rm = instruction & 0xF;
+    Word Rn = (instruction >> 12) & 0xF; // aka RdLo
+    Word Rd = (instruction >> 16) & 0xF; // aka RdHi
+    Word Rs = (instruction >> 8) & 0xF;
+
+    uint32_t rsOp = *registerMap[mode()][Rs];
+    uint32_t rmOp = *registerMap[mode()][Rm];
+
+    if(x) rsOp >>= 16;
+    if(y) rmOp >>= 16;
+
+    const int64_t signRs = std::bit_cast<int16_t>((uint16_t)rsOp);
+    const int64_t signRm = std::bit_cast<int16_t>((uint16_t)rmOp);
+
+    bool setQ = false;
+
+    switch(opcode){
+        case 0:{ // SMLAxy
+            int64_t res = signRs * signRm + std::bit_cast<int32_t>(*registerMap[mode()][Rn]);
+            if(res > std::numeric_limits<int32_t>::max() || res < std::numeric_limits<int32_t>::min())
+                setQ = true;
+            *registerMap[mode()][Rd] = res;
+            break;
+        }
+        case 1:{
+            if(x){ // SMULWy
+                *registerMap[mode()][Rd] = (signRs * std::bit_cast<int32_t>(*registerMap[mode()][Rm])) / 0x10000;
+            }
+            else{ // SMLAWy
+                int64_t res = (signRs * std::bit_cast<int32_t>(*registerMap[mode()][Rm])) / 0x10000 + std::bit_cast<int32_t>(*registerMap[mode()][Rn]);
+                if(res > std::numeric_limits<int32_t>::max() || res < std::numeric_limits<int32_t>::min())
+                    setQ = true;
+                *registerMap[mode()][Rd] = res;
+            }
+            break;
+        }
+        case 2:{ // SMLALxy
+            const int64_t RdHiLo = std::bit_cast<int64_t>( (uint64_t(*registerMap[mode()][Rd]) << 32) | (uint64_t(*registerMap[mode()][Rn])) );
+            const int64_t res = RdHiLo + signRs * signRm;
+            const uint64_t resHi = std::bit_cast<uint64_t>(res) >> 32;
+            const uint64_t resLo = std::bit_cast<uint64_t>(res) & 0xFFFFFFFFu;
+            *registerMap[mode()][Rd] = resHi;
+            *registerMap[mode()][Rn] = resLo;
+            remainingCycles += 1; // 1i
+            break;
+        }
+        case 3:{ // SMULxy
+            const int64_t res = signRs * signRm;
+            const uint64_t resHi = std::bit_cast<uint64_t>(res) >> 32;
+            const uint64_t resLo = std::bit_cast<uint64_t>(res) & 0xFFFFFFFFu;
+            *registerMap[mode()][Rd] = resHi;
+            *registerMap[mode()][Rn] = resLo;
+            break;
+        }
+    }
+
+    if(setQ){
+        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
+        cpsr.state.Q = 1;
+        *registerMap[mode()][CPSR] = cpsr.raw;
+    }
+
+
+    remainingCycles += 1; // 1S + interlock
     return false;
 }

@@ -10,6 +10,7 @@
 extern "C" {
 #include <armdisasm.h>
 }
+#include "../ibus.h"
 
 using namespace nds;
 /*
@@ -61,6 +62,24 @@ static inline bool isBranchLink(Word code)
 {
     auto masked = code & mask_Branch;
     return masked == form_Branch;
+}
+
+static inline bool isCountLeadingZeros(Word code)
+{
+    auto masked = code & mask_CountLeadingZeros;
+    return masked == form_CountLeadingZeros;
+}
+
+static inline bool isQALU(Word code)
+{
+    auto masked = code & mask_QALU;
+    return masked == form_QALU;
+}
+
+static inline bool isMultiplyHalfWord(Word code)
+{
+    auto masked = code & mask_MulHalfArm9;
+    return masked == form_MulHalfArm9;
 }
 
 static inline bool isBlockDataTransfer(Word code)
@@ -273,9 +292,23 @@ static inline bool isThumbLongBranchWithLink(HalfWord code){
     return masked == formT_LongBranchWithLink;
 }
 
+static inline bool isThumbBranchExchange(HalfWord code){
+    auto masked = code & maskT_BLXArm9;
+    return masked == formT_BLXArm9;
+}
+
 std::string CPU::printInstructionType(InstructionType t){
     std::string s = "";
     switch(t){
+        case TypeCountLeadingZeros:
+            s = "CountLeadingZeros";
+            break;
+        case TypeQALU:
+            s = "QALU";
+            break;
+        case TypeMultiplyHalfWord:
+            s = "MultiplyHalfWordArm9";
+            break;
         case TypeBranchAndExchange:
             s = "BranchExchange";
             break;
@@ -381,6 +414,9 @@ std::string CPU::printInstructionType(InstructionType t){
         case ThumbLongBranchWithLink:
             s = "ThumbLongBranchWithLink";
             break;
+        case ThumbBranchExchange:
+            s = "Thumb-BLX-Arm9";
+            break;
         case PipelineEmpty:
             s = "Pipeline is Empty";
             break;
@@ -463,6 +499,12 @@ bool CPU::executeInstruction()
                         return this->executeSingleDataSwap(info.code);
                     case TypeBranchLink:
                         return this->executeBranchLink(info.code);
+                    case TypeCountLeadingZeros:
+                        return this->executeCountLeadingZeros(info.code);
+                    case TypeQALU:
+                        return this->executeQALU(info.code);
+                    case TypeMultiplyHalfWord:
+                        return this->executeMultiplyHalfWord(info.code);
                     case TypeUndefined:
                         return this->executeUndefined(info.code);
                         return false;
@@ -538,6 +580,8 @@ bool CPU::executeInstruction()
                     return this->executeThumbUnconditionalBranch(info.code);
                 case ThumbLongBranchWithLink:
                     return this->executeThumbLongBranchWithLink(info.code);
+                case ThumbBranchExchange:
+                    return this->executeThumbBranchExchange(info.code);
                 default:
                     std::cout << "Unimplementierte Instruktion (THUMB) ausgeführt : " << getHex0x(info.code, 8) << std::endl;
                     std::cout << getDisassembly(info.code) << "\n";
@@ -575,6 +619,12 @@ InstructionInfo CPU::decodeInstructionARM(Word code)
 
     if(isBranchLink(code))
         return InstructionInfo{.type = TypeBranchLink, .code = code};
+
+    if(isCountLeadingZeros(code))
+        return InstructionInfo{.type = TypeCountLeadingZeros, .code = code};
+
+    if(isQALU(code))
+        return InstructionInfo{.type = TypeQALU, .code = code};
     
     if(isBlockDataTransfer(code))
         return InstructionInfo{.type = TypeBlockDataTransfer, .code = code};
@@ -599,6 +649,9 @@ InstructionInfo CPU::decodeInstructionARM(Word code)
         return InstructionInfo{.type = TypeMultiply, .code = code};
     if(isMultiplyAccumulateL(code))
         return InstructionInfo{.type = TypeMultiplyL, .code = code};
+    
+    if(isMultiplyHalfWord(code))
+        return InstructionInfo{.type = TypeMultiplyHalfWord, .code = code};
     
     if(isDataTransferSignHDW(code))
         return InstructionInfo{.type = TypeDataTransferSignHDW, .code = code};
@@ -673,6 +726,9 @@ InstructionInfo CPU::decodeInstructionTHUMB(Word code)
 
     if(isThumbLongBranchWithLink(code))
         return InstructionInfo{.type = ThumbLongBranchWithLink, .code = code};
+    if(isThumbBranchExchange(code)){
+        return InstructionInfo{.type = ThumbBranchExchange, .code = code};
+    }
 
     return InstructionInfo{.type = UnimplementedInstruction, .code = code};
 }

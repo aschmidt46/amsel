@@ -3,13 +3,13 @@
 #include <optional>
 #include <string>
 #include <memory>
-#include "../../gba/ibus.h"
 #include <vector>
 #include "arm946e-s_types.h"
-
-class gba::IBus;
+#include "cp15.h"
 
 namespace nds{
+
+    class IBus;
 
     inline uint32_t sign_extend_n_32(uint32_t x, uint32_t bits) {
         uint32_t m = 1u << (bits - 1);
@@ -26,30 +26,6 @@ namespace nds{
         public:
         inline OperatingMode mode() const{
             return (OperatingMode)_CPSR.state.mode_bits;
-            // switch(_CPSR.state.mode_bits){
-                // case 0: return User;      // ;\26bit Backward Compatibility modes
-                // case 1: return FIQ;             // ; (supported only on ARMv3, except ARMv3G,
-                // case 2: return IRQ;             // ; and on some non-T variants of ARMv4)
-                // case 3: return Supervisor;      // ;/
-                // case 16: return User;
-                // case 17: return FIQ;
-                // case 18: return IRQ;
-                // case 19: return Supervisor;
-                // case 23: return AbortMode;
-                // case 27: return Undefined;
-                // case 31: return System;
-                // default:{
-                //     // auto m = _CPSR.state.mode_bits;
-                //     // if(m < 16){
-                //     //     m &= 0b11;
-                //     //     if(m==0) return User;
-                //     //     if(m==1) return FIQ;
-                //     //     if(m==2) return IRQ;
-                //     //     if(m==3) return Supervisor;
-                //     // }
-                //     return User;
-                // }
-            // }
         }
 
         inline CpuState state() const{
@@ -117,11 +93,13 @@ namespace nds{
         size_t remainingCycles = 0; // Extreme Vereinfachung, muss ich ändern
 
 
-        gba::IBus* bus;
+        IBus* bus;
 
         bool shouldFlush = false;
             
         public:
+
+        CP15 cp15;
 
         bool lastTransactionWasRead = true;
         Word lastTransactionAddress = 0;
@@ -152,6 +130,10 @@ namespace nds{
         bool executeMultiplyLong(Word instruction);
         bool executeDataProc(Word instruction);
         bool executePSRTransfer(Word instruction);
+
+        bool executeCountLeadingZeros(Word instruction);
+        bool executeQALU(Word instruction);
+        bool executeMultiplyHalfWord(Word instruction);
         
         // THUMB
         
@@ -175,6 +157,9 @@ namespace nds{
         bool executeThumbSoftwareInterrupt(Word instruction);
         bool executeThumbUnconditionalBranch(Word instruction);
         bool executeThumbLongBranchWithLink(Word instruction);
+        
+        bool executeThumbBranchExchange(Word instruction);
+        
         void executeHardwareInterrupt();
 
         // Debug
@@ -183,7 +168,7 @@ namespace nds{
         
         public:
         CPU(bool skipBios = true);
-        CPU(gba::IBus* bus, bool skipBios = true) : CPU(skipBios){
+        CPU(IBus* bus, bool skipBios = true) : CPU(skipBios){
             this->bus = bus;
         };
         

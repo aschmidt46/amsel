@@ -6,6 +6,7 @@
 extern "C" {
 #include <armdisasm.h>
 }
+#include "../ibus.h"
 
 using namespace nds;
 
