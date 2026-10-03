@@ -9,6 +9,7 @@
 
 namespace gba{
 
+    template<typename T>
     class IBus;
 
     inline uint32_t sign_extend_n_32(uint32_t x, uint32_t bits) {
@@ -117,7 +118,7 @@ namespace gba{
         size_t remainingCycles = 0; // Extreme Vereinfachung, muss ich ändern
 
 
-        IBus* bus;
+        IBus<InstructionInfo>* bus;
 
         bool shouldFlush = false;
             
@@ -183,7 +184,7 @@ namespace gba{
         
         public:
         CPU(bool skipBios = true);
-        CPU(IBus* bus, bool skipBios = true) : CPU(skipBios){
+        CPU(IBus<InstructionInfo>* bus, bool skipBios = true) : CPU(skipBios){
             this->bus = bus;
         };
         

@@ -1,13 +1,15 @@
 #pragma once
-#include "../gba/ibus.h"
 #include "arm/arm946e-s.h"
+#include "gba/ibus.h"
 
 namespace nds{
     class SharedBus;
 
-    class Bus9 : public gba::IBus{
+    class Bus9 : public gba::IBus<InstructionInfo>{
         SharedBus* sharedBus;
         CPU cpu;
+
+        size_t clocks = 0;
 
         public:
         Bus9(SharedBus* sb) : sharedBus(sb){};
@@ -18,6 +20,11 @@ namespace nds{
         void writeWord(Word addr, Word val);
         Word readWord(Word addr);
 
+        void addCPUCycles(size_t num);
+
+        size_t getClocks();
+        void timerOverflowed(int index);
+        
         Word getIE();
         Word getIF();
         bool hasIME();

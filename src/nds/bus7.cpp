@@ -30,6 +30,20 @@ Word nds::Bus7::readWord(Word addr)
     return Word();
 }
 
+void nds::Bus7::addCPUCycles(size_t num)
+{
+    cpu.addCycles(num);
+}
+
+size_t nds::Bus7::getClocks()
+{
+    return clocks;
+}
+
+void nds::Bus7::timerOverflowed(int index)
+{
+}
+
 Word nds::Bus7::getIE()
 {
     return sharedBus->getIE();

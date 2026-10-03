@@ -3,7 +3,7 @@
 #include <iostream>
 #include <bit>
 #include <algorithm>
-#include "../ibus.h"
+#include "gba/ibus.h"
 
 using namespace nds;
 

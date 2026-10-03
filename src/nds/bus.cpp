@@ -2,6 +2,22 @@
 
 using namespace nds;
 
+void nds::SharedBus::PPUEnteredHBlank()
+{
+}
+
+void nds::SharedBus::PPUEnteredVBlank()
+{
+}
+
+void nds::SharedBus::PPULeftHBlank()
+{
+}
+
+void nds::SharedBus::PPULeftVBlank()
+{
+}
+
 void SharedBus::init()
 {
     bus7 = std::make_shared<Bus7>(this);
@@ -10,7 +26,7 @@ void SharedBus::init()
 
 void nds::SharedBus::setIF(int bit, bool val)
 {
-    IF = (IF & ~(1ui32 << bit)) | (val << bit);
+    IF = (IF & ~(1u << bit)) | (val << bit);
 }
 
 Word nds::SharedBus::getIE()

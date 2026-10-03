@@ -10,7 +10,7 @@
 extern "C" {
 #include <armdisasm.h>
 }
-#include "../ibus.h"
+#include "gba/ibus.h"
 
 using namespace nds;
 /*

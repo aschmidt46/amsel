@@ -1,6 +1,6 @@
 #include "arm946e-s.h"
 #include <iostream>
-#include "../ibus.h"
+#include "gba/ibus.h"
 
 using namespace nds;
 

@@ -19,9 +19,10 @@ namespace gba{
         EVENT_TimerOverflow,
     };
 
+    template<typename T>
     struct Event{
         size_t timePoint;
-        EventType type;
+        T type;
 
         union{
 
@@ -29,24 +30,25 @@ namespace gba{
 
         } args;
 
-        auto operator<=>(const Event &b) const{
+        auto operator<=>(const Event<T> &b) const{
             return b.timePoint <=> timePoint;
         };
     };
 
+    template<typename T, typename B>
     class Scheduler{
-        std::priority_queue<Event> heap;
+        std::priority_queue<Event<T>> heap;
         size_t time = 0;
-        std::optional<Event> next = {};
-        Bus* bus;
+        std::optional<Event<T>> next = {};
+        B* bus;
 
         void handleEvent();
 
         public:
-        Scheduler(Bus* bus) : bus(bus){};
+        Scheduler(B* bus) : bus(bus){};
         void init();
         bool cpuBlocked = false;
-        void scheduleEvent(Event e);
+        void scheduleEvent(Event<T> e);
         void clock();
     };
 }

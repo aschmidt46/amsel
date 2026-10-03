@@ -1,17 +1,17 @@
 #pragma once
 
-#include "../bus_types.h"
+#include "../../bus_types.h"
 #include <utility>
 #include <vector>
 #include <memory>
 #include <array>
 
 #include "ppu_registers.h"
-#include "../../gba/register/general_purpose.h"
-#include "../arm/arm946e-s.h"
+#include "../../../gba/register/general_purpose.h"
+#include "../../arm/arm946e-s.h"
 
 namespace nds{
-    class SharedBus;
+    class LCD;
     class PPU{
         std::vector<uint32_t> framebuffer;
 
@@ -45,7 +45,7 @@ namespace nds{
         PIXEL_T darken(const PIXEL_T &p);
         
 
-        std::weak_ptr<SharedBus> bus;
+        LCD* lcd;
 
         // Register
         LCDCONTROL_T LCDCONTROL = {.raw = 0}; // aka dispcnt
@@ -124,10 +124,9 @@ namespace nds{
         
         public:
         PPU() = default;
-        PPU(std::weak_ptr<SharedBus> bptr) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), bus(bptr){};
+        PPU(LCD* lcd) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), lcd(lcd){};
         uint32_t* accessFramebuffer();
 
-        void clock();
         void renderScanline();
         
         void onHBlank();

@@ -6,7 +6,6 @@
 #include <iostream>
 #include <array>
 #include <utility>
-#include "../bus.h"
 
 using namespace nds;
 
@@ -123,10 +122,6 @@ uint32_t *PPU::accessFramebuffer()
     return framebuffer.data();
 }
 
-void PPU::clock()
-{
-}
-
 void PPU::renderScanline()
 {
     currentCycle = 0;
@@ -185,7 +180,6 @@ void PPU::renderScanline()
 
 void PPU::onHBlank()
 {
-    LCDSTATUS.state.hBlankFlag = 1;
     if(currentScanline < 160){
         // dmx, dmy increment affine bg
         for(int i = 0; i < 2; i++){
@@ -195,23 +189,11 @@ void PPU::onHBlank()
             BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
             BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
         }
-
-        if(LCDSTATUS.state.hBlankIE){
-            bus.lock()->setIF(1, true);
-        }
-        bus.lock()->PPUEnteredHBlank();
     }
 }
 
 void PPU::onVBlank()
 {
-    // Vblank
-    LCDSTATUS.state.vBlankFlag = 1;
-    if(LCDSTATUS.state.vBlankIE){
-        // std::cout << "Vblank IRQ" << std::endl;
-        bus.lock()->setIF(0, true);
-    }
-    hasframe = true;
     for(int i = 0; i < 2; i++){
         // 20.8 bit signed
         Word refX = 0x0FFFFFFF & ((Word(BG_DXH[i]) << 16) | BG_DXL[i]);
@@ -223,7 +205,6 @@ void PPU::onVBlank()
         BG_REFERENCE_LINE_X[i] = BG_REFERENCE_X[i];
         BG_REFERENCE_LINE_Y[i] = BG_REFERENCE_Y[i];
     }
-    bus.lock()->PPUEnteredVBlank();
 }
 
 void PPU::increment()
@@ -235,7 +216,6 @@ void PPU::increment()
     mosaicObjXCurrent = 0;
     mosaicObjXCounter = 0;
 
-    LCDSTATUS.state.hBlankFlag = 0;
     currentScanline++;
 
     if(mosaicBgYCounter == 0){
@@ -256,22 +236,7 @@ void PPU::increment()
         mosaicBgYCounter = 0;
         mosaicObjYCurrent = 0;
         mosaicObjYCounter = 0;
-
-        LCDSTATUS.state.vCounterFlag = 0;
-        if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
-            bus.lock()->setIF(2, true);
-            LCDSTATUS.state.vCounterFlag = 1;
-        }
     }
-    else if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
-        bus.lock()->setIF(2, true);
-        LCDSTATUS.state.vCounterFlag = 1;
-    }
-    if(currentScanline >= 227){
-        LCDSTATUS.state.vBlankFlag = 0;
-        bus.lock()->PPULeftVBlank();
-    }
-    bus.lock()->PPULeftHBlank();
 }
 
 Word PPU::getVCount(){

@@ -13,13 +13,14 @@ namespace gba{
         Word prefetchedOpcode = 0;
     };
 
+    template<typename Info>
     class IBus{
         public:
         OpenBusData openBus = {};
-        std::vector<InstructionInfo> armCache;
-        std::vector<InstructionInfo> thumbCache;
-        std::vector<InstructionInfo> armCacheBIOS;
-        std::vector<InstructionInfo> thumbCacheBIOS;
+        std::vector<Info> armCache;
+        std::vector<Info> thumbCache;
+        std::vector<Info> armCacheBIOS;
+        std::vector<Info> thumbCacheBIOS;
         virtual void writeByte(Word addr, Byte val) = 0;
         virtual Byte readByte(Word addr) = 0;
         virtual void writeHalfWord(Word addr, HalfWord val) = 0;

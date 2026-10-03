@@ -1,8 +1,10 @@
 #include "scheduler.h"
 #include "bus.h"
 #include <iostream>
+#include <limits>
 
-void gba::Scheduler::handleEvent()
+template<>
+void gba::Scheduler<gba::EventType,gba::Bus>::handleEvent()
 {
     auto &e = next.value();
     switch(e.type){
@@ -48,7 +50,8 @@ void gba::Scheduler::handleEvent()
     // std::cout << "dealt.\n";
 }
 
-void gba::Scheduler::init()
+template<>
+void gba::Scheduler<gba::EventType, gba::Bus>::init()
 {
     heap.push({4, EVENT_APU_PSG});
     heap.push({0x10000, EVENT_APU_LengthCounters});
@@ -58,14 +61,16 @@ void gba::Scheduler::init()
     heap.push({197120, EVENT_PPU_VBLANK});
 }
 
-void gba::Scheduler::scheduleEvent(Event e)
+template<typename T, typename B>
+void gba::Scheduler<T,B>::scheduleEvent(Event<T> e)
 {
     e.timePoint += time;
     heap.push(e);
     // std::cout << "scheduled\n";
 }
 
-void gba::Scheduler::clock()
+template<typename T, typename B>
+void gba::Scheduler<T,B>::clock()
 {
     cpuBlocked = false;
     bool tryAgain = false;
@@ -83,3 +88,5 @@ void gba::Scheduler::clock()
     } while (tryAgain);
     time++;
 }
+
+template class gba::Scheduler<gba::EventType, gba::Bus>;

@@ -713,7 +713,7 @@ gba::Bus::Bus() : cpu(false), apu(nullptr), IME(0x04000208), waitCNT(0x04000204)
 }
 
 void gba::Bus::init(bool skipBios, bool rtc) {
-    scheduler = std::make_unique<Scheduler>(this);
+    scheduler = std::make_unique<Scheduler<EventType, Bus>>(this);
     scheduler->init();
     for(int i = 0; i < 4; i++){
         timers[i] = Timer(i, this);

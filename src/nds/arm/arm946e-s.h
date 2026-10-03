@@ -7,9 +7,14 @@
 #include "arm946e-s_types.h"
 #include "cp15.h"
 
+
+namespace gba{
+    template<typename T>
+    class IBus;
+}
+
 namespace nds{
 
-    class IBus;
 
     inline uint32_t sign_extend_n_32(uint32_t x, uint32_t bits) {
         uint32_t m = 1u << (bits - 1);
@@ -93,7 +98,7 @@ namespace nds{
         size_t remainingCycles = 0; // Extreme Vereinfachung, muss ich ändern
 
 
-        IBus* bus;
+        gba::IBus<InstructionInfo>* bus;
 
         bool shouldFlush = false;
             
@@ -168,7 +173,7 @@ namespace nds{
         
         public:
         CPU(bool skipBios = true);
-        CPU(IBus* bus, bool skipBios = true) : CPU(skipBios){
+        CPU(gba::IBus<InstructionInfo>* bus, bool skipBios = true) : CPU(skipBios){
             this->bus = bus;
         };
         

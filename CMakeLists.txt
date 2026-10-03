@@ -40,6 +40,7 @@ option(FEATURE_TEST_SUITE "GBA Tests" OFF)
 option(FEATURE_NES "NES-Core" ON)
 option(FEATURE_CGB "CGB-Core" ON)
 option(FEATURE_GBA "GBA-Core" ON)
+option(FEATURE_NDS "NDS-Core" ON)
 
 option(PROFILE_MODE "Run Emulation as fast as possible" OFF)
 
@@ -129,6 +130,11 @@ endif()
 if(FEATURE_GBA)
 add_compile_definitions(BUILD_GBA)
 include(${CMAKE_SOURCE_DIR}/cmake/features/gba.cmake)
+endif()
+
+if(FEATURE_NDS)
+add_compile_definitions(BUILD_NDS)
+include(${CMAKE_SOURCE_DIR}/cmake/features/nds.cmake)
 endif()
 
 

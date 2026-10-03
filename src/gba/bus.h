@@ -26,7 +26,7 @@ enum BackupType{
 };
 
 namespace gba{
-    class Bus final : public IBus, virtual public std::enable_shared_from_this<Bus>{
+    class Bus final : public IBus<InstructionInfo>, virtual public std::enable_shared_from_this<Bus>{
 
         bool missingBios = false;
 
@@ -34,7 +34,7 @@ namespace gba{
         PPU ppu;
         CPU cpu;
         APU apu;
-        std::unique_ptr<Scheduler> scheduler = 0;
+        std::unique_ptr<Scheduler<EventType, Bus>> scheduler = 0;
         std::array<Timer, 4> timers; // 0,1,2,3
         std::array<DMAChannel, 4> dma; // 0,1,2,3
         std::vector<Byte> bios;
