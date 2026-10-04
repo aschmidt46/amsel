@@ -30,6 +30,16 @@ void nds::SharedBus::setIF(int bit, bool val)
     bus9->setIF(bit, val);
 }
 
+void nds::SharedBus::setIFSingleBus(int bit, bool val, bool nds9)
+{
+    if(nds9){
+        bus9->setIF(bit, val);
+    }
+    else{
+        bus7->setIF(bit, val);
+    }
+}
+
 void nds::SharedBus::setHalt()
 {
     isHalted = true;

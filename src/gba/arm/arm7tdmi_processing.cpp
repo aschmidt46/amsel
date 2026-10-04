@@ -172,9 +172,9 @@ bool gba::CPU::pollInterrupts()
 {
     //interrupt disable nicht gesetzt             ime gesetzt
     if(!_CPSR.state.I && bus->hasIME()){
-        HalfWord IE = this->bus->getIE();
-        HalfWord IF = this->bus->getIF();
-        return (IE & 0x3FFF) & (IF & 0x3FFF);
+        Word IE = this->bus->getIE();
+        Word IF = this->bus->getIF();
+        return IE & IF;
     }
     return false;
 }

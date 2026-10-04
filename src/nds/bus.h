@@ -5,6 +5,7 @@
 #include "gba/scheduler.h"
 #include "lcd/lcd.h"
 #include "scheduler.h"
+#include "peripheral/ipc.h"
 
 namespace nds{
 
@@ -14,6 +15,7 @@ namespace nds{
         SharedBus(){};
         std::shared_ptr<Bus7> bus7;
         std::shared_ptr<Bus9> bus9;
+        std::shared_ptr<IPC> ipc;
         std::shared_ptr<LCD> lcd;
         std::shared_ptr<gba::Scheduler<EventType, SharedBus>> scheduler;
 
@@ -30,6 +32,7 @@ namespace nds{
 
         void init();
         void setIF(int bit, bool val);
+        void setIFSingleBus(int bit, bool val, bool nds9);
 
         void setHalt();
 

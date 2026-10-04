@@ -92,11 +92,11 @@ std::pair<float, float> gba::Bus::getSample()
 
 Word Bus::getIE()
 {
-    return IE;
+    return IE & 0x3FFF;
 }
 
 Word Bus::getIF(){
-    return IF;
+    return IF & 0x3FFF;
 }
 
 bool Bus::hasIME(){

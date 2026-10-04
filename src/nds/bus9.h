@@ -22,6 +22,8 @@ namespace nds{
         Bus9(SharedBus* sb) : sharedBus(sb), IME(0x4000208){};
         void writeByte(Word addr, Byte val);
         Byte readByte(Word addr);
+        void writeByteFromWide(Word addr, Byte val);
+        Byte readByteFromWide(Word addr);
         void writeHalfWord(Word addr, HalfWord val);
         HalfWord readHalfWord(Word addr);
         void writeWord(Word addr, Word val);
