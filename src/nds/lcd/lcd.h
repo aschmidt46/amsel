@@ -7,16 +7,18 @@ namespace nds{
     class LCD{
 
         SharedBus* bus;
-
+        
         PPU engineA;
         PPU engineB;
-
+        
         LCDSTATUS_T DISPSTAT = {.raw = 0}; // engine A + B
         bool hasframe = false;
         
         public:
+        std::vector<uint32_t> framebuffer;
         Word vCount = 0; // engine A + B
-        LCD(SharedBus* bus) : bus(bus){};
+        LCD(SharedBus* bus) : bus(bus), framebuffer(256*192*2){};
+        void init();
         void renderScanline();
         
         void onHBlank();
@@ -26,5 +28,12 @@ namespace nds{
         Word getVCount();
 
         bool hasFrame();
+
+        Byte readRegister(Word addr);
+        void writeRegister(Word addr, Byte val);
+        Byte readMemory(Word addr);
+        void writeMemory(Word addr, Byte val);
+
+        uint32_t* accessFramebuffer();
     };
 }

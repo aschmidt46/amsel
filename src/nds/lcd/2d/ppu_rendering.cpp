@@ -6,6 +6,7 @@
 #include <iostream>
 #include <array>
 #include <utility>
+#include "../lcd.h"
 
 using namespace nds;
 
@@ -119,13 +120,13 @@ bool PPU::hasTargetB(int index){
 
 uint32_t *PPU::accessFramebuffer()
 {
-    return framebuffer.data();
+    return lcd->framebuffer.data() + framebufferOffset*256*192;
 }
 
 void PPU::renderScanline()
 {
     currentCycle = 0;
-    if(currentScanline < 160){
+    if(currentScanline < 192){
         detectSpritesOnScanline();
         PIXEL_T (PPU::*fun)() = nullptr;
         switch(LCDCONTROL.state.bgMode){
@@ -148,11 +149,12 @@ void PPU::renderScanline()
                 fun = &PPU::drawPixelMode5;
                 break;
         }
-        for(; currentCycle < 240; currentCycle++){
+        fun = &PPU::drawPixelMode3;
+        for(; currentCycle < 256; currentCycle++){
 
             layerOrderSize = 0;
             auto output = (this->*fun)();
-            setPixel(currentCycle, currentScanline, output.red, output.green, output.blue);
+            setPixel(currentCycle, currentScanline + 192 * framebufferOffset, output.red, output.green, output.blue);
             
             if(currentCycle == debugX && currentScanline == debugY){
                 debugPixel = output;
@@ -180,7 +182,7 @@ void PPU::renderScanline()
 
 void PPU::onHBlank()
 {
-    if(currentScanline < 160){
+    if(currentScanline < 192){
         // dmx, dmy increment affine bg
         for(int i = 0; i < 2; i++){
             BG_REFERENCE_X[i] += sign_extend_n_32(BG_PB[i], 16);
@@ -229,7 +231,7 @@ void PPU::increment()
     }
     mosaicObjYCounter--;
 
-    if(currentScanline >= 228){
+    if(currentScanline >= 263){
         currentScanline = 0;
 
         mosaicBgYCurrent = 0;
@@ -250,8 +252,10 @@ constexpr std::array<std::array<std::pair<size_t, size_t>, 4>, 3> spriteShapeSiz
     {std::pair{8,16}, std::pair{8,32}, std::pair{16,32}, std::pair{32,64}}
 }};
 
-std::pair<size_t, size_t> getCenter(int x, int y, int sizeX, int sizeY){
-    return std::pair<size_t, size_t>{x + (sizeX / 2), y + (sizeY / 2)};
+namespace nds{
+    std::pair<size_t, size_t> getCenter(int x, int y, int sizeX, int sizeY){
+        return std::pair<size_t, size_t>{x + (sizeX / 2), y + (sizeY / 2)};
+    }
 }
 
 void PPU::detectSpritesOnScanline(){
@@ -273,7 +277,7 @@ void PPU::detectSpritesOnScanline(){
             extraSize = sizeY;
         }
         const int yEnd = current.attr0.state.yCoord + sizeY + extraSize;
-        if((yStart <= y && yEnd > y) || (yStart > 160 && (yEnd - 256) > y)){
+        if((yStart <= y && yEnd > y) || (yStart > 192 && (yEnd - 256) > y)){
             //push
             insertIntoSorted(oamAttribsCurrentLine, current, oamAttribsCurrentLineSize);
         }
@@ -299,8 +303,8 @@ bool PPU::spriteCollidesCurrentPixel(const OAMAttribs &current){
     const int xEnd = current.attr1.state.xCoord + sizeX + extraX;
     const int yEnd = current.attr0.state.yCoord + sizeY + extraY;
     return
-        ((yStart <= y && yEnd > y) || (yStart > 160 && (yEnd - 256) > y))
-        && ((xStart <= x && xEnd > x) || (xStart > 240 && (xEnd - 512) > x));
+        ((yStart <= y && yEnd > y) || (yStart > 192 && (yEnd - 256) > y))
+        && ((xStart <= x && xEnd > x) || (xStart > 256 && (xEnd - 512) > x));
 }
 
 void PPU::drawSprites(){
@@ -336,10 +340,10 @@ void PPU::drawSprites(){
             const bool bpp8 = sprite.attr0.state.colorMode;
             const Word tileOffset =  bpp8 ? 0x40 : 0x20;
             int spriteX = sprite.attr1.state.xCoord;
-            if(spriteX > 240)
+            if(spriteX > 256)
                 spriteX -= 512;
             int spriteY = sprite.attr0.state.yCoord;
-            if(spriteY > 160)
+            if(spriteY > 192)
                 spriteY -= 256;
             auto [sizeX, sizeY] = spriteShapeSizeTable[sprite.attr0.state.spriteShape][sprite.attr1.state.spriteSize];
             const Word sizeXHalf = sizeX / 2 - 1;
@@ -667,13 +671,13 @@ bool PPU::hasFrame() {
 
 void PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
 {
-    int index = (x + 240 * y);
+    int index = (x + 256 * y);
     #ifndef BUILD_LIBRETRO_CORE
     uint32_t col = (255 << 24) | (cb << 16) | (cg << 8) | (cr);
     #else
     uint32_t col = (255 << 24) | (cb) | (cg << 8) | (cr << 16);
     #endif
-    framebuffer[index] = col;
+    lcd->framebuffer[index] = col;
 }
 
 
@@ -758,9 +762,10 @@ PIXEL_T PPU::drawPixelMode2() {
 }
 
 PIXEL_T PPU::drawPixelMode3() {
-    const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
-    int index = currentCycle + 240 * pixelY;
-    HalfWord pixel = HalfWord(vRam[2 * index]) | (HalfWord(vRam[2 * index + 1]) << 8);
+    const int pixelY = currentScanline + framebufferOffset * 192;// = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
+    int index = currentCycle + 256 * pixelY;
+    // std::cout << "rendere lcdc\n";
+    HalfWord pixel = HalfWord(lcdc[2 * index]) | (HalfWord(lcdc[2 * index + 1]) << 8);
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
@@ -781,12 +786,12 @@ PIXEL_T PPU::drawPixelMode3() {
     if(actives.enableObj && LCDCONTROL.state.displayOBJ)
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
     
-    return setColorFromLayerOrder(actives);
+    return bg2;//setColorFromLayerOrder(actives);
 }
 
 PIXEL_T PPU::drawPixelMode4() {
     const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
-    int index = currentCycle + 240 * pixelY;
+    int index = currentCycle + 256 * pixelY;
     size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
     Byte paletteIndex = vRam[index + page];
     HalfWord pixel = HalfWord(paletteRam[2 * paletteIndex]) | (HalfWord(paletteRam[2 * paletteIndex + 1]) << 8);

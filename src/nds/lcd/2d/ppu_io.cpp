@@ -389,12 +389,17 @@ void PPU::writePPUMemory(Word addr, Byte value) {
         // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
             paletteRam[mod] = value;
     }
-    else if(addr >= 0x06000000 && addr < 0x07000000){
-        // auto relAddr = (addr - 0x06000000);
-        auto mod = addr % 0x20000;
-        if(mod >= 0x18000) mod -= 0x8000;
-        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
-            vRam[mod] = value;
+    // else if(addr >= 0x06000000 && addr < 0x07000000){
+    //     // auto relAddr = (addr - 0x06000000);
+    //     auto mod = addr % 0x20000;
+    //     if(mod >= 0x18000) mod -= 0x8000;
+    //     // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
+    //         vRam[mod] = value;
+    // }
+    else if(addr >= 0x06800000 && addr < 0x07000000){
+        addr -= 0x06800000;
+        auto mod = addr % 0xA4000;
+        lcdc[mod] = value;
     }
     else if(addr >= 0x07000000 && addr < 0x08000000){
         auto mod = (addr - 0x07000000) % 0x400;
@@ -411,13 +416,19 @@ Byte PPU::readPPUMemory(Word addr)
             return paletteRam[mod];
         // else return 0;
     }
-    else if(addr >= 0x06000000 && addr < 0x07000000){
-        // auto relAddr = (addr - 0x06000000);
-        auto mod = addr % 0x20000;
-        if(mod >= 0x18000) mod -= 0x8000;
-        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
-            return vRam[mod];
-        // else return 0;
+    
+    // else if(addr >= 0x06000000 && addr < 0x07000000){
+    //     // auto relAddr = (addr - 0x06000000);
+    //     auto mod = addr % 0x20000;
+    //     if(mod >= 0x18000) mod -= 0x8000;
+    //     // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
+    //         return vRam[mod];
+    //     // else return 0;
+    // }
+    else if(addr >= 0x06800000 && addr < 0x07000000){
+        addr -= 0x06800000;
+        auto mod = addr % 0xA4000;
+        return lcdc[mod];
     }
     else if(addr >= 0x07000000 && addr < 0x08000000){
         auto mod = (addr - 0x07000000) % 0x400;

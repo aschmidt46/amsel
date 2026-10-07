@@ -437,6 +437,9 @@ bool CPU::executeInstruction()
     if(this->pipeline[0].type != PipelineEmpty){
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
+        // outs << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code) << "\n";
+        // outs.flush();
+        if(info.code == 0) bus->setHalt();
 
         // auto iInfo = info;
 
@@ -747,13 +750,13 @@ CPU::CPU(bool skipBios)
 
     _R15_PC = 0xFFFF0000;
     
-    // if(skipBios){
-    //     _R13_SP = 0x03007F00;
-    //     _R13_SVC = 0x03007FE0;
-    //     _R13_irq = 0x03007FA0;
-    //     _R14_L_R = 0x08000000; 
-    //     _R15_PC = 0x08000000;
-    // }
+    if(skipBios){
+        _R13_SP = 0x3002F7C;
+        _R13_SVC = 0x3003FC0;
+        _R13_irq = 0x3003F80;
+        // _R14_L_R = 0x08000000; 
+        // _R15_PC = 0x08000000;
+    }
 
 }
 

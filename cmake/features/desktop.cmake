@@ -20,6 +20,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(imgui)
   
 set(RTAUDIO_BUILD_STATIC_LIBS TRUE)
+set(RTAUDIO_BUILD_TESTING FALSE)
 FetchContent_Declare(
   rtaudio
   GIT_REPOSITORY  https://github.com/thestk/rtaudio.git

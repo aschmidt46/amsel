@@ -13,11 +13,11 @@
 namespace nds{
     class LCD;
     class PPU{
-        std::vector<uint32_t> framebuffer;
 
         // Vram
         std::vector<Byte> paletteRam;
         std::vector<Byte> vRam;
+        std::vector<Byte> lcdc;
         std::vector<Byte> oamAttribs;
         bool spriteAlphaOverride = false;
         // Aktuelle Sprites
@@ -121,11 +121,15 @@ namespace nds{
                     std::unreachable();
             }
         }
+
         
         public:
         PPU() = default;
-        PPU(LCD* lcd) : framebuffer(240*160, 0), paletteRam(0x400, 0), vRam(0x18000, 0), oamAttribs(0x400, 0), lcd(lcd){};
+        PPU(LCD* lcd, Word fOffset) : paletteRam(0x400, 0), vRam(0x18000, 0), lcdc(0xA4000, 0), oamAttribs(0x400, 0), lcd(lcd), framebufferOffset(fOffset){};
         uint32_t* accessFramebuffer();
+
+        // Offset in großen Framebuffer, 0 = oberer Bildschirm, 1 = unterer
+        Word framebufferOffset = 0;
 
         void renderScanline();
         

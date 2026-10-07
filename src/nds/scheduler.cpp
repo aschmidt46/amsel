@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "bus.h"
+#include <iostream>
 
 using namespace nds;
 
@@ -26,17 +27,18 @@ void gba::Scheduler<nds::EventType,nds::SharedBus>::handleEvent()
             return;
         case NDSEVENT_PPU_HBLANK:
             bus->lcd->onHBlank();
-            scheduleEvent({226, NDSEVENT_PPU_IncrementScanline});
+            scheduleEvent({2130, NDSEVENT_PPU_IncrementScanline});
             return;
         case NDSEVENT_PPU_VBLANK:
             bus->lcd->onVBlank();
-            scheduleEvent({280896, NDSEVENT_PPU_VBLANK}); // 1232 cycles * 228 scanlines
+            // std::cout << "lcd blank\n";
+            scheduleEvent({560190, NDSEVENT_PPU_VBLANK}); // 1232 cycles * 228 scanlines
             return;
         case NDSEVENT_PPU_IncrementScanline:
             bus->lcd->increment();
-            if(bus->lcd->vCount < 160)
+            if(bus->lcd->vCount < 192) //nee
                 bus->lcd->renderScanline();
-            scheduleEvent({1006, NDSEVENT_PPU_HBLANK});
+            scheduleEvent({1536, NDSEVENT_PPU_HBLANK});
             return;
     }
     // std::cout << "dealt.\n";
@@ -45,8 +47,36 @@ void gba::Scheduler<nds::EventType,nds::SharedBus>::handleEvent()
 template<>
 void gba::Scheduler<nds::EventType, nds::SharedBus>::init()
 {
-    heap.push({1006, NDSEVENT_PPU_HBLANK});
-    heap.push({197120, NDSEVENT_PPU_VBLANK});
+    heap.push({1536, NDSEVENT_PPU_HBLANK});
+    heap.push({545280, NDSEVENT_PPU_VBLANK});
+}
+
+template<typename T, typename B>
+void gba::Scheduler<T,B>::scheduleEvent(Event<T> e)
+{
+    e.timePoint += time;
+    heap.push(e);
+    // std::cout << "scheduled\n";
+}
+
+template<typename T, typename B>
+void gba::Scheduler<T,B>::clock()
+{
+    cpuBlocked = false;
+    bool tryAgain = false;
+    do{
+        tryAgain = false;
+        if(next.has_value() && time >= next.value().timePoint){
+            handleEvent();
+            heap.pop();
+            next = {};
+            tryAgain = true;
+        }
+        if(!next.has_value() && !heap.empty()){
+            next = heap.top();
+        }
+    } while (tryAgain);
+    time++;
 }
 
 template class gba::Scheduler<nds::EventType, nds::SharedBus>;

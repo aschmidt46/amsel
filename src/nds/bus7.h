@@ -8,20 +8,22 @@
 namespace nds{
     class SharedBus;
 
-    class Bus7 : public gba::IBus<nds::InstructionInfo>{
+    class Bus7 : public gba::IBus<gba::InstructionInfo>{
         SharedBus* sharedBus;
-        gba::CPU cpu;
-
+        
         size_t clocks = 0;
-
+        
         std::vector<Byte> bios7;
-
+        std::vector<Byte> arm7WRAM;
+        
         Word IE = 0;
         Word IF = 0;
         gba::GeneralPurpose32 IME;
-
+        
         public:
-        Bus7(SharedBus* sb) : sharedBus(sb), IME(0x4000208){};
+        gba::CPU cpu;
+        Bus7(SharedBus* sb) : sharedBus(sb), arm7WRAM(0x10000, 0), IME(0x4000208){};
+        void init();
         void writeByte(Word addr, Byte val);
         Byte readByte(Word addr);
         void writeByteFromWide(Word addr, Byte val);
@@ -30,6 +32,8 @@ namespace nds{
         HalfWord readHalfWord(Word addr);
         void writeWord(Word addr, Word val);
         Word readWord(Word addr);
+
+        void clock();
 
         void addCPUCycles(size_t num);
 

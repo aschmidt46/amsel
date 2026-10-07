@@ -15,7 +15,7 @@ namespace nds{
     class NDS{
         double audioTime = 0;
         const double sampleRate = 20000;
-        const double audioTimePerGBAClock = 1.0 / 16777918.08;
+        const double audioTimePerGBAClock = 1.0 / (16777918.08 * 2);
         const double audioTimePerSystemSample = 1.0 / sampleRate;
         double audioSampleL = 0;
         double audioSampleR = 0;
@@ -47,7 +47,6 @@ namespace nds{
         void press(int i);
         void release(int i);
 
-        // void loadBios(const std::vector<uint8_t> &content);
 
         void setDebug(bool to);
         void setHalt(bool to);

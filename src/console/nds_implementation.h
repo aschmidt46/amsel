@@ -8,6 +8,7 @@ class NDSImplementation : public Console{
     void setAddressOf(int i, int to);
     static std::vector<SystemOption> options;
     nds::StartInfo constructStartInfo();
+    bool showExtendedDebug = false;
     public:
     std::string getConsoleName() override;
     NDSImplementation() = delete;

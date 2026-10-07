@@ -101,10 +101,11 @@ namespace nds{
         gba::IBus<InstructionInfo>* bus;
 
         bool shouldFlush = false;
+        // std::ofstream outs;
             
         public:
 
-        CP15 cp15;
+        CP15* cp15;
 
         bool lastTransactionWasRead = true;
         Word lastTransactionAddress = 0;
@@ -173,8 +174,10 @@ namespace nds{
         
         public:
         CPU(bool skipBios = true);
-        CPU(gba::IBus<InstructionInfo>* bus, bool skipBios = true) : CPU(skipBios){
+        CPU(gba::IBus<InstructionInfo>* bus, CP15* cp15) : CPU(true){
             this->bus = bus;
+            this->cp15 = cp15;
+            // this->outs = std::ofstream("arm9log.txt");
         };
         
         // führt die nächste Instruktion aus, falls das möglich ist
@@ -185,6 +188,15 @@ namespace nds{
         Word getPC() const{
             return _R15_PC;
         };
+        void setPC(Word val){
+            _R15_PC = val;
+        }
+        void setLR(Word val){
+            _R14_L_R = val;
+        }
+        void setIP(Word val){
+            _R12 = val;
+        }
 
         void clock();
         bool pollInterrupts();

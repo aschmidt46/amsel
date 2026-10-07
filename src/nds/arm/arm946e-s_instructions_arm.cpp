@@ -160,7 +160,7 @@ bool CPU::executeSoftwareInterrupt(Word instruction)
     (void)instruction;
     // bus->setHalt();
     _R14_SVC = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
-    *registerMap[mode()][R15] = 0xFFFF000F; //                                 <---------- NDS9 Exception Vector Basis ist FFFF0000
+    *registerMap[mode()][R15] = 0xFFFF0008; //                                 <---------- NDS9 Exception Vector Basis ist FFFF0000
     _SPSR_SVC.raw = *registerMap[mode()][CPSR];
     _CPSR.state.mode_bits = 19; // Supervisor
     _CPSR.state.I = 1; // IRQs ausschalten
@@ -194,6 +194,10 @@ bool CPU::executeCoProcDataTransfer(Word instruction)
 bool CPU::executeCoProcRegTransfer(Word instruction)
 {
     Word cpOpcode = (instruction >> 21) & 0b111;
+    if(cpOpcode != 0){
+        std::cout << "falscher Opcode CP15\n";
+        return false;
+    }
     bool armOpcode = ((instruction >> 20) & 1u) > 0;
     Word Cn = (instruction >> 16) & 0xF;
     Word Rd = (instruction >> 12) & 0xF;
@@ -203,7 +207,7 @@ bool CPU::executeCoProcRegTransfer(Word instruction)
 
     if(Pn == 15){
         if(armOpcode){ // MRC
-            Word res = cp15.MRC(cpOpcode, Cn, Cm);
+            Word res = cp15->MRC(Cn, Cm, CP);
             if(Rd == 15){
                 StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
                 *registerMap[mode()][CPSR] = (cpsr.raw & ~(0xFu << 28)) | (res & (0xFu << 28));
@@ -215,10 +219,10 @@ bool CPU::executeCoProcRegTransfer(Word instruction)
         }
         else{ // MCR
             if(Rd == 15){
-                cp15.MCR(cpOpcode, _R15_PC + 4, Cn, Cm);
+                cp15->MCR(_R15_PC + 4, Cn, Cm, CP);
             }
             else{
-                cp15.MCR(cpOpcode, *registerMap[mode()][Rd], Cn, Cm);
+                cp15->MCR(*registerMap[mode()][Rd], Cn, Cm, CP);
             }
             remainingCycles += 2; // was ist b??
         }
@@ -563,6 +567,8 @@ bool CPU::executePSRTransfer(Word instruction)
 
 bool CPU::executeSingleDataTransfer(Word instruction)
 {
+    // PLD??
+
     bool I = instruction & (1u << 25);
     bool P = instruction & (1u << 24);
     bool U = instruction & (1u << 23);

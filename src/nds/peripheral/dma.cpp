@@ -8,7 +8,7 @@ using namespace nds;
 
 constexpr std::array<Word, 4> srcMasks = {0x07FFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF};
 constexpr std::array<Word, 4> destMasks = {0x07FFFFFF, 0x07FFFFFF, 0x07FFFFFF, 0x0FFFFFFF};
-constexpr std::array<Word, 4> maxCountMasks = {0x3FFF, 0x3FFF, 0x3FFF, 0xFFFF};
+// constexpr std::array<Word, 4> maxCountMasks = {0x3FFF, 0x3FFF, 0x3FFF, 0xFFFF};
 
 template<typename ConcreteBus>
 void DMAChannel<ConcreteBus>::onWrite(Word addr, Byte val){

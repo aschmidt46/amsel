@@ -196,6 +196,9 @@ namespace gba{
         Word getPC() const{
             return _R15_PC;
         };
+        void setPC(Word val){
+            _R15_PC = val;
+        }
 
         void clock();
         bool pollInterrupts();

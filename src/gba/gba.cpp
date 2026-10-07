@@ -39,7 +39,9 @@ void gba::GBA::clockUntilSampleReady() {
 }
 
 bool gba::GBA::hasFrame(){
-    return bus->hasFrame();
+    if(!bus->isHalted() || bus->steps > 0)
+        return bus->hasFrame();
+    else return true;
 }
 
 bool gba::GBA::hasSample(){

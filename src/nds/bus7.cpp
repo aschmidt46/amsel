@@ -3,6 +3,11 @@
 
 using namespace nds;
 
+void nds::Bus7::init()
+{
+    new (&cpu) gba::CPU(this, false);
+}
+
 void nds::Bus7::writeByte(Word addr, Byte val)
 {
     writeByteFromWide(addr, val);
@@ -15,15 +20,62 @@ Byte nds::Bus7::readByte(Word addr)
 
 void nds::Bus7::writeByteFromWide(Word addr, Byte val)
 {
-    if(addr >= 0x4000180 && addr < 0x4000188){
+    if(addr >= 0x02000000 && addr < 0x03000000){
+        // main mem
+        sharedBus->writeByte(addr, val);
+    }
+    // Shared WRAM
+    if(addr >= 0x03000000 && addr < 0x03800000){
+        const auto [m, o] = sharedBus->wramAllocationNDS7[sharedBus->wramCNT];
+        addr -= 0x03000000;
+        if(m == 0){ // keine Allokation -> Mirrors von arm7WRAM
+            arm7WRAM[addr % 0x10000] = val;
+        }
+        else{
+            sharedBus->sharedWRAM[o + (addr % m)] = val;
+        }
+    }
+    else if(addr >= 0x03800000 && addr < 0x04000000){
+        // main mem
+        addr -= 0x03800000;
+        arm7WRAM[addr % 0x10000] = val;
+    }
+    else if(addr >= 0x4000180 && addr < 0x4000188){
         sharedBus->ipc->writeReg(addr, val, false);
     }
 }
 
 Byte nds::Bus7::readByteFromWide(Word addr)
 {
+    if(addr < 0x01000000){
+        return bios7[addr % bios7.size()];
+    }
+    if(addr >= 0x02000000 && addr < 0x03000000){
+        // main mem
+        return sharedBus->readByte(addr);
+    }
+    // Shared WRAM
+    if(addr >= 0x03000000 && addr < 0x03800000){
+        const auto [m, o] = sharedBus->wramAllocationNDS7[sharedBus->wramCNT];
+        addr -= 0x03000000;
+        if(m == 0){ // keine Allokation -> Mirrors von arm7WRAM
+            return arm7WRAM[addr % 0x10000];
+        }
+        else{
+            return sharedBus->sharedWRAM[o + (addr % m)];
+        }
+    }
+    if(addr >= 0x03800000 && addr < 0x04000000){
+        // main mem
+        addr -= 0x03800000;
+        return arm7WRAM[addr % 0x10000];
+    }
     if(addr >= 0x4000180 && addr < 0x4000188){
         return sharedBus->ipc->readReg(addr, false);
+    }
+
+    if(addr == 0x4000241){
+        return sharedBus->wramCNT;
     }
 
     return 0;
@@ -66,6 +118,11 @@ Word nds::Bus7::readWord(Word addr)
     const Word A3 = readByteFromWide(addr + 2);
     const Word A4 = readByteFromWide(addr + 3);
     return A1 | (A2 << 8) | (A3 << 16) | (A4 << 24);
+}
+
+void nds::Bus7::clock()
+{
+    cpu.clock();
 }
 
 void nds::Bus7::addCPUCycles(size_t num)

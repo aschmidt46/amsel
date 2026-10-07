@@ -16,6 +16,7 @@ namespace gba{
     template<typename Info>
     class IBus{
         public:
+        virtual ~IBus(){};
         OpenBusData openBus = {};
         std::vector<Info> armCache;
         std::vector<Info> thumbCache;

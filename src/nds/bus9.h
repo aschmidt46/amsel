@@ -8,18 +8,24 @@ namespace nds{
 
     class Bus9 : public gba::IBus<InstructionInfo>{
         SharedBus* sharedBus;
-        CPU cpu;
-
+        
         size_t clocks = 0;
-
+        
         std::vector<Byte> bios9;
-
+        std::vector<Byte> itcm;
+        std::vector<Byte> dtcm;
+        
         Word IE = 0;
         Word IF = 0;
         gba::GeneralPurpose32 IME;
-
         public:
-        Bus9(SharedBus* sb) : sharedBus(sb), IME(0x4000208){};
+        gba::GeneralPurpose16 KEYINPUT;
+        gba::GeneralPurpose16 KEYCNT;
+        
+        CPU cpu;
+        CP15 cp15;
+        Bus9(SharedBus* sb) : sharedBus(sb), itcm(0x8000, 0), dtcm(0x4000, 0), IME(0x4000208), KEYINPUT(0x04000130), KEYCNT(0x04000132){};
+        void init();
         void writeByte(Word addr, Byte val);
         Byte readByte(Word addr);
         void writeByteFromWide(Word addr, Byte val);
@@ -28,6 +34,15 @@ namespace nds{
         HalfWord readHalfWord(Word addr);
         void writeWord(Word addr, Word val);
         Word readWord(Word addr);
+
+        const std::vector<Byte> &getITCM() const{
+            return itcm;
+        };
+        const std::vector<Byte> &getDTCM() const{
+            return dtcm;
+        };
+
+        void clock();
 
         void addCPUCycles(size_t num);
 

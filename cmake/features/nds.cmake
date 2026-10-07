@@ -15,7 +15,7 @@ add_library(nds_dasm
 
 
 add_library(nds
-src/nds/bus.h src/nds/bus.cpp src/gba/ibus.h src/nds/bus_types.h
+src/nds/bus.h src/nds/bus.cpp src/gba/ibus.h src/nds/bus_types.h src/nds/bus_debug.cpp
 src/nds/nds.h src/nds/nds.cpp
 src/nds/bus7.h src/nds/bus7.cpp
 src/nds/bus9.h src/nds/bus9.cpp
@@ -37,7 +37,7 @@ src/gba/arm/arm7tdmi_instructions_thumb.cpp
 src/gba/arm/arm7tdmi_processing.cpp
 src/gba/arm/arm7tdmi_aux.cpp
 
-src/gba/scheduler.h src/gba/scheduler.cpp
+src/gba/scheduler.h
 src/nds/scheduler.h src/nds/scheduler.cpp
 
 src/nds/lcd/2d/ppu.h
@@ -51,6 +51,8 @@ src/nds/peripheral/dma.h
 src/nds/peripheral/dma.cpp
 src/nds/peripheral/timer.h
 src/nds/peripheral/timer.cpp
+src/nds/peripheral/ipc.h
+src/nds/peripheral/ipc.cpp
 
 src/console/console.h
 src/console/nds_implementation.h src/console/nds_implementation.cpp

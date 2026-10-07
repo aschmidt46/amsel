@@ -40,8 +40,7 @@ namespace nds{
             HalfWord hBlankIE : 1;
             HalfWord vCounterIE : 1;
             HalfWord Unused1 : 1;
-            HalfWord Unused2 : 1;
-            HalfWord vCountSetting : 8;
+            HalfWord vCountSetting : 9;
         } state;
         HalfWord raw;
     };

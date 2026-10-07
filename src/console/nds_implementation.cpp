@@ -292,6 +292,30 @@ uint8_t NDSImplementation::readCpuBus(uint64_t addr)
 
 void NDSImplementation::displayRegisters() {
     #ifdef BUILD_DESKTOP
+
+    if(ImGui::Button("Switch CPU")){
+        nds->bus->watchARM7 = !nds->bus->watchARM7;
+    }
+    ImGui::SameLine();
+    if(nds->bus->watchARM7){
+        ImGui::Text("NDS7");
+    }
+    else{
+        ImGui::Text("NDS9");
+    }
+
+    ImGui::SameLine();
+
+    if(ImGui::Button("Extended Debug")){
+        showExtendedDebug = !showExtendedDebug;
+    }
+
+    if(showExtendedDebug){
+        ImGui::Begin("Extended Debug", &showExtendedDebug, ImGuiWindowFlags_NoCollapse);
+        nds->bus->extendedDebugMenu();
+        ImGui::End();
+    }
+
     nds::CpuRegisterState state = nds->getRegs();
 
     ImGui::BeginTable("Register", 2);
