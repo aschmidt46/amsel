@@ -53,6 +53,8 @@ src/nds/peripheral/timer.h
 src/nds/peripheral/timer.cpp
 src/nds/peripheral/ipc.h
 src/nds/peripheral/ipc.cpp
+src/nds/peripheral/maths.h
+src/nds/peripheral/maths.cpp
 
 src/console/console.h
 src/console/nds_implementation.h src/console/nds_implementation.cpp

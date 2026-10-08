@@ -25,3 +25,6 @@ README-deploy.md
 .cache/
 out/
 CMakeSettings.json
+BATTERY/
+NO$GBA.EXE
+NO$GBA.INP
