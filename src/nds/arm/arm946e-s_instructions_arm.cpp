@@ -3,6 +3,7 @@
 #include <iostream>
 #include <bit>
 #include <algorithm>
+#include <limits>
 #include "gba/ibus.h"
 #include "framework/stringlib.h"
 
@@ -194,6 +195,8 @@ bool CPU::executeSoftwareInterrupt(Word instruction)
 void CPU::executeHardwareInterrupt(){
     _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 0);
     _R15_PC = 0xFFFF0018; // BIOS Interrupt Vector //                         <---------- NDS9 Exception Vector Basis ist FFFF0000
+    // std::cout << getDisassembly((bus->readWord(_R15_PC))) << ", IRQ vector address disassembly\n";
+    // bus->setHalt();
     _SPSR_irq.raw = *registerMap[mode()][CPSR];
     _CPSR.state.mode_bits = 18; // IRQ
     _CPSR.state.I = 1; // IRQs ausschalten
@@ -223,9 +226,17 @@ bool CPU::executeCoProcRegTransfer(Word instruction)
     bool armOpcode = ((instruction >> 20) & 1u) > 0;
     Word Cn = (instruction >> 16) & 0xF;
     Word Rd = (instruction >> 12) & 0xF;
-    Word Pn = (instruction >> 18) & 0xF;
+    Word Pn = (instruction >> 8) & 0xF;
     Word CP = (instruction >> 5) & 0b111;
     Word Cm = instruction & 0xF;
+
+    // std::cout << "Coproc Reg Transfer mit: \n";;
+    // std::cout << "Cn: " << Cn << "\n";
+    // std::cout << "Cm: " << Cm << "\n";
+    // std::cout << "cp: " << CP << "\n";
+    // std::cout << "Coprozessor: " << Pn << "\n";
+    // if(armOpcode) std::cout << "MRC\n";
+    // else std::cout << "MCR\n"; 
 
     if(Pn == 15){
         if(armOpcode){ // MRC

@@ -1,4 +1,5 @@
 #include "cp15.h"
+#include <iostream>
 
 using namespace nds;
 

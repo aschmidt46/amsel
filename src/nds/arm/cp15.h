@@ -78,8 +78,8 @@ namespace nds{
         Word protectionUnitAndMirror[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
         // TCM
-        TCM_SIZE_T dtcmSize;
-        TCM_SIZE_T itcmSize;
+        TCM_SIZE_T dtcmSize = {.raw = 0};
+        TCM_SIZE_T itcmSize = {.raw = 0};
 
         Word processID = 0;
         Word traceProcessID = 0;

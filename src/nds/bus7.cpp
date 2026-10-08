@@ -43,6 +43,35 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     else if(addr >= 0x4000180 && addr < 0x4000188){
         sharedBus->ipc->writeReg(addr, val, false);
     }
+
+    // Interrupt handling
+    else if(addr >= 0x04000208 && addr < 0x0400020C){
+        return IME.OnWriteByte(addr, val);
+    }
+    else if(addr == 0x04000210){
+        IE = (IE & 0xFFFFFF00) | val;
+    }
+    else if(addr == 0x04000211){//!!
+        IE = (IE & 0xFFFF00FF) | (Word(val) << 8);
+    }
+    else if(addr == 0x04000212){//!!
+        IE = (IE & 0xFF00FFFF) | (Word(val) << 16);
+    }
+    else if(addr == 0x04000213){//!!
+        IE = (IE & 0x00FFFFFF) | (Word(val) << 24);
+    }
+    else if(addr == 0x04000214){
+        IF = IF & ~Word(val);
+    }
+    else if(addr == 0x04000215){
+        IF = IF & ~(Word(val) << 8);
+    }
+    else if(addr == 0x04000216){
+        IF = IF & ~(Word(val) << 16);
+    }
+    else if(addr == 0x04000217){
+        IF = IF & ~(Word(val) << 24);
+    }
 }
 
 Byte nds::Bus7::readByteFromWide(Word addr)
@@ -72,6 +101,35 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
     if(addr >= 0x4000180 && addr < 0x4000188){
         return sharedBus->ipc->readReg(addr, false);
+    }
+
+    //Interrupt Handling
+    if(addr >= 0x04000208 && addr < 0x0400020C){
+        return IME.OnReadByte(addr);
+    }
+    if(addr == 0x04000210){
+        return IE;
+    }
+    if(addr == 0x04000211){//!!
+        return IE >> 8;
+    }
+    if(addr == 0x04000212){//!!
+        return IE >> 16;
+    }
+    if(addr == 0x04000213){//!!
+        return IE >> 24;
+    }
+    if(addr == 0x04000214){
+        return IF;
+    }
+    if(addr == 0x04000215){
+        return IF >> 8;
+    }
+    if(addr == 0x04000216){
+        return IF >> 16;
+    }
+    if(addr == 0x04000217){
+        return IF >> 24;
     }
 
     if(addr == 0x4000241){

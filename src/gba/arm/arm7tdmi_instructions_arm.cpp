@@ -215,6 +215,9 @@ bool gba::CPU::executeCoProcDataTransfer(Word instruction)
 bool gba::CPU::executeCoProcRegTransfer(Word instruction)
 {
     std::cout << "Coprozessor-Registertransfer aufgerufen!" << instruction << std::endl;
+    Word Pn = (instruction >> 8) & 0xF;
+    std::cout << "Nummer: " << Pn << "\n";
+    std::cout << "R15: " << _R15_PC << "\n";
     return false;
 }
 

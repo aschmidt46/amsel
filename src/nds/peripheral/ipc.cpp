@@ -6,20 +6,20 @@ using namespace nds;
 Byte nds::IPC::readIPCSYNCLower(bool isNDS9)
 {
     if(isNDS9){
-        return (nds7Out & 0b111);   
+        return (nds7Out & 0xF);   
     }
     else{
-        return (nds9Out & 0b111);
+        return (nds9Out & 0xF);
     }
 }
 
 Byte nds::IPC::readIPCSYNCHigher(bool isNDS9)
 {
     if(isNDS9){
-        return (nds9Out & 0b111) | (Byte(enableIRQ7to9) << 6);
+        return (nds9Out & 0xF) | (Byte(enableIRQ7to9) << 6);
     }
     else{
-        return (nds7Out & 0b111) | (Byte(enableIRQ9to7) << 6);
+        return (nds7Out & 0xF) | (Byte(enableIRQ9to7) << 6);
     }
 }
 
@@ -30,14 +30,14 @@ void nds::IPC::writeIPCSYNCLower(bool isNDS9, Byte val)
 void nds::IPC::writeIPCSYNCHigher(bool isNDS9, Byte val)
 {
     if(isNDS9){
-        nds9Out = val & 0b111;
+        nds9Out = val & 0xF;
         enableIRQ7to9 = ((val >> 6) & 1) > 0;
         if(((val >> 5) & 1) > 0 && enableIRQ9to7){
             bus->setIFSingleBus(16, true, false);
         }
     }
     else{
-        nds7Out = val & 0b111;
+        nds7Out = val & 0xF;
         enableIRQ9to7 = ((val >> 6) & 1) > 0;
         if(((val >> 5) & 1) > 0 && enableIRQ7to9){
             bus->setIFSingleBus(16, true, true);
@@ -48,20 +48,20 @@ void nds::IPC::writeIPCSYNCHigher(bool isNDS9, Byte val)
 Byte nds::IPC::readIPCFIFOCNTLower(bool isNDS9)
 {
     if(isNDS9){
-        return (sendFifo9.empty()) | ((sendFifo9.size() >= 16) << 1) | (IPCFIFOCNT_9 & 4);
+        return Byte(sendFifo9.empty()) | (Byte(sendFifo9.size() >= 16) << 1) | (IPCFIFOCNT_9 & 4);
     }
     else{
-        return (sendFifo7.empty()) | ((sendFifo7.size() >= 16) << 1) | (IPCFIFOCNT_7 & 4);
+        return Byte(sendFifo7.empty()) | (Byte(sendFifo7.size() >= 16) << 1) | (IPCFIFOCNT_7 & 4);
     }
 }
 
 Byte nds::IPC::readIPCFIFOCNTHigher(bool isNDS9)
 {
     if(isNDS9){
-        return (sendFifo7.empty()) | ((sendFifo7.size() >= 16) << 1) | ((IPCFIFOCNT_9 >> 8) & 4) | ((IPCFIFOCNT_9 >> 8) & 64) | ((IPCFIFOCNT_9 >> 8) & 128);
+        return Byte(sendFifo7.empty()) | (Byte(sendFifo7.size() >= 16) << 1) | ((IPCFIFOCNT_9 >> 8) & 4) | ((IPCFIFOCNT_9 >> 8) & 64) | ((IPCFIFOCNT_9 >> 8) & 128);
     }
     else{
-        return (sendFifo9.empty()) | ((sendFifo9.size() >= 16) << 1) | ((IPCFIFOCNT_7 >> 8) & 4) | ((IPCFIFOCNT_7 >> 8) & 64) | ((IPCFIFOCNT_7 >> 8) & 128);
+        return Byte(sendFifo9.empty()) | (Byte(sendFifo9.size() >= 16) << 1) | ((IPCFIFOCNT_7 >> 8) & 4) | ((IPCFIFOCNT_7 >> 8) & 64) | ((IPCFIFOCNT_7 >> 8) & 128);
     }
 }
 
@@ -97,7 +97,10 @@ void nds::IPC::writeIPCFIFOCNTHigher(bool isNDS9, Byte val)
 {
     if(isNDS9){
         bool before = ((IPCFIFOCNT_9 >> 8) & 4) && !sendFifo7.empty();
-        IPCFIFOCNT_9 = (IPCFIFOCNT_9 & ~(0b11000100 << 8)) | (HalfWord(val & 0b11000100) << 8); // set irq enable
+        IPCFIFOCNT_9 = (IPCFIFOCNT_9 & ~(0b10000100u << 8)) | (HalfWord(val & 0b10000100u) << 8); // set irq enable
+        if((val & 64) > 0){// error acknowledge
+            IPCFIFOCNT_9 &= ~(64u << 8);
+        }
         bool after = ((IPCFIFOCNT_9 >> 8) & 4) && !sendFifo7.empty();
         if(!before && after){ // rising edge
             bus->setIFSingleBus(18, true, true);
@@ -105,7 +108,10 @@ void nds::IPC::writeIPCFIFOCNTHigher(bool isNDS9, Byte val)
     }
     else{
         bool before = ((IPCFIFOCNT_7 >> 8) & 4) && !sendFifo9.empty();
-        IPCFIFOCNT_7 = (IPCFIFOCNT_7 & ~(0b11000100 << 8)) | (HalfWord(val & 0b11000100) << 8); // set irq enable
+        IPCFIFOCNT_7 = (IPCFIFOCNT_7 & ~(0b10000100u << 8)) | (HalfWord(val & 0b10000100u) << 8); // set irq enable
+        if((val & 64) > 0){// error acknowledge
+            IPCFIFOCNT_7 &= ~(64u << 8);
+        }
         bool after = ((IPCFIFOCNT_7 >> 8) & 4) && !sendFifo9.empty();
         if(!before && after){ // rising edge
             bus->setIFSingleBus(18, true, false);
@@ -157,12 +163,11 @@ Word nds::IPC::readFIFORECV(bool isNDS9)
             if((IPCFIFOCNT_7 & 4) && sendFifo7.empty()){
                 bus->setIFSingleBus(17, true, false); // fifo 7 empty -> nds7 irq
             }
-            return elem;
         }
         else{
             IPCFIFOCNT_9 |= 1u << 14;
-            return sendFifo7recent;
         }
+        return sendFifo7recent;
     }
     else{
         if(!sendFifo9.empty()){
@@ -173,12 +178,11 @@ Word nds::IPC::readFIFORECV(bool isNDS9)
             if((IPCFIFOCNT_9 & 4) && sendFifo9.empty()){
                 bus->setIFSingleBus(17, true, true); // fifo 9 empty -> nds9 irq
             }
-            return elem;
         }
         else{
             IPCFIFOCNT_7 |= 1u << 14;
-            return sendFifo9recent;
         }
+        return sendFifo9recent;
     }
 }
 

@@ -28,8 +28,8 @@ void NDSImplementation::setAddressOf(int i, int to){
 nds::StartInfo NDSImplementation::constructStartInfo()
 {
     std::string pbios7 = std::get<RequiredFile>(options[0]).path;
-    std::string pbios9 = std::get<RequiredFile>(options[0]).path;
-    std::string pfirmware = std::get<RequiredFile>(options[0]).path;
+    std::string pbios9 = std::get<RequiredFile>(options[1]).path;
+    std::string pfirmware = std::get<RequiredFile>(options[2]).path;
     std::vector<uint8_t> bios7, bios9, firmware;
 
     if(pbios7.c_str()){
@@ -49,6 +49,8 @@ nds::StartInfo NDSImplementation::constructStartInfo()
         firmware = std::vector<uint8_t>((std::istreambuf_iterator<char>(stream)),
                               std::istreambuf_iterator<char>());
     }
+
+    assert(bios7 != bios9);
 
     return nds::StartInfo{.bios7 = bios7, .bios9 = bios9, .firmware = firmware};
 }
@@ -375,6 +377,6 @@ void NDSImplementation::displayRegisters() {
 
 std::vector<SystemOption> NDSImplementation::options = {
     RequiredFile{NDSBios7, "nds7bios", "*.rom", ""},
-    RequiredFile{NDSBios9, "nds7bios", "*.rom", ""},
+    RequiredFile{NDSBios9, "nds9bios", "*.rom", ""},
     RequiredFile{NDSFirmware, "ndsfirmware", "*.bin", ""}
 };
