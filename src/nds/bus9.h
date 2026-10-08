@@ -2,6 +2,7 @@
 #include "arm/arm946e-s.h"
 #include "gba/ibus.h"
 #include "gba/register/general_purpose.h"
+#include "peripheral/maths.h"
 
 namespace nds{
     class SharedBus;
@@ -21,6 +22,7 @@ namespace nds{
         public:
         gba::GeneralPurpose16 KEYINPUT;
         gba::GeneralPurpose16 KEYCNT;
+        DSMaths maths;
         
         CPU cpu;
         CP15 cp15;

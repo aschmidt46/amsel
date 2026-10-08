@@ -91,6 +91,10 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val)
         sharedBus->wramCNT = val & 0b11;
     }
 
+    else if(addr >= 0x4000280 && addr < 0x40002C0){
+        maths.onWrite(addr, val);
+    }
+
     // ACHTUNG
     else if(addr >= 0x05000000 && addr < 0x08000000){
         sharedBus->lcd->writeMemory(addr, val);
@@ -175,6 +179,10 @@ Byte nds::Bus9::readByteFromWide(Word addr)
         return sharedBus->wramCNT;
     }
 
+    if(addr >= 0x4000280 && addr < 0x40002C0){
+        return maths.onRead(addr);
+    }
+
     // ACHTUNG
     if(addr >= 0x05000000 && addr < 0x08000000){
         return sharedBus->lcd->readMemory(addr);
@@ -233,6 +241,7 @@ void nds::Bus9::clock()
     // 66 MHz
     cpu.clock();
     cpu.clock();
+    maths.clock();
 
 }
 

@@ -38,11 +38,11 @@ void nds::CP15::MCR(Word val, Word Cn, Word Cm, Word cp)
 
     else if(Cn == 9 && Cm == 1 && cp == 0){
         Word m = TCM_SIZE_T::getWriteMask();
-        dtcmSize.raw = (dtcmSize.raw & ~m) | (dtcmSize.raw & m);
+        dtcmSize.raw = (dtcmSize.raw & ~m) | (val & m);
     }
     else if(Cn == 9 && Cm == 1 && cp == 1){
         Word m = TCM_SIZE_T::getWriteMask();
-        itcmSize.raw = (itcmSize.raw & ~m) | (itcmSize.raw & m);
+        itcmSize.raw = (itcmSize.raw & ~m) | (val & m);
     }
 
     else if(Cn == 13 && Cm == 0 && cp == 0){

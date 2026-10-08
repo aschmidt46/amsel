@@ -61,9 +61,9 @@ namespace nds{
 
     class CP15{
         private:
-        Word mainID = 0x41059461;
-        Word cacheType = 0x0F0D2112;
-        Word tcmSize = 0x00140180;
+        const Word mainID = 0x41059461;
+        const Word cacheType = 0x0F0D2112;
+        const Word tcmSize = 0x00140180;
         CP15_CONTROL_REG_T controlReg = {.raw = 0xF0};
 
         //PU

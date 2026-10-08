@@ -88,6 +88,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     int downOffset = !U ? (numberOfRegs+1) * 4 : 0; // Wortgröße 4
     downOffset -= !U && !P ? 8 : 0; // Magie, empirisch bestimmt
     bool emptyRegList = false;
+    bool firstRegister = false;
 
     if(W){
         if((instruction & 0xFFFF) == 0){ // Leere Registerliste
@@ -104,9 +105,9 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     Word origAddr = *registerMap[actualMode][Rn];
     Word addr = origAddr;
 
-    if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
+    // if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
         addr &= ~3u;
-    }
+    // }
 
     Word usedNumOfRegs = 0;
 
@@ -117,7 +118,12 @@ bool CPU::executeBlockDataTransfer(Word instruction)
         if(useRegister){
             usedNumOfRegs++;
             if((unsigned int)i>Rn) baseIsNotLastRegister = true;
+            if((unsigned int)i<Rn) firstRegister = false; 
         }
+    }
+    if(W){ // Aufpassen, überprüfen
+        if(!baseInRegisterList || (!L || !firstRegister))
+            *registerMap[actualMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
     }
     bool baseIsOnlyRegister = (usedNumOfRegs == 1) && baseInRegisterList;
 
