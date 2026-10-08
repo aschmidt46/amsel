@@ -112,8 +112,8 @@ namespace nds{
         Word mask_MultiplyAccumulateL =     0b0000'1111'1000'0000'0000'0000'1111'0000;
         static const
         Word form_BranchAndExchange =       0b0000'0001'0010'1111'1111'1111'0001'0000;
-        static const                    //  ..____'0001'0010'1111'1111'1111'0001'____
-        Word mask_BranchAndExchange =       0b0000'1111'1111'1111'1111'1111'1111'0000;
+        static const                    //  ..____'0001'0010'1111'1111'1111'00_1'____
+        Word mask_BranchAndExchange =       0b0000'1111'1111'1111'1111'1111'1101'0000;
         static const
         Word form_SingleDataSwap =          0b0000'0001'0000'0000'0000'0000'1001'0000;
         static const                    //  ..____'0001'0_00'____'____'0000'1001'____

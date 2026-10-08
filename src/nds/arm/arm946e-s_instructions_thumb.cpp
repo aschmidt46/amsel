@@ -88,6 +88,7 @@ bool CPU::executeThumbHiRegisterOperationsBX(Word instruction)
     Word Rd = (instruction & 0b111) | ((instruction & 0b10000000) >> 4);
     Word Rs = (instruction & (0b1111u << 3)) >> 3;
     Word opcode = (instruction & (0b11u << 8)) >> 8;
+    bool MSBd = ((instruction >> 7) & 1u) > 0;
     bool ret;
     switch(opcode){
         case 0:
@@ -100,7 +101,12 @@ bool CPU::executeThumbHiRegisterOperationsBX(Word instruction)
             ret =  executeDataProc(     (Rd << 12) | (Rd << 16) | Rs | (0b1101u << 21)    );
             break;
         default:
-            ret =  executeBranchExchange(   Rs    );
+            if(MSBd){
+                ret =  executeBranchExchange(   Rs  | (0b11 << 4) );
+            }
+            else{
+                ret =  executeBranchExchange(   Rs   );
+            }
             break;
     }
     _R15_PC &= ~1u;

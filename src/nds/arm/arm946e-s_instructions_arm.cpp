@@ -4,15 +4,22 @@
 #include <bit>
 #include <algorithm>
 #include "gba/ibus.h"
+#include "framework/stringlib.h"
 
 using namespace nds;
 
 bool CPU::executeBranchExchange(Word instruction)
 {
-    Word Rn = instruction & 0b1111;
+    Word Rn = instruction & 0xF;
+    Word opcode = (instruction >> 4) & 0xF;
+    bool L = opcode == 3;
     // Der Inhalt des Registers?
     CpuState nextState = (*registerMap[mode()][Rn] & 1) > 0 ? THUMB : ARM;
     Word jumpTarget = *registerMap[mode()][Rn] & ~(1u);
+
+    if(L){
+        *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus) ACHTUNG WAR 2, ist das so richtig?? PC + 4
+    }
 
     *registerMap[mode()][R15] = jumpTarget;
     this->_CPSR.state.T = nextState;
@@ -45,17 +52,22 @@ bool CPU::executeSingleDataSwap(Word instruction)
 
 bool CPU::executeBranchLink(Word instruction)
 {
+    bool exchange = (instruction >> 28) == 0b1111; // cond: always
     bool L = instruction & (1u << 24);
+    Word h = (Word)L;
     Word jumpRaw = (instruction & 0x00FFFFFF) << (state() == ARM ? 2 : 0);
     int32_t relJump;
     if(state()==ARM) relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 26));
     else relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 24));
+
+    if(exchange && state()==ARM) relJump += h*2;
 
     if(L){
         *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus) ACHTUNG WAR 2, ist das so richtig?? PC + 4
     }
     _R15_PC += relJump;
     remainingCycles += 3; //2S + 1N
+    if(exchange && state()==ARM) _CPSR.state.T = 1;
     return true;
 }
 
@@ -71,7 +83,6 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     const bool U = instruction & (1u << 23);
     const bool P = instruction & (1u << 24);
     const int incr = 4;
-    bool firstRegister = true;
     int numberOfRegs = std::popcount(instruction & 0xFFFF);
     int downOffset = !U ? (numberOfRegs+1) * 4 : 0; // Wortgröße 4
     downOffset -= !U && !P ? 8 : 0; // Magie, empirisch bestimmt
@@ -79,8 +90,8 @@ bool CPU::executeBlockDataTransfer(Word instruction)
 
     if(W){
         if((instruction & 0xFFFF) == 0){ // Leere Registerliste
-            instruction |= 1u << 15;
-            numberOfRegs = 16;
+            // instruction |= 1u << 15;
+            // numberOfRegs = 16;
             emptyRegList = true;
         }
     }
@@ -95,18 +106,19 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
         addr &= ~3u;
     }
+
+    Word usedNumOfRegs = 0;
+
+    bool baseIsNotLastRegister = false;
     
     for(int i=0; i < 16; i++){
         bool useRegister = instruction & (1u << i);
         if(useRegister){
-            if((unsigned int)i<Rn) firstRegister = false; 
+            usedNumOfRegs++;
+            if((unsigned int)i>Rn) baseIsNotLastRegister = true;
         }
     }
-
-    if(W){ // Aufpassen, überprüfen
-        if(!baseInRegisterList || (!L || !firstRegister))
-            *registerMap[actualMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
-    }
+    bool baseIsOnlyRegister = (usedNumOfRegs == 1) && baseInRegisterList;
 
     for(unsigned int i=0; i < 16; i++){
         bool useRegister = instruction & (1u << i);
@@ -114,13 +126,17 @@ bool CPU::executeBlockDataTransfer(Word instruction)
             if(P) addr += incr;
             
             if(L){ // Aus Speicher laden LDM
-                *registerMap[actualMode][i] = readWordUnaligned(addr - downOffset);
+                Word val = readWordUnaligned(addr - downOffset);
+                *registerMap[actualMode][i] = val;
+                if(i==15){ // Neu NDS9
+                    _CPSR.state.T = val & 1u;
+                }
             }
             else{ // In Speicher schreiben STM
                 // Spezialfall für leere Registerliste
                 if(emptyRegList && i==15 && !U) addr -= incr * 16;
 
-                if(i==Rn && baseInRegisterList && firstRegister){
+                if(i==Rn && baseInRegisterList){ // "Always store old base (armv5)"
                     writeWordUnaligned(addr - downOffset, origAddr);
                 }
                 else{
@@ -138,6 +154,12 @@ bool CPU::executeBlockDataTransfer(Word instruction)
             }
         }
     }
+
+    if(W){ // Aufpassen, überprüfen
+        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister))
+            *registerMap[actualMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+    }
+
     bool pcAsBase = false;
     if(Rn==15){
         pcAsBase = true;
@@ -677,6 +699,9 @@ bool CPU::executeSingleDataTransfer(Word instruction)
             }
         }
         *registerMap[mode()][sourceDestReg] = val;
+        if(sourceDestReg == 15){
+            _CPSR.state.T = val & 1u; // Neu auf NDS9
+        }
     }
     else{ // STR
         if(B){
@@ -1014,26 +1039,30 @@ bool nds::CPU::executeQALU(Word instruction)
         case 4: // qdadd
             {
                 int64_t r1 = n * 2;
-                r1 &= 0xFFFFFFFF;
+                if(r1 < std::numeric_limits<int32_t>::min() || r1 > std::numeric_limits<int32_t>::max()){
+                    _CPSR.state.Q = 1;
+                }
+                r1 = std::clamp(r1, (int64_t)std::numeric_limits<int32_t>::min(), (int64_t)std::numeric_limits<int32_t>::max());
                 res = m + r1;
                 break;
             }
         case 6: // qdsub
             {
                 int64_t r1 = n * 2;
-                r1 &= 0xFFFFFFFF;
+                if(r1 < std::numeric_limits<int32_t>::min() || r1 > std::numeric_limits<int32_t>::max()){
+                    _CPSR.state.Q = 1;
+                }
+                r1 = std::clamp(r1, (int64_t)std::numeric_limits<int32_t>::min(), (int64_t)std::numeric_limits<int32_t>::max());
                 res = m - r1;
                 break;
             }
     }
 
     if(res < std::numeric_limits<int32_t>::min() || res > std::numeric_limits<int32_t>::max()){
-        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
-        cpsr.state.Q = 1;
-        *registerMap[mode()][CPSR] = cpsr.raw;
+        _CPSR.state.Q = 1;
     }
 
-    res &= 0xFFFFFFFF;
+    res = std::clamp(res, (int64_t)std::numeric_limits<int32_t>::min(), (int64_t)std::numeric_limits<int32_t>::max());
 
     *registerMap[mode()][Rd] = std::bit_cast<uint32_t>((int32_t)res);
 
@@ -1043,19 +1072,21 @@ bool nds::CPU::executeQALU(Word instruction)
 
 bool nds::CPU::executeMultiplyHalfWord(Word instruction)
 {
-    Word opcode = (instruction >> 21) & 3u;
-    bool x = ((instruction >> 5) & 1u) > 0;
-    bool y = ((instruction >> 6) & 1u) > 0;
-    Word Rm = instruction & 0xF;
-    Word Rn = (instruction >> 12) & 0xF; // aka RdLo
-    Word Rd = (instruction >> 16) & 0xF; // aka RdHi
-    Word Rs = (instruction >> 8) & 0xF;
+    const Word opcode = (instruction >> 21) & 3u;
+    const bool x = ((instruction >> 5) & 1u) > 0;
+    const bool y = ((instruction >> 6) & 1u) > 0;
+    const Word Rm = instruction & 0xF;
+    const Word Rn = (instruction >> 12) & 0xF; // aka RdLo
+    const Word Rd = (instruction >> 16) & 0xF; // aka RdHi
+    const Word Rs = (instruction >> 8) & 0xF;
 
     uint32_t rsOp = *registerMap[mode()][Rs];
     uint32_t rmOp = *registerMap[mode()][Rm];
 
-    if(x) rsOp >>= 16;
-    if(y) rmOp >>= 16;
+    if(x) rmOp >>= 16;
+    if(y) rsOp >>= 16;
+    rsOp &= 0xFFFF;
+    rmOp &= 0xFFFF;
 
     const int64_t signRs = std::bit_cast<int16_t>((uint16_t)rsOp);
     const int64_t signRm = std::bit_cast<int16_t>((uint16_t)rmOp);
@@ -1072,10 +1103,10 @@ bool nds::CPU::executeMultiplyHalfWord(Word instruction)
         }
         case 1:{
             if(x){ // SMULWy
-                *registerMap[mode()][Rd] = (signRs * std::bit_cast<int32_t>(*registerMap[mode()][Rm])) / 0x10000;
+                *registerMap[mode()][Rd] = (signRs * std::bit_cast<int32_t>(*registerMap[mode()][Rm])) >> 16;
             }
             else{ // SMLAWy
-                int64_t res = (signRs * std::bit_cast<int32_t>(*registerMap[mode()][Rm])) / 0x10000 + std::bit_cast<int32_t>(*registerMap[mode()][Rn]);
+                int64_t res = ((signRs * std::bit_cast<int32_t>(*registerMap[mode()][Rm])) >> 16) + std::bit_cast<int32_t>(*registerMap[mode()][Rn]);
                 if(res > std::numeric_limits<int32_t>::max() || res < std::numeric_limits<int32_t>::min())
                     setQ = true;
                 *registerMap[mode()][Rd] = res;
@@ -1094,18 +1125,13 @@ bool nds::CPU::executeMultiplyHalfWord(Word instruction)
         }
         case 3:{ // SMULxy
             const int64_t res = signRs * signRm;
-            const uint64_t resHi = std::bit_cast<uint64_t>(res) >> 32;
-            const uint64_t resLo = std::bit_cast<uint64_t>(res) & 0xFFFFFFFFu;
-            *registerMap[mode()][Rd] = resHi;
-            *registerMap[mode()][Rn] = resLo;
+            *registerMap[mode()][Rd] = res;
             break;
         }
     }
 
     if(setQ){
-        StatusRegister cpsr = std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR]);
-        cpsr.state.Q = 1;
-        *registerMap[mode()][CPSR] = cpsr.raw;
+        _CPSR.state.Q = 1;
     }
 
 
