@@ -72,6 +72,11 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     else if(addr == 0x04000217){
         IF = IF & ~(Word(val) << 24);
     }
+
+    if(addr >= 0x06000000 && addr < 0x07000000){
+        addr -= 0x06000000;
+        sharedBus->lcd->writeMemoryNDS7(addr % 0x4'0000, val);
+    }
 }
 
 Byte nds::Bus7::readByteFromWide(Word addr)
@@ -132,8 +137,17 @@ Byte nds::Bus7::readByteFromWide(Word addr)
         return IF >> 24;
     }
 
+    if(addr == 0x4000240){
+        return sharedBus->lcd->getVRAMSTAT();
+    }
+
     if(addr == 0x4000241){
         return sharedBus->wramCNT;
+    }
+
+    if(addr >= 0x06000000 && addr < 0x07000000){
+        addr -= 0x06000000;
+        return sharedBus->lcd->readMemoryNDS7(addr % 0x4'0000);
     }
 
     return 0;

@@ -7,6 +7,17 @@ void nds::LCD::init()
 {
     engineA = PPU(this, 0);
     engineB = PPU(this, 1);
+
+    // default: LCDC mapping
+    switchVramBank<0>();
+    switchVramBank<1>();
+    switchVramBank<2>();
+    switchVramBank<3>();
+    switchVramBank<4>();
+    switchVramBank<5>();
+    switchVramBank<6>();
+    switchVramBank<8>();
+    switchVramBank<9>();
 }
 
 void nds::LCD::renderScanline()
@@ -109,12 +120,80 @@ void nds::LCD::writeRegister(Word addr, Byte val)
 
 Byte nds::LCD::readMemory(Word addr)
 {
-    return engineA.readPPUMemory(addr);
+    if(addr >= 0x05000000 && addr < 0x05000400){
+        return engineA.paletteRam[addr - 0x05000000];
+    }
+    if(addr >= 0x05000400 && addr < 0x05000800){
+        return engineB.paletteRam[addr - 0x05000400];
+    }
+    if(addr >= 0x07000000 && addr < 0x05000400){
+        return engineA.paletteRam[addr - 0x05000000];
+    }
+    if(addr >= 0x06000000 && addr < 0x07000000){
+        addr -= 0x06000000;
+        const Word offset = addr % 0x4000;
+        const Word page = addr / 0x4000;
+        if(pageTable[page].state.valid){
+            return vram[pageTable[page].state.bankID * 0x4000 + offset];
+        }
+    }
+    if(addr >= 0x07000000 && addr < 0x07000400){
+        return engineA.oamAttribs[addr - 0x07000000];
+    }
+    if(addr >= 0x07000400 && addr < 0x07000800){
+        return engineB.oamAttribs[addr - 0x07000400];
+    }
+    return 0;
 }
 
 void nds::LCD::writeMemory(Word addr, Byte val)
 {
-    engineA.writePPUMemory(addr, val);
+    if(addr >= 0x05000000 && addr < 0x05000400){
+        engineA.paletteRam[addr - 0x05000000] = val;
+    }
+    else if(addr >= 0x05000400 && addr < 0x05000800){
+        engineB.paletteRam[addr - 0x05000400] = val;
+    }
+    else if(addr >= 0x07000000 && addr < 0x05000400){
+        engineA.paletteRam[addr - 0x05000000] = val;
+    }
+    else if(addr >= 0x06000000 && addr < 0x07000000){
+        addr -= 0x06000000;
+        const Word offset = addr % 0x4000;
+        const Word page = addr / 0x4000;
+        if(pageTable[page].state.valid){
+            vram[pageTable[page].state.bankID * 0x4000 + offset] = val;
+        }
+    }
+    else if(addr >= 0x07000000 && addr < 0x07000400){
+        engineA.oamAttribs[addr - 0x07000000] = val;
+    }
+    else if(addr >= 0x07000400 && addr < 0x07000800){
+        engineB.oamAttribs[addr - 0x07000400] = val;
+    }
+}
+
+Byte nds::LCD::readMemoryNDS7(Word addr)
+{
+    // Adresse startet bei 0
+    const Word offset = addr % 0x4000;
+    const Word page = addr / 0x4000;
+    if(arm7PageTable[page].state.valid){
+        return vram[arm7PageTable[page].state.bankID * 0x4000 + offset];
+    }
+    else{
+        return 0;
+    }
+}
+
+void nds::LCD::writeMemoryNDS7(Word addr, Byte val)
+{
+    // Adresse startet bei 0
+    const Word offset = addr % 0x4000;
+    const Word page = addr / 0x4000;
+    if(arm7PageTable[page].state.valid){
+        vram[arm7PageTable[page].state.bankID * 0x4000 + offset] = val;
+    }
 }
 
 uint32_t* nds::LCD::accessFramebuffer()

@@ -12,13 +12,21 @@
 
 namespace nds{
     class LCD;
+
+    struct PPUAllocation{
+        Byte* ptr = nullptr;
+        int allocatedTo = 0;
+    };
+
     class PPU{
 
         // Vram
+        public:
         std::vector<Byte> paletteRam;
         std::vector<Byte> vRam;
         std::vector<Byte> lcdc;
         std::vector<Byte> oamAttribs;
+        private:
         bool spriteAlphaOverride = false;
         // Aktuelle Sprites
         std::array<OAMAttribs, 128> oamAttribsCurrentLine = {};
@@ -124,6 +132,12 @@ namespace nds{
 
         
         public:
+
+        // Gesetzt durch VRAM Mapping in LCD, immer nullptr Check machen
+        std::array<PPUAllocation, 4> bgExtendedPalette = {{nullptr, 0}}; // jeweils 8KB
+        PPUAllocation objExtendedPalette = {nullptr, 0}; // 8KB
+
+
         PPU() = default;
         PPU(LCD* lcd, Word fOffset) : paletteRam(0x400, 0), vRam(0x18000, 0), lcdc(0xA4000, 0), oamAttribs(0x400, 0), lcd(lcd), framebufferOffset(fOffset){};
         uint32_t* accessFramebuffer();

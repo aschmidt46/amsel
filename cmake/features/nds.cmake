@@ -44,8 +44,10 @@ src/nds/lcd/2d/ppu.h
 src/nds/lcd/2d/ppu_registers.h
 src/nds/lcd/2d/ppu_rendering.cpp
 src/nds/lcd/2d/ppu_io.cpp
+src/nds/lcd/3d/gpu.h
 src/nds/lcd/lcd.h
 src/nds/lcd/lcd.cpp
+src/nds/lcd/lcd_banks.cpp
 
 src/nds/peripheral/dma.h
 src/nds/peripheral/dma.cpp

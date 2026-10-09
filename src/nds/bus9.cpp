@@ -86,18 +86,18 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val)
         IF = IF & ~(Word(val) << 24);
     }
 
-
+    else if(addr >= 0x4000240 && addr < 0x4000247){
+        sharedBus->lcd->writeVramBankControl(addr, val);
+    }
     else if(addr == 0x4000247){
         sharedBus->wramCNT = val & 0b11;
+    }
+    else if(addr >= 0x4000248 && addr < 0x400024A){
+        sharedBus->lcd->writeVramBankControl(addr, val);
     }
 
     else if(addr >= 0x4000280 && addr < 0x40002C0){
         maths.onWrite(addr, val);
-    }
-
-    // ACHTUNG
-    else if(addr >= 0x05000000 && addr < 0x08000000){
-        sharedBus->lcd->writeMemory(addr, val);
     }
 }
 
@@ -199,8 +199,14 @@ Byte nds::Bus9::readByteFromWide(Word addr)
 
 void nds::Bus9::writeHalfWord(Word addr, HalfWord val)
 {
-    writeByteFromWide(addr, val);
-    writeByteFromWide(addr + 1, val >> 8);
+    if(addr >= 0x05000000 && addr < 0x08000000){
+        sharedBus->lcd->writeMemory(addr, val);
+        sharedBus->lcd->writeMemory(addr + 1, val >> 8);
+    }
+    else{
+        writeByteFromWide(addr, val);
+        writeByteFromWide(addr + 1, val >> 8);
+    }
 }
 
 HalfWord nds::Bus9::readHalfWord(Word addr)
@@ -214,6 +220,12 @@ void nds::Bus9::writeWord(Word addr, Word val)
 {
     if(addr == 0x4000188){
         sharedBus->ipc->writeFIFOSEND(true, val);
+    }
+    else if(addr >= 0x05000000 && addr < 0x08000000){
+        sharedBus->lcd->writeMemory(addr, val);
+        sharedBus->lcd->writeMemory(addr + 1, val >> 8);
+        sharedBus->lcd->writeMemory(addr + 2, val >> 16);
+        sharedBus->lcd->writeMemory(addr + 3, val >> 24);
     }
     else{
         writeByteFromWide(addr, val);

@@ -765,7 +765,9 @@ PIXEL_T PPU::drawPixelMode3() {
     const int pixelY = currentScanline + framebufferOffset * 192;// = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
     int index = currentCycle + 256 * pixelY;
     // std::cout << "rendere lcdc\n";
-    HalfWord pixel = HalfWord(lcdc[2 * index]) | (HalfWord(lcdc[2 * index + 1]) << 8);
+    Byte lower = lcd->readMemory(0x06800000 + 2 * index);
+    Byte higher = lcd->readMemory(0x06800000 + 2 * index + 1);
+    HalfWord pixel = HalfWord(lower) | (HalfWord(higher) << 8);
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
     HalfWord blue = (pixel >> 10) & 0b11111;
