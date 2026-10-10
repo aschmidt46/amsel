@@ -403,6 +403,8 @@ bool gba::CPU::executeInstruction()
     if(this->pipeline[0].type != PipelineEmpty){
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
+        // outs << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code) << "\n";
+        // outs.flush();
 
         // auto iInfo = info;
 

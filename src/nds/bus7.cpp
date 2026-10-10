@@ -6,6 +6,8 @@ using namespace nds;
 void nds::Bus7::init()
 {
     new (&cpu) gba::CPU(this, false);
+    // extrem wichtig bei cartridge boot time:
+    cpu.initialNDS();
 }
 
 void nds::Bus7::writeByte(Word addr, Byte val)

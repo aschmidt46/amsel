@@ -22,6 +22,8 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     Word entrynds7 = *(Word*)(bytes.data() + 0x34);
     
     bus7->cpu.setPC(entrynds7);
+    bus7->cpu.setLR(entrynds7);
+    bus7->cpu.setIP(entrynds7);
     bus9->cpu.setPC(entrynds9);
     bus9->cpu.setLR(entrynds9);
     bus9->cpu.setIP(entrynds9);

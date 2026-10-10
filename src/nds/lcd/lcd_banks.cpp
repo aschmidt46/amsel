@@ -32,6 +32,14 @@ static constexpr uint8_t BANK_G_END = BANK_G_BEGIN + BANK_G_SIZE;
 static constexpr uint8_t BANK_H_END = BANK_H_BEGIN + BANK_H_SIZE;
 static constexpr uint8_t BANK_I_END = BANK_I_BEGIN + BANK_I_SIZE;
 
+Byte nds::LCD::readVramBankControl(Word addr){
+    addr -= 0x4000240;
+    if(addr < 10 && addr != 7){
+        return vramControl[addr].raw;
+    }
+    return 0;
+}
+
 void nds::LCD::writeVramBankControl(Word addr, Byte val)
 {
     addr -= 0x4000240;

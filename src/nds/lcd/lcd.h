@@ -71,6 +71,7 @@ namespace nds{
         void writeMemoryNDS7(Word addr, Byte val);
 
         void writeVramBankControl(Word addr, Byte val);
+        Byte readVramBankControl(Word addr);
         Byte getVRAMSTAT();
 
         uint32_t* accessFramebuffer();

@@ -175,8 +175,14 @@ Byte nds::Bus9::readByteFromWide(Word addr)
     }
 
 
+    if(addr >= 0x4000240 && addr < 0x4000247){
+        return sharedBus->lcd->readVramBankControl(addr);
+    }
     if(addr == 0x4000247){
         return sharedBus->wramCNT;
+    }
+    if(addr >= 0x4000248 && addr < 0x400024A){
+        return sharedBus->lcd->readVramBankControl(addr);
     }
 
     if(addr >= 0x4000280 && addr < 0x40002C0){

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <limits>
 #include <iostream>
+#include <cmath>
 
 using namespace nds;
 
@@ -49,7 +50,11 @@ void nds::DSMaths::doDivision()
             int32_t denom = std::bit_cast<int32_t>(uint32_t(divDenom));
             if(denom == 0){
                 divRemResult = std::bit_cast<uint32_t>(num);
-                divResult = num > 0 ? std::bit_cast<uint64_t>((int64_t)-1) : 1;
+                divResult = num >= 0 ? std::bit_cast<uint32_t>(-1) : 1;
+                if(num < 0){
+                    divRemResult = sign_extend_n_64(divRemResult, 32);
+                    divResult |= uint64_t(std::bit_cast<uint32_t>(-1)) << 32;
+                }
                 break;
             }
             else if(denom == -1 && num == std::numeric_limits<int32_t>::min()){
@@ -68,10 +73,10 @@ void nds::DSMaths::doDivision()
             int32_t denom = std::bit_cast<int32_t>(uint32_t(divDenom));
             if(denom == 0){
                 divRemResult = std::bit_cast<uint64_t>(num);
-                divResult = num > 0 ? std::bit_cast<uint64_t>((int64_t)-1) : 1;
+                divResult = num >= 0 ? std::bit_cast<uint64_t>((int64_t)-1) : 1;
                 break;
             }
-            else if(denom == -1 && num == std::numeric_limits<int32_t>::min()){
+            else if(denom == -1 && num < std::numeric_limits<int32_t>::min()){
                 divResult = std::bit_cast<uint64_t>(num);
                 divRemResult = 0;
                 break;
@@ -87,10 +92,10 @@ void nds::DSMaths::doDivision()
             int64_t denom = std::bit_cast<int64_t>(divDenom);
             if(denom == 0){
                 divRemResult = std::bit_cast<uint64_t>(num);
-                divResult = num > 0 ? std::bit_cast<uint64_t>((int64_t)-1) : 1;
+                divResult = num >= 0 ? std::bit_cast<uint64_t>((int64_t)-1) : 1;
                 break;
             }
-            else if(denom == -1 && num == std::numeric_limits<int32_t>::min()){
+            else if(denom == -1 && num < std::numeric_limits<int32_t>::min()){
                 divResult = std::bit_cast<uint64_t>(num);
                 divRemResult = 0;
                 break;
@@ -103,15 +108,13 @@ void nds::DSMaths::doDivision()
         }
         default: return;
     }
-    std::cout << "Num: " << divNumer << "\n";
-    std::cout << "Denom: " << divDenom << "\n";
-    std::cout << "Res: " << divResult << "\n";
-    std::cout << "Rem: " << divRemResult << "\n";
 }
 
 void nds::DSMaths::doSqrt()
 {
     SQRTCNT &= ~(1u << 15);
+
+    sqrtResult = std::sqrtl((SQRTCNT & 1u) ? sqrtParam : sqrtParam & 0xFFFFFFFF);
 }
 
 void nds::DSMaths::clock()
@@ -193,12 +196,15 @@ void nds::DSMaths::onWrite(Word addr, Byte val)
     }
     else if(addr == 0x40002B0){
         SQRTCNT = (SQRTCNT & 0xFF00) | (val & 1u);
+        startSqrt();
     }
     else if(addr == 0x40002B1){
         SQRTCNT = (SQRTCNT & 0x00FF) | (HalfWord(val & 128u) << 8);
+        startSqrt();
     }
     else if(addr >= 0x40002B8 && addr < 0x40002C0){
         const Word byte = addr - 0x40002B8;
         sqrtParam = (sqrtParam & ~(uint64_t(0xFF) << (8 * byte))) | (uint64_t(val) << (8 * byte));
+        startSqrt();
     }
 }

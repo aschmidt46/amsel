@@ -181,11 +181,12 @@ namespace gba{
         // Debug
         bool advanced = false;
         
-        
+        // std::ofstream outs;
         public:
         CPU(bool skipBios = true);
         CPU(IBus<InstructionInfo>* bus, bool skipBios = true) : CPU(skipBios){
             this->bus = bus;
+            // this->outs = std::ofstream("arm7log.txt");
         };
         
         // führt die nächste Instruktion aus, falls das möglich ist
@@ -198,6 +199,18 @@ namespace gba{
         };
         void setPC(Word val){
             _R15_PC = val;
+        }
+        void setLR(Word val){
+            _R14_L_R = val;
+        }
+        void setIP(Word val){
+            _R12 = val;
+        }
+
+        void initialNDS(){
+            _R13_SP = 0x380FD80;
+            _R13_irq = 0x380FF80;
+            _R13_SVC = 0x380FFC0;
         }
 
         void clock();
