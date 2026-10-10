@@ -42,13 +42,23 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         addr -= 0x03800000;
         arm7WRAM[addr % 0x10000] = val;
     }
+    else if(addr >= 0x04000132 && addr < 0x04000134){
+        sharedBus->KEYCNT.OnWriteByte(addr, val);
+    }
     else if(addr >= 0x4000180 && addr < 0x4000188){
         sharedBus->ipc->writeReg(addr, val, false);
     }
 
+    else if(addr == 0x04000204){
+        exMem06 = 0x7F & val;
+    }
+    else if(addr == 0x4000206){
+        WIFIWAITCNT = val & 0b111111;
+    }
+
     // Interrupt handling
     else if(addr >= 0x04000208 && addr < 0x0400020C){
-        return IME.OnWriteByte(addr, val);
+        IME.OnWriteByte(addr, val);
     }
     else if(addr == 0x04000210){
         IE = (IE & 0xFFFFFF00) | val;
@@ -73,6 +83,12 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     }
     else if(addr == 0x04000217){
         IF = IF & ~(Word(val) << 24);
+    }
+    else if(addr == 0x4000301){
+        HALTCNT = val & 0b11000000;
+    }
+    else if(addr == 0x4000304){
+        POWCNT2 = val & 0b11;
     }
 
     if(addr >= 0x06000000 && addr < 0x07000000){
@@ -106,8 +122,34 @@ Byte nds::Bus7::readByteFromWide(Word addr)
         addr -= 0x03800000;
         return arm7WRAM[addr % 0x10000];
     }
+
+    if(addr >= 0x04000004 && addr < 0x04000008){
+        return sharedBus->lcd->readRegister(addr);
+    }
+
     if(addr >= 0x4000180 && addr < 0x4000188){
         return sharedBus->ipc->readReg(addr, false);
+    }
+
+    if(addr >= 0x04000130 && addr < 0x04000132){
+        return sharedBus->KEYINPUT.OnReadByte(addr);
+    }
+    if(addr >= 0x04000132 && addr < 0x04000134){
+        return sharedBus->KEYCNT.OnReadByte(addr);
+    }
+    if(addr >= 0x04000136 && addr < 0x04000138){
+        return sharedBus->EXKEYINPUT.OnReadByte(addr);
+    }
+
+    // EXMEMCNT
+    if(addr == 0x04000204){
+        return (exMem06 & 0x7F) | (sharedBus->EXMEMCNT & 0x80);
+    }
+    if(addr == 0x04000205){
+        return sharedBus->EXMEMCNT >> 8;
+    }
+    if(addr == 0x4000206){
+        return WIFIWAITCNT;
     }
 
     //Interrupt Handling
@@ -145,6 +187,15 @@ Byte nds::Bus7::readByteFromWide(Word addr)
 
     if(addr == 0x4000241){
         return sharedBus->wramCNT;
+    }
+    if(addr == 0x4000300){
+        return POSTFLG;
+    }
+    if(addr == 0x4000301){
+        return HALTCNT;
+    }
+    if(addr == 0x4000304){
+        return POWCNT2;
     }
 
     if(addr >= 0x06000000 && addr < 0x07000000){

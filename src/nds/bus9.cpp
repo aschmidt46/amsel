@@ -5,7 +5,6 @@ using namespace gba;
 
 void nds::Bus9::init()
 {
-    KEYINPUT.raw = 0b1111111111;
     new (&cpu) CPU(this, &cp15);
 }
 
@@ -49,7 +48,7 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val)
         sharedBus->lcd->writeRegister(addr, val);
     }
     else if(addr >= 0x04000132 && addr < 0x04000134){
-        KEYCNT.OnWriteByte(addr, val);
+        sharedBus->KEYCNT.OnWriteByte(addr, val);
     }
 
     // IPC
@@ -57,9 +56,18 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val)
         sharedBus->ipc->writeReg(addr, val, true);
     }
 
+    else if(addr == 0x04000204){
+        exMem06 = 0x7F & val;
+        Byte msb = 0x80 & val;
+        sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0xFF00) | msb;
+    }
+    else if(addr == 0x04000205){
+        sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0x00FF) | (HalfWord(val) << 8);
+    }
+
     // Interrupt handling
     else if(addr >= 0x04000208 && addr < 0x0400020C){
-        return IME.OnWriteByte(addr, val);
+        IME.OnWriteByte(addr, val);
     }
     else if(addr == 0x04000210){
         IE = (IE & 0xFFFFFF00) | val;
@@ -99,6 +107,13 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val)
     else if(addr >= 0x4000280 && addr < 0x40002C0){
         maths.onWrite(addr, val);
     }
+
+    else if(addr == 0x4000304){ // Muss noch implementiert werden
+        POWCNT1 = (POWCNT1 & 0xFF00) | (val & 0b1111);
+    }
+    else if(addr == 0x4000305){
+        POWCNT1 = (POWCNT1 & 0x00FF) | (HalfWord(val & 0b1000010) << 8);
+    }
 }
 
 Byte nds::Bus9::readByteFromWide(Word addr)
@@ -135,14 +150,22 @@ Byte nds::Bus9::readByteFromWide(Word addr)
     }
 
     if(addr >= 0x04000130 && addr < 0x04000132){
-        return KEYINPUT.OnReadByte(addr);
+        return sharedBus->KEYINPUT.OnReadByte(addr);
     }
     if(addr >= 0x04000132 && addr < 0x04000134){
-        return KEYCNT.OnReadByte(addr);
+        return sharedBus->KEYCNT.OnReadByte(addr);
     }
     // IPC
     if(addr >= 0x4000180 && addr < 0x4000188){
         return sharedBus->ipc->readReg(addr, true);
+    }
+
+    // EXMEMCNT
+    if(addr == 0x04000204){
+        return (exMem06 & 0x7F) | (sharedBus->EXMEMCNT & 0x80);
+    }
+    if(addr == 0x04000205){
+        return sharedBus->EXMEMCNT >> 8;
     }
 
     //Interrupt Handling
@@ -187,6 +210,15 @@ Byte nds::Bus9::readByteFromWide(Word addr)
 
     if(addr >= 0x4000280 && addr < 0x40002C0){
         return maths.onRead(addr);
+    }
+    if(addr == 0x4000300){ // --------------------------------------- Achtung, bit 1 ist schreibbar aus BIOS, siehe Gbatek
+        return POSTFLG;
+    }
+    if(addr == 0x4000304){ // Muss noch implementiert werden
+        return POWCNT1;
+    }
+    if(addr == 0x4000305){
+        return POWCNT1 >> 8;
     }
 
     // ACHTUNG

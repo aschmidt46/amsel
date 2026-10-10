@@ -21,6 +21,11 @@ namespace nds{
         gba::GeneralPurpose32 IME;
         
         public:
+        Byte exMem06 = 0;
+        Byte POSTFLG = 1;
+        Byte POWCNT2 = 1;
+        Byte WIFIWAITCNT = 0x30; // von Firmware gesetzt!
+        Byte HALTCNT = 0;
         gba::CPU cpu;
         Bus7(SharedBus* sb) : sharedBus(sb), arm7WRAM(0x10000, 0), IME(0x4000208){};
         void init();

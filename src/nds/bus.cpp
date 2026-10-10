@@ -60,6 +60,12 @@ void nds::SharedBus::writeByte(Word addr, Byte val)
     }
 }
 
+bool nds::SharedBus::canAccessGameCart(const bool isNDS9) const
+{
+    const bool rightsArm7 = ((EXMEMCNT >> 11) & 1u) > 0;
+    return rightsArm7 ^ isNDS9;
+}
+
 void nds::SharedBus::PPUEnteredHBlank()
 {
 }
@@ -143,11 +149,11 @@ void nds::SharedBus::clock()
 }
 
 void nds::SharedBus::press(int i){
-    bus9->KEYINPUT.raw &= ~(1u << i);
-    if(bus9->KEYCNT.raw & (1u << 14)){ // IRQ enable
-        if(bus9->KEYCNT.raw & (1u << i)){
-            if(bus9->KEYCNT.raw & (1u << 15)){ // AND
-                if((bus9->KEYINPUT.raw & 0b1111111111u) == 0){
+    KEYINPUT.raw &= ~(1u << i);
+    if(KEYCNT.raw & (1u << 14)){ // IRQ enable
+        if(KEYCNT.raw & (1u << i)){
+            if(KEYCNT.raw & (1u << 15)){ // AND
+                if((KEYINPUT.raw & 0b1111111111u) == 0){
                     setIF(12, true);
                 }
             }
@@ -159,5 +165,5 @@ void nds::SharedBus::press(int i){
 }
 
 void nds::SharedBus::release(int i){
-    bus9->KEYINPUT.raw |= (1u << i);
+    KEYINPUT.raw |= (1u << i);
 }

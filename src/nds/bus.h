@@ -17,33 +17,42 @@ namespace nds{
         public:
         bool watchARM7 = false;
         int steps = 0;
-        SharedBus() = default;
         std::shared_ptr<Bus7> bus7;
         std::shared_ptr<Bus9> bus9;
         std::shared_ptr<IPC> ipc;
         std::shared_ptr<LCD> lcd;
         std::shared_ptr<gba::Scheduler<EventType, SharedBus>> scheduler;
-
-
+        
+        
         std::array<Byte, 0x40'0000> mainMemory;
         std::array<Byte, 0x8000> sharedWRAM = {};
         Byte wramCNT = 0;
         std::vector<Byte> firmware;
-
+        
         std::vector<Byte> gameCart;
-
+        gba::GeneralPurpose16 KEYINPUT;
+        gba::GeneralPurpose16 KEYCNT;
+        gba::GeneralPurpose16 EXKEYINPUT;
+        HalfWord EXMEMCNT = 0b11 << 13; // 7-15 shared
+        
+        SharedBus() : KEYINPUT(0x04000130), KEYCNT(0x04000132), EXKEYINPUT(0x04000136){
+            KEYINPUT.raw = 0b1111111111;
+            EXKEYINPUT.raw = 0b01111111; // Hinge (bit 7) offen = 0
+        };
         void loadCartHLE(const std::vector<uint8_t> &bytes);
         Word nds7romRamStart = 0;
         Word nds7romRomStart = 0;
         Word nds7romSize = 0;
-
+        
         Word nds9romRamStart = 0;
         Word nds9romRomStart = 0;
         Word nds9romSize = 0;
-
-
+        
+        
         Byte readByte(Word addr);
         void writeByte(Word addr, Byte val);
+
+        bool canAccessGameCart(const bool isNDS9) const;
 
         // modulo, offset
         std::array<std::pair<Word, Word>, 4> wramAllocationNDS7 = { { {0, 0}, {0x4000, 0}, {0x4000, 0x4000}, {0x8000, 0} } };

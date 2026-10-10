@@ -20,13 +20,15 @@ namespace nds{
         Word IF = 0;
         gba::GeneralPurpose32 IME;
         public:
-        gba::GeneralPurpose16 KEYINPUT;
-        gba::GeneralPurpose16 KEYCNT;
         DSMaths maths;
+
+        Byte exMem06 = 0;
+        Byte POSTFLG = 1;
+        HalfWord POWCNT1 = 0;
         
         CPU cpu;
         CP15 cp15;
-        Bus9(SharedBus* sb) : sharedBus(sb), itcm(0x8000, 0), dtcm(0x4000, 0), IME(0x4000208), KEYINPUT(0x04000130), KEYCNT(0x04000132){};
+        Bus9(SharedBus* sb) : sharedBus(sb), itcm(0x8000, 0), dtcm(0x4000, 0), IME(0x4000208){};
         void init();
         void writeByte(Word addr, Byte val);
         Byte readByte(Word addr);
