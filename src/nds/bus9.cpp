@@ -162,6 +162,10 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
     else if(addr >= 0x04001000 && addr < 0x0400106E){
         sharedBus->lcd->writeRegister(addr, val);
     }
+
+    else if(addr == 0x040001A8){
+        std::cout << "Gamecard Command sent from NDS9\n";
+    }
 }
 
 Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)

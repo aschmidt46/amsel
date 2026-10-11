@@ -403,7 +403,14 @@ bool gba::CPU::executeInstruction()
     if(this->pipeline[0].type != PipelineEmpty){
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
-        // outs << "(r1: " << getHex0x(_R1, 8) << ")\t" << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
+        if(info.code == 0){
+            std::cout << "ANDEQ erreicht!\n";
+            bus->setHalt();
+            return false;
+        }
+        // outs << "(x0: " << getHex0x(_R0, 8) << ") " << "(x1: " << getHex0x(_R1, 8) << ") " << "(x2: " << getHex0x(_R2, 8) << ") " << "(x3: " << getHex0x(_R3, 8) << ") " << "(x4: " << getHex0x(_R4, 8) << ") " << "(x5: " << getHex0x(_R5, 8) << ") "
+        // << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") "
+        // << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
         // outs.flush();
 
         // auto iInfo = info;

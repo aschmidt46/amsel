@@ -45,7 +45,7 @@ void gba::Timer::reschedule()
     Word divider = control.raw & 0b11;
     numStart++;
     clocksStart = bus->getClocks();
-    bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider] * (0xFFFF - reload.raw), .type = EVENT_TimerOverflow, .args = {.index = number}});
+    bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider] * (0x10000 - reload.raw), .type = EVENT_TimerOverflow, .args = {.index = number}});
 }
 
 void gba::Timer::overflowTimer()

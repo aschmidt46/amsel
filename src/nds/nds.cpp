@@ -1,5 +1,7 @@
 #include "nds.h"
 #include "framework/global.h"
+#include <iostream>
+#include "framework/stringlib.h"
 
 using namespace nds;
 
@@ -184,7 +186,7 @@ std::string nds::NDS::getDisassembly(uint64_t code)
 
 uint64_t nds::NDS::readBus(uint64_t addr)
 {
-    return bus->watchARM7 ? bus->bus7->readWord(addr) : bus->bus9->readWord(addr);
+    return bus->watchARM7 ? bus->bus7->readByteFromWide(addr) : bus->bus9->readByteFromWide(addr);
 }
 
 std::tuple<std::string, std::string, std::string> nds::NDS::getLastTransaction()

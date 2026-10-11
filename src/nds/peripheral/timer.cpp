@@ -52,7 +52,7 @@ void Timer<ConcreteBus>::reschedule()
     Word divider = control.raw & 0b11;
     numStart++;
     clocksStart = cbus->getClocks();
-    bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider] * (0xFFFF - reload.raw), .type = scheduleEvent, .args = {.index = number}});
+    bus->scheduler->scheduleEvent({.timePoint = timerDividers[divider] * (0x10000 - reload.raw), .type = scheduleEvent, .args = {.index = number}});
 }
 
 template<typename ConcreteBus>

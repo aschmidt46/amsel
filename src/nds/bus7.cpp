@@ -117,9 +117,12 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         POWCNT2 = val & 0b11;
     }
 
-    if(addr >= 0x06000000 && addr < 0x07000000){
+    else if(addr >= 0x06000000 && addr < 0x07000000){
         addr -= 0x06000000;
         sharedBus->lcd->writeMemoryNDS7(addr % 0x4'0000, val);
+    }
+    else if(addr == 0x040001A8){
+        std::cout << "Gamecard Command sent from NDS7\n";
     }
 }
 
@@ -251,7 +254,6 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
 
     std::cout << "Bus7 unknown Read: " << getHex0x(addr, 8) << "\n";
-    // throw;
 
     return 0;
 }

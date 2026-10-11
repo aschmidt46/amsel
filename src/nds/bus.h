@@ -26,7 +26,7 @@ namespace nds{
         
         std::array<Byte, 0x40'0000> mainMemory;
         std::array<Byte, 0x8000> sharedWRAM = {};
-        Byte wramCNT = 0;
+        Byte wramCNT = 3; // !!! Warum steht das nirgends?
         std::vector<Byte> firmware;
         
         std::vector<Byte> gameCart;
