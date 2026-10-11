@@ -23,10 +23,7 @@ namespace nds{
         // Vram
         public:
         std::vector<Byte> paletteRam;
-        std::vector<Byte> vRam;
-        std::vector<Byte> lcdc;
         std::vector<Byte> oamAttribs;
-        private:
         bool spriteAlphaOverride = false;
         // Aktuelle Sprites
         std::array<OAMAttribs, 128> oamAttribsCurrentLine = {};
@@ -130,6 +127,8 @@ namespace nds{
             }
         }
 
+        bool isB = false;
+
         
         public:
 
@@ -139,7 +138,7 @@ namespace nds{
 
 
         PPU() = default;
-        PPU(LCD* lcd, Word fOffset) : paletteRam(0x400, 0), vRam(0x18000, 0), lcdc(0xA4000, 0), oamAttribs(0x400, 0), lcd(lcd), framebufferOffset(fOffset){};
+        PPU(LCD* lcd, Word fOffset, bool isB) : paletteRam(0x400, 0), oamAttribs(0x400, 0), lcd(lcd), isB(isB), framebufferOffset(fOffset){};
         uint32_t* accessFramebuffer();
 
         // Offset in großen Framebuffer, 0 = oberer Bildschirm, 1 = unterer
@@ -178,8 +177,5 @@ namespace nds{
         
         void writePPURegister(Word addr, Byte val);
         Byte readPPURegister(Word addr);
-
-        void writePPUMemory(Word addr, Byte value);
-        Byte readPPUMemory(Word addr);
     };
 }

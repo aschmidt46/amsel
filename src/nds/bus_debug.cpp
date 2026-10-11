@@ -189,6 +189,32 @@ void nds::SharedBus::extendedDebugMenu()
         std::ofstream out("memdump-nds9.txt");
         memdump9(out);
     }
+    if(ImGui::Button("PPU Registers")){
+        showPPURegisters = !showPPURegisters;
+    }
+
+    if(showPPURegisters){
+        ImGui::Begin("PPU Registers", &showPPURegisters, ImGuiWindowFlags_NoCollapse);
+
+        if(ImGui::BeginTabBar("selectEngine")){
+
+            if(ImGui::BeginTabItem("engine A")){
+                lcd->engineA.LCDCONTROL.render();
+                ImGui::EndTabItem();
+            }
+
+            if(ImGui::BeginTabItem("engine B")){
+                lcd->engineB.LCDCONTROL.render();
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
+
+
+
+        ImGui::End();
+    }
 
 
     //#endif

@@ -403,7 +403,7 @@ bool gba::CPU::executeInstruction()
     if(this->pipeline[0].type != PipelineEmpty){
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
-        // outs << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code) << "\n";
+        // outs << "(r1: " << getHex0x(_R1, 8) << ")\t" << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
         // outs.flush();
 
         // auto iInfo = info;
@@ -738,10 +738,11 @@ bool gba::CPU::checkCondition(Condition c) const
     return false;
 }
 
-std::string CPU::getDisassembly(Word code){
+std::string CPU::getDisassembly(Word code, Word pc){
     ARMSTATE s;
     auto state = getRegisterState();
-    disasm_init(&s, 0);
+    disasm_init(&s, DISASM_COMMENT | DISASM_INSTR);
+    disasm_address(&s, pc);
     int mode = ((state.CPSR >> 5) & 1u) ? 0 : 1;
     s.arm_mode = mode;
     if(mode == 1){

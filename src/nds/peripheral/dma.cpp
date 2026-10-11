@@ -12,6 +12,7 @@ constexpr std::array<Word, 4> destMasks = {0x07FFFFFF, 0x07FFFFFF, 0x07FFFFFF, 0
 
 template<typename ConcreteBus>
 void DMAChannel<ConcreteBus>::onWrite(Word addr, Byte val){
+    // std::cout << "DMA Bus " << (isDMA7() ? "7" : "9") << " write, addr: " << addr << "\n";
     if(addr < 4){
         SourceAddress.OnWriteByte(addr, val);
     }
@@ -25,6 +26,7 @@ void DMAChannel<ConcreteBus>::onWrite(Word addr, Byte val){
         const bool enabledBefore = isEnabled();
         Control.OnWriteByte(addr, val);
         startTiming = getStartTiming();
+        // std::cout << startTiming << "\n";
         const int incrementer = dmaTransferIs32Bit() ? 4 : 2;
         int destIncrementFactor = 0;
         switch(getDestAddrControl()){
@@ -72,19 +74,17 @@ void DMAChannel<ConcreteBus>::resetInternalCounters(bool SAD, bool DAD){
     currentCount = 0;
     maxCount = WordCount.raw;
 
-    currentSourceAddr &= srcMasks[dmaIndex];
-    currentDestAddr &= destMasks[dmaIndex];
+    currentSourceAddr &= isDMA7() ? srcMasks[dmaIndex] : 0xFFFFFFE;
+    currentDestAddr &= isDMA7() ? destMasks[dmaIndex] : 0xFFFFFFE;
 
     if(dmaIndex == 3){ // any Memory
-        maxCount &= 0xFFFF; // 16 bit
-        if(maxCount == 0) maxCount = 0x10000;
+        maxCount &= isDMA7() ? 0xFFFF : 0x1FFFFF;
+        if(maxCount == 0) maxCount = isDMA7() ? 0x10000 : 0x200000;
     }
     else{ // internal memory
-        maxCount &= 0x3FFF; // 14 bit
-        if(maxCount == 0) maxCount = 0x4000;
+        maxCount &= isDMA7() ? 0x3FFF : 0x1FFFFF; // 14 bit
+        if(maxCount == 0) maxCount = isDMA7() ? 0x4000 : 0x200000;
     }
-    if(startTiming == DMA_SOUND_FIFO)
-        maxCount = 4;
     
     if(dmaTransferIs32Bit()){
         currentSourceAddr &= ~3u;
@@ -98,7 +98,16 @@ void DMAChannel<ConcreteBus>::resetInternalCounters(bool SAD, bool DAD){
 
 template<typename ConcreteBus>
 Byte DMAChannel<ConcreteBus>::onRead(Word addr){
-    if(addr >= 10 && addr < 12){
+    if(addr < 4){
+        return SourceAddress.OnReadByte(addr);
+    }
+    else if(addr < 8){
+        return DestinationAddress.OnReadByte(addr);
+    }
+    else if(addr < 10){
+        return WordCount.OnReadByte(addr);
+    }
+    else if(addr < 12){
         return Control.OnReadByte(addr);
     }
     else{
@@ -114,6 +123,8 @@ DMAChannel<ConcreteBus>::DMAChannel(int index, SharedBus *busPtr, ConcreteBus *c
 template<typename ConcreteBus>
 void DMAChannel<ConcreteBus>::commenceTransfer()
 {
+    std::cout << "Starting DMA Transfer on Bus " << (isDMA7() ? "7" : "9") << " with Timing ";
+    printStartTiming(); 
     size_t remaining = 0;
     while(currentCount < maxCount){
         remaining += 2;
@@ -121,26 +132,24 @@ void DMAChannel<ConcreteBus>::commenceTransfer()
         
         if(dmaTransferIs32Bit()){
             if(currentSourceAddr >= 0x2000000) // Dma open bus
-                lastRead = cbus->readWord(currentSourceAddr); // update latch
+                lastRead = cbus->readWordFromDMA(currentSourceAddr); // update latch
             const Word data = lastRead;
-            cbus->writeWord(currentDestAddr & ~3u, data);
+            cbus->writeWordFromDMA(currentDestAddr & ~3u, data);
         }
         else{
             if(currentSourceAddr >= 0x2000000){
-                lastRead = cbus->readHalfWord(currentSourceAddr);
+                lastRead = cbus->readHalfWordFromDMA(currentSourceAddr);
                 lastRead |= lastRead << 16; // Halbwort Wird in Latch dupliziert
             }
             Word data = lastRead;
             if(currentSourceAddr < 0x2000000 && currentDestAddr & 2)
                 data >>= 16;
-            cbus->writeHalfWord(currentDestAddr & ~1u, data);
+            cbus->writeHalfWordFromDMA(currentDestAddr & ~1u, data);
         }
     
-        if(startTiming != DMA_SOUND_FIFO)
-            currentDestAddr += destIncrement;
-        else{
-            // bus->apu.clockFromDMA();
-        }
+        // if(startTiming != DMA_SOUND_FIFO)
+        currentDestAddr += destIncrement;
+
         currentSourceAddr += sourceIncrement;
 
         currentSourceAddr &= srcMasks[dmaIndex];
@@ -172,23 +181,29 @@ template<typename ConcreteBus>
 void DMAChannel<ConcreteBus>::printStartTiming(){
     auto s = getStartTiming();
     switch(s){
-        case DMA_VIDEO_CAPTURE:
-            std::cout << "Video Capture\n";
+        case DMA_HBLANK_OR_CARTRIDGE_SLOT:
+            std::cout << "Hblank or Cartridge\n";
             break;
-        case DMA_SOUND_FIFO:
-            std::cout << "Sound FIFO\n";
+        case DMA_SYNC_OR_WIRELESS_SPECIAL:
+            std::cout << "Sync or Wireless\n";
             break;
         case DMA_IMMEDIATE:
             std::cout << "Immediate\n";
             break;
-        case DMA_HBLANK:
-            std::cout << "HBLANK\n";
+        case DMA_MAIN_MEMORY_DISPLAY:
+            std::cout << "Main Memory Display\n";
             break;
         case DMA_VBLANK:
             std::cout << "VBLANK\n";
             break;
-        case DMA_SPECIAL_PROHIBITED:
-            std::cout << "Dma verboten\n";
+        case DMA_DS_CARTRIDGE_SLOT:
+            std::cout << "Ds Cartridge Slot\n";
+            break;
+        case DMA_GBA_CARTRIDGE_SLOT:
+            std::cout << "Gba Cartridge Slot\n";
+            break;
+        case DMA_GEOMETRY_COMMAND_FIFO:
+            std::cout << "Geometry Command Fifo\n";
             break;
     }
 }

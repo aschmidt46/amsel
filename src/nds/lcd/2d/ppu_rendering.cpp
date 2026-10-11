@@ -149,7 +149,7 @@ void PPU::renderScanline()
                 fun = &PPU::drawPixelMode5;
                 break;
         }
-        fun = &PPU::drawPixelMode3;
+        // fun = &PPU::drawPixelMode3;
         for(; currentCycle < 256; currentCycle++){
 
             layerOrderSize = 0;
@@ -384,7 +384,7 @@ void PPU::drawSprites(){
     
             const Word paletteBank = sprite.attr2.state.paletteBank; // nur in 4bbp modus
     
-            Byte* vRamTiles = vRam.data() + 0x00010000;
+            Byte* vRamTiles = lcd->vram.data() + lcd->getVramOffset(isB ? 0x600000 : 0x400000); // Offset zu 0x06000000
     
             Word currentTileX = xOffset / 8;
             Word currentTileY = yOffset / 8;
@@ -422,7 +422,7 @@ void PPU::drawSprites(){
         
             // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
             const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-            if(tileStart + pixelIndex >= vRam.data() + vRam.size())
+            if(tileStart + pixelIndex >= lcd->vram.data() + lcd->vram.size())
                 continue;
             Byte pixel = *(tileStart + pixelIndex);
             if(!bpp8){
@@ -493,8 +493,8 @@ void PPU::drawBG(const int index)
     const Word screenBaseBlock = CONTROL.state.screenBaseBlock;
     const Word characterBaseBlock = CONTROL.state.CHRBaseBlock;
     auto [bgrX, bgrY] = isAffine ? affineBgrSizes[CONTROL.state.screenSize] : regularBgrSizes[CONTROL.state.screenSize];
-    Byte* entries = vRam.data() + (screenBaseBlock * screenblockSize);
-    Byte* chrEntries = vRam.data() + (characterBaseBlock * chrblockSize);
+    Byte* entries = lcd->vram.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (screenBaseBlock * screenblockSize); // BG Vram bei 0x06000000 (A) und 0x06200000 (B)
+    Byte* chrEntries = lcd->vram.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (characterBaseBlock * chrblockSize);
     const Word tileWidth = bpp8 ? 0x40 : 0x20;
     const Word tileWidthByte = bpp8 ? 8 : 4;
     Word mapX;
@@ -551,7 +551,7 @@ void PPU::drawBG(const int index)
 
     // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
     const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-    if(tileStart + pixelIndex >= vRam.data() + vRam.size()){
+    if(tileStart + pixelIndex >= lcd->vram.data() + lcd->vram.size()){
         if(!CONTROL.state.mosaic || mosaicBgXCounter == 0)
             latchedBg[index] = result;
         return;
@@ -794,8 +794,8 @@ PIXEL_T PPU::drawPixelMode3() {
 PIXEL_T PPU::drawPixelMode4() {
     const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
     int index = currentCycle + 256 * pixelY;
-    size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
-    Byte paletteIndex = vRam[index + page];
+    size_t page = 0;//LCDCONTROL.state.frameSelect ? 0xA000 : 0;
+    Byte paletteIndex = 0;//vRam[index + page];
     HalfWord pixel = HalfWord(paletteRam[2 * paletteIndex]) | (HalfWord(paletteRam[2 * paletteIndex + 1]) << 8);
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;
@@ -824,8 +824,8 @@ PIXEL_T PPU::drawPixelMode5() {
     PIXEL_T bg2;
     if(currentCycle < 160 && currentScanline < 128){
         int index = currentCycle + 160 * pixelY;
-        size_t page = LCDCONTROL.state.frameSelect ? 0xA000 : 0;
-        HalfWord pixel = HalfWord(vRam[page + 2 * index]) | (HalfWord(vRam[page + 2 * index + 1]) << 8);
+        size_t page = 0;//LCDCONTROL.state.frameSelect ? 0xA000 : 0;
+        HalfWord pixel = 0;//HalfWord(vRam[page + 2 * index]) | (HalfWord(vRam[page + 2 * index + 1]) << 8);
         HalfWord red = pixel & 0b11111;
         HalfWord green = (pixel >> 5) & 0b11111;
         HalfWord blue = (pixel >> 10) & 0b11111;

@@ -51,6 +51,9 @@ void nds::CP15::MCR(Word val, Word Cn, Word Cm, Word cp)
     else if(Cn == 13 && Cm <= 1 && cp == 1){
         traceProcessID = val;
     }
+    else{
+        std::cout << "MCR unhandled: C" << Cn << ", C" << Cm << ", " << cp << "\n";
+    }
 }
 
 Word nds::CP15::MRC(Word Cn, Word Cm, Word cp)
@@ -112,5 +115,6 @@ Word nds::CP15::MRC(Word Cn, Word Cm, Word cp)
     if(Cn == 13 && Cm <= 1 && cp == 1){
         return traceProcessID;
     }
+    std::cout << "MRC unhandled: C" << Cn << ", C" << Cm << ", " << cp << "\n";
     return 0;
 }

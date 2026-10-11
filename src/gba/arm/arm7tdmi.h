@@ -246,7 +246,7 @@ namespace gba{
         InstructionInfo getInstructionInPipeline();
         std::string printCPSR();
         std::string printMode();
-        std::string getDisassembly(Word code);
+        std::string getDisassembly(Word code, Word pc = 0);
 
     };
 };

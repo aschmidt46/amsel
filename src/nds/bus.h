@@ -84,6 +84,7 @@ namespace nds{
 
         // Debug
 
+        bool showPPURegisters = false;
 
 
         void setDebug(bool to);

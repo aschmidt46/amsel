@@ -27,6 +27,11 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     bus9->cpu.setPC(entrynds9);
     bus9->cpu.setLR(entrynds9);
     bus9->cpu.setIP(entrynds9);
+
+    // copy header
+    for(size_t i = 0; i < 0x170; i++){
+        bus9->writeByte(0x27FFE00 + i, gameCart[i]);
+    }
     
     size_t j = nds9romRamStart;
     for(size_t i = nds9romRomStart; i < nds9romRomStart + nds9romSize; i++){
@@ -68,10 +73,14 @@ bool nds::SharedBus::canAccessGameCart(const bool isNDS9) const
 
 void nds::SharedBus::PPUEnteredHBlank()
 {
+    bus7->PPUEnteredHBlank();
+    bus9->PPUEnteredHBlank();
 }
 
 void nds::SharedBus::PPUEnteredVBlank()
 {
+    bus7->PPUEnteredVBlank();
+    bus9->PPUEnteredVBlank();
 }
 
 void nds::SharedBus::PPULeftHBlank()

@@ -28,6 +28,7 @@ namespace nds{
 
         SharedBus* bus;
         
+        public:
         PPU engineA;
         PPU engineB;
         GPU engine3D;
@@ -40,6 +41,7 @@ namespace nds{
         std::array<VRAMCNT_T, 10> vramControl = {};
         std::array<Byte, 0xA4000> vram = {};
 
+        private:
         template<Word N>
         void switchVramBank();
         template<Word N>
@@ -66,6 +68,7 @@ namespace nds{
         Byte readRegister(Word addr);
         void writeRegister(Word addr, Byte val);
         Byte readMemory(Word addr);
+        Word getVramOffset(Word addr);
         void writeMemory(Word addr, Byte val);
         Byte readMemoryNDS7(Word addr);
         void writeMemoryNDS7(Word addr, Byte val);

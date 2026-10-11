@@ -5,8 +5,8 @@ using namespace nds;
 
 void nds::LCD::init()
 {
-    engineA = PPU(this, 0);
-    engineB = PPU(this, 1);
+    engineA = PPU(this, 0, false);
+    engineB = PPU(this, 1, true);
 
     // default: LCDC mapping
     switchVramBank<0>();
@@ -103,7 +103,13 @@ Byte nds::LCD::readRegister(Word addr)
     if(addr == 0x04000005){
         return DISPSTAT.raw >> 8;
     }
-    return engineA.readPPURegister(addr);
+    if(addr >= 0x04000000 && addr < 0x0400006E){
+        return engineA.readPPURegister(addr);
+    }
+    if(addr >= 0x04001000 && addr < 0x0400106E){
+        return engineB.readPPURegister(addr - 0x1000);
+    }
+    return 0;
 }
 
 void nds::LCD::writeRegister(Word addr, Byte val)
@@ -115,7 +121,12 @@ void nds::LCD::writeRegister(Word addr, Byte val)
         DISPSTAT.raw = (DISPSTAT.raw & 0x00FF) | (HalfWord(val) << 8);
     }
 
-    else engineA.writePPURegister(addr, val);
+    else if(addr >= 0x04000000 && addr < 0x0400006E){
+        engineA.writePPURegister(addr, val);
+    }
+    else if(addr >= 0x04001000 && addr < 0x0400106E){
+        engineB.writePPURegister(addr - 0x1000, val);
+    }
 }
 
 Byte nds::LCD::readMemory(Word addr)
@@ -142,6 +153,17 @@ Byte nds::LCD::readMemory(Word addr)
     }
     if(addr >= 0x07000400 && addr < 0x07000800){
         return engineB.oamAttribs[addr - 0x07000400];
+    }
+    return 0;
+}
+
+Word nds::LCD::getVramOffset(Word addr)
+{
+    // Adresse startet bei 0
+    const Word offset = addr % 0x4000;
+    const Word page = addr / 0x4000;
+    if(pageTable[page].state.valid){
+        return pageTable[page].state.bankID * 0x4000 + offset;
     }
     return 0;
 }

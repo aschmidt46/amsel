@@ -4,7 +4,12 @@
 
 using namespace nds;
 
-// TIMINGS SIND FALSCH; ALLE ÜBERPRÜFEN
+template<>
+void gba::Scheduler<nds::EventType, nds::SharedBus>::scheduleEvent(Event<nds::EventType> e)
+{
+    e.timePoint += time;
+    heap.push(e);
+}
 
 template<>
 void gba::Scheduler<nds::EventType,nds::SharedBus>::handleEvent()
@@ -14,16 +19,16 @@ void gba::Scheduler<nds::EventType,nds::SharedBus>::handleEvent()
         case NDSEVENT_None:
             return;
         case NDSEVENT_DmaTransfer7:
-            // bus->bus7->dma[e.args.index].commenceTransfer();
+            bus->bus7->dma[e.args.index].commenceTransfer();
             return;
         case NDSEVENT_TimerOverflow7:
-            // bus->bus7->timers[e.args.index].overflowTimer();
+            bus->bus7->timers[e.args.index].overflowTimer();
             return;
         case NDSEVENT_DmaTransfer9:
-            // bus->bus9->dma[e.args.index].commenceTransfer();
+            bus->bus9->dma[e.args.index].commenceTransfer();
             return;
         case NDSEVENT_TimerOverflow9:
-            // bus->bus9->timers[e.args.index].overflowTimer();
+            bus->bus9->timers[e.args.index].overflowTimer();
             return;
         case NDSEVENT_PPU_HBLANK:
             bus->lcd->onHBlank();
@@ -51,21 +56,14 @@ void gba::Scheduler<nds::EventType, nds::SharedBus>::init()
     heap.push({545280, NDSEVENT_PPU_VBLANK});
 }
 
-template<typename T, typename B>
-void gba::Scheduler<T,B>::scheduleEvent(Event<T> e)
+template<>
+void gba::Scheduler<nds::EventType, nds::SharedBus>::clock()
 {
-    e.timePoint += time;
-    heap.push(e);
-    // std::cout << "scheduled\n";
-}
-
-template<typename T, typename B>
-void gba::Scheduler<T,B>::clock()
-{
-    cpuBlocked = false;
     bool tryAgain = false;
     do{
         tryAgain = false;
+        if(!heap.empty())
+            next = heap.top();
         if(next.has_value() && time >= next.value().timePoint){
             handleEvent();
             heap.pop();

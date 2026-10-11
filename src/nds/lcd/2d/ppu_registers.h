@@ -9,26 +9,66 @@
 #define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
 #endif
 
+#include <imgui.h>
+
 
 namespace nds{
     union LCDCONTROL_T {
         struct{
-            HalfWord bgMode : 3; //lsb
-            HalfWord cgbMode : 1;
-            HalfWord frameSelect : 1;
-            HalfWord hblankIntervalFree : 1;
-            HalfWord ObjCharVRAMMapping : 1;
-            HalfWord ForcedBlank : 1;
-            HalfWord displayBG0 : 1;
-            HalfWord displayBG1 : 1;
-            HalfWord displayBG2 : 1;
-            HalfWord displayBG3 : 1;
-            HalfWord displayOBJ : 1;
-            HalfWord displayWin0 : 1;
-            HalfWord displayWin1 : 1;
-            HalfWord displayObjWindow : 1;
+            Word bgMode : 3; //lsb
+            Word bg0_use3d : 1; // NEU (nur A)
+            Word ObjCharVRAMMapping : 1; // evtl anders
+            Word bitmapObj2DDimension : 1; // NEU
+            Word bitmapObjMapping : 1; // NEU
+            Word ForcedBlank : 1;
+            Word displayBG0 : 1;
+            Word displayBG1 : 1;
+            Word displayBG2 : 1;
+            Word displayBG3 : 1;
+            Word displayOBJ : 1;
+            Word displayWin0 : 1;
+            Word displayWin1 : 1;
+            Word displayObjWindow : 1; // bit 15, darunter alles NEU
+            Word displayMode : 2;
+            Word vramBlock : 2; // Für Capture und Displaymode 2 (NUR A)
+            Word tileObj1DBoundary : 2; // siehe bit 4
+            Word bitmapObj1DBoundary : 1; // siehe 5-6 (NUR A)
+            Word objProcessingDuringHBlank : 1; // war GBA bit 5 (hab ich nicht behandelt)
+            Word characterBase : 3; // in 64K schritten (nur A)
+            Word screenBase : 3; // in 64K schritten (nur A) "merged with 2K step in BGxCNT"
+            Word useBGExtendedPalettes : 1;
+            Word useOBJExtendedPalettes : 1;
         } state;
-        HalfWord raw;
+        Word raw;
+
+        void render(){
+            //#ifdef BUILD_DESKTOP
+
+            ImGui::Text("BG Mode:\t%d", state.bgMode);
+            ImGui::Text("use 3d:\t%d", state.bg0_use3d);
+            ImGui::Text("objCharVramMap:\t%d", state.ObjCharVRAMMapping);
+            ImGui::Text("BitmapObj2DDim:\t%d", state.bitmapObj2DDimension);
+            ImGui::Text("bitmapObjMapping:\t%d", state.bitmapObjMapping);
+            ImGui::Text("forcedBlank:\t%d", state.ForcedBlank);
+            ImGui::Text("DisplayBG0:\t%d", state.displayBG0);
+            ImGui::Text("DisplayBG1:\t%d", state.displayBG1);
+            ImGui::Text("DisplayBG2:\t%d", state.displayBG2);
+            ImGui::Text("DisplayBG3:\t%d", state.displayBG3);
+            ImGui::Text("DisplayObj:\t%d", state.displayOBJ);
+            ImGui::Text("DisplayWin0:\t%d", state.displayWin0);
+            ImGui::Text("DisplayWin1:\t%d", state.displayWin1);
+            ImGui::Text("DisplayObjWin:\t%d", state.displayObjWindow);
+            ImGui::Text("DisplayMode:\t%d", state.displayMode);
+            ImGui::Text("VRAM Block:\t%d", state.vramBlock);
+            ImGui::Text("TileObj1DBoundary:\t%d", state.tileObj1DBoundary);
+            ImGui::Text("bitmapObj1DBound:\t%d", state.bitmapObj1DBoundary);
+            ImGui::Text("ObjProcHblank:\t%d", state.objProcessingDuringHBlank);
+            ImGui::Text("Character Base:\t%d", state.characterBase);
+            ImGui::Text("Screen Base:\t%d", state.screenBase);
+            ImGui::Text("BG ext pallette:\t%d", state.useBGExtendedPalettes);
+            ImGui::Text("Obj ext pallette:\t%d", state.useOBJExtendedPalettes);
+            //#endif
+        }
     };
 
     union LCDSTATUS_T {

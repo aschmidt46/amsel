@@ -25,10 +25,12 @@ namespace nds{
     enum DMAStartTiming : HalfWord{
         DMA_IMMEDIATE = 0,
         DMA_VBLANK = 1,
-        DMA_HBLANK = 2,
-        DMA_SPECIAL_PROHIBITED = 3,
-        DMA_SOUND_FIFO = 4,
-        DMA_VIDEO_CAPTURE = 5,
+        DMA_HBLANK_OR_CARTRIDGE_SLOT = 2,
+        DMA_SYNC_OR_WIRELESS_SPECIAL = 3,
+        DMA_MAIN_MEMORY_DISPLAY = 4,
+        DMA_DS_CARTRIDGE_SLOT = 5,
+        DMA_GBA_CARTRIDGE_SLOT = 6,
+        DMA_GEOMETRY_COMMAND_FIFO = 7,
     };
 
     template<typename ConcreteBus>
@@ -36,7 +38,7 @@ namespace nds{
         SharedBus* bus;
         ConcreteBus* cbus;
         int dmaIndex;
-        const EventType schedulerEvent = NDSEVENT_DmaTransfer7;
+        EventType schedulerEvent = NDSEVENT_DmaTransfer7;
 
         gba::GeneralPurpose32 SourceAddress;
         public: gba::GeneralPurpose32 DestinationAddress;
@@ -60,6 +62,10 @@ namespace nds{
 
         void resetInternalCounters(bool SAD, bool DAD);
         void printStartTiming();
+
+        inline bool isDMA7() const{
+            return schedulerEvent == NDSEVENT_DmaTransfer7;
+        }
     
         public:
         // bool isActive = false;
@@ -92,12 +98,9 @@ namespace nds{
         }
 
         inline DMAStartTiming getStartTiming() const{
-            DMAStartTiming timing = DMAStartTiming((Control.raw >> 12) & 0b11u);
-            if((dmaIndex == 1 || dmaIndex == 2) && timing == DMA_SPECIAL_PROHIBITED){
-                timing = DMA_SOUND_FIFO;
-            }
-            else if(dmaIndex == 3 && timing == DMA_SPECIAL_PROHIBITED){
-                timing = DMA_VIDEO_CAPTURE;
+            DMAStartTiming timing = DMAStartTiming((Control.raw >> (isDMA7() ? 12 : 11)) & (isDMA7() ? 0b11u : 0b111u)); // NDS9 hat ein bit mehr (davor?)
+            if(timing == DMA_SYNC_OR_WIRELESS_SPECIAL && isDMA7() && (dmaIndex == 1 || dmaIndex == 3)){
+                timing = DMA_GBA_CARTRIDGE_SLOT;
             }
             return timing;
         }

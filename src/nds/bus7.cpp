@@ -1,5 +1,7 @@
 #include "bus7.h"
 #include "bus.h"
+#include <iostream>
+#include "framework/stringlib.h"
 
 using namespace nds;
 
@@ -8,6 +10,11 @@ void nds::Bus7::init()
     new (&cpu) gba::CPU(this, false);
     // extrem wichtig bei cartridge boot time:
     cpu.initialNDS();
+
+    for(int i = 0; i < 4; i++){
+        new (&timers[i]) Timer<Bus7>(i, sharedBus, this, NDSEVENT_TimerOverflow7);
+        new (&dma[i]) DMAChannel<Bus7>(i, sharedBus, this, NDSEVENT_DmaTransfer7);
+    }
 }
 
 void nds::Bus7::writeByte(Word addr, Byte val)
@@ -41,6 +48,25 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         // main mem
         addr -= 0x03800000;
         arm7WRAM[addr % 0x10000] = val;
+    }
+    // DMA
+    else if(addr >= 0x040000B0 && addr < 0x040000BC){
+        dma[0].onWrite(addr - 0x040000B0, val);
+    }
+    else if(addr >= 0x040000BC && addr < 0x040000C8){
+        dma[1].onWrite(addr - 0x040000BC, val);
+    }
+    else if(addr >= 0x040000C8 && addr < 0x040000D4){
+        dma[2].onWrite(addr - 0x040000C8, val);
+    }
+    else if(addr >= 0x040000D4 && addr < 0x040000E0){
+        dma[3].onWrite(addr - 0x040000D4, val);
+    }
+    else if(addr >= 0x04000100 && addr < 0x04000110){
+        addr -= 0x04000100;
+        const Word num = addr / 4;
+        const Word reg = addr % 4;
+        timers[num].onWrite(reg, val);
     }
     else if(addr >= 0x04000132 && addr < 0x04000134){
         sharedBus->KEYCNT.OnWriteByte(addr, val);
@@ -127,6 +153,27 @@ Byte nds::Bus7::readByteFromWide(Word addr)
         return sharedBus->lcd->readRegister(addr);
     }
 
+    // DMA
+    if(addr >= 0x040000B0 && addr < 0x040000BC){
+        return dma[0].onRead(addr - 0x040000B0);
+    }
+    if(addr >= 0x040000BC && addr < 0x040000C8){
+        return dma[1].onRead(addr - 0x040000BC);
+    }
+    if(addr >= 0x040000C8 && addr < 0x040000D4){
+        return dma[2].onRead(addr - 0x040000C8);
+    }
+    if(addr >= 0x040000D4 && addr < 0x040000E0){
+        return dma[3].onRead(addr - 0x040000D4);
+    }
+
+    if(addr >= 0x04000100 && addr < 0x04000110){
+        addr -= 0x04000100;
+        const Word num = addr / 4;
+        const Word reg = addr % 4;
+        return timers[num].onRead(reg);
+    }
+
     if(addr >= 0x4000180 && addr < 0x4000188){
         return sharedBus->ipc->readReg(addr, false);
     }
@@ -203,6 +250,9 @@ Byte nds::Bus7::readByteFromWide(Word addr)
         return sharedBus->lcd->readMemoryNDS7(addr % 0x4'0000);
     }
 
+    std::cout << "Bus7 unknown Read: " << getHex0x(addr, 8) << "\n";
+    // throw;
+
     return 0;
 }
 
@@ -245,8 +295,23 @@ Word nds::Bus7::readWord(Word addr)
     return A1 | (A2 << 8) | (A3 << 16) | (A4 << 24);
 }
 
+void nds::Bus7::PPUEnteredHBlank()
+{
+}
+
+void nds::Bus7::PPUEnteredVBlank()
+{
+    for(auto &d : dma){
+        if(d.getStartTiming() == DMA_VBLANK && d.isEnabled()){
+            d.commenceTransfer();
+            return;
+        }
+    }
+}
+
 void nds::Bus7::clock()
 {
+    clocks++;
     cpu.clock();
 }
 
@@ -272,6 +337,11 @@ size_t nds::Bus7::getClocks()
 
 void nds::Bus7::timerOverflowed(int index)
 {
+    if(index < 3){
+        if(timers[index + 1].usesPreviousTimer()){
+            timers[index + 1].clockWithPrevious();
+        }
+    }
 }
 
 void nds::Bus7::setIF(int bit, bool val)

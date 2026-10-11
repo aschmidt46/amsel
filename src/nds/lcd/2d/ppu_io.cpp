@@ -35,12 +35,16 @@ std::string PPU::getDebugOutput()
 void PPU::writePPURegister(Word addr, Byte val)
 {
     if(addr == 0x04000000){
-        LCDCONTROL.raw = (LCDCONTROL.raw & 0xFF00) | val;
-        LCDCONTROL.state.cgbMode = 0;
+        LCDCONTROL.raw = (LCDCONTROL.raw & 0xFFFFFF00) | val;
     }
     else if(addr == 0x04000001){
-        LCDCONTROL.raw = (LCDCONTROL.raw & 0x00FF) | (HalfWord(val) << 8);
-        LCDCONTROL.state.cgbMode = 0;
+        LCDCONTROL.raw = (LCDCONTROL.raw & 0xFFFF00FF) | (Word(val) << 8);
+    }
+    else if(addr == 0x04000002){
+        LCDCONTROL.raw = (LCDCONTROL.raw & 0xFF00FFFF) | (Word(val) << 16);
+    }
+    else if(addr == 0x04000003){
+        LCDCONTROL.raw = (LCDCONTROL.raw & 0x00FFFFFF) | (Word(val) << 24);
     }
     else if(addr == 0x04000004){
         LCDSTATUS.raw = (LCDSTATUS.raw & 0xFF07) | (val & 0b11111000); // untere 3 bits read only
@@ -326,6 +330,10 @@ Byte PPU::readPPURegister(Word addr)
             return LCDCONTROL.raw;
         case 0x04000001:
             return LCDCONTROL.raw >> 8;
+        case 0x04000002:
+            return LCDCONTROL.raw >> 16;
+        case 0x04000003:
+            return LCDCONTROL.raw >> 24;
         case 0x04000004:
             return LCDSTATUS.raw;
         case 0x04000005:
@@ -379,63 +387,5 @@ Byte PPU::readPPURegister(Word addr)
     }
 
     std::cout << "Unbekannter PPU Register read: "<< getHex0x(addr, 8) << "\n";
-    return 0;
-}
-
-// MUSS gefixt werden (auch für Openlara), bei Byte Writes wird das Byte in beide Bytes des Halbworts geschrieben
-void PPU::writePPUMemory(Word addr, Byte value) {
-    if(addr >= 0x05000000 && addr < 0x06000000){
-        auto mod = (addr - 0x05000000) % 0x400;
-        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
-            paletteRam[mod] = value;
-    }
-    // else if(addr >= 0x06000000 && addr < 0x07000000){
-    //     // auto relAddr = (addr - 0x06000000);
-    //     auto mod = addr % 0x20000;
-    //     if(mod >= 0x18000) mod -= 0x8000;
-    //     // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
-    //         vRam[mod] = value;
-    // }
-    else if(addr >= 0x06800000 && addr < 0x07000000){
-        addr -= 0x06800000;
-        auto mod = addr % 0xA4000;
-        lcdc[mod] = value;
-    }
-    else if(addr >= 0x07000000 && addr < 0x08000000){
-        auto mod = (addr - 0x07000000) % 0x400;
-        // if(LCDSTATUS.state.vBlankFlag || (LCDSTATUS.state.hBlankFlag && LCDCONTROL.state.hblankIntervalFree))
-            oamAttribs[mod] = value;
-    }
-}
-
-Byte PPU::readPPUMemory(Word addr)
-{
-    if(addr >= 0x05000000 && addr < 0x06000000){
-        auto mod = (addr - 0x05000000) % 0x400;
-        // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
-            return paletteRam[mod];
-        // else return 0;
-    }
-    
-    // else if(addr >= 0x06000000 && addr < 0x07000000){
-    //     // auto relAddr = (addr - 0x06000000);
-    //     auto mod = addr % 0x20000;
-    //     if(mod >= 0x18000) mod -= 0x8000;
-    //     // if(LCDSTATUS.state.vBlankFlag || LCDSTATUS.state.hBlankFlag)
-    //         return vRam[mod];
-    //     // else return 0;
-    // }
-    else if(addr >= 0x06800000 && addr < 0x07000000){
-        addr -= 0x06800000;
-        auto mod = addr % 0xA4000;
-        return lcdc[mod];
-    }
-    else if(addr >= 0x07000000 && addr < 0x08000000){
-        auto mod = (addr - 0x07000000) % 0x400;
-        // if(LCDSTATUS.state.vBlankFlag || (LCDSTATUS.state.hBlankFlag && LCDCONTROL.state.hblankIntervalFree))
-            return oamAttribs[mod];
-        // else return 0;
-    }
-    std::cout << "Unbekannter PPU mem read\n";
     return 0;
 }

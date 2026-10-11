@@ -27,7 +27,7 @@ namespace nds{
 
         public:
         Timer() : reload(0), control(0){};
-        Timer(int num, SharedBus* bptr, ConcreteBus* cbus) : number(num), bus(bptr), cbus(cbus), reload(0), control(2){};
+        Timer(int num, SharedBus* bptr, ConcreteBus* cbus, EventType e) : scheduleEvent(e), number(num), bus(bptr), cbus(cbus), reload(0), control(2){};
         gba::GeneralPurpose16 reload;
         gba::GeneralPurpose16 control;
 

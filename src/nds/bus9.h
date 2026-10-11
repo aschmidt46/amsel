@@ -3,6 +3,8 @@
 #include "gba/ibus.h"
 #include "gba/register/general_purpose.h"
 #include "peripheral/maths.h"
+#include "peripheral/timer.h"
+#include "peripheral/dma.h"
 
 namespace nds{
     class SharedBus;
@@ -21,6 +23,10 @@ namespace nds{
         gba::GeneralPurpose32 IME;
         public:
         DSMaths maths;
+        std::array<Timer<Bus9>, 4> timers;
+        std::array<DMAChannel<Bus9>, 4> dma;
+
+        std::array<gba::GeneralPurpose32, 4> dmaFill = {{gba::GeneralPurpose32(0x40000E0), gba::GeneralPurpose32(0x40000E4), gba::GeneralPurpose32(0x40000E8), gba::GeneralPurpose32(0x40000EC)}};
 
         Byte exMem06 = 0;
         Byte POSTFLG = 1;
@@ -32,12 +38,48 @@ namespace nds{
         void init();
         void writeByte(Word addr, Byte val);
         Byte readByte(Word addr);
-        void writeByteFromWide(Word addr, Byte val);
-        Byte readByteFromWide(Word addr);
-        void writeHalfWord(Word addr, HalfWord val);
-        HalfWord readHalfWord(Word addr);
-        void writeWord(Word addr, Word val);
-        Word readWord(Word addr);
+        inline void writeByteFromWide(Word addr, Byte val){
+            writeByteFromWide(addr, val, false);
+        };
+        inline Byte readByteFromWide(Word addr){
+            return readByteFromWide(addr, false);
+        };
+        inline void writeHalfWord(Word addr, HalfWord val){
+            writeHalfWord(addr, val, false);
+        };
+        inline HalfWord readHalfWord(Word addr){
+            return readHalfWord(addr, false);
+        };
+        inline void writeWord(Word addr, Word val){
+            writeWord(addr, val, false);
+        };
+        inline Word readWord(Word addr){
+            return readWord(addr, false);
+        };
+
+        inline void writeHalfWordFromDMA(Word addr, HalfWord val){
+            writeHalfWord(addr, val, true);
+        };
+        inline HalfWord readHalfWordFromDMA(Word addr){
+            return readHalfWord(addr, true);
+        };
+        inline void writeWordFromDMA(Word addr, Word val){
+            writeWord(addr, val, true);
+        };
+        inline Word readWordFromDMA(Word addr){
+            return readWord(addr, true);
+        };
+
+        void writeByteFromWide(Word addr, Byte val, bool isDMA);
+        Byte readByteFromWide(Word addr, bool isDMA);
+
+        void writeHalfWord(Word addr, HalfWord val, bool isDMA);
+        HalfWord readHalfWord(Word addr, bool isDMA);
+        void writeWord(Word addr, Word val, bool isDMA);
+        Word readWord(Word addr, bool isDMA);
+
+        void PPUEnteredHBlank();
+        void PPUEnteredVBlank();
 
         const std::vector<Byte> &getITCM() const{
             return itcm;
@@ -63,5 +105,7 @@ namespace nds{
         bool hasIME();
 
         void setHalt();
+
+        void onWritePOWCNT1();
     };
 }
