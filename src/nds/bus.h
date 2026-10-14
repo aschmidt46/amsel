@@ -6,14 +6,12 @@
 #include "lcd/lcd.h"
 #include "scheduler.h"
 #include "peripheral/ipc.h"
+#include "peripheral/cartridge.h"
 
 namespace nds{
 
     class SharedBus{
         bool halted = false;
-        bool watchBreakpoints = false;
-        std::vector<uint64_t> breakpoints;
-        std::vector<std::string> breakpointsOP;
         public:
         bool watchARM7 = false;
         int steps = 0;
@@ -27,9 +25,11 @@ namespace nds{
         std::array<Byte, 0x40'0000> mainMemory;
         std::array<Byte, 0x8000> sharedWRAM = {};
         Byte wramCNT = 3; // !!! Warum steht das nirgends?
-        std::vector<Byte> firmware;
+
+        Word chipID = 0x1FC2;
         
-        std::vector<Byte> gameCart;
+        // std::vector<Byte> gameCart;
+        Cartridge gameCart;
         gba::GeneralPurpose16 KEYINPUT;
         gba::GeneralPurpose16 KEYCNT;
         gba::GeneralPurpose16 EXKEYINPUT;

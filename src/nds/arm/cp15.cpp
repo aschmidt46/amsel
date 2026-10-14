@@ -1,5 +1,6 @@
 #include "cp15.h"
 #include <iostream>
+#include "framework/stringlib.h"
 
 using namespace nds;
 

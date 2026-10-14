@@ -101,7 +101,6 @@ namespace nds{
         gba::IBus<InstructionInfo>* bus;
 
         bool shouldFlush = false;
-        // std::ofstream outs;
             
         public:
 
@@ -174,6 +173,7 @@ namespace nds{
         
         public:
         CPU(bool skipBios = true);
+        // std::ofstream outs;
         CPU(gba::IBus<InstructionInfo>* bus, CP15* cp15) : CPU(true){
             this->bus = bus;
             this->cp15 = cp15;
@@ -219,7 +219,7 @@ namespace nds{
         std::pair<std::string, std::vector<int>> getNextNInstructions(int n);
         std::pair<std::string, std::vector<int>> getPrev10Instructions();
         void incrementCircular();
-        const int circSize = 15;
+        const int circSize = 50;
         std::vector<std::pair<int64_t, CpuState>> circular{std::vector<std::pair<int64_t, CpuState>>(circSize,{-1, ARM})};
         unsigned int circularIndex = 0;
         std::string getCurrentOpcode();
@@ -231,7 +231,7 @@ namespace nds{
         InstructionInfo getInstructionInPipeline();
         std::string printCPSR();
         std::string printMode();
-        std::string getDisassembly(Word code);
+        std::string getDisassembly(Word code, Word pc = 0);
 
     };
 };

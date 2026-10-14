@@ -8,7 +8,7 @@ using namespace nds;
 void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
 {
     if(bytes.size() == 0) return;
-    gameCart = bytes;
+    gameCart = Cartridge(this, bytes);
     nds9romRomStart = *(Word*)(bytes.data() + 0x20);
     // nds9romRomStart &= ~0xFFF; // align 0x1000
     nds9romRamStart = *(Word*)(bytes.data() + 0x28);
@@ -20,6 +20,8 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     
     Word entrynds9 = *(Word*)(bytes.data() + 0x24);
     Word entrynds7 = *(Word*)(bytes.data() + 0x34);
+
+    // std::cout << "Start in " << getHex0x(nds9romRomStart + (entrynds9 - nds9romRamStart), 8) << "\n";
     
     bus7->cpu.setPC(entrynds7);
     bus7->cpu.setLR(entrynds7);
@@ -28,20 +30,60 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     bus9->cpu.setLR(entrynds9);
     bus9->cpu.setIP(entrynds9);
 
+    // Werte von gbatek
+    // bus7->writeByte(0x04000300, 1);
+    // bus9->writeByte(0x04000300, 1);
+    bus9->writeByte(0x04000247, 0x03);
+    bus9->writeWord(0x027FF800, 0x00001FC2);
+    bus9->writeWord(0x027FF804, 0x00001FC2);
+    bus9->writeHalfWord(0x027FF850, 0x5835);
+    bus9->writeHalfWord(0x027FF880, 0x0007);
+    bus9->writeHalfWord(0x027FF884, 0x0006);
+    bus9->writeWord(0x027FFC00, 0x00001FC2);
+    bus9->writeWord(0x027FFC04, 0x00001FC2);
+    bus9->writeHalfWord(0x027FFC10, 0x5835);
+    bus9->writeHalfWord(0x027FFC40, 0x0001);
+
+    // Generate cart ID
+// 1st byte - Manufacturer (eg. C2h=Macronix) (roughly based on JEDEC IDs)
+// 2nd byte - Chip size (00h..7Fh: (N+1)Mbytes, F0h..FFh: (100h-N)*256Mbytes?)
+// 3rd byte - Flags
+//   0   Maybe Infrared flag? (in case ROM does contain on-chip infrared stuff)
+//   1   Unknown (set in some 3DS carts)
+//   2-7 Zero
+// 4th byte - Flags
+//   0-2 Zero
+//   3   Seems to be NAND flag (0=ROM, 1=NAND) (observed in only ONE cartridge)
+//   4   3DS Flag (0=NDS/DSi, 1=3DS)
+//   5   Zero   ... set in ... DSi-exclusive games? (support cmd B5h/D6h ?)
+//   6   DSi flag (0=NDS/3DS, 1=DSi)
+//   7   Cart Protocol Variant (0=older/smaller carts, 1=newer/bigger carts)
+    // chipID = 0xC2; // Manufacturer = Macronix
+    // if (bytes.size() >= 1024 * 1024 && bytes.size() <= 128 * 1024 * 1024) {
+    //     chipID |= ((bytes.size() >> 20) - 1) << 8;
+    // } else {
+    //     chipID |= (0x100 - (bytes.size() >> 28)) << 8;
+    // }
+
+    bus9->writeWord(0x027FF800, chipID);
+    bus9->writeWord(0x027FF804, chipID);
+    bus9->writeWord(0x027FFC00, chipID);
+    bus9->writeWord(0x027FFC04, chipID);
+
     // copy header
     for(size_t i = 0; i < 0x170; i++){
-        bus9->writeByte(0x27FFE00 + i, gameCart[i]);
+        mainMemory[0x3FFE00 + i] = bytes[i];
     }
     
     size_t j = nds9romRamStart;
     for(size_t i = nds9romRomStart; i < nds9romRomStart + nds9romSize; i++){
-        bus9->writeByte(j, gameCart[i]);
+        bus9->writeByte(j, bytes[i]);
         j++;
     }
 
     j = nds7romRamStart;
     for(size_t i = nds7romRomStart; i < nds7romRomStart + nds7romSize; i++){
-        bus7->writeByte(j, gameCart[i]);
+        bus7->writeByte(j, bytes[i]);
         j++;
     }
 }

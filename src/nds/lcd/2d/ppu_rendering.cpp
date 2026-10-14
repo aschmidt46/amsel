@@ -149,7 +149,17 @@ void PPU::renderScanline()
                 fun = &PPU::drawPixelMode5;
                 break;
         }
-        // fun = &PPU::drawPixelMode3;
+                                                                if(isB) framebufferOffset = 1;
+                                                                else framebufferOffset = 0;
+        if(LCDCONTROL.state.displayMode == 0){
+            for(; currentCycle < 256; currentCycle++){
+                setPixel(currentCycle, currentScanline + 192 * framebufferOffset, 255, 255, 255);
+            }
+            return;
+        }
+        else if(LCDCONTROL.state.displayMode == 2){
+            fun = &PPU::drawPixelMode3;
+        }
         for(; currentCycle < 256; currentCycle++){
 
             layerOrderSize = 0;

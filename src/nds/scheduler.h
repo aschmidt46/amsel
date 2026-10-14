@@ -12,5 +12,8 @@ namespace nds{
         NDSEVENT_PPU_IncrementScanline,
         NDSEVENT_TimerOverflow7,
         NDSEVENT_TimerOverflow9,
+        NDSEVENT_GameCardDataWord,
+        NDSEVENT_GameCardChipID,
+        NDSEVENT_SPITransferComplete
     };
 }

@@ -698,7 +698,7 @@ gba::CPU::CPU(bool skipBios)
     _SPSR_irq.raw = 0;
     _SPSR_und.raw = 0;
 
-    _CPSR.state.mode_bits = 31;
+    _CPSR.raw = 0xD3;
 
     if(skipBios){
         _R13_SP = 0x03007F00;

@@ -45,6 +45,15 @@ void gba::Scheduler<nds::EventType,nds::SharedBus>::handleEvent()
                 bus->lcd->renderScanline();
             scheduleEvent({1536, NDSEVENT_PPU_HBLANK});
             return;
+        case NDSEVENT_GameCardDataWord:
+            bus->gameCart.sendDataWord();
+            return;
+        case NDSEVENT_GameCardChipID:
+            bus->gameCart.sendChipID();
+            return;
+        case NDSEVENT_SPITransferComplete:
+            bus->bus7->spi.completeTransfer();
+            return;
     }
     // std::cout << "dealt.\n";
 }

@@ -6,23 +6,33 @@
 #include "gba/register/general_purpose.h"
 #include "peripheral/timer.h"
 #include "peripheral/dma.h"
+#include "peripheral/spi.h"
 
 namespace nds{
     class SharedBus;
 
     class Bus7 : public gba::IBus<gba::InstructionInfo>{
-        SharedBus* sharedBus;
         
         size_t clocks = 0;
         
+        public:
+        SharedBus* sharedBus;
+        private:
         std::vector<Byte> bios7;
         std::vector<Byte> arm7WRAM;
         
         Word IE = 0;
         Word IF = 0;
         gba::GeneralPurpose32 IME;
+
+        HalfWord RTCSTUB = 0;
+        HalfWord SOUNDCNTSTUB = 0;
+        HalfWord RCNT = 0;
         
         public:
+        bool watchBreakpoints = false;
+        std::vector<uint64_t> breakpoints;
+        std::vector<std::string> breakpointsOP;
         std::array<Timer<Bus7>, 4> timers;
         std::array<DMAChannel<Bus7>, 4> dma;
         Byte exMem06 = 0;
@@ -31,6 +41,7 @@ namespace nds{
         Byte WIFIWAITCNT = 0x30; // von Firmware gesetzt!
         Byte HALTCNT = 0;
         gba::CPU cpu;
+        SPI spi;
         Bus7(SharedBus* sb) : sharedBus(sb), arm7WRAM(0x10000, 0), IME(0x4000208){};
         void init();
         void writeByte(Word addr, Byte val);
@@ -75,5 +86,10 @@ namespace nds{
         bool hasIME();
 
         void setHalt();
+
+        std::vector<uint64_t> addBreakpoint(uint64_t bp);
+        std::vector<uint64_t> removeBreakpoint(uint64_t bp);
+        std::vector<std::string> removeBreakpointOP(std::string bp);
+        std::vector<std::string> addBreakpointOP(std::string bp);
     };
 }

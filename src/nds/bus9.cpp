@@ -98,13 +98,18 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
         sharedBus->ipc->writeReg(addr, val, true);
     }
 
+    // Gamecart
+    else if(addr >= 0x040001A0 && addr < 0x040001B0 && sharedBus->canAccessGameCart(true)){
+        sharedBus->gameCart.onWrite(addr, val);
+    }
+
     else if(addr == 0x04000204){
         exMem06 = 0x7F & val;
         Byte msb = 0x80 & val;
         sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0xFF00) | msb;
     }
     else if(addr == 0x04000205){
-        sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0x00FF) | (HalfWord(val) << 8);
+        sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0x00FF) | (HalfWord(val & 0b10001000) << 8);
     }
 
     // Interrupt handling
@@ -163,13 +168,23 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
         sharedBus->lcd->writeRegister(addr, val);
     }
 
-    else if(addr == 0x040001A8){
-        std::cout << "Gamecard Command sent from NDS9\n";
+    // else if(addr == 0x040001A8){
+    //     std::cout << "Gamecard Command sent from NDS9\n";
+    // }
+
+    // Gamecart
+    else if(addr >= 0x04100010 && addr < 0x04100014 && sharedBus->canAccessGameCart(true)){
+        sharedBus->gameCart.onWrite(addr, val);
+    }
+
+    else{
+        std::cout << "Bus9 unknown write at " << getHex0x(addr, 8) << ": " << getHex0x(val, 2) << "\n";
     }
 }
 
 Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
 {
+    // if(addr == 0xE1D410F8) setHalt();
     if(!isDMA){
         const Word itcmEnd = cp15.itcmRegion();
         const auto [dtcmStart, dtcmEnd] = cp15.dtcmRegion();
@@ -248,6 +263,11 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
         return sharedBus->ipc->readReg(addr, true);
     }
 
+    // Gamecart
+    if(addr >= 0x040001A0 && addr < 0x040001B0 && sharedBus->canAccessGameCart(true)){
+        return sharedBus->gameCart.onRead(addr);
+    }
+
     // EXMEMCNT
     if(addr == 0x04000204){
         return (exMem06 & 0x7F) | (sharedBus->EXMEMCNT & 0x80);
@@ -312,6 +332,11 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
     // Engine B
     if(addr >= 0x04001000 && addr < 0x0400106E){
         return sharedBus->lcd->readRegister(addr);
+    }
+
+    // Gamecart
+    else if(addr >= 0x04100010 && addr < 0x04100014 && sharedBus->canAccessGameCart(true)){
+        return sharedBus->gameCart.onRead(addr);
     }
 
     // ACHTUNG
@@ -407,6 +432,18 @@ void nds::Bus9::PPUEnteredVBlank()
 
 void nds::Bus9::clock()
 {
+
+    if(watchBreakpoints){
+        if(std::find(breakpoints.begin(), breakpoints.end(), cpu.getRegisterState().R[15] - (cpu.state() == ARM ? 8 : 4)) != breakpoints.end()){
+            setHalt();
+            return;
+        }
+        if(std::find(breakpointsOP.begin(), breakpointsOP.end(), cpu.getCurrentOpcode()) != breakpointsOP.end()){
+            setHalt();
+            return;
+        }
+    }
+
     clocks++;
     // 66 MHz
     cpu.clock();
@@ -480,4 +517,66 @@ void nds::Bus9::onWritePOWCNT1()
         sharedBus->lcd->engineA.framebufferOffset = 1;
         sharedBus->lcd->engineB.framebufferOffset = 0;
     }
+}
+
+std::vector<uint64_t> nds::Bus9::addBreakpoint(uint64_t bp)
+{
+    if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpoints){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpoints.push_back(bp);
+    }
+
+    return breakpoints;
+}
+
+std::vector<uint64_t> nds::Bus9::removeBreakpoint(uint64_t bp)
+{
+    std::erase_if(breakpoints, [&](uint64_t i) { return i == bp; });
+
+
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpoints;
+}
+
+std::vector<std::string> nds::Bus9::removeBreakpointOP(std::string bp)
+{
+    std::erase_if(breakpointsOP, [&](std::string i) { return i == bp; });
+
+
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpointsOP;
+}
+
+std::vector<std::string> nds::Bus9::addBreakpointOP(std::string bp)
+{
+    if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpointsOP){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpointsOP.push_back(bp);
+    }
+
+    return breakpointsOP;
 }

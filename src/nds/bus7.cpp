@@ -11,6 +11,8 @@ void nds::Bus7::init()
     // extrem wichtig bei cartridge boot time:
     cpu.initialNDS();
 
+    new (&spi) SPI(this);
+
     for(int i = 0; i < 4; i++){
         new (&timers[i]) Timer<Bus7>(i, sharedBus, this, NDSEVENT_TimerOverflow7);
         new (&dma[i]) DMAChannel<Bus7>(i, sharedBus, this, NDSEVENT_DmaTransfer7);
@@ -71,8 +73,32 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     else if(addr >= 0x04000132 && addr < 0x04000134){
         sharedBus->KEYCNT.OnWriteByte(addr, val);
     }
+    else if(addr == 0x04000134){
+        RCNT = (RCNT & 0xFF00) | (val);
+    }
+    else if(addr == 0x04000135){
+        RCNT = (RCNT & 0x00FF) | (HalfWord(val) << 8);
+    }
+
+    else if(addr == 0x04000138){
+        RTCSTUB = (RTCSTUB & 0xFF00) | (val);
+    }
+    else if(addr == 0x04000139){
+        RTCSTUB = (RTCSTUB & 0x00FF) | (HalfWord(val) << 8);
+    }
+
     else if(addr >= 0x4000180 && addr < 0x4000188){
         sharedBus->ipc->writeReg(addr, val, false);
+    }
+
+    // Gamecart
+    else if(addr >= 0x040001A0 && addr < 0x040001B0 && sharedBus->canAccessGameCart(false)){
+        sharedBus->gameCart.onWrite(addr, val);
+    }
+
+    // SPI
+    else if(addr >= 0x040001C0 && addr < 0x040001C3){
+        spi.onWrite(addr, val);
     }
 
     else if(addr == 0x04000204){
@@ -117,13 +143,25 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         POWCNT2 = val & 0b11;
     }
 
+    else if(addr == 0x04000500){
+        SOUNDCNTSTUB = (SOUNDCNTSTUB & 0xFF00) | (val);
+    }
+    else if(addr == 0x04000501){
+        SOUNDCNTSTUB = (SOUNDCNTSTUB & 0x00FF) | (HalfWord(val) << 8);
+    }
+
+    // Gamecart
+    else if(addr >= 0x04100010 && addr < 0x04100014 && sharedBus->canAccessGameCart(false)){
+        sharedBus->gameCart.onWrite(addr, val);
+    }
+
     else if(addr >= 0x06000000 && addr < 0x07000000){
         addr -= 0x06000000;
         sharedBus->lcd->writeMemoryNDS7(addr % 0x4'0000, val);
     }
-    else if(addr == 0x040001A8){
-        std::cout << "Gamecard Command sent from NDS7\n";
-    }
+    // else if(addr == 0x040001A8){
+    //     std::cout << "Gamecard Command sent from NDS7\n";
+    // }
 }
 
 Byte nds::Bus7::readByteFromWide(Word addr)
@@ -187,8 +225,30 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     if(addr >= 0x04000132 && addr < 0x04000134){
         return sharedBus->KEYCNT.OnReadByte(addr);
     }
+    if(addr == 0x04000134){
+        return RCNT;
+    }
+    if(addr == 0x04000135){
+        return RCNT >> 8;
+    }
     if(addr >= 0x04000136 && addr < 0x04000138){
         return sharedBus->EXKEYINPUT.OnReadByte(addr);
+    }
+    if(addr == 0x04000138){
+        return RTCSTUB;
+    }
+    if(addr == 0x04000139){
+        return RTCSTUB >> 8;
+    }
+
+    // Gamecart
+    if(addr >= 0x040001A0 && addr < 0x040001B0 && sharedBus->canAccessGameCart(false)){
+        return sharedBus->gameCart.onRead(addr);
+    }
+
+    // SPI
+    if(addr >= 0x040001C0 && addr < 0x040001C4){
+        return spi.onRead(addr);
     }
 
     // EXMEMCNT
@@ -246,6 +306,18 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
     if(addr == 0x4000304){
         return POWCNT2;
+    }
+
+    if(addr == 0x04000500){
+        return SOUNDCNTSTUB;
+    }
+    if(addr == 0x04000501){
+        return SOUNDCNTSTUB >> 8;
+    }
+
+    // Gamecart
+    else if(addr >= 0x04100010 && addr < 0x04100014 && sharedBus->canAccessGameCart(false)){
+        return sharedBus->gameCart.onRead(addr);
     }
 
     if(addr >= 0x06000000 && addr < 0x07000000){
@@ -313,6 +385,18 @@ void nds::Bus7::PPUEnteredVBlank()
 
 void nds::Bus7::clock()
 {
+
+    if(watchBreakpoints){
+        if(std::find(breakpoints.begin(), breakpoints.end(), cpu.getRegisterState().R[15] - (cpu.state() == gba::CpuState::ARM ? 8 : 4)) != breakpoints.end()){
+            setHalt();
+            return;
+        }
+        if(std::find(breakpointsOP.begin(), breakpointsOP.end(), cpu.getCurrentOpcode()) != breakpointsOP.end()){
+            setHalt();
+            return;
+        }
+    }
+
     clocks++;
     cpu.clock();
 }
@@ -369,4 +453,66 @@ bool nds::Bus7::hasIME()
 void nds::Bus7::setHalt()
 {
     sharedBus->setHalt();
+}
+
+std::vector<uint64_t> nds::Bus7::addBreakpoint(uint64_t bp)
+{
+    if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpoints){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpoints.push_back(bp);
+    }
+
+    return breakpoints;
+}
+
+std::vector<uint64_t> nds::Bus7::removeBreakpoint(uint64_t bp)
+{
+    std::erase_if(breakpoints, [&](uint64_t i) { return i == bp; });
+
+
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpoints;
+}
+
+std::vector<std::string> nds::Bus7::removeBreakpointOP(std::string bp)
+{
+    std::erase_if(breakpointsOP, [&](std::string i) { return i == bp; });
+
+
+    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
+        watchBreakpoints = false;
+    }
+    return breakpointsOP;
+}
+
+std::vector<std::string> nds::Bus7::addBreakpointOP(std::string bp)
+{
+    if(!watchBreakpoints){
+        watchBreakpoints = true;
+    }
+
+    bool exists = false;
+
+    for(const auto &e : breakpointsOP){
+        if(e==bp)
+            exists = true;
+    }
+
+    if(!exists){
+        breakpointsOP.push_back(bp);
+    }
+
+    return breakpointsOP;
 }

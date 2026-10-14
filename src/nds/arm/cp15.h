@@ -64,21 +64,21 @@ namespace nds{
         const Word mainID = 0x41059461;
         const Word cacheType = 0x0F0D2112;
         const Word tcmSize = 0x00140180;
-        CP15_CONTROL_REG_T controlReg = {.raw = 0xF0};
+        CP15_CONTROL_REG_T controlReg = {.raw = 0x12078};
 
         //PU
-        Word cachabilityDataUnified = 0;
-        Word cachabiltiyInstruction = 0;
-        Word cacheWriteBufferabilityData = 0;
+        Word cachabilityDataUnified = 0x42;
+        Word cachabiltiyInstruction = 0x42;
+        Word cacheWriteBufferabilityData = 0x2;
         
-        Word accessPermissionDataUnified = 0;
-        Word accessPermissionInstruction = 0;
-        Word extendedAccessPermissionDataUnified = 0;
-        Word extendedAccessPermissionInstruction = 0;
-        Word protectionUnitAndMirror[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+        Word accessPermissionDataUnified = 0x5545;
+        Word accessPermissionInstruction = 0x1405;
+        Word extendedAccessPermissionDataUnified = 0x15111011;
+        Word extendedAccessPermissionInstruction = 0x5100011;
+        Word protectionUnitAndMirror[8] = {0x4000033, 0x200002B, 0x0, 0x8000035, 0x300001B, 0x0, 0xFFFF001D, 0x27FF017};
 
         // TCM
-        TCM_SIZE_T dtcmSize = {.raw = 0};
+        TCM_SIZE_T dtcmSize = {.raw = 0x0300000A};
         TCM_SIZE_T itcmSize = {.raw = 0};
 
         Word processID = 0;
@@ -87,8 +87,6 @@ namespace nds{
 
         public:
         CP15(){
-            controlReg.state.itcmEnable = 1;
-            controlReg.state.dtcmEnable = 1;
             itcmSize.state.virtualSize = 16;
         }
         void MCR(Word armRegister, Word Cn, Word Cm, Word cp);

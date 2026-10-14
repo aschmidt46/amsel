@@ -7,7 +7,7 @@ using namespace nds;
 
 void nds::NDS::checkBios()
 {
-    if(bus->firmware.size() == 0 || bus->bus7->getBiosSize() == 0 || bus->bus9->getBiosSize() == 0){
+    if(bus->bus7->getBiosSize() == 0 || bus->bus9->getBiosSize() == 0){
         executionAllowed = false;
         sendMessage = true;
     }
@@ -17,7 +17,7 @@ nds::NDS::NDS(const std::vector<uint8_t> &bytes, const StartInfo &info)
 {
     bus = std::make_shared<SharedBus>();
     bus->init();
-    bus->firmware = info.firmware;
+    bus->bus7->spi.setFirmware(info.firmware);
     loadBios7(info.bios7);
     loadBios9(info.bios9);
     checkBios();
@@ -36,7 +36,7 @@ void nds::NDS::loadBios9(const std::vector<uint8_t> &content)
 
 void nds::NDS::loadFirmware(const std::vector<uint8_t> &content)
 {
-    bus->firmware = content;
+    bus->bus7->spi.setFirmware(content);
 }
 
 uint8_t *nds::NDS::accessFramebuffer()

@@ -22,6 +22,9 @@ namespace nds{
         Word IF = 0;
         gba::GeneralPurpose32 IME;
         public:
+        bool watchBreakpoints = false;
+        std::vector<uint64_t> breakpoints;
+        std::vector<std::string> breakpointsOP;
         DSMaths maths;
         std::array<Timer<Bus9>, 4> timers;
         std::array<DMAChannel<Bus9>, 4> dma;
@@ -107,5 +110,11 @@ namespace nds{
         void setHalt();
 
         void onWritePOWCNT1();
+
+
+        std::vector<uint64_t> addBreakpoint(uint64_t bp);
+        std::vector<uint64_t> removeBreakpoint(uint64_t bp);
+        std::vector<std::string> removeBreakpointOP(std::string bp);
+        std::vector<std::string> addBreakpointOP(std::string bp);
     };
 }

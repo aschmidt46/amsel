@@ -46,32 +46,13 @@ std::pair<std::string, std::vector<int>> SharedBus::getPrevInstructions() {
 }
 
 std::vector<std::string> SharedBus::removeBreakpointOP(std::string bp) {
-    std::erase_if(breakpointsOP, [&](std::string i) { return i == bp; });
-
-
-    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
-        watchBreakpoints = false;
-    }
-    return breakpointsOP;
+    if(watchARM7) return bus7->removeBreakpointOP(bp);
+    else return bus9->removeBreakpointOP(bp);
 }
 
 std::vector<std::string> SharedBus::addBreakpointOP(std::string bp) {
-    if(!watchBreakpoints){
-        watchBreakpoints = true;
-    }
-
-    bool exists = false;
-
-    for(const auto &e : breakpointsOP){
-        if(e==bp)
-            exists = true;
-    }
-
-    if(!exists){
-        breakpointsOP.push_back(bp);
-    }
-
-    return breakpointsOP;
+    if(watchARM7) return bus7->addBreakpointOP(bp);
+    else return bus9->addBreakpointOP(bp);
 }
 
 CpuRegisterState SharedBus::getRegs() {
@@ -112,32 +93,13 @@ std::string SharedBus::getState() {
 }
 
 std::vector<uint64_t> SharedBus::addBreakpoint(uint64_t bp) {
-  if(!watchBreakpoints){
-        watchBreakpoints = true;
-    }
-
-    bool exists = false;
-
-    for(const auto &e : breakpoints){
-        if(e==bp)
-            exists = true;
-    }
-
-    if(!exists){
-        breakpoints.push_back(bp);
-    }
-
-    return breakpoints;
+    if(watchARM7) return bus7->addBreakpoint(bp);
+    else return bus9->addBreakpoint(bp);
 }
 
 std::vector<uint64_t> SharedBus::removeBreakpoint(uint64_t bp) {
-  std::erase_if(breakpoints, [&](uint64_t i) { return i == bp; });
-
-
-    if(watchBreakpoints && breakpointsOP.size() == 0 && breakpoints.size() == 0){
-        watchBreakpoints = false;
-    }
-    return breakpoints;
+    if(watchARM7) return bus7->removeBreakpoint(bp);
+    else return bus9->removeBreakpoint(bp);
 }
 
 std::string SharedBus::getDisassembly(uint64_t code)

@@ -93,7 +93,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     if(W){
         if((instruction & 0xFFFF) == 0){ // Leere Registerliste
             // instruction |= 1u << 15;
-            // numberOfRegs = 16;
+            numberOfRegs = 16;
             emptyRegList = true;
         }
     }
@@ -102,12 +102,12 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     bool R15InTransferList = instruction & (1u << 15);
     int actualMode = (S && !L && R15InTransferList) || (!R15InTransferList && S) ? User : mode();
     bool transferCPSR = L && S && R15InTransferList;
-    Word origAddr = *registerMap[actualMode][Rn];
+    Word origAddr = *registerMap[mode()][Rn];
     Word addr = origAddr;
 
-    // if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
+    if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
         addr &= ~3u;
-    // }
+    }
 
     Word usedNumOfRegs = 0;
 
@@ -122,8 +122,9 @@ bool CPU::executeBlockDataTransfer(Word instruction)
         }
     }
     if(W){ // Aufpassen, überprüfen
-        if(!baseInRegisterList || (!L || !firstRegister))
-            *registerMap[actualMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+        if(!baseInRegisterList || (!L || !firstRegister)){
+            *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+        }
     }
     bool baseIsOnlyRegister = (usedNumOfRegs == 1) && baseInRegisterList;
 
@@ -163,8 +164,8 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     }
 
     if(W){ // Aufpassen, überprüfen
-        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister))
-            *registerMap[actualMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister) || emptyRegList)
+            *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
     }
 
     bool pcAsBase = false;
@@ -778,6 +779,11 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
     bool immediate = (instruction & (1u << 22));
     Word offsetValue;
     bool isJump = L && Rd == R15;
+
+    if(!L && ((instruction >> 5) & 0b11) > 1){
+        std::cout << "ACHTUNG: LDRD / STRD\n";
+        throw;
+    }
 
     
     Word modifiedBase = *registerMap[mode()][Rn];

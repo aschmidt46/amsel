@@ -57,6 +57,12 @@ src/nds/peripheral/ipc.h
 src/nds/peripheral/ipc.cpp
 src/nds/peripheral/maths.h
 src/nds/peripheral/maths.cpp
+src/nds/peripheral/cartridge.h
+src/nds/peripheral/cartridge.cpp
+src/nds/peripheral/spi.h
+src/nds/peripheral/spi.cpp
+src/nds/peripheral/firmware.h
+src/nds/peripheral/firmware.cpp
 
 src/console/console.h
 src/console/nds_implementation.h src/console/nds_implementation.cpp

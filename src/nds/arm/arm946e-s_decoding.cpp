@@ -437,9 +437,12 @@ bool CPU::executeInstruction()
     if(this->pipeline[0].type != PipelineEmpty){
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
-        // outs << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code) << "\n";
+        // outs << "(x0: " << getHex0x(_R0, 8) << ") " << "(x1: " << getHex0x(_R1, 8) << ") " << "(x2: " << getHex0x(_R2, 8) << ") " << "(x3: " << getHex0x(_R3, 8) << ") " << "(x4: " << getHex0x(_R4, 8) << ") " << "(x5: " << getHex0x(_R5, 8) << ") "
+        // << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") "
+        // << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
         // outs.flush();
         if(info.code == 0) bus->setHalt();
+        // if(_R15_PC - 8 == 0xFFFF0018) bus->setHalt();
 
         // auto iInfo = info;
 
@@ -746,7 +749,7 @@ CPU::CPU(bool skipBios)
     _SPSR_irq.raw = 0;
     _SPSR_und.raw = 0;
 
-    _CPSR.state.mode_bits = 31;
+    _CPSR.raw = 0xD3;
 
     _R15_PC = 0xFFFF0000;
     
@@ -795,10 +798,11 @@ bool CPU::checkCondition(Condition c) const
     return false;
 }
 
-std::string CPU::getDisassembly(Word code){
+std::string CPU::getDisassembly(Word code, Word pc){
     ARMSTATE s;
     auto state = getRegisterState();
-    disasm_init(&s, 0);
+    disasm_init(&s, DISASM_COMMENT | DISASM_INSTR);
+    disasm_address(&s, pc);
     int mode = ((state.CPSR >> 5) & 1u) ? 0 : 1;
     s.arm_mode = mode;
     if(mode == 1){

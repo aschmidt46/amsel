@@ -1,5 +1,6 @@
 #include "lcd.h"
 #include "../bus.h"
+#include <iostream>
 
 using namespace nds;
 
@@ -109,6 +110,7 @@ Byte nds::LCD::readRegister(Word addr)
     if(addr >= 0x04001000 && addr < 0x0400106E){
         return engineB.readPPURegister(addr - 0x1000);
     }
+    std::cout << "Unknwon LCD reg read " << addr << "\n";
     return 0;
 }
 
