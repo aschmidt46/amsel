@@ -209,18 +209,18 @@ bool CPU::executeThumbPushPopRegisters(Word instruction)
     bool L = instruction & (1u << 11);
     bool U = L ? true : false;
     bool P = L ? false : true;
-    if(Rlist == 0 && !R){ // Spezialfall, siehe Nanoboyadvance
+    if(Rlist == 0 && !R){ // genauso wie unten?
         bool isJump = false;
         if(L){
-            *registerMap[mode()][R15] = readWordUnaligned(*registerMap[mode()][R13]);
-            isJump = true;
+            // *registerMap[mode()][R15] = readWordUnaligned(*registerMap[mode()][R13]);
+            // isJump = true;
             *registerMap[mode()][R13] += 0x40;
         }
         else{
             std::cout << "Push mit leerer Liste!\n";
             bus->setHalt();
             *registerMap[mode()][R13] -= 0x40;
-            writeWordUnaligned(*registerMap[mode()][R13], *registerMap[mode()][R15] + 2);
+            // writeWordUnaligned(*registerMap[mode()][R13], *registerMap[mode()][R15] + 2);
         }
         // Stimmt das?
         remainingCycles += 3;
@@ -240,14 +240,14 @@ bool CPU::executeThumbMultipleLoadStore(Word instruction)
     Word Rb = (instruction & (0b111u << 8)) >> 8;
     bool L = instruction & (1u << 11);
     bool returnJump = false;
-    if(Rlist == 0){ // Spezialfall, siehe Nanoboyadvance
-        if(L){
-            *registerMap[mode()][R15] = readWordUnaligned(*registerMap[mode()][Rb]);
-            returnJump = true;
-        }
-        else{
-            writeWordUnaligned(*registerMap[mode()][Rb], *registerMap[mode()][R15] + 2);
-        }
+    if(Rlist == 0){ // gbatek thumb loadstore "strange effects"
+        // if(L){ ARMv4 ONLY
+        //     *registerMap[mode()][R15] = readWordUnaligned(*registerMap[mode()][Rb]);
+        //     returnJump = true;
+        // }
+        // else{
+        //     writeWordUnaligned(*registerMap[mode()][Rb], *registerMap[mode()][R15] + 2);
+        // }
         *registerMap[mode()][Rb] += 0x40;
         remainingCycles += 3; // überprüfen!
         return returnJump;

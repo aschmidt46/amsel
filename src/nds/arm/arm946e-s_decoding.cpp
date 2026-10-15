@@ -441,6 +441,13 @@ bool CPU::executeInstruction()
         // << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") "
         // << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
         // outs.flush();
+        // if(_R15_PC - 8 == 0x) bus->setHalt();
+        // if(_R15_PC - 8 == 0x018) bus->setHalt();
+        // if(_R15_PC - 8 == 0x1ff8538) bus->setHalt();
+        if(_CPSR.state.mode_bits == 8){
+            bus->setHalt();
+            return false;
+        }
         if(info.code == 0) bus->setHalt();
         // if(_R15_PC - 8 == 0xFFFF0018) bus->setHalt();
 
@@ -750,6 +757,7 @@ CPU::CPU(bool skipBios)
     _SPSR_und.raw = 0;
 
     _CPSR.raw = 0xD3;
+    _CPSR.state.mode_bits = System;
 
     _R15_PC = 0xFFFF0000;
     

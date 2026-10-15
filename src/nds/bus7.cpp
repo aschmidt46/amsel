@@ -143,6 +143,10 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         POWCNT2 = val & 0b11;
     }
 
+    if(addr >= 0x04000400 && addr < 0x04000500){
+        audioStub[addr - 0x04000400] = val;
+    }
+
     else if(addr == 0x04000500){
         SOUNDCNTSTUB = (SOUNDCNTSTUB & 0xFF00) | (val);
     }
@@ -263,9 +267,10 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
 
     //Interrupt Handling
-    if(addr >= 0x04000208 && addr < 0x0400020C){
-        return IME.OnReadByte(addr);
+    if(addr == 0x04000208){
+        return IME.OnReadByte(addr) & 1u;
     }
+    if(addr >= 0x04000209 && addr < 0x04000210) return 0;
     if(addr == 0x04000210){
         return IE;
     }
@@ -307,6 +312,13 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     if(addr == 0x4000304){
         return POWCNT2;
     }
+    if(addr >= 0x4000308 && addr < 0x400030C){
+        return BIOSPROT.OnReadByte(addr);
+    }
+
+    if(addr >= 0x04000400 && addr < 0x04000500){
+        return audioStub[addr - 0x04000400];
+    }
 
     if(addr == 0x04000500){
         return SOUNDCNTSTUB;
@@ -325,7 +337,7 @@ Byte nds::Bus7::readByteFromWide(Word addr)
         return sharedBus->lcd->readMemoryNDS7(addr % 0x4'0000);
     }
 
-    std::cout << "Bus7 unknown Read: " << getHex0x(addr, 8) << "\n";
+    // std::cout << "Bus7 unknown Read: " << getHex0x(addr, 8) << "\n";
 
     return 0;
 }

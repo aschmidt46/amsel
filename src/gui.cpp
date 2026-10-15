@@ -725,6 +725,7 @@ void Gui::render()
                 changeTitle = true;
                 createConsole(result.value().c_str());
                 console->setHalt(this->state->halt);
+                console->produceDisassembly(state->showDebugger);
                 for(auto bp : breakpoints){
                   console->addBreakpoint(bp);
                 }

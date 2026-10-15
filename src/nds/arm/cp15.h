@@ -112,5 +112,15 @@ namespace nds{
             const Word base = dtcmSize.state.regionBase << 12;
             return {base, base + vSize};
         };
+
+        inline Word exceptionBase(){
+            return controlReg.state.exceptionVectors == 0 ? 0x0 : 0xFFFF0000;
+        }
+
+        inline bool setEBitOnExceptions(){
+            return controlReg.state.cpsrEOnExceptions == 1;
+        }
+
+        void renderTCM();
     };
 };

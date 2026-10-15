@@ -19,6 +19,7 @@ namespace nds{
         std::queue<Word> sendFifo9;
         Word sendFifo9recent = 0;
 
+        public:
         Byte readIPCSYNCLower(bool isNDS9);
         Byte readIPCSYNCHigher(bool isNDS9);
         void writeIPCSYNCLower(bool isNDS9, Byte val);
@@ -28,7 +29,6 @@ namespace nds{
         void writeIPCFIFOCNTLower(bool isNDS9, Byte val);
         void writeIPCFIFOCNTHigher(bool isNDS9, Byte val);
 
-        public:
         IPC(SharedBus* bus) : bus(bus){};
 
         Byte readReg(Word addr, bool isNDS9);

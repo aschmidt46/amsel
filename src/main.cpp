@@ -105,7 +105,7 @@ int run(int argc, wchar_t** argv)
     if(std::chrono::duration_cast<milliseconds>(t2).count() >= 1000){
       float speed = float(fps) / 59.73f;
       speed = std::floorf(speed * 100.0f) / 100.0f;
-      std::cout << "FPS: " << fps << " (" << speed << "x)\n";
+      // std::cout << "FPS: " << fps << " (" << speed << "x)\n";
       t1 = high_resolution_clock::now();
       fps = 0;
     }

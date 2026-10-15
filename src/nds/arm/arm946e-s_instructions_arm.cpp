@@ -100,11 +100,17 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     
     bool baseInRegisterList = instruction & (1u << Rn);
     bool R15InTransferList = instruction & (1u << 15);
-    int actualMode = (S && !L && R15InTransferList) || (!R15InTransferList && S) ? User : mode();
+    bool userTransfer = false;
+    if(S && !R15InTransferList)
+        userTransfer = true;
+    int swapBackMode = mode();
     bool transferCPSR = L && S && R15InTransferList;
     Word origAddr = *registerMap[mode()][Rn];
     Word addr = origAddr;
-
+    
+    if(userTransfer){
+        _CPSR.state.mode_bits = User;
+    }
     if(addr < 0x0E000000 || addr >= 0x0F000000){ // SRAM Region nicht aligned!
         addr &= ~3u;
     }
@@ -121,7 +127,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
             if((unsigned int)i<Rn) firstRegister = false; 
         }
     }
-    if(W){ // Aufpassen, überprüfen
+    if(W && !userTransfer){ // Aufpassen, überprüfen
         if(!baseInRegisterList || (!L || !firstRegister)){
             *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
         }
@@ -135,9 +141,13 @@ bool CPU::executeBlockDataTransfer(Word instruction)
             
             if(L){ // Aus Speicher laden LDM
                 Word val = readWordUnaligned(addr - downOffset);
-                *registerMap[actualMode][i] = val;
+                *registerMap[mode()][i] = val;
                 if(i==15){ // Neu NDS9
                     _CPSR.state.T = val & 1u;
+                    *registerMap[mode()][R15] = val & ~1u;
+                    if(_CPSR.state.T == 0){
+                        *registerMap[mode()][R15] = val & ~3u;
+                    }
                 }
             }
             else{ // In Speicher schreiben STM
@@ -148,25 +158,35 @@ bool CPU::executeBlockDataTransfer(Word instruction)
                     writeWordUnaligned(addr - downOffset, origAddr);
                 }
                 else{
-                    if(i!=15) writeWordUnaligned(addr - downOffset, *registerMap[actualMode][i]);
-                    else writeWordUnaligned(addr - downOffset, *registerMap[actualMode][i] + 4); // Adresse der Anweisung + 12
+                    if(i!=15) writeWordUnaligned(addr - downOffset, *registerMap[mode()][i]);
+                    else writeWordUnaligned(addr - downOffset, *registerMap[mode()][i] + 4); // Adresse der Anweisung + 12
                 }
             }
             
             if(!P) addr += incr;
 
-            if(transferCPSR && i==15){
-                if(actualMode != User && actualMode != System){
-                    *registerMap[actualMode][CPSR] = *registerMap[actualMode][SPSR];
-                } // else?
+            if(transferCPSR && i==15 && !userTransfer){
+                *registerMap[mode()][CPSR] = *registerMap[mode()][SPSR];
             }
         }
     }
 
-    if(W){ // Aufpassen, überprüfen
-        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister) || emptyRegList)
-            *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+    if(userTransfer){
+        _CPSR.state.mode_bits = swapBackMode;
     }
+    
+    if(W){ // Aufpassen, überprüfen
+        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister) || emptyRegList || S){
+            if(userTransfer){
+                *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+            }
+            else{
+                *registerMap[swapBackMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
+            }
+        }
+            // bei User Bank transfer anders?
+    }
+
 
     bool pcAsBase = false;
     if(Rn==15){
@@ -190,8 +210,14 @@ bool CPU::executeSoftwareInterrupt(Word instruction)
     (void)instruction;
     // bus->setHalt();
     _R14_SVC = *registerMap[mode()][R15] - (state() == ARM ? 4 : 2);
-    *registerMap[mode()][R15] = 0xFFFF0008; //                                 <---------- NDS9 Exception Vector Basis ist FFFF0000
+    *registerMap[mode()][R15] = cp15->exceptionBase() + 0x8; //                                 <---------- NDS9 Exception Vector Basis ist FFFF0000 (NICHT IMMER)
     _SPSR_SVC.raw = *registerMap[mode()][CPSR];
+    if(cp15->setEBitOnExceptions()){
+        _CPSR.state.E = 1;
+    }
+    else{
+        _CPSR.state.E = 0;
+    }
     _CPSR.state.mode_bits = 19; // Supervisor
     _CPSR.state.I = 1; // IRQs ausschalten
     _CPSR.state.T = 0; // Zurück zu ARM Modus
@@ -201,10 +227,16 @@ bool CPU::executeSoftwareInterrupt(Word instruction)
 
 void CPU::executeHardwareInterrupt(){
     _R14_irq = *registerMap[mode()][R15] - (state() == ARM ? 4 : 0);
-    _R15_PC = 0xFFFF0018; // BIOS Interrupt Vector //                         <---------- NDS9 Exception Vector Basis ist FFFF0000
+    _R15_PC = cp15->exceptionBase() + 0x18; // BIOS Interrupt Vector //                         <---------- NDS9 Exception Vector Basis ist FFFF0000 (NICHT IMMER)
     // std::cout << getDisassembly((bus->readWord(_R15_PC))) << ", IRQ vector address disassembly\n";
     // bus->setHalt();
     _SPSR_irq.raw = *registerMap[mode()][CPSR];
+    if(cp15->setEBitOnExceptions()){
+        _CPSR.state.E = 1;
+    }
+    else{
+        _CPSR.state.E = 0;
+    }
     _CPSR.state.mode_bits = 18; // IRQ
     _CPSR.state.I = 1; // IRQs ausschalten
     _CPSR.state.T = 0; // Zurück zu ARM Modus
@@ -607,7 +639,6 @@ bool CPU::executePSRTransfer(Word instruction)
 
 bool CPU::executeSingleDataTransfer(Word instruction)
 {
-    // PLD??
 
     bool I = instruction & (1u << 25);
     bool P = instruction & (1u << 24);
@@ -616,8 +647,8 @@ bool CPU::executeSingleDataTransfer(Word instruction)
     bool W = instruction & (1u << 21);
     bool L = instruction & (1u << 20);
     bool isJump = false;
-    Word baseReg = (instruction & (0xFu << 16)) >> 16;
-    Word sourceDestReg = (instruction & (0xFu << 12)) >> 12;
+    const Word baseReg = (instruction & (0xFu << 16)) >> 16;
+    const Word sourceDestReg = (instruction & (0xFu << 12)) >> 12;
     // "In the case of post-indexed addressing, the write back bit is
     // redundant and must be set to zero, since the old base value can be retained by setting
     // the offset to zero. Therefore post-indexed data transfers always write back the modified base"
@@ -631,6 +662,13 @@ bool CPU::executeSingleDataTransfer(Word instruction)
     const bool carryBefore = (std::bit_cast<StatusRegister>(*registerMap[mode()][CPSR])).state.C;
 
     Word offset;
+
+    Word cond = (instruction >> 28) & 0xF;
+
+    if(cond == 0b1111 && P && B && !W && L && baseReg == 0b1111){ // PLD aka NOP
+        std::cout << "PLD ausgelöst\n";
+        return false;
+    }
 
 
     auto modifyOffset = [&](){
@@ -719,6 +757,7 @@ bool CPU::executeSingleDataTransfer(Word instruction)
         *registerMap[mode()][sourceDestReg] = val;
         if(sourceDestReg == 15){
             _CPSR.state.T = val & 1u; // Neu auf NDS9
+            *registerMap[mode()][sourceDestReg] &= ~1u;
         }
     }
     else{ // STR
@@ -780,10 +819,9 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
     Word offsetValue;
     bool isJump = L && Rd == R15;
 
-    if(!L && ((instruction >> 5) & 0b11) > 1){
-        std::cout << "ACHTUNG: LDRD / STRD\n";
-        throw;
-    }
+    Word opcode = ((instruction >> 5) & 0b11);
+
+    bool isDouble = opcode > 1 && !L;
 
     
     Word modifiedBase = *registerMap[mode()][Rn];
@@ -810,18 +848,18 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
 
     // Operation hier:
     // S==0 und H==0 wird nicht beachtet, weil es sich dann um Single Data Swap handelt
-    if(S){ // Sign extend Halbwort oder Byte
+    if(S && !isDouble){ // Sign extend Halbwort oder Byte
         Word val;
         if(H){
             val = readHalfWord(modifiedBase);
-            // Word signBit = 15;                        <---- NICHT AUF NDS9 ???? nur force align?
+            Word signBit = 15;             //           <---- NICHT AUF NDS9 ???? nur force align?
             // if (modifiedBase & 1) {
             //     val = (val >> 8) | (val << 24);
             //     signBit = 7;
             // }
-            // val &= 0xFFFFu;
-            // Word mask = 1u << signBit;
-            // val = (val ^ mask) - mask;
+            val &= 0xFFFFu;
+            Word mask = 1u << signBit;
+            val = (val ^ mask) - mask;
         }
         else{
             val = readByte(modifiedBase);
@@ -832,7 +870,7 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
         // ist immer LDR
         *registerMap[mode()][Rd] = val;
     }
-    else{ // Unsigned Halbwort
+    else if (!S && !isDouble){ // Unsigned Halbwort
         if(L){ // LDRH
             Word val = readHalfWord(modifiedBase);
             // Siehe gbatek "Alignment"
@@ -844,6 +882,22 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
         else{
             Word R15Offset = Rd == R15 ? 4 : 0;
             writeHalfWord(modifiedBase, *registerMap[mode()][Rd] + R15Offset);
+        }
+    }
+    else{
+        if(Rd == 15){
+            std::cout << "LDRD STRD mit Rd 15???\n";
+            throw;
+        }
+        if(opcode == 2){
+            if(Rd == R14) isJump = true;
+            // LDRD
+            *registerMap[mode()][Rd] = readWord(modifiedBase);
+            *registerMap[mode()][Rd+1] = readWord(modifiedBase+4);
+        }
+        else if(opcode == 3){
+            writeWord(modifiedBase, *registerMap[mode()][Rd]);
+            writeWord(modifiedBase+4, *registerMap[mode()][Rd+1]);
         }
     }
 

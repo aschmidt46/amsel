@@ -56,14 +56,14 @@ void DMAChannel<ConcreteBus>::onWrite(Word addr, Byte val){
 
 
         if(!enabledBefore && isEnabled()){
-            if(SourceAddress.raw == 0x08000080) bus->setHalt();
-            std::cout << "SETTING DMA Transfer Index " << dmaIndex <<  " on Bus " << (isDMA7() ? "7" : "9") << " with Timing ";
-            printStartTiming();
-            std::cout << "\n";
+            // if(SourceAddress.raw == 0x08000080) bus->setHalt();
+            // std::cout << "SETTING DMA Transfer Index " << dmaIndex <<  " on Bus " << (isDMA7() ? "7" : "9") << " with Timing ";
+            // printStartTiming();
             std::cout << "Source Addr " << getHex0x(SourceAddress.raw, 8) << ", Dest Addr " << getHex0x(DestinationAddress.raw, 8) << ", Size " << getHex0x(WordCount.raw, 8) << "\n";
             resetInternalCounters(true, true);
             if(startTiming == DMA_IMMEDIATE){
-                bus->scheduler->scheduleEvent({.timePoint = 3, .type = schedulerEvent, .args={.index = this->dmaIndex}});
+                commenceTransfer();
+                // bus->scheduler->scheduleEvent({.timePoint = 3, .type = schedulerEvent, .args={.index = this->dmaIndex}});
             }
         }
         else if(enabledBefore && !isEnabled()){

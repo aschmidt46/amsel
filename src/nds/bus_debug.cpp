@@ -154,6 +154,9 @@ void nds::SharedBus::extendedDebugMenu()
     if(ImGui::Button("PPU Registers")){
         showPPURegisters = !showPPURegisters;
     }
+    if(ImGui::Button("Memory State")){
+        showMemoryState = !showMemoryState;
+    }
 
     if(showPPURegisters){
         ImGui::Begin("PPU Registers", &showPPURegisters, ImGuiWindowFlags_NoCollapse);
@@ -172,6 +175,27 @@ void nds::SharedBus::extendedDebugMenu()
 
             ImGui::EndTabBar();
         }
+
+
+
+        ImGui::End();
+    }
+
+    if(showMemoryState){
+        ImGui::Begin("Memory State", &showMemoryState, ImGuiWindowFlags_NoCollapse);
+
+        ImGui::SeparatorText("TCM");
+        bus9->cpu.cp15->renderTCM();
+
+        ImGui::SeparatorText("IPC");
+
+        ImGui::Text("IPCFIFOCNT 9: ");
+        ImGui::SameLine();
+        ImGui::Text(getHex0x((HalfWord(ipc->readIPCFIFOCNTHigher(true)) << 8) | ipc->readIPCFIFOCNTLower(true), 4).c_str());
+
+        ImGui::Text("IPCFIFOCNT 7: ");
+        ImGui::SameLine();
+        ImGui::Text(getHex0x((HalfWord(ipc->readIPCFIFOCNTHigher(false)) << 8) | ipc->readIPCFIFOCNTLower(false), 4).c_str());
 
 
 

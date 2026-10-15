@@ -8,6 +8,7 @@ namespace nds{
         std::vector<Byte> bios7;
         std::vector<Byte> bios9;
         std::vector<Byte> firmware;
+        std::optional<size_t> haltAt = {};
     };
 
     const StartInfo defInfo = {};

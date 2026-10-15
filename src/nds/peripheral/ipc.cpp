@@ -1,5 +1,6 @@
 #include "ipc.h"
 #include "../bus.h"
+#include <iostream>
 
 using namespace nds;
 
@@ -175,6 +176,10 @@ Word nds::IPC::readFIFORECV(bool isNDS9)
             sendFifo9recent = elem;
             if(IPCFIFOCNT_7 >> 15)
                 sendFifo9.pop();
+            std::cout << "Bus 7 read fifo\n";
+            if(sendFifo9.empty()){
+                std::cout << "and fifo 9 empties\n";
+            }
             if((IPCFIFOCNT_9 & 4) && sendFifo9.empty()){
                 bus->setIFSingleBus(17, true, true); // fifo 9 empty -> nds9 irq
             }
@@ -191,7 +196,11 @@ void nds::IPC::writeFIFOSEND(bool isNDS9, Word val)
     if(isNDS9){
         if(IPCFIFOCNT_9 >> 15){
             if(sendFifo9.size() < 16){
+                std::cout << "Fifo 9 send\n";
                 sendFifo9.push(val);
+                if(sendFifo9.empty()){
+                    std::cout << "das geht aber nicht \n";
+                }
                 if(sendFifo9.size() == 1 && ((IPCFIFOCNT_7 >> 10) & 1))
                     bus->setIFSingleBus(18, true, false); // fifo 7 not empty -> nds7 irq
             }

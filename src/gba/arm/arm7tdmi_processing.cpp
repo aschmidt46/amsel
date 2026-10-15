@@ -137,6 +137,12 @@ void gba::CPU::advanceCPUToNextValidState()
         // Beginne mit aktuellem Zustand
         bool jump = executeInstruction();
         if(jump){
+            if(state() == ARM){
+                _R15_PC &= ~3u;
+            }
+            else{
+                _R15_PC &= ~1u;
+            }
             flushPipeline();
         }
         else{

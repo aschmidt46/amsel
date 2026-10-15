@@ -28,6 +28,7 @@ namespace nds{
         HalfWord RTCSTUB = 0;
         HalfWord SOUNDCNTSTUB = 0;
         HalfWord RCNT = 0;
+        std::array<Byte, 0x100> audioStub = {};
         
         public:
         bool watchBreakpoints = false;
@@ -39,10 +40,11 @@ namespace nds{
         Byte POSTFLG = 1;
         Byte POWCNT2 = 1;
         Byte WIFIWAITCNT = 0x30; // von Firmware gesetzt!
+        gba::GeneralPurpose32 BIOSPROT;
         Byte HALTCNT = 0;
         gba::CPU cpu;
         SPI spi;
-        Bus7(SharedBus* sb) : sharedBus(sb), arm7WRAM(0x10000, 0), IME(0x4000208){};
+        Bus7(SharedBus* sb) : sharedBus(sb), arm7WRAM(0x10000, 0), IME(0x4000208), BIOSPROT(0x4000308){};
         void init();
         void writeByte(Word addr, Byte val);
         Byte readByte(Word addr);

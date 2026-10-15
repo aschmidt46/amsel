@@ -219,7 +219,7 @@ namespace nds{
         std::pair<std::string, std::vector<int>> getNextNInstructions(int n);
         std::pair<std::string, std::vector<int>> getPrev10Instructions();
         void incrementCircular();
-        const int circSize = 50;
+        const int circSize = 20;
         std::vector<std::pair<int64_t, CpuState>> circular{std::vector<std::pair<int64_t, CpuState>>(circSize,{-1, ARM})};
         unsigned int circularIndex = 0;
         std::string getCurrentOpcode();

@@ -1,6 +1,10 @@
 #include "cp15.h"
 #include <iostream>
 #include "framework/stringlib.h"
+// #ifdef BUILD_DESKTOP
+#include <imgui.h>
+// #endif
+#include <bitset>
 
 using namespace nds;
 
@@ -121,4 +125,29 @@ Word nds::CP15::MRC(Word Cn, Word Cm, Word cp)
     }
     std::cout << "MRC unhandled: C" << Cn << ", C" << Cm << ", " << cp << "\n";
     return 0;
+}
+
+void nds::CP15::renderTCM()
+{
+    //#ifdef BUILD_DESKTOP
+        ImGui::Text("ITCM End: ");
+        ImGui::SameLine();
+        ImGui::Text(getHex0x(itcmRegion(), 8).c_str());
+        ImGui::Text((std::string("Is Enabled? ") + (itcmIsEnabled() ? "Yes" : "No")).c_str());
+        ImGui::Text((std::string("Is Load Mode? ") + (itcmIsLoadMode() ? "Yes" : "No")).c_str());
+
+        ImGui::Text("");
+
+        auto [start, end] = dtcmRegion();
+        ImGui::Text("DTCM Region: ");
+        ImGui::SameLine();
+        ImGui::Text((getHex0x(start, 8) + "---" + getHex0x(end, 8)).c_str());
+        ImGui::Text((std::string("Is Enabled? ") + (dtcmIsEnabled() ? "Yes" : "No")).c_str());
+        ImGui::Text((std::string("Is Load Mode? ") + (dtcmIsLoadMode() ? "Yes" : "No")).c_str());
+
+        ImGui::Text("CP15 Control Reg: ");
+        ImGui::Text("Exception Base: ");
+        ImGui::SameLine();
+        ImGui::Text(std::to_string(exceptionBase()).c_str());
+    //#endif
 }

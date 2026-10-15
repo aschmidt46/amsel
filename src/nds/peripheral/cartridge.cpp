@@ -20,6 +20,7 @@ void nds::Cartridge::startTransfer()
                 offsetAddress = 0x8000 + (offsetAddress & 0x1FF);
             }
             std::cout << getHex0x(offsetAddress, 8) << "\n";
+            // bus->setHalt();
             oncePerCycle = false;
             if(remainingLength > 0){
                 bus->scheduler->scheduleEvent({.timePoint = 80 + romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardDataWord});
@@ -154,6 +155,7 @@ void nds::Cartridge::onWrite(Word addr, Byte val)
         }
         else if(addr == 7){
             gameCardBusCommandOut = (gameCardBusCommandOut & 0xFFFFFFFFFFFFFF00) | (uint64_t(val));
+            // bus->setHalt();
         }
         // gameCardBusCommandOut = (gameCardBusCommandOut & ~(uint64_t(0xFF) << (56 - addr * 8))) | (uint64_t(val) << (56 - addr * 8));
     }

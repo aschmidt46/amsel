@@ -15,6 +15,10 @@ namespace nds{
         public:
         bool watchARM7 = false;
         int steps = 0;
+        size_t clocks = 0;
+        bool stepBack = false;
+        size_t haltAt = 0;
+
         std::shared_ptr<Bus7> bus7;
         std::shared_ptr<Bus9> bus9;
         std::shared_ptr<IPC> ipc;
@@ -85,6 +89,7 @@ namespace nds{
         // Debug
 
         bool showPPURegisters = false;
+        bool showMemoryState = false;
 
 
         void setDebug(bool to);

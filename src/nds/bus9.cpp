@@ -27,6 +27,7 @@ Byte nds::Bus9::readByte(Word addr)
 
 void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
 {
+    // if(addr == 0x02ff0000) setHalt();
     if(!isDMA){
         const Word itcmEnd = cp15.itcmRegion();
         const auto [dtcmStart, dtcmEnd] = cp15.dtcmRegion();
@@ -178,13 +179,12 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
     }
 
     else{
-        std::cout << "Bus9 unknown write at " << getHex0x(addr, 8) << ": " << getHex0x(val, 2) << "\n";
+        // std::cout << "Bus9 unknown write at " << getHex0x(addr, 8) << ": " << getHex0x(val, 2) << "\n";
     }
 }
 
 Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
 {
-    // if(addr == 0xE1D410F8) setHalt();
     if(!isDMA){
         const Word itcmEnd = cp15.itcmRegion();
         const auto [dtcmStart, dtcmEnd] = cp15.dtcmRegion();
@@ -277,9 +277,11 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
     }
 
     //Interrupt Handling
-    if(addr >= 0x04000208 && addr < 0x0400020C){
-        return IME.OnReadByte(addr);
+    if(addr == 0x04000208){
+        // setHalt();
+        return IME.OnReadByte(addr) & 1u;
     }
+    if(addr >= 0x0400209 && addr < 0x04000210) return 0;
     if(addr == 0x04000210){
         return IE;
     }
@@ -344,13 +346,17 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
         return sharedBus->lcd->readMemory(addr);
     }
 
+    if(addr >= 0x08000000 && addr < 0x09000000){
+        return 0;
+    }
+
     // BIOS
     if(addr >= 0xFFFF0000){
         addr -= 0xFFFF0000;
         return bios9[addr % bios9.size()];
     }
 
-    std::cout << "Bus9 unknown Read: " << getHex0x(addr, 8) << "\n";
+    // std::cout << "Bus9 unknown Read: " << getHex0x(addr, 8) << "\n";
 
     return 0;
 }
@@ -447,7 +453,7 @@ void nds::Bus9::clock()
     clocks++;
     // 66 MHz
     cpu.clock();
-    cpu.clock();
+    // cpu.clock();
     maths.clock();
 
 }

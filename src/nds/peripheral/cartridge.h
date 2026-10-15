@@ -34,7 +34,9 @@ namespace nds{
 
     class Cartridge{
         SharedBus* bus;
+        public:
         std::vector<Byte> cartridge;
+        private:
         EventType currentMode = NDSEVENT_None;
         HalfWord AUXSPICNT = 0;
         Byte AUXSPIDATA = 0;

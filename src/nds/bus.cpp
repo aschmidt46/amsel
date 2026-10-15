@@ -10,6 +10,10 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     if(bytes.size() == 0) return;
     gameCart = Cartridge(this, bytes);
     nds9romRomStart = *(Word*)(bytes.data() + 0x20);
+    if(nds9romRomStart < 0x8000){
+        std::cout << "WARNING: SECURE AREA PRESENT, ROM OFFSET: " << getHex0x(nds9romRomStart, 8) << "\n";
+        // throw;
+    }
     // nds9romRomStart &= ~0xFFF; // align 0x1000
     nds9romRamStart = *(Word*)(bytes.data() + 0x28);
     nds9romSize = *(Word*)(bytes.data() + 0x2C);
@@ -17,9 +21,12 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     nds7romRomStart = *(Word*)(bytes.data() + 0x30);
     nds7romRamStart = *(Word*)(bytes.data() + 0x38);
     nds7romSize = *(Word*)(bytes.data() + 0x3C);
+
+    // std::cout << "nds9rom off: " << getHex0x(nds9romRomStart, 8) << "\n";
     
     Word entrynds9 = *(Word*)(bytes.data() + 0x24);
     Word entrynds7 = *(Word*)(bytes.data() + 0x34);
+    // std::cout << "nds9entry: " << getHex0x(entrynds9 - nds9romRamStart, 8) << "\n";
 
     // std::cout << "Start in " << getHex0x(nds9romRomStart + (entrynds9 - nds9romRamStart), 8) << "\n";
     
@@ -34,15 +41,14 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     // bus7->writeByte(0x04000300, 1);
     // bus9->writeByte(0x04000300, 1);
     bus9->writeByte(0x04000247, 0x03);
-    bus9->writeWord(0x027FF800, 0x00001FC2);
-    bus9->writeWord(0x027FF804, 0x00001FC2);
     bus9->writeHalfWord(0x027FF850, 0x5835);
     bus9->writeHalfWord(0x027FF880, 0x0007);
     bus9->writeHalfWord(0x027FF884, 0x0006);
-    bus9->writeWord(0x027FFC00, 0x00001FC2);
-    bus9->writeWord(0x027FFC04, 0x00001FC2);
     bus9->writeHalfWord(0x027FFC10, 0x5835);
+    bus9->writeHalfWord(0x027FFC30, 0xFFFF);
     bus9->writeHalfWord(0x027FFC40, 0x0001);
+
+    bus7->BIOSPROT.raw = 0x1204;
 
     // Generate cart ID
 // 1st byte - Manufacturer (eg. C2h=Macronix) (roughly based on JEDEC IDs)
@@ -65,14 +71,23 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     //     chipID |= (0x100 - (bytes.size() >> 28)) << 8;
     // }
 
+    HalfWord secureCRC16 = *(HalfWord*)(bytes.data() + 0x6C);
+
+    HalfWord headerCRC16 = *(HalfWord*)(bytes.data() + 0x15E);
+
     bus9->writeWord(0x027FF800, chipID);
     bus9->writeWord(0x027FF804, chipID);
+
+    bus9->writeHalfWord(0x027FF808, headerCRC16);
+    bus9->writeHalfWord(0x027FF80A, secureCRC16);
+
     bus9->writeWord(0x027FFC00, chipID);
     bus9->writeWord(0x027FFC04, chipID);
 
     // copy header
-    for(size_t i = 0; i < 0x170; i++){
-        mainMemory[0x3FFE00 + i] = bytes[i];
+    for(size_t i = 0; i < 0x170; i+=4){
+        // writeByte(0x027FFE00 + i, bytes[i]);
+        bus9->writeWord(0x027FFE00 + i, *(Word*)&bytes[i]);
     }
     
     size_t j = nds9romRamStart;
@@ -188,7 +203,14 @@ void nds::SharedBus::clock()
     //     }
     // }
 
+    if(stepBack && clocks == haltAt){
+        stepBack = false;
+        halted = true;
+    }
+
+    
     if(!halted || steps > 0){
+        clocks++;
         bus7->clock();
         bus9->clock();
         scheduler->clock();

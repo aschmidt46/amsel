@@ -52,7 +52,7 @@ nds::StartInfo NDSImplementation::constructStartInfo()
 
     assert(bios7 != bios9);
 
-    return nds::StartInfo{.bios7 = bios7, .bios9 = bios9, .firmware = firmware};
+    return nds::StartInfo{.bios7 = bios7, .bios9 = bios9, .firmware = firmware, .haltAt = std::nullopt};
 }
 
 std::string NDSImplementation::getConsoleName(){
@@ -310,6 +310,20 @@ void NDSImplementation::displayRegisters() {
 
     if(ImGui::Button("Extended Debug")){
         showExtendedDebug = !showExtendedDebug;
+    }
+
+    ImGui::SameLine();
+
+    if(ImGui::Button("Step Back (reset)")){
+        const auto cart = nds->bus->gameCart.cartridge;
+        auto clocks = nds->bus->clocks - 1;
+        auto info = constructStartInfo();
+        info.haltAt = {clocks};
+        nds = std::make_shared<nds::NDS>(cart, info);
+        nds->setDebug(true);
+        while(nds->bus->stepBack){
+            nds->clockUntilSampleReady();
+        }
     }
 
     if(showExtendedDebug){

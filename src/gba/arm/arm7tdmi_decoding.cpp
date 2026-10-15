@@ -403,6 +403,7 @@ bool gba::CPU::executeInstruction()
     if(this->pipeline[0].type != PipelineEmpty){
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
+        // if(_R15_PC - 8 == 0x018) bus->setHalt();
         if(info.code == 0){
             std::cout << "ANDEQ erreicht!\n";
             bus->setHalt();
