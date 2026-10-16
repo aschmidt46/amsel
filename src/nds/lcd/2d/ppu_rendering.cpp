@@ -149,8 +149,6 @@ void PPU::renderScanline()
                 fun = &PPU::drawPixelMode5;
                 break;
         }
-                                                                if(isB) framebufferOffset = 1;
-                                                                else framebufferOffset = 0;
         if(LCDCONTROL.state.displayMode == 0){
             for(; currentCycle < 256; currentCycle++){
                 setPixel(currentCycle, currentScanline + 192 * framebufferOffset, 255, 255, 255);
@@ -411,16 +409,20 @@ void PPU::drawSprites(){
             }
             const Word inTileX = xOffset % 8;
             const Word inTileY = yOffset % 8;
+            Word boundary = 0x20; // 32
         
             if(!spriteMappingMode1D){
                 tileSizeX = bpp8 ? 16 : 32; // 32 Tiles in Folge, dann kommt die nächste Zeile
             }
-        
+            else if(spriteMappingMode1D && LCDCONTROL.state.tileObj1DBoundary == 1) boundary = 64;
+            else if(spriteMappingMode1D && LCDCONTROL.state.tileObj1DBoundary == 2) boundary = 128;
+            else if(spriteMappingMode1D && LCDCONTROL.state.tileObj1DBoundary == 3) boundary = 256;
+            
             const Word tileIndex = currentTileX + currentTileY * tileSizeX;
         
             const Word tileWidthByte = bpp8 ? 8 : 4;
         
-            Byte* tileStart = vRamTiles + 0x20 * baseTileIndex + tileOffset * tileIndex;
+            Byte* tileStart = vRamTiles + boundary * baseTileIndex + tileOffset * tileIndex;
         
             const Word verticalFactor = flipV ? -1 : 1;
             const Word horizontalFactor = flipH ? -1 : 1;
@@ -500,8 +502,8 @@ void PPU::drawBG(const int index)
 
     const Word screenblockSize = 0x800;
     const Word chrblockSize = 0x4000;
-    const Word screenBaseBlock = CONTROL.state.screenBaseBlock;
-    const Word characterBaseBlock = CONTROL.state.CHRBaseBlock;
+    const Word screenBaseBlock = CONTROL.state.screenBaseBlock + (isB ? 0 : (LCDCONTROL.state.screenBase * 32));
+    const Word characterBaseBlock = CONTROL.state.CHRBaseBlock + (isB ? 0 : (LCDCONTROL.state.characterBase * 4));
     auto [bgrX, bgrY] = isAffine ? affineBgrSizes[CONTROL.state.screenSize] : regularBgrSizes[CONTROL.state.screenSize];
     Byte* entries = lcd->vram.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (screenBaseBlock * screenblockSize); // BG Vram bei 0x06000000 (A) und 0x06200000 (B)
     Byte* chrEntries = lcd->vram.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (characterBaseBlock * chrblockSize);

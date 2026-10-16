@@ -1,6 +1,7 @@
 #pragma once
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <string>
 
 GLFWwindow* initWindow();
 void postInit();
@@ -16,4 +17,5 @@ void onWindowUpdate();
 
 // Logik
 void updateTitle(GLFWwindow* window);
+void appendTitle(GLFWwindow* window, std::string title);
 void updateOtherViewports();

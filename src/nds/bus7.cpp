@@ -317,6 +317,7 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
 
     if(addr >= 0x04000400 && addr < 0x04000500){
+        // return 0;
         return audioStub[addr - 0x04000400];
     }
 

@@ -161,7 +161,7 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
         onWritePOWCNT1();
     }
     else if(addr == 0x4000305){
-        POWCNT1 = (POWCNT1 & 0x00FF) | (HalfWord(val & 0b1000010) << 8);
+        POWCNT1 = (POWCNT1 & 0x00FF) | (HalfWord(val & 0b10000010) << 8);
         onWritePOWCNT1();
     }
     // Engine B

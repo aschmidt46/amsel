@@ -254,6 +254,15 @@ void updateTitle(GLFWwindow* window){
     glfwSetWindowTitle(window, fn.c_str());
 }
 
+void appendTitle(GLFWwindow* window, std::string t)
+{
+  auto fn = title + " - " + gameTitle + " " + " - " + t;
+    if(gameTitle.size()==0){
+      fn = title;
+    }
+    glfwSetWindowTitle(window, fn.c_str());
+}
+
 void updateOtherViewports()
 {
   ImGuiIO& io = ImGui::GetIO();

@@ -165,11 +165,17 @@ void nds::SharedBus::extendedDebugMenu()
 
             if(ImGui::BeginTabItem("engine A")){
                 lcd->engineA.LCDCONTROL.render();
+                ImGui::Text("framebufferOffset: ");
+                ImGui::SameLine();
+                ImGui::Text(std::to_string(lcd->engineA.framebufferOffset).c_str());
                 ImGui::EndTabItem();
             }
 
             if(ImGui::BeginTabItem("engine B")){
                 lcd->engineB.LCDCONTROL.render();
+                ImGui::Text("framebufferOffset: ");
+                ImGui::SameLine();
+                ImGui::Text(std::to_string(lcd->engineB.framebufferOffset).c_str());
                 ImGui::EndTabItem();
             }
 

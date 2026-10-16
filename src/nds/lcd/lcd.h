@@ -24,6 +24,15 @@ namespace nds{
         Byte raw = 0;
     };
 
+    union MASTERBRIGHT_T{
+        struct{
+            HalfWord factor : 5;
+            HalfWord _unused : 9;
+            HalfWord mode : 2;
+        } state;
+        HalfWord raw = 0;
+    };
+
     class LCD{
 
         SharedBus* bus;
@@ -40,6 +49,7 @@ namespace nds{
         // ACHTUNG, [7] existiert nicht, [6] ist Bank G, [8] ist Bank H, [9] ist Bank I
         std::array<VRAMCNT_T, 10> vramControl = {};
         std::array<Byte, 0xA4000> vram = {};
+        MASTERBRIGHT_T masterBright = {.raw = 0};
 
         private:
         template<Word N>

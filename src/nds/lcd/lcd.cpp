@@ -104,10 +104,16 @@ Byte nds::LCD::readRegister(Word addr)
     if(addr == 0x04000005){
         return DISPSTAT.raw >> 8;
     }
-    if(addr >= 0x04000000 && addr < 0x0400006E){
+    if(addr >= 0x04000000 && addr < 0x0400006C){
         return engineA.readPPURegister(addr);
     }
-    if(addr >= 0x04001000 && addr < 0x0400106E){
+    if(addr == 0x0400006C){
+        return masterBright.raw;
+    }
+    if(addr == 0x0400006D){
+        return masterBright.raw >> 8;
+    }
+    if(addr >= 0x04001000 && addr < 0x0400106C){
         return engineB.readPPURegister(addr - 0x1000);
     }
     std::cout << "Unknwon LCD reg read " << addr << "\n";
@@ -123,10 +129,16 @@ void nds::LCD::writeRegister(Word addr, Byte val)
         DISPSTAT.raw = (DISPSTAT.raw & 0x00FF) | (HalfWord(val) << 8);
     }
 
-    else if(addr >= 0x04000000 && addr < 0x0400006E){
+    else if(addr >= 0x04000000 && addr < 0x0400006C){
         engineA.writePPURegister(addr, val);
     }
-    else if(addr >= 0x04001000 && addr < 0x0400106E){
+    else if(addr == 0x0400006C){
+        masterBright.state.factor = val & 0x1F;
+    }
+    else if(addr == 0x0400006D){
+        masterBright.state.mode = val >> 6;
+    }
+    else if(addr >= 0x04001000 && addr < 0x0400106C){
         engineB.writePPURegister(addr - 0x1000, val);
     }
 }

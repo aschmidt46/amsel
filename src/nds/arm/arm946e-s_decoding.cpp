@@ -763,8 +763,8 @@ CPU::CPU(bool skipBios)
 
     if(skipBios){
         _R13_SP = 0x3002F7C;
-        _R13_SVC = 0x3003FC0;
         _R13_irq = 0x3003F80;
+        _R13_SVC = 0x3003FC0;
         // _R14_L_R = 0x08000000;
         // _R15_PC = 0x08000000;
     }
