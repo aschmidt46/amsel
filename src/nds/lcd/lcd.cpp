@@ -139,9 +139,6 @@ Byte nds::LCD::readMemory(Word addr)
     if(addr >= 0x05000400 && addr < 0x05000800){
         return engineB.paletteRam[addr - 0x05000400];
     }
-    if(addr >= 0x07000000 && addr < 0x05000400){
-        return engineA.paletteRam[addr - 0x05000000];
-    }
     if(addr >= 0x06000000 && addr < 0x07000000){
         addr -= 0x06000000;
         const Word offset = addr % 0x4000;
@@ -177,9 +174,6 @@ void nds::LCD::writeMemory(Word addr, Byte val)
     }
     else if(addr >= 0x05000400 && addr < 0x05000800){
         engineB.paletteRam[addr - 0x05000400] = val;
-    }
-    else if(addr >= 0x07000000 && addr < 0x05000400){
-        engineA.paletteRam[addr - 0x05000000] = val;
     }
     else if(addr >= 0x06000000 && addr < 0x07000000){
         addr -= 0x06000000;

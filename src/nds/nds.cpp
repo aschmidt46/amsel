@@ -53,7 +53,6 @@ void nds::NDS::clock()
 {
     // 33 MHz
     bus->clock();
-    bus->clock();
 
     audioTime += audioTimePerGBAClock;
     if(audioTime >= audioTimePerSystemSample){

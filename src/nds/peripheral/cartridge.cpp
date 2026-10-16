@@ -23,7 +23,7 @@ void nds::Cartridge::startTransfer()
             // bus->setHalt();
             oncePerCycle = false;
             if(remainingLength > 0){
-                bus->scheduler->scheduleEvent({.timePoint = 80 + romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardDataWord});
+                bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardDataWord});
             }
             else{
                 checkAndResend();
@@ -163,7 +163,7 @@ void nds::Cartridge::onWrite(Word addr, Byte val)
 
 void nds::Cartridge::sendDataWord()
 {
-    gameCardBus4byteDataIn = cartridge[offsetAddress] | (Word(cartridge[offsetAddress + 1]) << 8) | (Word(cartridge[offsetAddress + 2]) << 16) | (Word(cartridge[offsetAddress + 3]) << 16);
+    gameCardBus4byteDataIn = cartridge[offsetAddress] | (Word(cartridge[offsetAddress + 1]) << 8) | (Word(cartridge[offsetAddress + 2]) << 16) | (Word(cartridge[offsetAddress + 3]) << 24);
     offsetAddress += 4;
     remainingLength -= 4;
 

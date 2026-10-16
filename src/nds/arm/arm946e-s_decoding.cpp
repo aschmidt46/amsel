@@ -33,7 +33,7 @@ ARM Binary Opcode Format (Arm11 / Arm9 Instruktionen entfernt) GBATEK
   |_Cond__|1_1_0|P|U|N|W|L|__Rn___|__CRd__|__CP#__|____Offset_____| CoDataTrans
   |_Cond__|1_1_1_0|_CPopc_|__CRn__|__CRd__|__CP#__|_CP__|0|__CRm__| CoDataOp
   |_Cond__|1_1_1_0|CPopc|L|__CRn__|__Rd___|__CP#__|_CP__|1|__CRm__| CoRegTrans
-  
+
   |_Cond__|0_0_0_1_0|B|0_0|__Rn___|__Rd___|0_0_0_0|1_0_0_1|__Rm___| TransSwp12 (Single Data Swap)
   |_Cond__|1_0_1|L|___________________Offset______________________| B,BL,BLX (Branch)
   |_Cond__|1_1_1_1|_____________Ignored_by_Processor______________| SWI
@@ -208,7 +208,7 @@ static inline bool isPSRTransfer(Word code)
         }
         else{ // MRS
             if((code & (0b1111 << 16)) >> 16 != 0b1111) return false; //mus 0b1111 sein
-            if((code & 0b11111111111) > 0) return false; // muss 0 sein
+            if((code & 0b111111111111) > 0) return false; // muss 0 sein
         }
         return true;
     }
@@ -638,7 +638,7 @@ InstructionInfo CPU::decodeInstructionARM(Word code)
 
     if(isQALU(code))
         return InstructionInfo{.type = TypeQALU, .code = code};
-    
+        
     if(isBlockDataTransfer(code))
         return InstructionInfo{.type = TypeBlockDataTransfer, .code = code};
 
@@ -654,23 +654,23 @@ InstructionInfo CPU::decodeInstructionARM(Word code)
 
     if(isSingleDataTransfer(code))
         return InstructionInfo{.type = TypeSingleDataTransfer, .code = code};
-    
+
     if(isUndefined(code))
         return InstructionInfo{.type = TypeUndefined, .code = code};
-    
+
     if(isMultiplyAccumulate(code))
         return InstructionInfo{.type = TypeMultiply, .code = code};
     if(isMultiplyAccumulateL(code))
         return InstructionInfo{.type = TypeMultiplyL, .code = code};
-    
+
     if(isMultiplyHalfWord(code))
         return InstructionInfo{.type = TypeMultiplyHalfWord, .code = code};
-    
+
     if(isDataTransferSignHDW(code))
         return InstructionInfo{.type = TypeDataTransferSignHDW, .code = code};
-    
 
-    
+
+
     if(isPSRTransfer(code))
         return InstructionInfo{.type = TypePSRTransfer, .code = code};
 
@@ -688,7 +688,7 @@ InstructionInfo CPU::decodeInstructionTHUMB(Word code)
 
     if(isThumbMoveShiftedRegister(code))
         return InstructionInfo{.type = ThumbMoveShiftedRegister, .code = code};
-        
+
     if(isThumbMoveCompareAddSubtractImmediate(code))
         return InstructionInfo{.type = ThumbMoveCompareAddSubtractImmediate, .code = code};
 
@@ -727,7 +727,7 @@ InstructionInfo CPU::decodeInstructionTHUMB(Word code)
 
     if(isThumbMultipleLoadStore(code))
         return InstructionInfo{.type = ThumbMultipleLoadStore, .code = code};
-        
+
     if(isThumbSoftwareInterrupt(code))
         return InstructionInfo{.type = ThumbSoftwareInterrupt, .code = code};
 
@@ -740,7 +740,7 @@ InstructionInfo CPU::decodeInstructionTHUMB(Word code)
     if(isThumbLongBranchWithLink(code))
         return InstructionInfo{.type = ThumbLongBranchWithLink, .code = code};
     if(isThumbBranchExchange(code)){
-        return InstructionInfo{.type = ThumbBranchExchange, .code = code};
+        return InstructionInfo{.type = ThumbLongBranchWithLink, .code = code};
     }
 
     return InstructionInfo{.type = UnimplementedInstruction, .code = code};
@@ -760,12 +760,12 @@ CPU::CPU(bool skipBios)
     _CPSR.state.mode_bits = System;
 
     _R15_PC = 0xFFFF0000;
-    
+
     if(skipBios){
         _R13_SP = 0x3002F7C;
         _R13_SVC = 0x3003FC0;
         _R13_irq = 0x3003F80;
-        // _R14_L_R = 0x08000000; 
+        // _R14_L_R = 0x08000000;
         // _R15_PC = 0x08000000;
     }
 
@@ -801,7 +801,7 @@ bool CPU::checkCondition(Condition c) const
                 return _CPSR.state.Z == 1 || (_CPSR.state.N != _CPSR.state.V);
             }
         case AL: return true;
-        case NV: return false;
+        case NV: return true;
     }
     return false;
 }

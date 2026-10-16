@@ -117,7 +117,7 @@ bool CPU::executeThumbPCRelativeLoad(Word instruction)
 {
     Word imm = instruction & 0xFF;
     Word Rd = (instruction & (0b111u << 8)) >> 8;
-    Word base = *registerMap[mode()][R15] + (imm << 2);
+    Word base = (*registerMap[mode()][R15] & ~1u) + (imm << 2);
     *registerMap[mode()][Rd] = readWord(base);
     remainingCycles += 3;
     return false;

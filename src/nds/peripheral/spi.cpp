@@ -24,7 +24,7 @@ void nds::SPI::onWrite(Word addr, Byte val)
     }
     else if(addr == 0x040001C2){
         SPIDATA = val;
-        if(SPICNT.state.busyFlag == 0){
+        if(SPICNT.state.busyFlag == 0 && SPICNT.state.spiBusEnable){
             startTransfer();
         }
     }

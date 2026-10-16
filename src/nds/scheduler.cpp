@@ -32,7 +32,7 @@ void gba::Scheduler<nds::EventType,nds::SharedBus>::handleEvent()
             return;
         case NDSEVENT_PPU_HBLANK:
             bus->lcd->onHBlank();
-            scheduleEvent({2130, NDSEVENT_PPU_IncrementScanline});
+            scheduleEvent({594, NDSEVENT_PPU_IncrementScanline});
             return;
         case NDSEVENT_PPU_VBLANK:
             bus->lcd->onVBlank();
@@ -62,7 +62,7 @@ template<>
 void gba::Scheduler<nds::EventType, nds::SharedBus>::init()
 {
     heap.push({1536, NDSEVENT_PPU_HBLANK});
-    heap.push({545280, NDSEVENT_PPU_VBLANK});
+    heap.push({294912, NDSEVENT_PPU_VBLANK});
 }
 
 template<>

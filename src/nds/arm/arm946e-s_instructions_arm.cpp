@@ -19,7 +19,10 @@ bool CPU::executeBranchExchange(Word instruction)
     Word jumpTarget = *registerMap[mode()][Rn] & ~(1u);
 
     if(L){
-        *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus) ACHTUNG WAR 2, ist das so richtig?? PC + 4
+        *registerMap[mode()][R14] = (_R15_PC & ~0b1u) - (state() == ARM ? 4 : 2);
+        // Richtig um Mode in LR zu speicern?
+        if(state() == THUMB) *registerMap[mode()][R14] |= 1;
+        else *registerMap[mode()][R14] &= ~1u;
     }
 
     *registerMap[mode()][R15] = jumpTarget;
@@ -53,22 +56,23 @@ bool CPU::executeSingleDataSwap(Word instruction)
 
 bool CPU::executeBranchLink(Word instruction)
 {
-    bool exchange = (instruction >> 28) == 0b1111; // cond: always
+    bool exchange = (instruction >> 28) == 0b1111 && state() == ARM; // cond: "never"
     bool L = instruction & (1u << 24);
-    Word h = (Word)L;
+    if(exchange) L = true;
+    Word h = (instruction & (1u << 24)) > 0 ? 1 : 0;
     Word jumpRaw = (instruction & 0x00FFFFFF) << (state() == ARM ? 2 : 0);
     int32_t relJump;
     if(state()==ARM) relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 26));
     else relJump = std::bit_cast<int32_t>(sign_extend_n_32(jumpRaw, 24));
 
-    if(exchange && state()==ARM) relJump += h*2;
+    if(exchange) relJump += h*2;
 
     if(L){
-        *registerMap[mode()][R14] = _R15_PC - (state() == ARM ? 4 : 2); // Adresse NACH aktueller (Wegen Pipelining zwei voraus) ACHTUNG WAR 2, ist das so richtig?? PC + 4
+        *registerMap[mode()][R14] = _R15_PC - 4; // Wird aus Thumb nie mit Link aufgerufen, R15_PC sollte immer schon alignt sein
     }
     _R15_PC += relJump;
     remainingCycles += 3; //2S + 1N
-    if(exchange && state()==ARM) _CPSR.state.T = 1;
+    if(exchange) _CPSR.state.T = 1;
     return true;
 }
 
@@ -97,7 +101,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
             emptyRegList = true;
         }
     }
-    
+
     bool baseInRegisterList = instruction & (1u << Rn);
     bool R15InTransferList = instruction & (1u << 15);
     bool userTransfer = false;
@@ -107,7 +111,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     bool transferCPSR = L && S && R15InTransferList;
     Word origAddr = *registerMap[mode()][Rn];
     Word addr = origAddr;
-    
+
     if(userTransfer){
         _CPSR.state.mode_bits = User;
     }
@@ -118,13 +122,13 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     Word usedNumOfRegs = 0;
 
     bool baseIsNotLastRegister = false;
-    
+
     for(int i=0; i < 16; i++){
         bool useRegister = instruction & (1u << i);
         if(useRegister){
             usedNumOfRegs++;
             if((unsigned int)i>Rn) baseIsNotLastRegister = true;
-            if((unsigned int)i<Rn) firstRegister = false; 
+            if((unsigned int)i<Rn) firstRegister = false;
         }
     }
     if(W && !userTransfer){ // Aufpassen, überprüfen
@@ -138,7 +142,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
         bool useRegister = instruction & (1u << i);
         if(useRegister){
             if(P) addr += incr;
-            
+
             if(L){ // Aus Speicher laden LDM
                 Word val = readWordUnaligned(addr - downOffset);
                 *registerMap[mode()][i] = val;
@@ -174,7 +178,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     if(userTransfer){
         _CPSR.state.mode_bits = swapBackMode;
     }
-    
+
     if(W){ // Aufpassen, überprüfen
         if(!L || (baseIsNotLastRegister || baseIsOnlyRegister) || emptyRegList || S){
             if(userTransfer){
@@ -549,7 +553,7 @@ bool CPU::executeDataProc(Word instruction)
                 _CPSR.state.Z = result32 == 0;
                 _CPSR.state.N = (result32 & (1u << 31)) > 0;
             }
-    
+
             // (SUB, RSB, ADD, ADC, SBC, RSC, CMP, CMN):
             //  If the S bit is set (and Rd is not R15) the V flag in the CPSR will be set if an overflow occurs into bit 31 of the result
             // C - Carry out bit aus bit 31 der ALU
@@ -587,7 +591,7 @@ bool CPU::executePSRTransfer(Word instruction)
     bool writeX = instruction & (1u << 17); //..
     bool writeC = instruction & (1u << 16);
     Word writeMask = (writeF ? 0xFFu << 24 : 0) | (writeS ? 0xFFu << 16 : 0) | (writeX ? 0xFFu << 8 : 0) | (writeC ? 0xFFu : 0);
-    
+
 
     if(opcode){ // MSR
         bool destSPSRMode = instruction & (1u << 22);
@@ -665,7 +669,7 @@ bool CPU::executeSingleDataTransfer(Word instruction)
 
     Word cond = (instruction >> 28) & 0xF;
 
-    if(cond == 0b1111 && P && B && !W && L && baseReg == 0b1111){ // PLD aka NOP
+    if(cond == 0b1111 && P && B && !W && L && sourceDestReg == 0b1111){ // PLD aka NOP
         std::cout << "PLD ausgelöst\n";
         return false;
     }
@@ -782,7 +786,7 @@ bool CPU::executeSingleDataTransfer(Word instruction)
     }
 
     // Sehr seltsamer Spezialfall, empirisch bestimmt
-    if(W && sourceDestReg == R15 && baseReg == R15 && 
+    if(W && sourceDestReg == R15 && baseReg == R15 &&
         L){
         *registerMap[mode()][R15] -= 4;
     }
@@ -809,12 +813,12 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
     bool H = instruction & (1u << 5); // Halbwort
     Word Rd = (instruction & (0xFu << 12)) >> 12; // Source / Dest
     Word Rn = (instruction & (0xFu << 16)) >> 16; // Base
-    
+
     bool L = instruction & (1u << 20);
     bool W = instruction & (1u << 21);
     bool U = instruction & (1u << 23);
     bool P = instruction & (1u << 24);
-    
+
     bool immediate = (instruction & (1u << 22));
     Word offsetValue;
     bool isJump = L && Rd == R15;
@@ -823,7 +827,7 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
 
     bool isDouble = opcode > 1 && !L;
 
-    
+
     Word modifiedBase = *registerMap[mode()][Rn];
     if(immediate){
         offsetValue = (instruction & 0xF) | ((instruction & (0xFu << 8)) >> 4);
@@ -901,7 +905,7 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
         }
     }
 
-    
+
     if(!P){
         if(modifiedBase != *registerMap[mode()][Rn])
             modifiedBase = *registerMap[mode()][Rn];
@@ -918,11 +922,11 @@ bool CPU::executeDataTransferSignHDW(Word instruction)
     }
 
     // Sehr seltsamer Spezialfall, empirisch bestimmt
-    if(W && Rd == R15 && Rn == R15 && 
+    if(W && Rd == R15 && Rn == R15 &&
         L && !P){
         *registerMap[mode()][R15] -= 4;
     }
-    
+
 
     if(L){
         if(Rd == 15){ // LDR PC
