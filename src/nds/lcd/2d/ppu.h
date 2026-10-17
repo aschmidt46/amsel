@@ -170,6 +170,8 @@ namespace nds{
         PIXEL_T drawPixelMode4();
         PIXEL_T drawPixelMode5();
 
+        PIXEL_T drawPixelLCDC();
+
         PIXEL_T debugPixel = {};
         Word debugX = 0, debugY = 0;
         void setLatchPixel(unsigned int x, unsigned int y);

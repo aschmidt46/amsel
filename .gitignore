@@ -28,3 +28,5 @@ CMakeSettings.json
 BATTERY/
 NO$GBA.EXE
 NO$GBA.INP
+src/nds/resources/database.xml
+src/nds/resources/conversion.py

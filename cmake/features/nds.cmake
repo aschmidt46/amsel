@@ -49,6 +49,9 @@ src/nds/lcd/lcd.h
 src/nds/lcd/lcd.cpp
 src/nds/lcd/lcd_banks.cpp
 
+src/nds/resources/rominfo.h
+src/nds/resources/database.h
+
 src/nds/peripheral/dma.h
 src/nds/peripheral/dma.cpp
 src/nds/peripheral/timer.h

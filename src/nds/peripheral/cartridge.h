@@ -2,6 +2,7 @@
 #include "../bus_types.h"
 #include <vector>
 #include "../scheduler.h"
+#include "../resources/rominfo.h"
 
 namespace nds{
 
@@ -30,6 +31,20 @@ namespace nds{
         }
     };
 
+    union AUXSPICNT_T{
+        struct {
+            HalfWord baudRate : 2;
+            HalfWord _unused0 : 4;
+            HalfWord holdChipSelect : 1;
+            HalfWord busy : 1;
+            HalfWord _unused1 : 5;
+            HalfWord ndsSlotMode : 1;
+            HalfWord transferReadyIRQ : 1;
+            HalfWord ndsSlotEnable : 1;
+        } state;
+        HalfWord raw = 0;
+    };
+
     class SharedBus;
 
     class Cartridge{
@@ -38,7 +53,7 @@ namespace nds{
         std::vector<Byte> cartridge;
         private:
         EventType currentMode = NDSEVENT_None;
-        HalfWord AUXSPICNT = 0;
+        AUXSPICNT_T AUXSPICNT = {.raw = 0};
         Byte AUXSPIDATA = 0;
 
         ROMCTRL_T romControl = {.state = {.key1Gap1Length = 0x08F8, .key1Gap2Length = 0x18}};
@@ -57,6 +72,9 @@ namespace nds{
 
         void startTransfer();
 
+        RomInfo romInfo = {0, SAVETYPE_NONE, 0};
+
+
         public:
         Cartridge() = default;
         Cartridge(SharedBus* bus, const std::vector<Byte> &cart);
@@ -65,5 +83,10 @@ namespace nds{
         void sendDataWord();
         void sendChipID();
         void checkAndResend();
+
+        bool canSave();
+        std::vector<Byte> getSaveData();
+        size_t getSaveSize();
+        void loadSave(const std::vector<Byte> &saveData);
     };
 }

@@ -64,12 +64,12 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
 //   5   Zero   ... set in ... DSi-exclusive games? (support cmd B5h/D6h ?)
 //   6   DSi flag (0=NDS/3DS, 1=DSi)
 //   7   Cart Protocol Variant (0=older/smaller carts, 1=newer/bigger carts)
-    // chipID = 0xC2; // Manufacturer = Macronix
-    // if (bytes.size() >= 1024 * 1024 && bytes.size() <= 128 * 1024 * 1024) {
-    //     chipID |= ((bytes.size() >> 20) - 1) << 8;
-    // } else {
-    //     chipID |= (0x100 - (bytes.size() >> 28)) << 8;
-    // }
+    chipID = 0xC2; // Manufacturer = Macronix
+    if (bytes.size() >= 1024 * 1024 && bytes.size() <= 128 * 1024 * 1024) {
+        chipID |= ((bytes.size() >> 20) - 1) << 8;
+    } else {
+        chipID |= (0x100 - (bytes.size() >> 28)) << 8;
+    }
 
     HalfWord secureCRC16 = *(HalfWord*)(bytes.data() + 0x6C);
 

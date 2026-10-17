@@ -2,6 +2,8 @@
 #include <iostream>
 #include "framework/stringlib.h"
 #include "../bus.h"
+#include "../resources/database.h"
+#include "framework/global.h"
 
 using namespace nds;
 
@@ -52,15 +54,30 @@ void nds::Cartridge::startTransfer()
 
 nds::Cartridge::Cartridge(SharedBus *bus, const std::vector<Byte> &cart) : bus(bus), cartridge(cart)
 {
+    Word id = *(Word*)(cartridge.data() + 0xC);
+    bool found = false;
+
+    for(size_t i = 0; i < romDB.size(); i++){
+        if(romDB[i].id == id){
+            romInfo = romDB[i];
+            std::string saveType = romInfo.type == SAVETYPE_NONE ? "None" : (romInfo.type == SAVETYPE_EEPROM ? "EEPROM" : "FLASH");
+            std::cout << "detected " << saveType << "\n";
+            found = true;
+            break;
+        }
+    }
+    if(!found){
+        messageQueue.enqueue({.type = MT_WARNING, .title = std::nullopt, .content = "Game not found in Database!"});
+    }
 }
 
 Byte nds::Cartridge::onRead(Word addr)
 {
     if(addr == 0x40001A0){
-        return AUXSPICNT;
+        return AUXSPICNT.raw;
     }
     if(addr == 0x40001A1){
-        return AUXSPICNT >> 8;
+        return AUXSPICNT.raw >> 8;
     }
     if(addr == 0x40001A2){
         return AUXSPIDATA;
@@ -104,10 +121,10 @@ Byte nds::Cartridge::onRead(Word addr)
 void nds::Cartridge::onWrite(Word addr, Byte val)
 {
     if(addr == 0x40001A0){
-        AUXSPICNT = (AUXSPICNT & 0xFF00) | (val & 0b01000011);
+        AUXSPICNT.raw = (AUXSPICNT.raw & 0xFF00) | (val & 0b01000011);
     }
     else if(addr == 0x40001A1){
-        AUXSPICNT = (AUXSPICNT & 0x00FF) | (HalfWord(val & 0b11100000) << 8);
+        AUXSPICNT.raw = (AUXSPICNT.raw & 0x00FF) | (HalfWord(val & 0b11100000) << 8);
     }
     else if(addr == 0x40001A2){
         AUXSPIDATA = val;
@@ -190,7 +207,7 @@ void nds::Cartridge::checkAndResend()
         romControl.state.blockStartStatus = 0;
         romControl.state.dataWordStatus = 0;
 
-        if(((AUXSPICNT >> 14) & 1u) > 0){
+        if(AUXSPICNT.state.transferReadyIRQ > 0){
             if(bus->canAccessGameCart(false)){
                 bus->setIFSingleBus(19, true, false);
             }
@@ -199,4 +216,23 @@ void nds::Cartridge::checkAndResend()
             }
         }
     }
+}
+
+bool nds::Cartridge::canSave()
+{
+    return romInfo.type != SAVETYPE_NONE;
+}
+
+std::vector<Byte> nds::Cartridge::getSaveData()
+{
+    return std::vector<Byte>();
+}
+
+size_t nds::Cartridge::getSaveSize()
+{
+    return romInfo.size;
+}
+
+void nds::Cartridge::loadSave(const std::vector<Byte> &saveData)
+{
 }

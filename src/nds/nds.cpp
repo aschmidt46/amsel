@@ -94,21 +94,22 @@ bool nds::NDS::hasSample()
 
 bool nds::NDS::canSave()
 {
-    return false;
+    return bus->gameCart.canSave();
 }
 
 std::vector<uint8_t> nds::NDS::getSaveData()
 {
-    return std::vector<uint8_t>();
+    return bus->gameCart.getSaveData();
 }
 
 size_t nds::NDS::getSaveSize()
 {
-    return size_t();
+    return bus->gameCart.getSaveSize();
 }
 
 void nds::NDS::loadSave(const std::vector<uint8_t> &saveData)
 {
+    bus->gameCart.loadSave(saveData);
 }
 
 std::pair<float, float> nds::NDS::getSample()

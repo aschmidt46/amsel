@@ -148,6 +148,9 @@ void PPU::renderScanline()
             case 5:
                 fun = &PPU::drawPixelMode5;
                 break;
+            case 6:
+                fun = &PPU::drawPixelMode5; // ------------------------------------------------------------ ACHTUNG
+                break;
         }
         if(LCDCONTROL.state.displayMode == 0){
             for(; currentCycle < 256; currentCycle++){
@@ -156,11 +159,13 @@ void PPU::renderScanline()
             return;
         }
         else if(LCDCONTROL.state.displayMode == 2){
-            fun = &PPU::drawPixelMode3;
+            fun = &PPU::drawPixelLCDC;
         }
+        const auto bd = getBackdrop();
         for(; currentCycle < 256; currentCycle++){
 
-            layerOrderSize = 0;
+            layerOrderSize = 1;
+            layerOrder[0] = bd;
             auto output = (this->*fun)();
             setPixel(currentCycle, currentScanline + 192 * framebufferOffset, output.red, output.green, output.blue);
             
@@ -711,7 +716,6 @@ PIXEL_T PPU::drawPixelMode0() {
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
-    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
     for(int i = 3; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
@@ -733,9 +737,103 @@ PIXEL_T PPU::drawPixelMode1() {
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
-    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
+    //affine
+    if(displayBG(3) && actives.bgActive(3)){
+        drawBG<true, true>(3);
+        if(latchedBg[3].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
+    }
+
+    for(int i = 2; i >= 0; i--){
+        if(displayBG(i) && actives.bgActive(i)){
+            if(BG_CNT[i].state.colorsPalettes)
+                drawBG<false, true>(i);
+            else drawBG<false, false>(i);
+            if(latchedBg[i].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
+        }
+    }
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
+    }
+
+    return setColorFromLayerOrder(actives);
+}
+
+PIXEL_T PPU::drawPixelMode2() {
+
+    this->drawSprites(); // Für Obj Window zuerst
+    WINDOW_ACTIVES_T actives = getActives();
 
     //affine
+    if(displayBG(3) && actives.bgActive(3)){
+        drawBG<true, true>(3);
+        if(latchedBg[3].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
+    }
+
+    if(displayBG(2) && actives.bgActive(2)){
+        drawBG<true, true>(2);
+        if(latchedBg[2].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
+    }
+
+    // 1 und 0 sind Text
+    for(int i = 1; i >= 0; i--){
+        if(displayBG(i) && actives.bgActive(i)){
+            if(BG_CNT[i].state.colorsPalettes)
+                drawBG<false, true>(i);
+            else drawBG<false, false>(i);
+            if(latchedBg[i].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
+        }
+    }
+
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
+    }
+
+    return setColorFromLayerOrder(actives);
+}
+
+PIXEL_T PPU::drawPixelMode3() {
+    this->drawSprites(); // Für Obj Window zuerst
+    WINDOW_ACTIVES_T actives = getActives();
+
+    //affine ---------------------------------------------------------------------- EXTENDED ??????
+    if(displayBG(3) && actives.bgActive(3)){
+        drawBG<true, true>(3);
+        if(latchedBg[3].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
+    }
+
+    for(int i = 2; i >= 0; i--){
+        if(displayBG(i) && actives.bgActive(i)){
+            if(BG_CNT[i].state.colorsPalettes)
+                drawBG<false, true>(i);
+            else drawBG<false, false>(i);
+            if(latchedBg[i].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
+        }
+    }
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
+    }
+
+    return setColorFromLayerOrder(actives);
+}
+
+PIXEL_T PPU::drawPixelMode4() {
+    this->drawSprites(); // Für Obj Window zuerst
+    WINDOW_ACTIVES_T actives = getActives();
+
+    //affine ---------------------------------------------------------------------- EXTENDED ??????
+    if(displayBG(3) && actives.bgActive(3)){
+        drawBG<true, true>(3);
+        if(latchedBg[3].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
+    }
+
     if(displayBG(2) && actives.bgActive(2)){
         drawBG<true, true>(2);
         if(latchedBg[2].priority < 99)
@@ -758,37 +856,17 @@ PIXEL_T PPU::drawPixelMode1() {
     return setColorFromLayerOrder(actives);
 }
 
-PIXEL_T PPU::drawPixelMode2() {
+PIXEL_T PPU::drawPixelMode5() {
+    PIXEL_T bg2 = {.pixel = 1, .red = Byte(0), .green = Byte(255), .blue = Byte(0), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
-    this->drawSprites(); // Für Obj Window zuerst
-    WINDOW_ACTIVES_T actives = getActives();
-
-    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize); // niedrigste Prio
-
-    //affine
-    if(displayBG(3) && actives.bgActive(3)){
-        drawBG<true, true>(3);
-        if(latchedBg[3].priority < 99)
-            insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
-    }
-
-    if(displayBG(2) && actives.bgActive(2)){
-        drawBG<true, true>(2);
-        if(latchedBg[2].priority < 99)
-            insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
-    }
-
-    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
-        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
-    }
-
-    return setColorFromLayerOrder(actives);
+    
+    return bg2;
 }
 
-PIXEL_T PPU::drawPixelMode3() {
-    const int pixelY = currentScanline + framebufferOffset * 192;// = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
+PIXEL_T nds::PPU::drawPixelLCDC()
+{
+    const int pixelY = currentScanline + framebufferOffset * 192;
     int index = currentCycle + 256 * pixelY;
-    // std::cout << "rendere lcdc\n";
     Byte lower = lcd->readMemory(0x06800000 + 2 * index);
     Byte higher = lcd->readMemory(0x06800000 + 2 * index + 1);
     HalfWord pixel = HalfWord(lower) | (HalfWord(higher) << 8);
@@ -797,79 +875,5 @@ PIXEL_T PPU::drawPixelMode3() {
     HalfWord blue = (pixel >> 10) & 0b11111;
     PIXEL_T bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
-    if(!BG_CNT[2].state.mosaic || mosaicBgXCounter == 0)
-        latchedBg[2] = bg2;
-
-    this->drawSprites(); // Für Obj Window zuerst
-
-    WINDOW_ACTIVES_T actives = getActives();
-
-    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
-
-    if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
-        insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
-        
-    if(actives.enableObj && LCDCONTROL.state.displayOBJ)
-        insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
-    
-    return bg2;//setColorFromLayerOrder(actives);
-}
-
-PIXEL_T PPU::drawPixelMode4() {
-    const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
-    int index = currentCycle + 256 * pixelY;
-    size_t page = 0;//LCDCONTROL.state.frameSelect ? 0xA000 : 0;
-    Byte paletteIndex = 0;//vRam[index + page];
-    HalfWord pixel = HalfWord(paletteRam[2 * paletteIndex]) | (HalfWord(paletteRam[2 * paletteIndex + 1]) << 8);
-    HalfWord red = pixel & 0b11111;
-    HalfWord green = (pixel >> 5) & 0b11111;
-    HalfWord blue = (pixel >> 10) & 0b11111;
-    PIXEL_T bg2 = {.pixel = paletteIndex, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
-
-    if(!BG_CNT[2].state.mosaic || mosaicBgXCounter == 0)
-        latchedBg[2] = bg2;
-
-    this->drawSprites(); // Für Obj Window zuerst
-    WINDOW_ACTIVES_T actives = getActives();
-
-    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
-
-    if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
-        insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
-        
-    if(actives.enableObj && LCDCONTROL.state.displayOBJ)
-        insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
-    
-    return setColorFromLayerOrder(actives);
-}
-
-PIXEL_T PPU::drawPixelMode5() {
-    const int pixelY = BG_CNT[2].state.mosaic > 0 ? mosaicBgYCurrent : currentScanline;
-    PIXEL_T bg2;
-    if(currentCycle < 160 && currentScanline < 128){
-        int index = currentCycle + 160 * pixelY;
-        size_t page = 0;//LCDCONTROL.state.frameSelect ? 0xA000 : 0;
-        HalfWord pixel = 0;//HalfWord(vRam[page + 2 * index]) | (HalfWord(vRam[page + 2 * index + 1]) << 8);
-        HalfWord red = pixel & 0b11111;
-        HalfWord green = (pixel >> 5) & 0b11111;
-        HalfWord blue = (pixel >> 10) & 0b11111;
-        bg2 = {.pixel = 1, .red = Byte(red << 3), .green = Byte(green << 3), .blue = Byte(blue << 3), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
-    }
-    else{
-        bg2 = PIXEL_T{.pixel = 0, .priority = 99};
-    }
-    if(!BG_CNT[2].state.mosaic || mosaicBgXCounter == 0)
-        latchedBg[2] = bg2;
-    this->drawSprites(); // Für Obj Window zuerst
-    WINDOW_ACTIVES_T actives = getActives();
-
-    insertIntoSorted(layerOrder, getBackdrop(), layerOrderSize);
-
-    if(LCDCONTROL.state.displayBG2 && actives.bgActive(2))
-        insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
-        
-    if(actives.enableObj && LCDCONTROL.state.displayOBJ)
-        insertIntoSorted(layerOrder, latchedObj, layerOrderSize);
-    
-    return setColorFromLayerOrder(actives);
+    return bg2;
 }
