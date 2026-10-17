@@ -12,6 +12,7 @@ void gamepadCallback(int controller, int key, int action);
 void pollGamepadEvents();
 void joystickCallback(int jid, int event);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void mousePosCallback(GLFWwindow* window, double xpos, double ypos);
 
 // Eingabelogik
 std::pair<std::vector<int>, std::vector<int>> calculateGamepadStateDelta(const GLFWgamepadstate &prev, const GLFWgamepadstate &now);

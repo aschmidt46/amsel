@@ -88,13 +88,12 @@ namespace nds{
     union BGCNT_T {
         struct{
             HalfWord BGPriority : 2; //lsb
-            HalfWord CHRBaseBlock : 2;
-            HalfWord unused : 2; // muss 0 sein
+            HalfWord CHRBaseBlock : 4;
             HalfWord mosaic : 1;
             HalfWord colorsPalettes : 1;
             HalfWord screenBaseBlock : 5;
             // HalfWord unusedBG0BG1 : 1;
-            HalfWord DisplayAreaOverflowBG2BG3 : 1;
+            HalfWord DisplayAreaOverflowBG2BG3 : 1; // oder extended Palette Slot bg01
             HalfWord screenSize : 2;
         } state;
         HalfWord raw;

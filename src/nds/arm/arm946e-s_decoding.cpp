@@ -444,11 +444,11 @@ bool CPU::executeInstruction()
         // if(_R15_PC - 8 == 0x) bus->setHalt();
         // if(_R15_PC - 8 == 0x018) bus->setHalt();
         // if(_R15_PC - 8 == 0x1ff8538) bus->setHalt();
-        if(_CPSR.state.mode_bits == 8){
-            bus->setHalt();
-            return false;
-        }
-        if(info.code == 0) bus->setHalt();
+        // if(_CPSR.state.mode_bits == 8){
+        //     bus->setHalt();
+        //     return false;
+        // }
+        // if(info.code == 0) bus->setHalt();
         // if(_R15_PC - 8 == 0xFFFF0018) bus->setHalt();
 
         // auto iInfo = info;

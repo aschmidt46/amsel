@@ -28,6 +28,8 @@ namespace nds{
 
         StatusRegister _CPSR, _SPSR_fiq, _SPSR_SVC, _SPSR_abt, _SPSR_irq, _SPSR_und; // Init in Konstruktor
 
+        bool haltMode = false;
+
         public:
         inline OperatingMode mode() const{
             return (OperatingMode)_CPSR.state.mode_bits;
@@ -184,6 +186,8 @@ namespace nds{
         void advanceCPU();
         // Führt eine Instruktion aus und clockt die CPU so oft, bis sie erneut eine Instruktion ausführen kann
         void advanceCPUToNextValidState();
+
+        void enterHaltMode();
 
         Word getPC() const{
             return _R15_PC;

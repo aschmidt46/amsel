@@ -574,8 +574,20 @@ void PPU::drawBG(const int index)
         pixel &= 0xF;
     }
     Byte paletteIndex =  bpp8 ? pixel : pixel | (entry.state.paletteBank << 4);
-    HalfWord colorLow = paletteRam[2 * Word(paletteIndex)]; // Byte adressiert
-    HalfWord colorHigh = paletteRam[2 * Word(paletteIndex) + 1];
+    HalfWord colorLow, colorHigh;
+    Word exPaletteIndex = index;
+    if(CONTROL.state.DisplayAreaOverflowBG2BG3){
+        if(index == 0) exPaletteIndex = 2;
+        else if(index == 1) exPaletteIndex = 3;
+    }
+    if(LCDCONTROL.state.useBGExtendedPalettes && bpp8 && bgExtendedPalette[index].ptr != nullptr){
+        colorLow = bgExtendedPalette[exPaletteIndex].ptr[2 * Word(paletteIndex) + entry.state.paletteBank * 0x200]; // Byte adressiert
+        colorHigh = bgExtendedPalette[exPaletteIndex].ptr[2 * Word(paletteIndex) + entry.state.paletteBank * 0x200 + 1];
+    }
+    else{
+        colorLow = paletteRam[2 * Word(paletteIndex)]; // Byte adressiert
+        colorHigh = paletteRam[2 * Word(paletteIndex) + 1];
+    }
     HalfWord color = colorLow | (colorHigh << 8);
     Byte red = color & 0b11111;
     Byte green = (color >> 5) & 0b11111;

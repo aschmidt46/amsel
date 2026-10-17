@@ -1,6 +1,7 @@
 #pragma once
 #include "../bus_types.h"
 #include "firmware.h"
+#include "touch.h"
 
 namespace nds{
 
@@ -28,15 +29,17 @@ namespace nds{
 
     class SPI{
         Bus7* bus;
-        Firmware firmware;
-
+        
         SPI_CNT_T SPICNT = {.raw = 0};
         Byte SPIDATA = 0;
-
+        
         void startTransfer();
+        void unselectDevices();
         public:
-        SPI() = default;
-        SPI(Bus7* bus) : bus(bus){};
+        Firmware firmware;
+        TouchController touch;
+        SPI() : touch(nullptr){};
+        SPI(Bus7* bus) : bus(bus), touch(bus){};
 
         void onWrite(Word addr, Byte val);
         Byte onRead(Word addr);

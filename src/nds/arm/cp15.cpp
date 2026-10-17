@@ -5,6 +5,7 @@
 #include <imgui.h>
 // #endif
 #include <bitset>
+#include "arm946e-s.h"
 
 using namespace nds;
 
@@ -58,6 +59,11 @@ void nds::CP15::MCR(Word val, Word Cn, Word Cm, Word cp)
     }
     else if(Cn == 7){
         // Cache
+
+        // Halt
+        if((Cm == 0 && cp == 4) || (Cm == 8 && cp == 2)){
+            cpu->enterHaltMode();
+        }
     }
     else{
         std::cout << "MCR unhandled: C" << Cn << ", C" << Cm << ", " << cp << "\n";

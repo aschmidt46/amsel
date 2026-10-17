@@ -8,10 +8,22 @@ using namespace nds;
 void nds::SPI::startTransfer()
 {
     SPICNT.state.busyFlag = 1;
-    if(SPICNT.state.deviceSelect == 1){
-        firmware.write(SPIDATA);
+    switch(SPICNT.state.deviceSelect){
+        case 1:
+            firmware.write(SPIDATA);
+            break;
+        case 2:
+            touch.write(SPIDATA);
+            break;
+        default: break;
     }
     bus->sharedBus->scheduler->scheduleEvent({.timePoint= 10, .type= NDSEVENT_SPITransferComplete});
+}
+
+void nds::SPI::unselectDevices()
+{
+    firmware.state = FIRMWARE_IDLE;
+    touch.reset();
 }
 
 void nds::SPI::onWrite(Word addr, Byte val)
@@ -21,6 +33,10 @@ void nds::SPI::onWrite(Word addr, Byte val)
     }
     else if(addr == 0x040001C1){
         SPICNT.raw = (SPICNT.raw & 0x00FF) | (HalfWord(val & 0b11001111) << 8);
+        std::cout << "SPICNT device select: " << SPICNT.state.deviceSelect << "\n";
+        if(SPICNT.state.spiBusEnable == 0){
+            unselectDevices();
+        }
     }
     else if(addr == 0x040001C2){
         SPIDATA = val;
@@ -40,9 +56,7 @@ Byte nds::SPI::onRead(Word addr)
     }
     if(addr == 0x040001C2){
         if(!SPICNT.state.chipSelectHold){
-            if(SPICNT.state.deviceSelect == 1){
-                firmware.state = FIRMWARE_IDLE;
-            }
+            unselectDevices();
         }
         const auto tmp = SPIDATA;
         SPIDATA = 0;
@@ -57,11 +71,27 @@ void nds::SPI::completeTransfer()
     if(SPICNT.state.interruptRequest){
         bus->setIF(23, true);
     }
-    
-    if(SPICNT.state.deviceSelect == 1) SPIDATA = firmware.read();
+
+    switch(SPICNT.state.deviceSelect){
+        case 1:
+            SPIDATA = firmware.read();
+            break;
+        case 2:
+            SPIDATA = touch.read();
+            break;
+        default: break;
+    }
 
     if(SPICNT.state.transferSize){ // jedes zweite Byte wird verworfen
-        if(SPICNT.state.deviceSelect == 1) (void)firmware.read();
+        switch(SPICNT.state.deviceSelect){
+            case 1:
+                (void)firmware.read();
+                break;
+            case 2:
+                (void)touch.read();
+                break;
+            default: break;
+        }
     }
 }
 

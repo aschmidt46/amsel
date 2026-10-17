@@ -32,11 +32,15 @@ void nds::LCD::onHBlank()
     engineA.onHBlank();
     engineB.onHBlank();
 
-    DISPSTAT.state.hBlankFlag = 1;
+    DISPSTAT_7.state.hBlankFlag = 1;
+    DISPSTAT_9.state.hBlankFlag = 1;
     if(vCount < 192){
 
-        if(DISPSTAT.state.hBlankIE){
-            bus->setIF(1, true);
+        if(DISPSTAT_7.state.hBlankIE){
+            bus->bus7->setIF(1, true);
+        }
+        if(DISPSTAT_9.state.hBlankIE){
+            bus->bus9->setIF(1, true);
         }
         bus->PPUEnteredHBlank();
     }
@@ -48,9 +52,13 @@ void nds::LCD::onVBlank()
     engineB.onVBlank();
 
     // Vblank
-    DISPSTAT.state.vBlankFlag = 1;
-    if(DISPSTAT.state.vBlankIE){
-        bus->setIF(0, true);
+    DISPSTAT_7.state.vBlankFlag = 1;
+    DISPSTAT_9.state.vBlankFlag = 1;
+    if(DISPSTAT_7.state.vBlankIE){
+        bus->bus7->setIF(0, true);
+    }
+    if(DISPSTAT_9.state.vBlankIE){
+        bus->bus9->setIF(0, true);
     }
     hasframe = true;
     bus->PPUEnteredVBlank();
@@ -61,24 +69,35 @@ void nds::LCD::increment()
     engineA.increment();
     engineB.increment();
 
-    DISPSTAT.state.hBlankFlag = 0;
+    DISPSTAT_7.state.hBlankFlag = 0;
+    DISPSTAT_9.state.hBlankFlag = 0;
     vCount++;
 
     if(vCount >= 263){
         vCount = 0;
 
-        DISPSTAT.state.vCounterFlag = 0;
-        if(vCount == DISPSTAT.state.vCountSetting && DISPSTAT.state.vCounterIE){
-            bus->setIF(2, true);
-            DISPSTAT.state.vCounterFlag = 1;
+        DISPSTAT_7.state.vCounterFlag = 0;
+        DISPSTAT_9.state.vCounterFlag = 0;
+        if(vCount == DISPSTAT_7.state.vCountSetting && DISPSTAT_7.state.vCounterIE){
+            bus->bus7->setIF(2, true);
+            DISPSTAT_7.state.vCounterFlag = 1;
+        }
+        if(vCount == DISPSTAT_9.state.vCountSetting && DISPSTAT_9.state.vCounterIE){
+            bus->bus9->setIF(2, true);
+            DISPSTAT_9.state.vCounterFlag = 1;
         }
     }
-    else if(vCount == DISPSTAT.state.vCountSetting && DISPSTAT.state.vCounterIE){
-        bus->setIF(2, true);
-        DISPSTAT.state.vCounterFlag = 1;
+    else if(vCount == DISPSTAT_7.state.vCountSetting && DISPSTAT_7.state.vCounterIE){
+        bus->bus7->setIF(2, true);
+        DISPSTAT_7.state.vCounterFlag = 1;
+    }
+    else if(vCount == DISPSTAT_9.state.vCountSetting && DISPSTAT_9.state.vCounterIE){
+        bus->bus9->setIF(2, true);
+        DISPSTAT_9.state.vCounterFlag = 1;
     }
     if(vCount >= 262){
-        DISPSTAT.state.vBlankFlag = 0;
+        DISPSTAT_7.state.vBlankFlag = 0;
+        DISPSTAT_9.state.vBlankFlag = 0;
         bus->PPULeftVBlank();
     }
     bus->PPULeftHBlank();
@@ -96,13 +115,23 @@ bool nds::LCD::hasFrame()
     return tmp;
 }
 
-Byte nds::LCD::readRegister(Word addr)
+Byte nds::LCD::readRegister(Word addr, bool isNDS9)
 {
     if(addr == 0x04000004){
-        return DISPSTAT.raw;
+        if(isNDS9){
+            return DISPSTAT_9.raw;
+        }
+        else{
+            return DISPSTAT_7.raw;
+        }
     }
     if(addr == 0x04000005){
-        return DISPSTAT.raw >> 8;
+        if(isNDS9){
+            return DISPSTAT_9.raw >> 8;
+        }
+        else{
+            return DISPSTAT_7.raw >> 8;
+        }
     }
     if(addr >= 0x04000000 && addr < 0x0400006C){
         return engineA.readPPURegister(addr);
@@ -120,13 +149,23 @@ Byte nds::LCD::readRegister(Word addr)
     return 0;
 }
 
-void nds::LCD::writeRegister(Word addr, Byte val)
+void nds::LCD::writeRegister(Word addr, Byte val, bool isNDS9)
 {
     if(addr == 0x04000004){
-        DISPSTAT.raw = (DISPSTAT.raw & 0xFF07) | (val & 0b11111000); // untere 3 bits read only
+        if(isNDS9){
+            DISPSTAT_9.raw = (DISPSTAT_9.raw & 0xFF07) | (val & 0b11111000); // untere 3 bits read only
+        }
+        else{
+            DISPSTAT_7.raw = (DISPSTAT_7.raw & 0xFF07) | (val & 0b11111000);
+        }
     }
     else if(addr == 0x04000005){
-        DISPSTAT.raw = (DISPSTAT.raw & 0x00FF) | (HalfWord(val) << 8);
+        if(isNDS9){
+            DISPSTAT_9.raw = (DISPSTAT_9.raw & 0x00FF) | (HalfWord(val) << 8);
+        }
+        else{
+            DISPSTAT_7.raw = (DISPSTAT_7.raw & 0x00FF) | (HalfWord(val) << 8);
+        }
     }
 
     else if(addr >= 0x04000000 && addr < 0x0400006C){

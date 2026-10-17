@@ -115,6 +115,7 @@ void CPU::advanceCPU()
         flushPipeline();
     }
     else{
+        if(haltMode) return;
         wasInterrupt = false;
         bool jump = executeInstruction();
         if(jump){
@@ -176,11 +177,16 @@ void CPU::clock() {
 
 bool CPU::pollInterrupts()
 {
-    //interrupt disable nicht gesetzt             ime gesetzt
+    const Word IE = this->bus->getIE();
+    const Word IF = this->bus->getIF();
+    const bool interrupt = IE & IF;
+
+    if(haltMode && interrupt){
+        haltMode = false;
+        return true;
+    }
     if(!_CPSR.state.I && bus->hasIME()){
-        Word IE = this->bus->getIE();
-        Word IF = this->bus->getIF();
-        return IE & IF;
+        return interrupt;
     }
     return false;
 }
@@ -199,6 +205,11 @@ void CPU::flushPipeline()
 void CPU::addCycles(size_t cycles)
 {
     remainingCycles += cycles;
+}
+
+void nds::CPU::enterHaltMode()
+{
+    haltMode = true;
 }
 
 template<bool isARM, bool testMode>

@@ -51,6 +51,11 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         addr -= 0x03800000;
         arm7WRAM[addr % 0x10000] = val;
     }
+
+    if(addr >= 0x04000004 && addr < 0x04000008){
+        sharedBus->lcd->writeRegister(addr, val, false);
+    }
+
     // DMA
     else if(addr >= 0x040000B0 && addr < 0x040000BC){
         dma[0].onWrite(addr - 0x040000B0, val);
@@ -138,6 +143,7 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     }
     else if(addr == 0x4000301){
         HALTCNT = val & 0b11000000;
+        if((HALTCNT >> 6) == 2) cpu.enterHaltMode();
     }
     else if(addr == 0x4000304){
         POWCNT2 = val & 0b11;
@@ -195,7 +201,7 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
 
     if(addr >= 0x04000004 && addr < 0x04000008){
-        return sharedBus->lcd->readRegister(addr);
+        return sharedBus->lcd->readRegister(addr, false);
     }
 
     // DMA
@@ -235,8 +241,8 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     if(addr == 0x04000135){
         return RCNT >> 8;
     }
-    if(addr >= 0x04000136 && addr < 0x04000138){
-        return sharedBus->EXKEYINPUT.OnReadByte(addr);
+    if(addr == 0x04000136){
+        return sharedBus->EXKEYINPUT;
     }
     if(addr == 0x04000138){
         return RTCSTUB;

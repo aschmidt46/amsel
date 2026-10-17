@@ -66,6 +66,9 @@ GLFWwindow* initWindow(){
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Multi Viewport für Debugger (braucht docking branch)
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+  io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
+  touchCursor = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR);
 
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();

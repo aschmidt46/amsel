@@ -28,6 +28,10 @@ class NDSImplementation : public Console{
     void setController1Key(bool gamepad, int key, int action) override;
     void setController2Key(bool gamepad, int key, int action) override;
 
+    std::optional<Rect> getTouchArea() override;
+    void setTouch(float x, float y) override;
+    void releaseTouch() override;
+
     bool canSave() override;
     std::vector<uint8_t> getSaveData() override;
 

@@ -190,6 +190,26 @@ void NDSImplementation::setController2Key(bool gamepad, int key, int action) {
     (void)gamepad; (void)key; (void)action;
 }
 
+std::optional<Rect> NDSImplementation::getTouchArea()
+{
+    return {Rect{
+        .left = 0.0f,
+        .top = 192.0f,
+        .right = 256.0f,
+        .bottom = 384.0f
+    }};
+}
+
+void NDSImplementation::setTouch(float x, float y)
+{
+    nds->setTouch(x, y);
+}
+
+void NDSImplementation::releaseTouch()
+{
+    nds->releaseTouch();
+}
+
 bool NDSImplementation::canSave()
 {
     return nds->canSave();

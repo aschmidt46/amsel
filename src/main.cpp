@@ -38,6 +38,8 @@ Screen* screen;
 Console* console;
 std::mutex consoleLock;
 GLFWwindow* window;
+bool mouseIsDown = false;
+GLFWcursor* touchCursor;
 std::vector<std::pair<std::string, std::vector<SystemOption>*>> systemOptions;
 #ifdef BUILD_DESKTOP
 asio::io_context io_context;

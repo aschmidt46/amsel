@@ -14,6 +14,7 @@
 class NES;
 class Gui;
 struct GLFWwindow;
+struct GLFWcursor;
 class Screen;
 
 enum MessageType{ // Toast Symbol
@@ -89,6 +90,8 @@ extern Screen* screen;
 extern Console* console;
 extern std::mutex consoleLock;
 extern GLFWwindow* window; // Haupt-Viewport
+extern GLFWcursor* touchCursor;
+extern bool mouseIsDown;
 extern std::vector<std::pair<std::string, std::vector<SystemOption>*>> systemOptions;
 #ifdef BUILD_DESKTOP
 extern asio::io_context io_context;

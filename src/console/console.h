@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #ifdef BUILD_WEB    
 #include <emscripten.h>
 #include <emscripten/bind.h>
@@ -28,6 +29,13 @@ struct Toggle{
 struct CustomMenu{
     LocalizedString name;
     bool visible = false;
+};
+
+struct Rect{
+    float left = 0.0f;
+    float top = 0.0f;
+    float right = 0.0f;
+    float bottom = 0.0f;
 };
 
 using SystemOption = std::variant<RequiredFile, Toggle, CustomMenu>;
@@ -60,6 +68,9 @@ class Console{
     virtual float getY() = 0;
     virtual void setController1Key(bool gamepad, int key, int action) = 0;
     virtual void setController2Key(bool gamepad, int key, int action) = 0;
+    virtual std::optional<Rect> getTouchArea(){ return std::nullopt; }
+    virtual void setTouch(float x, float y){};
+    virtual void releaseTouch(){};
     std::string getGameTitle();
     void setName(std::string name);
     void setVolume(float v);

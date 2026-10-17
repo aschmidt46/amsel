@@ -126,6 +126,16 @@ void nds::NDS::release(int i)
     bus->release(i);
 }
 
+void nds::NDS::setTouch(float x, float y)
+{
+    bus->bus7->spi.touch.setTouch(x,y);
+}
+
+void nds::NDS::releaseTouch()
+{
+    bus->bus7->spi.touch.releaseTouch();
+}
+
 void nds::NDS::setDebug(bool to)
 {
     this->bus->setDebug(to);

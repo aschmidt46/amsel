@@ -143,6 +143,7 @@ class Screen{
     ~Screen(){
         
     };
+    float left = 0, top = 0, right = (float)width, bottom = (float)height;
     
     unsigned int getScreenTexture() const;
     vec4 computeRect(int x, int y);

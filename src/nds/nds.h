@@ -16,7 +16,7 @@ namespace nds{
     class NDS{
         double audioTime = 0;
         const double sampleRate = 20000;
-        const double audioTimePerGBAClock = 1.0 / (16777918.08 * 2);
+        const double audioTimePerGBAClock = 1.0 / (16777918.08 / 25.0f);
         const double audioTimePerSystemSample = 1.0 / sampleRate;
         double audioSampleL = 0;
         double audioSampleR = 0;
@@ -47,6 +47,9 @@ namespace nds{
         std::pair<float, float> getSample();
         void press(int i);
         void release(int i);
+
+        void setTouch(float x, float y);
+        void releaseTouch();
 
 
         void setDebug(bool to);

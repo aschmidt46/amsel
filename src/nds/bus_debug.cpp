@@ -8,8 +8,81 @@ extern "C"{
 #include <imgui.h>
 #include <iostream>
 //#endif
+#include <array>
+#include <string>
+#include <numeric>
 
 using namespace nds;
+
+std::array<std::string, 32> nds9IRQs = {{
+    "LCD V-Blank",
+    "LCD H-Blank",
+    "LCD V-Count",
+    "Timer 0",
+    "Timer 1",
+    "Timer 2",
+    "Timer 3",
+    "Bit 7 (unused)",
+    "DMA 0",
+    "DMA 1",
+    "DMA 2",
+    "DMA 3",
+    "Keypad",
+    "GBA Slot",
+    "Bit 14 (unused)",
+    "Bit 15 (unused)",
+    "IPC Sync",
+    "IPC Send FIFO",
+    "IPC Receive FIFO",
+    "Game Card Transfer",
+    "Game Card IREQ_MC",
+    "Geometry Command FIFO",
+    "Bit 22 (unused)",
+    "Bit 23 (unused)",
+    "Bit 24 (unused)",
+    "Bit 25 (unused)",
+    "Bit 26 (unused)",
+    "Bit 27 (unused)",
+    "Bit 28 (unused)",
+    "Bit 29 (unused)",
+    "Bit 30 (unused)",
+    "Bit 31 (unused)",
+}};
+
+std::array<std::string, 32> nds7IRQs = {{
+    "LCD V-Blank",
+    "LCD H-Blank",
+    "LCD V-Count",
+    "Timer 0",
+    "Timer 1",
+    "Timer 2",
+    "Timer 3",
+    "SIO / RCNT / RTC",
+    "DMA 0",
+    "DMA 1",
+    "DMA 2",
+    "DMA 3",
+    "Keypad",
+    "GBA Slot",
+    "Bit 14 (unused)",
+    "Bit 15 (unused)",
+    "IPC Sync",
+    "IPC Send FIFO",
+    "IPC Receive FIFO",
+    "Game Card Transfer",
+    "Game Card IREQ_MC",
+    "Bit 21 (unused)",
+    "Screens unfolding",
+    "SPI Bus",
+    "Wifi",
+    "Bit 25 (unused)",
+    "Bit 26 (unused)",
+    "Bit 27 (unused)",
+    "Bit 28 (unused)",
+    "Bit 29 (unused)",
+    "Bit 30 (unused)",
+    "Bit 31 (unused)",
+}};
 
 
 
@@ -154,7 +227,7 @@ void nds::SharedBus::extendedDebugMenu()
     if(ImGui::Button("PPU Registers")){
         showPPURegisters = !showPPURegisters;
     }
-    if(ImGui::Button("Memory State")){
+    if(ImGui::Button("System State")){
         showMemoryState = !showMemoryState;
     }
 
@@ -188,20 +261,100 @@ void nds::SharedBus::extendedDebugMenu()
     }
 
     if(showMemoryState){
-        ImGui::Begin("Memory State", &showMemoryState, ImGuiWindowFlags_NoCollapse);
+        ImGui::Begin("System State", &showMemoryState, ImGuiWindowFlags_NoCollapse);
 
-        ImGui::SeparatorText("TCM");
-        bus9->cpu.cp15->renderTCM();
+        if(ImGui::BeginTabBar("selectSubSystem")){
 
-        ImGui::SeparatorText("IPC");
+            if(ImGui::BeginTabItem("Memory")){
 
-        ImGui::Text("IPCFIFOCNT 9: ");
-        ImGui::SameLine();
-        ImGui::Text(getHex0x((HalfWord(ipc->readIPCFIFOCNTHigher(true)) << 8) | ipc->readIPCFIFOCNTLower(true), 4).c_str());
+                ImGui::SeparatorText("TCM");
+                bus9->cpu.cp15->renderTCM();
 
-        ImGui::Text("IPCFIFOCNT 7: ");
-        ImGui::SameLine();
-        ImGui::Text(getHex0x((HalfWord(ipc->readIPCFIFOCNTHigher(false)) << 8) | ipc->readIPCFIFOCNTLower(false), 4).c_str());
+                ImGui::EndTabItem();
+            }
+
+            if(ImGui::BeginTabItem("IPC")){
+
+                ImGui::SeparatorText("IPC");
+
+                ImGui::Text("IPCFIFOCNT 9: ");
+                ImGui::SameLine();
+                ImGui::Text(getHex0x((HalfWord(ipc->readIPCFIFOCNTHigher(true)) << 8) | ipc->readIPCFIFOCNTLower(true), 4).c_str());
+
+                ImGui::Text("IPCFIFOCNT 7: ");
+                ImGui::SameLine();
+                ImGui::Text(getHex0x((HalfWord(ipc->readIPCFIFOCNTHigher(false)) << 8) | ipc->readIPCFIFOCNTLower(false), 4).c_str());
+
+                ImGui::EndTabItem();
+            }
+
+            if(ImGui::BeginTabItem("Interrupts")){
+
+                ImGui::SeparatorText("IRQ");
+                std::vector<std::string> ie7;
+                std::vector<std::string> if7;
+                std::vector<std::string> ie9;
+                std::vector<std::string> if9;
+                for(int i = 0; i < 32; i++){
+                    if(((bus7->getIE() >> i) & 1u) > 0){
+                        ie7.push_back(nds7IRQs[i]);
+                    }
+                }
+                for(int i = 0; i < 32; i++){
+                    if(((bus7->getIF() >> i) & 1u) > 0){
+                        if7.push_back(nds7IRQs[i]);
+                    }
+                }
+                for(int i = 0; i < 32; i++){
+                    if(((bus9->getIE() >> i) & 1u) > 0){
+                        ie9.push_back(nds9IRQs[i]);
+                    }
+                }
+                for(int i = 0; i < 32; i++){
+                    if(((bus9->getIF() >> i) & 1u) > 0){
+                        if9.push_back(nds9IRQs[i]);
+                    }
+                }
+
+                auto joinDelim = [](std::string ss, std::string s){ return ss.empty() ? s : ss + ", " + s; };
+
+                std::string ie7s = std::accumulate(std::begin(ie7), std::end(ie7), std::string(), joinDelim);
+                std::string if7s = std::accumulate(std::begin(if7), std::end(if7), std::string(), joinDelim);
+                std::string ie9s = std::accumulate(std::begin(ie9), std::end(ie9), std::string(), joinDelim);
+                std::string if9s = std::accumulate(std::begin(if9), std::end(if9), std::string(), joinDelim);
+
+                ImGui::SeparatorText("NDS7");
+                ImGui::Text("IME: ");
+                ImGui::SameLine();
+                ImGui::Text(std::to_string((int)bus7->hasIME()).c_str());
+                
+                ImGui::Text("IE: ");
+                ImGui::SameLine();
+                ImGui::Text(ie7s.c_str());
+                
+                ImGui::Text("IF: ");
+                ImGui::SameLine();
+                ImGui::Text(if7s.c_str());
+
+                ImGui::SeparatorText("NDS9");
+                ImGui::Text("IME: ");
+                ImGui::SameLine();
+                ImGui::Text(std::to_string((int)bus9->hasIME()).c_str());
+                
+                ImGui::Text("IE: ");
+                ImGui::SameLine();
+                ImGui::Text(ie9s.c_str());
+                
+                ImGui::Text("IF: ");
+                ImGui::SameLine();
+                ImGui::Text(if9s.c_str());
+                
+
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
 
 
 

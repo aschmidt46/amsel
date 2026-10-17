@@ -386,6 +386,6 @@ Byte PPU::readPPURegister(Word addr)
             return BRIGHTNESS_FADE.raw >> 24;
     }
 
-    std::cout << "Unbekannter PPU Register read: "<< getHex0x(addr, 8) << "\n";
+    // std::cout << "Unbekannter PPU Register read: "<< getHex0x(addr, 8) << "\n";
     return 0;
 }

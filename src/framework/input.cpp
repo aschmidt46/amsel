@@ -6,6 +6,7 @@
 #include "imgui_impl_glfw.h"
 
 #include "gui.h"
+#include "screen.h"
 
 GLFWgamepadstate previousState1;
 GLFWgamepadstate previousState2;
@@ -18,9 +19,54 @@ void initInput(){
   glfwSetJoystickCallback(joystickCallback);
   glfwSetKeyCallback(window, keyCallback);
   glfwSetMouseButtonCallback(window, mouseCallback);
+  glfwSetCursorPosCallback(window, mousePosCallback);
 };
 
+void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
+{
+  if(console->getTouchArea().has_value()){
+    const auto rect = console->getTouchArea().value();
+    const float cx = console->getX(); float cy = console->getY();
+    const float screenWidth = screen->right - screen->left;
+    const float screenHeight = screen->bottom - screen->top;
+
+    const float touchWidth = rect.right - rect.left; // Größe von Touch Areal in Pixeln (In Konsolen-Koordinaten)
+    const float touchHeight = rect.bottom - rect.top;
+
+    const float xWidthFactor = (touchWidth) / cx; // Wie viel Vom Konsolenbildschirm ist von Touchg "bedeckt" (1 = gesamte Breite)
+    const float yWidthFactor = (touchHeight) / cy;
+
+    const float x0 = screen->left + (rect.left / cx) * screenWidth; // In Bildschirmkoordinaten
+    const float x1 = screen->left + (rect.right / cx) * screenWidth;
+
+    const float y0 = screen->top + (rect.top / cy) * screenHeight;
+    const float y1 = screen->top + (rect.bottom / cy) * screenHeight;
+
+    if(xpos >= x0 && xpos < x1 && ypos >= y0 && ypos < y1){
+        glfwSetCursor(window, touchCursor);
+        const float xw = (xpos - x0) / (xWidthFactor * screenWidth); // Positionen auf Konsolenbildschirm zwischen 0 und 1
+        const float yw = (ypos - y0) / (yWidthFactor * screenHeight);
+        if(mouseIsDown){
+          // std::cout << "x: " << xw << ", y: " << yw << "\n";
+          console->setTouch(xw * touchWidth, yw * touchHeight);
+        }
+    }
+    else{
+      glfwSetCursor(window, NULL);
+    }
+  }
+
+  ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+}
+
 void mouseCallback(GLFWwindow* window, int button, int action, int mods){
+  mouseIsDown = action > 0;
+  if(mouseIsDown){
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+    mousePosCallback(window, x, y);
+  }
+  else console->releaseTouch();
 
   ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 

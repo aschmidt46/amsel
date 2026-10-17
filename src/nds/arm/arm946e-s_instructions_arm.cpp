@@ -24,8 +24,8 @@ bool CPU::executeBranchExchange(Word instruction)
         if(state() == THUMB) *registerMap[mode()][R14] |= 1;
         else *registerMap[mode()][R14] &= ~1u;
     }
-
-    *registerMap[mode()][R15] = jumpTarget;
+    
+    _R15_PC = jumpTarget;
     this->_CPSR.state.T = nextState;
     this->remainingCycles += 3; //2S + 1N
     return true;
@@ -255,7 +255,7 @@ bool CPU::executeCoProcDataOperation(Word instruction)
 bool CPU::executeCoProcDataTransfer(Word instruction)
 {
     std::cout << "Coprozessor-Datentransfer aufgerufen!" << instruction << std::endl;
-    bus->setHalt();
+    // bus->setHalt();
     return false;
 }
 

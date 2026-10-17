@@ -63,6 +63,8 @@ src/nds/peripheral/spi.h
 src/nds/peripheral/spi.cpp
 src/nds/peripheral/firmware.h
 src/nds/peripheral/firmware.cpp
+src/nds/peripheral/touch.h
+src/nds/peripheral/touch.cpp
 
 src/console/console.h
 src/console/nds_implementation.h src/console/nds_implementation.cpp

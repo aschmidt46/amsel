@@ -8,6 +8,7 @@ using namespace gba;
 void nds::Bus9::init()
 {
     new (&cpu) CPU(this, &cp15);
+    cp15.setCPU(&cpu);
 
     for(int i = 0; i < 4; i++){
         new (&timers[i]) Timer<Bus9>(i, sharedBus, this, NDSEVENT_TimerOverflow9);
@@ -57,7 +58,7 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
 
      // LCD 2D
     else if(addr >= 0x04000000 && addr < 0x0400006E){
-        sharedBus->lcd->writeRegister(addr, val);
+        sharedBus->lcd->writeRegister(addr, val, true);
     }
     // DMA
     else if(addr >= 0x040000B0 && addr < 0x040000BC){
@@ -166,7 +167,7 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
     }
     // Engine B
     else if(addr >= 0x04001000 && addr < 0x0400106E){
-        sharedBus->lcd->writeRegister(addr, val);
+        sharedBus->lcd->writeRegister(addr, val, true);
     }
 
     // else if(addr == 0x040001A8){
@@ -216,7 +217,7 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
 
     // LCD 2D
     if(addr >= 0x04000000 && addr < 0x0400006E){
-        return sharedBus->lcd->readRegister(addr);
+        return sharedBus->lcd->readRegister(addr, true);
     }
 
     // DMA
@@ -333,7 +334,7 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
 
     // Engine B
     if(addr >= 0x04001000 && addr < 0x0400106E){
-        return sharedBus->lcd->readRegister(addr);
+        return sharedBus->lcd->readRegister(addr, true);
     }
 
     // Gamecart

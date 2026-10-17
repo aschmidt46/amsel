@@ -183,6 +183,11 @@ vec4 Screen::computeRect(int x, int y){
     y0 = cY - (h/2);
     y1 = cY + (h/2);
 
+    left = x0;
+    right = x1;
+    top = y0;
+    bottom = y1;
+
     iResolutionX = w;
     iResolutionY = h;
 

@@ -57,7 +57,8 @@ namespace nds{
         template<Word N>
         void clearVramBank();
         
-        LCDSTATUS_T DISPSTAT = {.raw = 0}; // engine A + B
+        LCDSTATUS_T DISPSTAT_7 = {.raw = 0}; // engine A + B
+        LCDSTATUS_T DISPSTAT_9 = {.raw = 0}; // engine A + B
         bool hasframe = false;
         
         public:
@@ -75,8 +76,8 @@ namespace nds{
 
         bool hasFrame();
 
-        Byte readRegister(Word addr);
-        void writeRegister(Word addr, Byte val);
+        Byte readRegister(Word addr, bool isNDS9);
+        void writeRegister(Word addr, Byte val, bool isNDS9);
         Byte readMemory(Word addr);
         Word getVramOffset(Word addr);
         void writeMemory(Word addr, Byte val);

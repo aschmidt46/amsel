@@ -4,6 +4,8 @@
 
 namespace nds{
 
+    class CPU;
+
     union CP15_CONTROL_REG_T{
         struct{
             Word mmuPuEnable : 1; // LSB
@@ -83,11 +85,18 @@ namespace nds{
 
         Word processID = 0;
         Word traceProcessID = 0;
+        CPU* cpu;
 
 
         public:
         CP15(){
             itcmSize.state.virtualSize = 16;
+        }
+        CP15(CPU* cpu) : CP15(){
+            this->cpu = cpu;
+        }
+        void setCPU(CPU* cpu){
+            this->cpu = cpu;
         }
         void MCR(Word armRegister, Word Cn, Word Cm, Word cp);
         Word MRC(Word Cn, Word Cm, Word cp);

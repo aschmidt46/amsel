@@ -101,6 +101,12 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
         bus7->writeByte(j, bytes[i]);
         j++;
     }
+
+    Word firmwareBase = 0x027FFC80;
+    for(Word i = 0x3FE00; i < 0x3FE6C; i++){
+        writeByte(firmwareBase, bus7->spi.firmware.firmwareData[i]);
+        firmwareBase++;
+    }
 }
 
 Byte nds::SharedBus::readByte(Word addr)
@@ -142,6 +148,25 @@ void nds::SharedBus::PPUEnteredVBlank()
 
 void nds::SharedBus::PPULeftHBlank()
 {
+    if(lcd->vCount >= 2 && lcd->vCount < 194){
+        int block = 5;
+        for(int i = 0; i < 4; i++){
+            if(bus9->dma[i].getStartTiming() == DMA_SYNC_OR_WIRELESS_SPECIAL && bus9->dma[i].isEnabled()){ // Video Capture dma, siehe gbatek addendum melonds
+                block = i;
+                break;
+            }
+        }
+        if(block < 5){
+            bus9->dma[block].commenceTransfer();
+        }
+    }
+    if(lcd->vCount == 194){
+        for(int i = 0; i < 4; i++){
+            if(bus9->dma[i].getStartTiming() == DMA_SYNC_OR_WIRELESS_SPECIAL && bus9->dma[i].isEnabled()){
+                bus9->dma[i].Control.raw &= ~(1u << 15);
+            }
+        }
+    }
 }
 
 void nds::SharedBus::PPULeftVBlank()

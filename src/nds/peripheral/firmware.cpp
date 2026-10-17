@@ -51,6 +51,7 @@ void nds::Firmware::write(Byte data)
                 state = FIRMWARE_READ_DATA;
                 readWriteIndex = address;
                 std::cout << "FIRMWARE READ DATA AT ADDRESS: " << getHex0x(address, 6) << "\n";
+                if(address >= firmwareData.size()) std::cout << "FIRMWARE READ OUT OF BOUNDS!\n";
                 address = 0;
             }
             return;
@@ -76,7 +77,7 @@ Byte nds::Firmware::read()
             return status;
         }
         case FIRMWARE_READ_DATA:{
-            const Byte current = firmwareData[readWriteIndex];
+            const Byte current = readWriteIndex < firmwareData.size() ? firmwareData[readWriteIndex] : 0;
             readWriteIndex++;
             return current;
         }

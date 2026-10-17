@@ -36,12 +36,11 @@ namespace nds{
         Cartridge gameCart;
         gba::GeneralPurpose16 KEYINPUT;
         gba::GeneralPurpose16 KEYCNT;
-        gba::GeneralPurpose16 EXKEYINPUT;
+        Byte EXKEYINPUT = 127; // hinge (bit 7) offen
         HalfWord EXMEMCNT = 0b11 << 13; // 7-15 shared
         
-        SharedBus() : KEYINPUT(0x04000130), KEYCNT(0x04000132), EXKEYINPUT(0x04000136){
+        SharedBus() : KEYINPUT(0x04000130), KEYCNT(0x04000132){
             KEYINPUT.raw = 0b1111111111;
-            EXKEYINPUT.raw = 0b01111111; // Hinge (bit 7) offen = 0
         };
         void loadCartHLE(const std::vector<uint8_t> &bytes);
         Word nds7romRamStart = 0;

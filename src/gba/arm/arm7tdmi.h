@@ -24,6 +24,8 @@ namespace gba{
 
         StatusRegister _CPSR, _SPSR_fiq, _SPSR_SVC, _SPSR_abt, _SPSR_irq, _SPSR_und; // Init in Konstruktor
 
+        bool haltMode = false;
+
         public:
         inline OperatingMode mode() const{
             return (OperatingMode)_CPSR.state.mode_bits;
@@ -215,6 +217,9 @@ namespace gba{
 
         void clock();
         bool pollInterrupts();
+        inline void enterHaltMode(){
+            haltMode = true;
+        }
 
         bool pipelineIsSaturated();
         void flushPipeline();

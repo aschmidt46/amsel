@@ -22,6 +22,7 @@ Screen* screen;
 Console* console;
 std::mutex consoleLock;
 GLFWwindow* window;
+bool mouseIsDown = false;
 // ---------------------------
 
 

@@ -189,8 +189,9 @@ Word nds::IPC::readFIFORECV(bool isNDS9)
 
 void nds::IPC::writeFIFOSEND(bool isNDS9, Word val)
 {
+    // std::cout << "Fifo Send\n";
     if(isNDS9){
-        if(IPCFIFOCNT_9 >> 15){
+        if(((IPCFIFOCNT_9 >> 15) & 1u) > 0){
             if(sendFifo9.size() < 16){
                 sendFifo9.push(val);
                 if(sendFifo9.size() == 1 && ((IPCFIFOCNT_7 >> 10) & 1))
@@ -202,7 +203,7 @@ void nds::IPC::writeFIFOSEND(bool isNDS9, Word val)
         }
     }
     else{
-        if(IPCFIFOCNT_7 >> 15){
+        if(((IPCFIFOCNT_7 >> 15) & 1u) > 0){
             if(sendFifo7.size() < 16){
                 sendFifo7.push(val);
                 if(sendFifo7.size() == 1 && ((IPCFIFOCNT_9 >> 10) & 1))
