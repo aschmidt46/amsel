@@ -230,6 +230,10 @@ void nds::SharedBus::extendedDebugMenu()
     if(ImGui::Button("System State")){
         showMemoryState = !showMemoryState;
     }
+    if(ImGui::Button("Start Log")){
+        bus9->cpu.startLogging = true;
+        bus7->cpu.startLogging = true;
+    }
 
     if(showPPURegisters){
         ImGui::Begin("PPU Registers", &showPPURegisters, ImGuiWindowFlags_NoCollapse);

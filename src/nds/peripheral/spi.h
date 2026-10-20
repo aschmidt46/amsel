@@ -38,8 +38,8 @@ namespace nds{
         public:
         Firmware firmware;
         TouchController touch;
-        SPI() : touch(nullptr){};
-        SPI(Bus7* bus) : bus(bus), touch(bus){};
+        SPI() : firmware(nullptr), touch(nullptr){};
+        SPI(Bus7* bus) : bus(bus), firmware(bus), touch(bus){};
 
         void onWrite(Word addr, Byte val);
         Byte onRead(Word addr);

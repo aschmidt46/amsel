@@ -45,14 +45,27 @@ void gba::Scheduler<nds::EventType,nds::SharedBus>::handleEvent()
                 bus->lcd->renderScanline();
             scheduleEvent({1536, NDSEVENT_PPU_HBLANK});
             return;
-        case NDSEVENT_GameCardDataWord:
-            bus->gameCart.sendDataWord();
+        case NDSEVENT_GameCardEvent:
+            bus->gameCart.cardReply(e.args.index);
             return;
-        case NDSEVENT_GameCardChipID:
-            bus->gameCart.sendChipID();
+        case NDSEVENT_GameCardStopBlock:
+            bus->gameCart.romControl.state.blockStartStatus = 0;
+            bus->gameCart.romControl.state.dataWordStatus = 0;
+
+            if(bus->gameCart.AUXSPICNT.state.transferReadyIRQ > 0){
+                if(bus->canAccessGameCart(false)){
+                    bus->setIFSingleBus(19, true, false);
+                }
+                else{
+                    bus->setIFSingleBus(19, true, true);
+                }
+            }
             return;
         case NDSEVENT_SPITransferComplete:
             bus->bus7->spi.completeTransfer();
+            return;
+        case NDSEVENT_AUXSPITransferComplete:
+            bus->gameCart.completeTransfer();
             return;
     }
     // std::cout << "dealt.\n";

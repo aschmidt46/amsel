@@ -3,6 +3,8 @@
 #include <vector>
 #include "../scheduler.h"
 #include "../resources/rominfo.h"
+#include <memory>
+#include "eeprom.h"
 
 namespace nds{
 
@@ -45,48 +47,94 @@ namespace nds{
         HalfWord raw = 0;
     };
 
+    enum GameCardEventType : int{
+        GameCardEventType_DataWord = 0,
+        GameCardEventType_ChipID = 1,
+        GameCardEventType_Dummy = 2,
+        GameCardEventType_SecureBlock = 3,
+        GameCardEventType_Dummy_Chip = 4,
+    };
+
     class SharedBus;
 
     class Cartridge{
         SharedBus* bus;
         public:
         std::vector<Byte> cartridge;
-        private:
-        EventType currentMode = NDSEVENT_None;
+        Byte* secureArea = nullptr;
+        Word cartID = 0;
+        std::unique_ptr<EEPROM> eeprom = nullptr;
+        ROMCTRL_T romControl = {.raw = 0};
+        int currentMode = 0;
         AUXSPICNT_T AUXSPICNT = {.raw = 0};
+        private:
         Byte AUXSPIDATA = 0;
-
-        ROMCTRL_T romControl = {.state = {.key1Gap1Length = 0x08F8, .key1Gap2Length = 0x18}};
-
+        
+        
         uint64_t gameCardBusCommandOut = 0;
-
+        
         Word gameCardBus4byteDataIn = 0;
-
+        
         int64_t remainingLength = 0;
         Word offsetAddress = 0;
         bool oncePerCycle = false;
+        bool useKEY1 = false;
 
-        inline Byte getCMD() const{
-            return gameCardBusCommandOut >> 56;
+        inline Byte getCMD(){
+            uint64_t tmp = gameCardBusCommandOut;
+
+            if(useKEY1){
+                decrypt64((Byte*)&tmp);
+
+                if((tmp >> 60) == 0x4) return 4;
+                if((tmp >> 60) == 0x1) return 1;
+                if((tmp >> 60) == 0xA) return 0xA;
+            }
+
+            return tmp >> 56;
         }
 
         void startTransfer();
 
         RomInfo romInfo = {0, SAVETYPE_NONE, 0};
 
+        void unselectDevices();
+        void startTransferSPI();
+
 
         public:
         Cartridge() = default;
-        Cartridge(SharedBus* bus, const std::vector<Byte> &cart);
+        Cartridge(SharedBus* bus, const std::vector<Byte> &cart, bool hle = true);
         Byte onRead(Word addr);
         void onWrite(Word addr, Byte val);
-        void sendDataWord();
-        void sendChipID();
         void checkAndResend();
-
+        
+        void completeTransfer();
+        
         bool canSave();
         std::vector<Byte> getSaveData();
         size_t getSaveSize();
         void loadSave(const std::vector<Byte> &saveData);
+
+
+
+
+        void cardReply(int index);
+
+        void sendDataWord();
+        void sendChipID();
+        void sendDummy();
+        void sendSecureBlock();
+
+        std::array<Byte, 0x1048> keybuf = {};
+        std::array<Byte, 0x10> keycode = {};
+
+
+        void encrypt64(Byte* ptr);
+        void decrypt64(Byte* ptr);
+
+        void applyKeycode(Word modulo);
+
+        void initKeycode(Word idcode, Word level, Word modulo);
     };
 }

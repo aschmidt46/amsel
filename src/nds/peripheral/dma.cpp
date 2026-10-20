@@ -59,7 +59,10 @@ void DMAChannel<ConcreteBus>::onWrite(Word addr, Byte val){
             // if(SourceAddress.raw == 0x08000080) bus->setHalt();
             // std::cout << "SETTING DMA Transfer Index " << dmaIndex <<  " on Bus " << (isDMA7() ? "7" : "9") << " with Timing ";
             // printStartTiming();
-            std::cout << "Source Addr " << getHex0x(SourceAddress.raw, 8) << ", Dest Addr " << getHex0x(DestinationAddress.raw, 8) << ", Size " << getHex0x(WordCount.raw, 8) << "\n";
+            if(startTiming != DMA_IMMEDIATE && startTiming != DMA_HBLANK_OR_CARTRIDGE_SLOT){
+                std::cout << "Source Addr " << getHex0x(SourceAddress.raw, 8) << ", Dest Addr " << getHex0x(DestinationAddress.raw, 8) << ", Size " << getHex0x(WordCount.raw, 8) << "\n";
+                printStartTiming();
+            }
             resetInternalCounters(true, true);
             if(startTiming == DMA_IMMEDIATE){
                 commenceTransfer();
@@ -128,8 +131,10 @@ DMAChannel<ConcreteBus>::DMAChannel(int index, SharedBus *busPtr, ConcreteBus *c
 template<typename ConcreteBus>
 void DMAChannel<ConcreteBus>::commenceTransfer()
 {
-    std::cout << "Starting DMA Transfer on Bus " << (isDMA7() ? "7" : "9") << " with Timing ";
+    // std::cout << "Starting DMA Transfer on Bus " << (isDMA7() ? "7" : "9") << " with Timing ";
     printStartTiming(); 
+    std::cout << currentSourceAddr << "\n";
+    std::cout << currentDestAddr << "\n";
     size_t remaining = 0;
     while(currentCount < maxCount){
         remaining += 2;

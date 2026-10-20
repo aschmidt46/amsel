@@ -32,7 +32,7 @@ namespace nds{
         std::array<gba::GeneralPurpose32, 4> dmaFill = {{gba::GeneralPurpose32(0x40000E0), gba::GeneralPurpose32(0x40000E4), gba::GeneralPurpose32(0x40000E8), gba::GeneralPurpose32(0x40000EC)}};
 
         Byte exMem06 = 0;
-        Byte POSTFLG = 1;
+        Byte POSTFLG = 0;
         HalfWord POWCNT1 = 0;
         
         CPU cpu;
@@ -83,6 +83,7 @@ namespace nds{
 
         void PPUEnteredHBlank();
         void PPUEnteredVBlank();
+        void onDataWordArrived();
 
         const std::vector<Byte> &getITCM() const{
             return itcm;

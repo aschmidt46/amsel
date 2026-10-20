@@ -22,6 +22,10 @@ void nds::SPI::startTransfer()
 
 void nds::SPI::unselectDevices()
 {
+    if(firmware.state == FIRMWARE_PW){
+        firmware.status &= ~2u;
+        firmware.awaitRead = false;
+    };
     firmware.state = FIRMWARE_IDLE;
     touch.reset();
 }
@@ -33,7 +37,7 @@ void nds::SPI::onWrite(Word addr, Byte val)
     }
     else if(addr == 0x040001C1){
         SPICNT.raw = (SPICNT.raw & 0x00FF) | (HalfWord(val & 0b11001111) << 8);
-        std::cout << "SPICNT device select: " << SPICNT.state.deviceSelect << "\n";
+        // std::cout << "SPICNT device select: " << SPICNT.state.deviceSelect << "\n";
         if(SPICNT.state.spiBusEnable == 0){
             unselectDevices();
         }
@@ -55,7 +59,8 @@ Byte nds::SPI::onRead(Word addr)
         return SPICNT.raw >> 8;
     }
     if(addr == 0x040001C2){
-        if(!SPICNT.state.chipSelectHold){
+        if(!SPICNT.state.chipSelectHold && !SPICNT.state.busyFlag){
+            std::cout << "SPI CS pulled up\n";
             unselectDevices();
         }
         const auto tmp = SPIDATA;

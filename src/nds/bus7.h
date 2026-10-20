@@ -7,6 +7,8 @@
 #include "peripheral/timer.h"
 #include "peripheral/dma.h"
 #include "peripheral/spi.h"
+#include "peripheral/rtc.h"
+
 
 namespace nds{
     class SharedBus;
@@ -17,19 +19,20 @@ namespace nds{
         
         public:
         SharedBus* sharedBus;
-        private:
         std::vector<Byte> bios7;
+        private:
         std::vector<Byte> arm7WRAM;
         
         Word IE = 0;
         Word IF = 0;
         gba::GeneralPurpose32 IME;
-
-        HalfWord RTCSTUB = 0;
+        
         HalfWord SOUNDCNTSTUB = 0;
         HalfWord RCNT = 0;
         std::array<Byte, 0x100> audioStub = {};
-        
+
+        std::array<Byte, 0x8000> wifi = {};
+                
         public:
         bool watchBreakpoints = false;
         std::vector<uint64_t> breakpoints;
@@ -37,13 +40,14 @@ namespace nds{
         std::array<Timer<Bus7>, 4> timers;
         std::array<DMAChannel<Bus7>, 4> dma;
         Byte exMem06 = 0;
-        Byte POSTFLG = 1;
+        Byte POSTFLG = 0;
         Byte POWCNT2 = 1;
         Byte WIFIWAITCNT = 0x30; // von Firmware gesetzt!
         gba::GeneralPurpose32 BIOSPROT;
         Byte HALTCNT = 0;
         gba::CPU cpu;
         SPI spi;
+        std::unique_ptr<RTC> rtc = nullptr;
         Bus7(SharedBus* sb) : sharedBus(sb), arm7WRAM(0x10000, 0), IME(0x4000208), BIOSPROT(0x4000308){};
         void init();
         void writeByte(Word addr, Byte val);
@@ -70,6 +74,7 @@ namespace nds{
 
         void PPUEnteredHBlank();
         void PPUEnteredVBlank();
+        void onDataWordArrived();
 
         void clock();
 

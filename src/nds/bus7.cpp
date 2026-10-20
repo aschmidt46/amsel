@@ -8,10 +8,10 @@ using namespace nds;
 void nds::Bus7::init()
 {
     new (&cpu) gba::CPU(this, false);
-    // extrem wichtig bei cartridge boot time:
-    cpu.initialNDS();
 
     new (&spi) SPI(this);
+
+    rtc = std::make_unique<RTC>(this);
 
     for(int i = 0; i < 4; i++){
         new (&timers[i]) Timer<Bus7>(i, sharedBus, this, NDSEVENT_TimerOverflow7);
@@ -86,10 +86,7 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     }
 
     else if(addr == 0x04000138){
-        RTCSTUB = (RTCSTUB & 0xFF00) | (val);
-    }
-    else if(addr == 0x04000139){
-        RTCSTUB = (RTCSTUB & 0x00FF) | (HalfWord(val) << 8);
+        rtc->onWrite(addr ,val);
     }
 
     else if(addr >= 0x4000180 && addr < 0x4000188){
@@ -163,6 +160,11 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     // Gamecart
     else if(addr >= 0x04100010 && addr < 0x04100014 && sharedBus->canAccessGameCart(false)){
         sharedBus->gameCart.onWrite(addr, val);
+    }
+
+    else if(addr >= 0x4800000 && addr < 0x4810000){
+        addr -= 0x4800000;
+        wifi[addr % 0x8000] = val;
     }
 
     else if(addr >= 0x06000000 && addr < 0x07000000){
@@ -245,10 +247,7 @@ Byte nds::Bus7::readByteFromWide(Word addr)
         return sharedBus->EXKEYINPUT;
     }
     if(addr == 0x04000138){
-        return RTCSTUB;
-    }
-    if(addr == 0x04000139){
-        return RTCSTUB >> 8;
+        return rtc->onRead(addr);
     }
 
     // Gamecart
@@ -335,8 +334,20 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
 
     // Gamecart
-    else if(addr >= 0x04100010 && addr < 0x04100014 && sharedBus->canAccessGameCart(false)){
+    if(addr >= 0x04100010 && addr < 0x04100014 && sharedBus->canAccessGameCart(false)){
         return sharedBus->gameCart.onRead(addr);
+    }
+
+    if(addr == 0x480803C){
+        return 0b00000010;
+    }
+    if(addr == 0x480803D){
+        return 0b00000010;
+    }
+
+    if(addr >= 0x4800000 && addr < 0x4810000){
+        addr -= 0x4800000;
+        return wifi[addr % 0x8000];
     }
 
     if(addr >= 0x06000000 && addr < 0x07000000){
@@ -396,6 +407,16 @@ void nds::Bus7::PPUEnteredVBlank()
 {
     for(auto &d : dma){
         if(d.getStartTiming() == DMA_VBLANK && d.isEnabled()){
+            d.commenceTransfer();
+            return;
+        }
+    }
+}
+
+void nds::Bus7::onDataWordArrived()
+{
+    for(auto &d : dma){
+        if(d.getStartTiming() == DMA_HBLANK_OR_CARTRIDGE_SLOT && d.isEnabled()){
             d.commenceTransfer();
             return;
         }

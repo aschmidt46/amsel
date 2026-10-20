@@ -9,41 +9,112 @@ using namespace nds;
 
 void nds::Cartridge::startTransfer()
 {
+    std::cout << "Start Transfer:\n";
     switch(getCMD()){
+        case 0x9F:{
+            // Dummy, sendet 0xFF
+            oncePerCycle = false;
+            currentMode = GameCardEventType_Dummy;
+            remainingLength = 0x2000;
+            romControl.state.dataWordStatus = 0;
+            bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index=currentMode}});
+            break;
+        }
+        case 0x00:{
+            // Header
+            std::cout << "sent header\n";
+            romControl.state.dataWordStatus = 0;
+            remainingLength = 0x200;
+            offsetAddress = 0;
+            currentMode = GameCardEventType_DataWord;
+            oncePerCycle = false;
+            bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index=currentMode}});
+            break;
+        }
+        case 0x3C:{
+            // Aktiviere KEY1
+            std::cout << "act key1\n";
+            oncePerCycle = false;
+            currentMode = GameCardEventType_Dummy;
+            remainingLength = 0;
+            useKEY1 = true;
+            romControl.state.dataWordStatus = 0;
+            romControl.state.blockStartStatus = 0;
+            gameCardBus4byteDataIn = 0xFFFFFFFF;
+            // bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index=currentMode}});
+            break;
+        }
+        case 0x4:{
+            // Aktiviere KEY2
+            std::cout << "act key2\n";
+            oncePerCycle = false;
+            currentMode = GameCardEventType_Dummy;
+            remainingLength = 0x1000;
+            romControl.state.dataWordStatus = 0;
+            // romControl.state.blockStartStatus = 0;
+            gameCardBus4byteDataIn = 0xFFFFFFFF;
+            // bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index=currentMode}});
+            bus->scheduler->scheduleEvent({.timePoint =1000, .type = NDSEVENT_GameCardStopBlock});
+            break;
+        }
+        case 0xA:{
+            // Aktiviere Main
+            std::cout << "Main Data Mode\n";
+            std::cout << "MUSS NACH SECURE AREA KOMMEN\n";
+            oncePerCycle = false;
+            currentMode = GameCardEventType_Dummy;
+            remainingLength = 0x910;
+            romControl.state.dataWordStatus = 0;
+            romControl.state.blockStartStatus = 0;
+            gameCardBus4byteDataIn = 0xFFFFFFFF;
+            // bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index=currentMode}});
+            bus->scheduler->scheduleEvent({.timePoint =1000, .type = NDSEVENT_GameCardStopBlock});
+            break;
+        }
         case 0xB7:{
-            std::cout << "Gamecard Read Command\n";
+            // std::cout << "Gamecard Read Command\n";
             // std::cout << getHex0x(gameCardBusCommandOut, 16) << "\n";
             // std::cout << romControl.getTranferSize() << "\n";
             romControl.state.dataWordStatus = 0;
             remainingLength = romControl.getTranferSize();
             offsetAddress = (gameCardBusCommandOut >> 24) & 0xFFFFFFFF;
-            currentMode = NDSEVENT_GameCardDataWord;
+            currentMode = GameCardEventType_DataWord;
             if(offsetAddress < 0x8000){
                 offsetAddress = 0x8000 + (offsetAddress & 0x1FF);
             }
-            std::cout << getHex0x(offsetAddress, 8) << "\n";
             // bus->setHalt();
             oncePerCycle = false;
             if(remainingLength > 0){
-                bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardDataWord});
+                bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index=currentMode}});
             }
             else{
                 checkAndResend();
             }
             break;
         }
+        case 0x90:
         case 0xB8:{
-            std::cout << "CHIP ID Command\n";
+            // std::cout << "CHIP ID Command\n";
             romControl.state.dataWordStatus = 0;
             remainingLength = romControl.getTranferSize();
-            currentMode = NDSEVENT_GameCardChipID;
+            currentMode = GameCardEventType_ChipID;
             oncePerCycle = false;
             if(remainingLength > 0){
-                bus->scheduler->scheduleEvent({.timePoint = 80 + romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardChipID});
+                bus->scheduler->scheduleEvent({.timePoint = 80 + romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
             }
             else{
                 checkAndResend();
             }
+            break;
+        }
+        case 0x1:{
+            std::cout << "CHIP ID KEY1 Command\n";
+            romControl.state.dataWordStatus = 0;
+            remainingLength = 0x2000;
+            currentMode = GameCardEventType_Dummy_Chip;
+            oncePerCycle = false;
+            bus->scheduler->scheduleEvent({.timePoint = 80 + romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
+            bus->scheduler->scheduleEvent({.timePoint = 1000, .type = NDSEVENT_GameCardStopBlock});
             break;
         }
         default:{
@@ -52,22 +123,77 @@ void nds::Cartridge::startTransfer()
     }
 }
 
-nds::Cartridge::Cartridge(SharedBus *bus, const std::vector<Byte> &cart) : bus(bus), cartridge(cart)
+void nds::Cartridge::unselectDevices()
 {
-    Word id = *(Word*)(cartridge.data() + 0xC);
+    if(eeprom != nullptr) eeprom->state = EEPROM_STATE_IDLE;
+}
+
+void nds::Cartridge::startTransferSPI()
+{
+    AUXSPICNT.state.busy = 1;
+    switch(romInfo.type){
+        case SAVETYPE_NONE:{
+            break;
+        }
+        case SAVETYPE_EEPROM:{
+            eeprom->write(AUXSPIDATA);
+        }
+        case SAVETYPE_FLASH:{
+            std::cout << "---------------------------------------------------- TRIED CARD FLASH TRANSFER - FAIL\n";
+            break;
+        }
+    }
+    bus->scheduler->scheduleEvent({.timePoint= 10, .type= NDSEVENT_AUXSPITransferComplete});
+}
+
+nds::Cartridge::Cartridge(SharedBus *bus, const std::vector<Byte> &cart, bool hle) : bus(bus), cartridge(cart)
+{
+    cartID = *(Word*)(cartridge.data() + 0xC);
+    secureArea = cartridge.data() + 0x4000;
     bool found = false;
 
     for(size_t i = 0; i < romDB.size(); i++){
-        if(romDB[i].id == id){
+        if(cartID == romDB[i].id){
             romInfo = romDB[i];
             std::string saveType = romInfo.type == SAVETYPE_NONE ? "None" : (romInfo.type == SAVETYPE_EEPROM ? "EEPROM" : "FLASH");
             std::cout << "detected " << saveType << "\n";
+            messageQueue.enqueue({.type = MT_INFO, .title = std::nullopt, .content = saveType});
             found = true;
             break;
         }
     }
+    
     if(!found){
         messageQueue.enqueue({.type = MT_WARNING, .title = std::nullopt, .content = "Game not found in Database!"});
+    }
+
+    switch(romInfo.type){
+        case SAVETYPE_NONE:{
+            break;
+        }
+        case SAVETYPE_EEPROM:{
+            eeprom = std::make_unique<EEPROM>(romInfo.size);
+            break;
+        }
+    }
+
+    if(!hle){ // Nur falls Cartridge bereits entschlüsselt ist!!
+        // initKeycode(cartID, 1, 8);
+        // encrypt64(cartridge.data() + 0x78);  NEIN
+        initKeycode(cartID, 3, 8);
+        for(size_t i = 0; i < 0x800; i += 8){
+            encrypt64(secureArea + i);
+        }
+        // danach?
+        initKeycode(cartID, 2, 8);
+        encrypt64(secureArea);
+        // std::cout << "Key1 test:\n";
+        // uint64_t test = 0xC0FFEEFEC0FFEEFEull;
+        // std::cout << getHex0x(test, 16) << "\n";
+        // encrypt64((Byte*)&test);
+        // std::cout << getHex0x(test, 16) << "\n";
+        // decrypt64((Byte*)&test);
+        // std::cout << getHex0x(test, 16) << "\n";
     }
 }
 
@@ -80,7 +206,13 @@ Byte nds::Cartridge::onRead(Word addr)
         return AUXSPICNT.raw >> 8;
     }
     if(addr == 0x40001A2){
-        return AUXSPIDATA;
+        if(!AUXSPICNT.state.holdChipSelect && !AUXSPICNT.state.busy){
+            std::cout << "Chip select pulled up\n";
+            unselectDevices();
+        }
+        const auto tmp = AUXSPIDATA;
+        AUXSPIDATA = 0;
+        return tmp;
     }
     if(addr == 0x40001A4){
         return romControl.raw;
@@ -125,9 +257,16 @@ void nds::Cartridge::onWrite(Word addr, Byte val)
     }
     else if(addr == 0x40001A1){
         AUXSPICNT.raw = (AUXSPICNT.raw & 0x00FF) | (HalfWord(val & 0b11100000) << 8);
+        if(AUXSPICNT.state.ndsSlotEnable == 0) unselectDevices();
     }
     else if(addr == 0x40001A2){
         AUXSPIDATA = val;
+        if(AUXSPICNT.state.busy == 0 && AUXSPICNT.state.ndsSlotEnable && AUXSPICNT.state.ndsSlotMode){
+            startTransferSPI();
+        }
+        if(AUXSPICNT.state.busy == 0 && (!AUXSPICNT.state.ndsSlotMode || !AUXSPICNT.state.ndsSlotEnable)){
+            unselectDevices();
+        }
     }
     else if(addr == 0x40001A4){
         romControl.raw = (romControl.raw & 0xFFFFFF00) | (val);
@@ -178,30 +317,12 @@ void nds::Cartridge::onWrite(Word addr, Byte val)
     }
 }
 
-void nds::Cartridge::sendDataWord()
-{
-    gameCardBus4byteDataIn = cartridge[offsetAddress] | (Word(cartridge[offsetAddress + 1]) << 8) | (Word(cartridge[offsetAddress + 2]) << 16) | (Word(cartridge[offsetAddress + 3]) << 24);
-    offsetAddress += 4;
-    remainingLength -= 4;
-
-    romControl.state.dataWordStatus = 1;
-    oncePerCycle = false;
-}
-
-void nds::Cartridge::sendChipID()
-{
-    gameCardBus4byteDataIn = bus->chipID;
-    romControl.state.dataWordStatus = 1;
-    remainingLength -= 4;
-    oncePerCycle = false;
-}
-
 void nds::Cartridge::checkAndResend()
 {
     if(oncePerCycle) return;
     oncePerCycle = true;
     if(remainingLength > 0){
-        bus->scheduler->scheduleEvent({.timePoint = romControl.state.transferCLKRate ? 8u : 5u, .type = currentMode});
+        bus->scheduler->scheduleEvent({.timePoint = romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
     }
     else{
         romControl.state.blockStartStatus = 0;
@@ -218,6 +339,20 @@ void nds::Cartridge::checkAndResend()
     }
 }
 
+void nds::Cartridge::completeTransfer()
+{
+    AUXSPICNT.state.busy = 0;
+    AUXSPIDATA = 0;
+
+    switch(romInfo.type){
+        case SAVETYPE_NONE:
+            break;
+        case SAVETYPE_EEPROM:
+            AUXSPIDATA = eeprom->read();
+            break;
+    }
+}
+
 bool nds::Cartridge::canSave()
 {
     return romInfo.type != SAVETYPE_NONE;
@@ -225,6 +360,15 @@ bool nds::Cartridge::canSave()
 
 std::vector<Byte> nds::Cartridge::getSaveData()
 {
+    switch(romInfo.type){
+        case SAVETYPE_NONE:{
+            break;
+        }
+        case SAVETYPE_EEPROM:{
+            return eeprom->getSave();
+            break;
+        }
+    }
     return std::vector<Byte>();
 }
 
@@ -235,4 +379,70 @@ size_t nds::Cartridge::getSaveSize()
 
 void nds::Cartridge::loadSave(const std::vector<Byte> &saveData)
 {
+    switch(romInfo.type){
+        case SAVETYPE_NONE:{
+            break;
+        }
+        case SAVETYPE_EEPROM:{
+            eeprom = std::make_unique<EEPROM>(romInfo.size);
+            eeprom->loadSave(saveData);
+            break;
+        }
+    }
+}
+
+void nds::Cartridge::cardReply(int index)
+{
+    romControl.state.dataWordStatus = 1;
+    remainingLength -= 4;
+    oncePerCycle = false;
+    switch((GameCardEventType)index){
+        case GameCardEventType_DataWord:
+            sendDataWord();
+            break;
+        case GameCardEventType_ChipID:
+            sendChipID();
+            break;
+        case GameCardEventType_Dummy:
+            sendDummy();
+            break;
+        case GameCardEventType_Dummy_Chip:
+            if(remainingLength >= 0x16F0){
+                sendDummy();
+            }
+            else{
+                sendChipID();
+            }
+            break;
+        case GameCardEventType_SecureBlock:
+            sendSecureBlock();
+            break;
+        default: break;
+    }
+}
+
+
+
+void nds::Cartridge::sendDataWord()
+{
+    gameCardBus4byteDataIn = cartridge[offsetAddress] | (Word(cartridge[offsetAddress + 1]) << 8) | (Word(cartridge[offsetAddress + 2]) << 16) | (Word(cartridge[offsetAddress + 3]) << 24);
+    offsetAddress += 4;
+    bus->onDataWordArrived();
+}
+
+void nds::Cartridge::sendChipID()
+{
+    gameCardBus4byteDataIn = bus->chipID;
+    bus->onDataWordArrived();
+}
+
+void nds::Cartridge::sendDummy()
+{
+    gameCardBus4byteDataIn = 0xFFFFFFFF;
+    bus->onDataWordArrived();
+}
+
+void nds::Cartridge::sendSecureBlock()
+{
+
 }

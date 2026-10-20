@@ -43,6 +43,7 @@ namespace nds{
             KEYINPUT.raw = 0b1111111111;
         };
         void loadCartHLE(const std::vector<uint8_t> &bytes);
+        void loadCart(const std::vector<uint8_t> &bytes);
         Word nds7romRamStart = 0;
         Word nds7romRomStart = 0;
         Word nds7romSize = 0;
@@ -66,6 +67,8 @@ namespace nds{
         void PPUEnteredVBlank();
         void PPULeftHBlank();
         void PPULeftVBlank();
+
+        void onDataWordArrived();
 
         void init();
         void setIF(int bit, bool val);

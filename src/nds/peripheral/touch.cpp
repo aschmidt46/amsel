@@ -18,9 +18,9 @@ void nds::TouchController::setTouch(float x, float y)
 
     touchX8 = (float(touchX12) / float(0x1000)) * 0xFF;
     touchY8 = (float(touchY12) / float(0x1000)) * 0xFF;
-    if(penIRQ){
+    // if(penIRQ){
         bus->sharedBus->EXKEYINPUT &= ~(1u << 6);
-    }
+    // }
 }
 
 void nds::TouchController::releaseTouch()
@@ -30,9 +30,9 @@ void nds::TouchController::releaseTouch()
     touchX8 = 0x0;
     touchY8 = 0xFF;
 
-    if(penIRQ){
+    // if(penIRQ){
         bus->sharedBus->EXKEYINPUT |= (1u << 6);
-    }
+    // }
 }
 
 void nds::TouchController::write(Byte val)

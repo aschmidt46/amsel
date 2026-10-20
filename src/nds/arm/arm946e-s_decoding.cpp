@@ -426,6 +426,10 @@ std::string CPU::printInstructionType(InstructionType t){
 
 bool CPU::executeInstruction()
 {
+    if(registerMap[mode()][R1] == nullptr){
+        bus->setHalt();
+        return false;
+    }
     // auto catastrophicExit = [&](int num){
     //     std::cout << "KATASTROPHE: Fall " << num << " ist eingetreten!\n";
     //     // throw "ERROR";
@@ -437,10 +441,13 @@ bool CPU::executeInstruction()
     if(this->pipeline[0].type != PipelineEmpty){
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
-        // outs << "(x0: " << getHex0x(_R0, 8) << ") " << "(x1: " << getHex0x(_R1, 8) << ") " << "(x2: " << getHex0x(_R2, 8) << ") " << "(x3: " << getHex0x(_R3, 8) << ") " << "(x4: " << getHex0x(_R4, 8) << ") " << "(x5: " << getHex0x(_R5, 8) << ") "
-        // << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") "
-        // << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
-        // outs.flush();
+        if(startLogging && (mode() == System || mode() == User)){
+            outs << "(x0: " << getHex0x(_R0, 8) << ") " << "(x1: " << getHex0x(_R1, 8) << ") " << "(x2: " << getHex0x(_R2, 8) << ") " << "(x3: " << getHex0x(_R3, 8) << ") " << "(x4: " << getHex0x(_R4, 8) << ") " << "(x5: " << getHex0x(_R5, 8) << ") "
+            << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") " << "(x7: " << getHex0x(_R8, 8) << ") " << "(x9: " << getHex0x(_R9, 8) << ") " << "(x10: " << getHex0x(_R10, 8) << ") "
+            << "(x11: " << getHex0x(_R11, 8) << ") " << "(x12: " << getHex0x(_R12, 8) << ") " << "(x13: " << getHex0x(*registerMap[mode()][R13], 8) << ") " << "(x14: " << getHex0x(*registerMap[mode()][R14], 8) << ") "
+            << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
+            outs.flush();
+        }
         // if(_R15_PC - 8 == 0x) bus->setHalt();
         // if(_R15_PC - 8 == 0x018) bus->setHalt();
         // if(_R15_PC - 8 == 0x1ff8538) bus->setHalt();
@@ -448,7 +455,7 @@ bool CPU::executeInstruction()
         //     bus->setHalt();
         //     return false;
         // }
-        // if(info.code == 0) bus->setHalt();
+        if(info.code == 0) bus->setHalt();
         // if(_R15_PC - 8 == 0xFFFF0018) bus->setHalt();
 
         // auto iInfo = info;
@@ -757,7 +764,8 @@ CPU::CPU(bool skipBios)
     _SPSR_und.raw = 0;
 
     _CPSR.raw = 0xD3;
-    _CPSR.state.mode_bits = System;
+    // _CPSR.state.mode_bits = System;
+    _CPSR.state.mode_bits = Supervisor;
 
     _R15_PC = 0xFFFF0000;
 

@@ -22,6 +22,7 @@ nds::NDS::NDS(const std::vector<uint8_t> &bytes, const StartInfo &info)
     loadBios9(info.bios9);
     checkBios();
     bus->loadCartHLE(bytes);
+    // bus->loadCart(bytes);
 
     if(info.haltAt.has_value()){
         bus->stepBack = true;

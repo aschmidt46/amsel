@@ -9,11 +9,19 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
 {
     if(bytes.size() == 0) return;
     gameCart = Cartridge(this, bytes);
+    gameCart.romControl = {.state = {.key1Gap1Length = 0x08F8, .key1Gap2Length = 0x18}};
     nds9romRomStart = *(Word*)(bytes.data() + 0x20);
     if(nds9romRomStart < 0x8000){
         std::cout << "WARNING: SECURE AREA PRESENT, ROM OFFSET: " << getHex0x(nds9romRomStart, 8) << "\n";
         // throw;
     }
+
+    bus9->cpu.initHLEBoot();
+    bus7->cpu.initialNDS();
+
+    bus7->POSTFLG = 1;
+    bus9->POSTFLG = 1;
+
     // nds9romRomStart &= ~0xFFF; // align 0x1000
     nds9romRamStart = *(Word*)(bytes.data() + 0x28);
     nds9romSize = *(Word*)(bytes.data() + 0x2C);
@@ -109,6 +117,19 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
     }
 }
 
+void nds::SharedBus::loadCart(const std::vector<uint8_t> &bytes)
+{
+    if(bytes.size() == 0) return;
+    gameCart = Cartridge(this, bytes, false);
+
+    chipID = 0xC2; // Manufacturer = Macronix
+    if (bytes.size() >= 1024 * 1024 && bytes.size() <= 128 * 1024 * 1024) {
+        chipID |= ((bytes.size() >> 20) - 1) << 8;
+    } else {
+        chipID |= (0x100 - (bytes.size() >> 28)) << 8;
+    }
+}
+
 Byte nds::SharedBus::readByte(Word addr)
 {
     if(addr >= 0x02000000 && addr < 0x03000000){
@@ -171,6 +192,16 @@ void nds::SharedBus::PPULeftHBlank()
 
 void nds::SharedBus::PPULeftVBlank()
 {
+}
+
+void nds::SharedBus::onDataWordArrived()
+{
+    if(canAccessGameCart(false)){
+        bus7->onDataWordArrived();
+    }
+    else{
+        bus9->onDataWordArrived();
+    }
 }
 
 void SharedBus::init()

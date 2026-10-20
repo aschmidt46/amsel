@@ -437,6 +437,16 @@ void nds::Bus9::PPUEnteredVBlank()
     }
 }
 
+void nds::Bus9::onDataWordArrived()
+{
+    for(auto &d : dma){
+        if(d.getStartTiming() == DMA_DS_CARTRIDGE_SLOT && d.isEnabled()){
+            d.commenceTransfer();
+            return;
+        }
+    }
+}
+
 void nds::Bus9::clock()
 {
 

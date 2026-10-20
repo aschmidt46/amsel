@@ -183,13 +183,14 @@ namespace gba{
         // Debug
         bool advanced = false;
         
-        // std::ofstream outs;
+        std::ofstream outs;
         public:
         CPU(bool skipBios = true);
         CPU(IBus<InstructionInfo>* bus, bool skipBios = true) : CPU(skipBios){
             this->bus = bus;
-            // this->outs = std::ofstream("arm7log.txt");
+            this->outs = std::ofstream("arm7log.txt");
         };
+        bool startLogging = false;
         
         // führt die nächste Instruktion aus, falls das möglich ist
         void advanceCPU();

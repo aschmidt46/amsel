@@ -2,11 +2,11 @@
 #include "console.h"
 #include "framework/global.h"
 #include "framework/stringlib.h"
-#ifdef BUILD_DESKTOP
+// #ifdef BUILD_DESKTOP
 #include "framework/file_io.h"
 #include "framework/screen.h"
 #include <imgui.h>
-#endif
+// #endif
 #include "framework/locale.h"
 
 // FIXEN::
@@ -313,7 +313,7 @@ uint8_t NDSImplementation::readCpuBus(uint64_t addr)
 
 
 void NDSImplementation::displayRegisters() {
-    #ifdef BUILD_DESKTOP
+    // #ifdef BUILD_DESKTOP
 
     if(ImGui::Button("Switch CPU")){
         nds->bus->watchARM7 = !nds->bus->watchARM7;
@@ -336,11 +336,13 @@ void NDSImplementation::displayRegisters() {
 
     if(ImGui::Button("Step Back (reset)")){
         const auto cart = nds->bus->gameCart.cartridge;
+        const auto cpu = nds->bus->watchARM7;
         auto clocks = nds->bus->clocks - 1;
         auto info = constructStartInfo();
         info.haltAt = {clocks};
         nds = std::make_shared<nds::NDS>(cart, info);
         nds->setDebug(true);
+        nds->bus->watchARM7 = cpu;
         while(nds->bus->stepBack){
             nds->clockUntilSampleReady();
         }
@@ -406,7 +408,7 @@ void NDSImplementation::displayRegisters() {
         cstrings.push_back(const_cast<char*>(stack[i].c_str()));
     int select = 1;
     ImGui::ListBox("Stack", &select, cstrings.data(), stack.size());
-    #endif
+    // #endif
 }
 
 std::vector<SystemOption> NDSImplementation::options = {

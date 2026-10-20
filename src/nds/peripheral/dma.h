@@ -3,6 +3,7 @@
 #include "gba/register/general_purpose.h"
 #include <memory>
 #include "../scheduler.h"
+#include <iostream>
 
 
 namespace nds{

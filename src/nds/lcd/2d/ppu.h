@@ -169,6 +169,7 @@ namespace nds{
         PIXEL_T drawPixelMode3();
         PIXEL_T drawPixelMode4();
         PIXEL_T drawPixelMode5();
+        PIXEL_T drawPixelMode6();
 
         PIXEL_T drawPixelLCDC();
 

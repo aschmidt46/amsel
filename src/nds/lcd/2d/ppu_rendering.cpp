@@ -149,7 +149,7 @@ void PPU::renderScanline()
                 fun = &PPU::drawPixelMode5;
                 break;
             case 6:
-                fun = &PPU::drawPixelMode5; // ------------------------------------------------------------ ACHTUNG
+                fun = &PPU::drawPixelMode6; // ------------------------------------------------------------ ACHTUNG
                 break;
         }
         if(LCDCONTROL.state.displayMode == 0){
@@ -857,6 +857,42 @@ PIXEL_T PPU::drawPixelMode4() {
 }
 
 PIXEL_T PPU::drawPixelMode5() {
+    this->drawSprites(); // Für Obj Window zuerst
+    WINDOW_ACTIVES_T actives = getActives();
+
+    //affine ---------------------------------------------------------------------- EXTENDED ??????
+    if(displayBG(3) && actives.bgActive(3)){
+        drawBG<true, true>(3);
+        if(latchedBg[3].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
+    }
+
+    //affine ---------------------------------------------------------------------- EXTENDED ??????
+    if(displayBG(2) && actives.bgActive(2)){
+        drawBG<true, true>(2);
+        if(latchedBg[2].priority < 99)
+            insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
+    }
+
+    // 1 und 0 sind Text
+    for(int i = 1; i >= 0; i--){
+        if(displayBG(i) && actives.bgActive(i)){
+            if(BG_CNT[i].state.colorsPalettes)
+                drawBG<false, true>(i);
+            else drawBG<false, false>(i);
+            if(latchedBg[i].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
+        }
+    }
+
+    if(actives.enableObj && LCDCONTROL.state.displayOBJ){
+        insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
+    }
+
+    return setColorFromLayerOrder(actives);
+}
+
+PIXEL_T nds::PPU::drawPixelMode6(){
     PIXEL_T bg2 = {.pixel = 1, .red = Byte(0), .green = Byte(255), .blue = Byte(0), .priority = (Byte)BG_CNT[2].state.BGPriority, .layerIndex = 3};
 
     
@@ -867,8 +903,9 @@ PIXEL_T nds::PPU::drawPixelLCDC()
 {
     const int pixelY = currentScanline + framebufferOffset * 192;
     int index = currentCycle + 256 * pixelY;
-    Byte lower = lcd->readMemory(0x06800000 + 2 * index);
-    Byte higher = lcd->readMemory(0x06800000 + 2 * index + 1);
+    Word vramBase = 0x06800000 + LCDCONTROL.state.vramBlock * 0x20000;
+    Byte lower = lcd->readMemory(vramBase + 2 * index);
+    Byte higher = lcd->readMemory(vramBase + 2 * index + 1);
     HalfWord pixel = HalfWord(lower) | (HalfWord(higher) << 8);
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;

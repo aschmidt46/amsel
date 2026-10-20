@@ -392,6 +392,10 @@ std::string gba::CPU::printInstructionType(InstructionType t){
 
 bool gba::CPU::executeInstruction()
 {
+    if(registerMap[mode()][R1] == nullptr){
+        bus->setHalt();
+        return false;
+    }
     // auto catastrophicExit = [&](int num){
     //     std::cout << "KATASTROPHE: Fall " << num << " ist eingetreten!\n";
     //     // throw "ERROR";
@@ -409,10 +413,12 @@ bool gba::CPU::executeInstruction()
             bus->setHalt();
             return false;
         }
-        // outs << "(x0: " << getHex0x(_R0, 8) << ") " << "(x1: " << getHex0x(_R1, 8) << ") " << "(x2: " << getHex0x(_R2, 8) << ") " << "(x3: " << getHex0x(_R3, 8) << ") " << "(x4: " << getHex0x(_R4, 8) << ") " << "(x5: " << getHex0x(_R5, 8) << ") "
-        // << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") "
-        // << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
-        // outs.flush();
+        if(startLogging && (mode() == System || mode() == User)){
+            outs << "(x0: " << getHex0x(_R0, 8) << ") " << "(x1: " << getHex0x(_R1, 8) << ") " << "(x2: " << getHex0x(_R2, 8) << ") " << "(x3: " << getHex0x(_R3, 8) << ") " << "(x4: " << getHex0x(_R4, 8) << ") " << "(x5: " << getHex0x(_R5, 8) << ") "
+            << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") "
+            << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
+            outs.flush();
+        }
 
         // auto iInfo = info;
 
@@ -700,6 +706,7 @@ gba::CPU::CPU(bool skipBios)
     _SPSR_und.raw = 0;
 
     _CPSR.raw = 0xD3;
+    // _CPSR.state.mode_bits = System;
 
     if(skipBios){
         _R13_SP = 0x03007F00;

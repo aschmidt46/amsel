@@ -175,12 +175,15 @@ namespace nds{
         
         public:
         CPU(bool skipBios = true);
-        // std::ofstream outs;
-        CPU(gba::IBus<InstructionInfo>* bus, CP15* cp15) : CPU(true){
+        std::ofstream outs;
+        CPU(gba::IBus<InstructionInfo>* bus, CP15* cp15) : CPU(false){
             this->bus = bus;
             this->cp15 = cp15;
-            // this->outs = std::ofstream("arm9log.txt");
+            this->outs = std::ofstream("arm9log.txt");
         };
+        bool startLogging = false;
+
+        void initHLEBoot();
         
         // führt die nächste Instruktion aus, falls das möglich ist
         void advanceCPU();

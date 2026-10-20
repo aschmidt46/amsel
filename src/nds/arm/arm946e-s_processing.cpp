@@ -207,6 +207,13 @@ void CPU::addCycles(size_t cycles)
     remainingCycles += cycles;
 }
 
+void nds::CPU::initHLEBoot()
+{
+    _R13_SP = 0x3002F7C;
+    _R13_irq = 0x3003F80;
+    _R13_SVC = 0x3003FC0;
+}
+
 void nds::CPU::enterHaltMode()
 {
     haltMode = true;
