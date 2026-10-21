@@ -104,10 +104,14 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     bool baseInRegisterList = instruction & (1u << Rn);
     bool R15InTransferList = instruction & (1u << 15);
     bool userTransfer = false;
-    if(S && !R15InTransferList)
-        userTransfer = true;
+    bool transferCPSR = false;
+    if(S){
+        if(L && R15InTransferList)
+            transferCPSR = true;
+        else userTransfer = true;
+    }
     int swapBackMode = mode();
-    bool transferCPSR = L && S && R15InTransferList;
+    Word* baseReg = registerMap[swapBackMode][Rn];
     Word origAddr = *registerMap[mode()][Rn];
     Word addr = origAddr;
 
@@ -140,10 +144,13 @@ bool CPU::executeBlockDataTransfer(Word instruction)
                 Word val = readWordUnaligned(addr - downOffset);
                 *registerMap[mode()][i] = val;
                 if(i==15){ // Neu NDS9
-                    _CPSR.state.T = val & 1u;
-                    *registerMap[mode()][R15] = val & ~1u;
-                    if(_CPSR.state.T == 0){
-                        *registerMap[mode()][R15] = val & ~3u;
+                    if(transferCPSR){
+                        bool newT = (*registerMap[mode()][SPSR] >> 5) & 1u;
+                        *registerMap[mode()][R15] = val & (newT ? ~1u : ~3u);
+                    }
+                    else{
+                        _CPSR.state.T = val & 1u;
+                        *registerMap[mode()][R15] = val & (_CPSR.state.T ? ~1u : ~3u);
                     }
                 }
             }
@@ -172,16 +179,17 @@ bool CPU::executeBlockDataTransfer(Word instruction)
         _CPSR.state.mode_bits = swapBackMode;
     }
 
+    bool wb = false;
+
     if(W){ // Aufpassen, überprüfen
-        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister) || !baseInRegisterList || emptyRegList || S){
-            if(userTransfer){
-                *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
-            }
-            else{
-                *registerMap[swapBackMode][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
-            }
+        if(baseInRegisterList){
+            if(baseIsNotLastRegister || baseIsOnlyRegister || !L) wb = true;
         }
-            // bei User Bank transfer anders?
+        else wb = true;
+    }
+
+    if(wb){
+        *baseReg = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
     }
 
 
