@@ -448,7 +448,12 @@ bool CPU::executeInstruction()
             << (state() == ARM ? "(arm)" : "(thumb)") << getHex0x((_R15_PC - 8) & ~0b11u, 8) << ":\t" << getDisassembly(info.code, _R15_PC - 8) << "\n";
             outs.flush();
         }
-        // if(_R15_PC - 8 == 0x) bus->setHalt();
+        // if(_R15_PC == 0x2001d6c) bus->setHalt();
+        // for(int i= 0; i < 15; i++){
+        //     if(*registerMap[User][i] == 0x22acbc4){
+        //         bus->setHalt();
+        //     }
+        // }
         // if(_R15_PC - 8 == 0x018) bus->setHalt();
         // if(_R15_PC - 8 == 0x1ff8538) bus->setHalt();
         // if(_CPSR.state.mode_bits == 8){

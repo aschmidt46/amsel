@@ -9,7 +9,7 @@ using namespace nds;
 
 void nds::Cartridge::startTransfer()
 {
-    std::cout << "Start Transfer:\n";
+    // std::cout << "Start Transfer:\n";
     switch(getCMD()){
         case 0x9F:{
             // Dummy, sendet 0xFF

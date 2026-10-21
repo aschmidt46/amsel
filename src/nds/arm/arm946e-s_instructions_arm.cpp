@@ -92,7 +92,6 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     int downOffset = !U ? (numberOfRegs+1) * 4 : 0; // Wortgröße 4
     downOffset -= !U && !P ? 8 : 0; // Magie, empirisch bestimmt
     bool emptyRegList = false;
-    bool firstRegister = false;
 
     if(W){
         if((instruction & 0xFFFF) == 0){ // Leere Registerliste
@@ -128,12 +127,6 @@ bool CPU::executeBlockDataTransfer(Word instruction)
         if(useRegister){
             usedNumOfRegs++;
             if((unsigned int)i>Rn) baseIsNotLastRegister = true;
-            if((unsigned int)i<Rn) firstRegister = false;
-        }
-    }
-    if(W && !userTransfer){ // Aufpassen, überprüfen
-        if(!baseInRegisterList || (!L || !firstRegister)){
-            *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
         }
     }
     bool baseIsOnlyRegister = (usedNumOfRegs == 1) && baseInRegisterList;
@@ -180,7 +173,7 @@ bool CPU::executeBlockDataTransfer(Word instruction)
     }
 
     if(W){ // Aufpassen, überprüfen
-        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister) || emptyRegList || S){
+        if(!L || (baseIsNotLastRegister || baseIsOnlyRegister) || !baseInRegisterList || emptyRegList || S){
             if(userTransfer){
                 *registerMap[mode()][Rn] = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
             }

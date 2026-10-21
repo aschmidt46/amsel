@@ -97,9 +97,11 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
         // writeByte(0x027FFE00 + i, bytes[i]);
         bus9->writeWord(0x027FFE00 + i, *(Word*)&bytes[i]);
     }
+
     
     size_t j = nds9romRamStart;
-    for(size_t i = nds9romRomStart; i < nds9romRomStart + nds9romSize; i++){
+    size_t rom9End = nds9romRomStart < 0x8000 ? (nds9romRomStart + nds9romSize > 0x8000 ? nds9romRomStart + nds9romSize : 0x8000) : nds9romRomStart + nds9romSize;
+    for(size_t i = nds9romRomStart; i < rom9End; i++){
         bus9->writeByte(j, bytes[i]);
         j++;
     }
