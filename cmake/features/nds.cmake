@@ -71,6 +71,8 @@ src/nds/peripheral/touch.h
 src/nds/peripheral/touch.cpp
 src/nds/peripheral/eeprom.h
 src/nds/peripheral/eeprom.cpp
+src/nds/peripheral/flash.h
+src/nds/peripheral/flash.cpp
 src/nds/peripheral/rtc.h
 src/nds/peripheral/rtc.cpp
 

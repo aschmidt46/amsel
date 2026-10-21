@@ -126,6 +126,7 @@ void nds::Cartridge::startTransfer()
 void nds::Cartridge::unselectDevices()
 {
     if(eeprom != nullptr) eeprom->state = EEPROM_STATE_IDLE;
+    if(flash != nullptr) flash->state = FLASH_IDLE;
 }
 
 void nds::Cartridge::startTransferSPI()
@@ -137,9 +138,10 @@ void nds::Cartridge::startTransferSPI()
         }
         case SAVETYPE_EEPROM:{
             eeprom->write(AUXSPIDATA);
+            break;
         }
         case SAVETYPE_FLASH:{
-            std::cout << "---------------------------------------------------- TRIED CARD FLASH TRANSFER - FAIL\n";
+            flash->write(AUXSPIDATA);
             break;
         }
     }
@@ -173,6 +175,10 @@ nds::Cartridge::Cartridge(SharedBus *bus, const std::vector<Byte> &cart, bool hl
         }
         case SAVETYPE_EEPROM:{
             eeprom = std::make_unique<EEPROM>(romInfo.size);
+            break;
+        }
+        case SAVETYPE_FLASH:{
+            flash = std::make_unique<Flash>(romInfo.size);
             break;
         }
     }
@@ -350,6 +356,9 @@ void nds::Cartridge::completeTransfer()
         case SAVETYPE_EEPROM:
             AUXSPIDATA = eeprom->read();
             break;
+        case SAVETYPE_FLASH:
+            AUXSPIDATA = flash->read();
+            break;
     }
 }
 
@@ -366,6 +375,10 @@ std::vector<Byte> nds::Cartridge::getSaveData()
         }
         case SAVETYPE_EEPROM:{
             return eeprom->getSave();
+            break;
+        }
+        case SAVETYPE_FLASH:{
+            return flash->getSave();
             break;
         }
     }
@@ -386,6 +399,11 @@ void nds::Cartridge::loadSave(const std::vector<Byte> &saveData)
         case SAVETYPE_EEPROM:{
             eeprom = std::make_unique<EEPROM>(romInfo.size);
             eeprom->loadSave(saveData);
+            break;
+        }
+        case SAVETYPE_FLASH:{
+            flash = std::make_unique<Flash>(romInfo.size);
+            flash->loadSave(saveData);
             break;
         }
     }

@@ -13,14 +13,16 @@ void nds::TouchController::reset()
 
 void nds::TouchController::setTouch(float x, float y)
 {
-    touchX12 = (int)scaleAxisComplex(0, 256, x, 0x100, 0xED0);
-    touchY12 = (int)scaleAxisComplex(0, 192, y, 0xB0, 0xF20);
+    touchX12 = 0.75 * x / 3;//(int)scaleAxisComplex(0, 256, x, 0x100, 0xED0);
+    touchY12 = 0.75 * y / 3;//(int)scaleAxisComplex(0, 192, y, 0xB0, 0xF20);
 
     touchX8 = (float(touchX12) / float(0x1000)) * 0xFF;
     touchY8 = (float(touchY12) / float(0x1000)) * 0xFF;
     // if(penIRQ){
         bus->sharedBus->EXKEYINPUT &= ~(1u << 6);
     // }
+    // std::cout << "x: " << getHex0x(touchX12,6) << "\n";
+    // std::cout << "y: " << getHex0x(touchY12,6) << "\n";
 }
 
 void nds::TouchController::releaseTouch()
@@ -43,7 +45,7 @@ void nds::TouchController::write(Byte val)
 
 
 
-    std::cout << "touch write\n";
+    // std::cout << "touch write\n";
     control.raw = val;
     switch(control.state.powerDownModeSelect){
         case 0:
@@ -78,6 +80,7 @@ void nds::TouchController::write(Byte val)
             else{
                 readBuffer = HalfWord(touchY12) << 1;
             }
+            awaitRead =true;
             break;
         }
         case 5:{
@@ -87,6 +90,7 @@ void nds::TouchController::write(Byte val)
             else{
                 readBuffer = HalfWord(touchX12) << 1;
             }
+            awaitRead =true;
             break;
         }
     }
@@ -94,9 +98,13 @@ void nds::TouchController::write(Byte val)
 
 Byte nds::TouchController::read()
 {
+    if(awaitRead){
+        awaitRead = false;
+        return 0;
+    }
     const Byte tmp = readBuffer;
     readBuffer >>= 8;
     bufferSize--;
-    std::cout << "read: " << getHex0x(tmp, 2) << "\n";
+    // std::cout << "read: " << getHex0x(tmp, 2) << "\n";
     return tmp;
 }

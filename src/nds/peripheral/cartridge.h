@@ -5,6 +5,7 @@
 #include "../resources/rominfo.h"
 #include <memory>
 #include "eeprom.h"
+#include "flash.h"
 
 namespace nds{
 
@@ -64,6 +65,7 @@ namespace nds{
         Byte* secureArea = nullptr;
         Word cartID = 0;
         std::unique_ptr<EEPROM> eeprom = nullptr;
+        std::unique_ptr<Flash> flash = nullptr;
         ROMCTRL_T romControl = {.raw = 0};
         int currentMode = 0;
         AUXSPICNT_T AUXSPICNT = {.raw = 0};

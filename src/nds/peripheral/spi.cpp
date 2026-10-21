@@ -26,7 +26,8 @@ void nds::SPI::unselectDevices()
         firmware.status &= ~2u;
         firmware.awaitRead = false;
     };
-    firmware.state = FIRMWARE_IDLE;
+    if(firmware.state != FIRMWARE_DP)
+        firmware.state = FIRMWARE_IDLE;
     touch.reset();
 }
 

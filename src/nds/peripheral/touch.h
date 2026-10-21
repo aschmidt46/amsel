@@ -25,6 +25,7 @@ namespace nds{
         bool penIRQ = true;
         bool vref = false;
         bool adc = false;
+
         
         HalfWord touchX12 = 0x0;
         HalfWord touchY12 = 0xFFF;
@@ -35,11 +36,12 @@ namespace nds{
         int bufferSize = 0;
         
         HalfWord readBuffer = 0;
-
+        
         Bus7* bus = nullptr;
         
         
         public:
+        bool awaitRead = false;
         void reset();
         TouchController(Bus7* bus) : bus(bus){};
         void setTouch(float  x, float y);

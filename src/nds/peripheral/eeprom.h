@@ -31,6 +31,7 @@ namespace nds{
 
         
         public:
+        bool awaitRead = false;
         Byte status = 0;
         EEPROM_STATE state = EEPROM_STATE_IDLE;
         EEPROM(size_t size);

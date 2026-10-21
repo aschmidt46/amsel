@@ -11,9 +11,15 @@ namespace nds{
         FIRMWARE_READ_STATUS,
         FIRMWARE_READ_ID,
         FIRMWARE_READ_DATA_ADDRESS,
+        FIRMWARE_READ_DATA_ADDRESS_FAST,
         FIRMWARE_READ_DATA,
         FIRMWARE_PW_ADDRESS,
-        FIRMWARE_PW
+        FIRMWARE_PW,
+        FIRMWARE_PP_ADDRESS,
+        FIRMWARE_PP,
+        FIRMWARE_PE_ADDRESS,
+        FIRMWARE_SE_ADDRESS,
+        FIRMWARE_DP,
     };
 
     class Bus7;

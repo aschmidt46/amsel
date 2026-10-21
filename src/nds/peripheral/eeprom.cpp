@@ -100,6 +100,7 @@ void nds::EEPROM::write(Byte val)
                 case 0x05:{
                     std::cout << "EEPROM READ STATUS\n";
                     state = EEPROM_STATE_READ_STATUS;
+                    awaitRead = true;
                     break;
                 }
                 case 0x01:{
@@ -110,6 +111,7 @@ void nds::EEPROM::write(Byte val)
                 case 0x9F:{
                     std::cout << "EEPROM READ JEDEC\n";
                     state = EEPROM_STATE_READ_JEDEC;
+                    awaitRead = true;
                     break;
                 }
                 default:{
@@ -131,6 +133,7 @@ void nds::EEPROM::write(Byte val)
                 else std::cout << "EEPROM WRITE AT: ";
                 std::cout << getHex0x(runningAddress, 6) << "\n";
                 state = (state == EEPROM_STATE_READ_ADDRESS) ? EEPROM_STATE_READ : EEPROM_STATE_WRITE;
+                if(state == EEPROM_STATE_READ) awaitRead = true;
                 remainingPage = pageSize;
             }
             break;
@@ -159,6 +162,10 @@ void nds::EEPROM::write(Byte val)
 
 Byte nds::EEPROM::read()
 {
+    if(awaitRead){
+        awaitRead = false;
+        return 0;
+    }
     switch(state){
         case EEPROM_STATE_READ_JEDEC:{
             return 0xFF;
