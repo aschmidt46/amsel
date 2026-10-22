@@ -80,8 +80,12 @@ namespace nds{
             HalfWord hBlankIE : 1;
             HalfWord vCounterIE : 1;
             HalfWord Unused1 : 1;
-            HalfWord vCountSetting : 9;
+            HalfWord vCountMSB : 1;
+            HalfWord vCountSetting : 8;
         } state;
+        inline HalfWord getVCountSetting() const{
+            return state.vCountSetting | (state.vCountMSB << 8);
+        }
         HalfWord raw;
     };
 

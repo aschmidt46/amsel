@@ -81,7 +81,7 @@ void DMAChannel<ConcreteBus>::resetInternalCounters(bool SAD, bool DAD){
     if(SAD) currentSourceAddr = SourceAddress.raw;
     if(DAD) currentDestAddr = DestinationAddress.raw;
     currentCount = 0;
-    maxCount = WordCount.raw;
+    maxCount = isDMA7() ? WordCount.raw : WordCount.raw | ((Control.raw & 0b11111)  << 16); // Wordcount ist größer in DMA9
 
     currentSourceAddr &= isDMA7() ? srcMasks[dmaIndex] : 0xFFFFFFE;
     currentDestAddr &= isDMA7() ? destMasks[dmaIndex] : 0xFFFFFFE;

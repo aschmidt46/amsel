@@ -78,22 +78,32 @@ void nds::LCD::increment()
 
         DISPSTAT_7.state.vCounterFlag = 0;
         DISPSTAT_9.state.vCounterFlag = 0;
-        if(vCount == DISPSTAT_7.state.vCountSetting && DISPSTAT_7.state.vCounterIE){
+        if(vCount == DISPSTAT_7.getVCountSetting() && DISPSTAT_7.state.vCounterIE){
             bus->bus7->setIF(2, true);
             DISPSTAT_7.state.vCounterFlag = 1;
         }
-        if(vCount == DISPSTAT_9.state.vCountSetting && DISPSTAT_9.state.vCounterIE){
+        if(vCount == DISPSTAT_9.getVCountSetting() && DISPSTAT_9.state.vCounterIE){
             bus->bus9->setIF(2, true);
             DISPSTAT_9.state.vCounterFlag = 1;
         }
     }
-    else if(vCount == DISPSTAT_7.state.vCountSetting && DISPSTAT_7.state.vCounterIE){
-        bus->bus7->setIF(2, true);
-        DISPSTAT_7.state.vCounterFlag = 1;
-    }
-    else if(vCount == DISPSTAT_9.state.vCountSetting && DISPSTAT_9.state.vCounterIE){
-        bus->bus9->setIF(2, true);
-        DISPSTAT_9.state.vCounterFlag = 1;
+    if(vCount < 263){
+        if(vCount == DISPSTAT_7.getVCountSetting()){
+            DISPSTAT_7.state.vCounterFlag = 1;
+            if(DISPSTAT_7.state.vCounterIE)
+                bus->bus7->setIF(2, true);
+        }
+        else{
+            DISPSTAT_7.state.vCounterFlag = 0;
+        }
+        if(vCount == DISPSTAT_9.getVCountSetting()){
+            DISPSTAT_9.state.vCounterFlag = 1;
+            if(DISPSTAT_9.state.vCounterIE)
+                bus->bus9->setIF(2, true);
+        }
+        else{
+            DISPSTAT_9.state.vCounterFlag = 0;
+        }
     }
     if(vCount >= 262){
         DISPSTAT_7.state.vBlankFlag = 0;

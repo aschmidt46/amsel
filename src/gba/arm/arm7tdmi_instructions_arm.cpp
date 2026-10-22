@@ -671,8 +671,7 @@ bool gba::CPU::executeSingleDataTransfer(Word instruction)
             writeByte(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
         else{
-            modifiedBase &= ~(0b11); // Wort Alignment (Immer)
-            writeWordUnaligned(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
+            writeWordUnaligned(modifiedBase & ~0b11u, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
     }
 

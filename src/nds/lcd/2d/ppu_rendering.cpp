@@ -447,8 +447,18 @@ void PPU::drawSprites(){
                 pixel &= 0xF;
             }
             Byte paletteIndex =  bpp8 ? pixel : pixel | (paletteBank << 4);
-            HalfWord colorLow = paletteRam[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
-            HalfWord colorHigh = paletteRam[2 * Word(paletteIndex) + 0x201];
+            HalfWord colorLow, colorHigh;
+            // if(sprite.attr0.state.gfxMode == 0b11){ // bitmap obj
+            //     std::cout << "found bitmap obj\n";
+            // }
+            if(LCDCONTROL.state.useOBJExtendedPalettes & bpp8 && objExtendedPalette.ptr != nullptr){
+                colorLow = objExtendedPalette.ptr[2 * Word(paletteIndex) + sprite.attr2.state.paletteBank * 0x200];
+                colorHigh = objExtendedPalette.ptr[2 * Word(paletteIndex) + sprite.attr2.state.paletteBank * 0x200 + 1];
+            }
+            else{
+                colorLow = paletteRam[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
+                colorHigh = paletteRam[2 * Word(paletteIndex) + 0x201];
+            }
             HalfWord color = colorLow | (colorHigh << 8);
             Byte red = color & 0b11111;
             Byte green = (color >> 5) & 0b11111;
@@ -489,7 +499,7 @@ Word PPU::seIndexFast(Word tx, Word ty, BGCNT_T bgcnt)
 constexpr std::array<std::pair<Word, Word>, 4> regularBgrSizes = {std::pair{256,256}, std::pair{512,256}, std::pair{256,512}, std::pair{512,512}};
 constexpr std::array<std::pair<Word, Word>, 4> affineBgrSizes =  {std::pair{128,128}, std::pair{256,256}, std::pair{512,512}, std::pair{1024,1024}};
 
-template <bool isAffine, bool bpp8>
+template <bool isAffine, bool bpp8, bool extended>
 void PPU::drawBG(const int index)
 {
     const BGCNT_T &CONTROL = BG_CNT[index];
@@ -547,12 +557,13 @@ void PPU::drawBG(const int index)
     Word inTileX = mapX % 8;
     Word inTileY = mapY % 8;
     Word screenIndex = sbb;
-    const Word screenEntrySize = isAffine ? 1 : 2;
+    bool entries16Bit = (isAffine && (extended && !CONTROL.state.colorsPalettes)) || !isAffine; // Spezialfall extended mit 16bit bgmap
+    const Word screenEntrySize = entries16Bit ? 2 : 1;
     Byte entryLow = entries[screenIndex * screenEntrySize];
-    Byte entryHigh = isAffine ? 0 : entries[screenIndex * screenEntrySize + 1];
+    Byte entryHigh = !entries16Bit ? 0 : entries[screenIndex * screenEntrySize + 1];
     ScreenEntry entry;
     entry.raw = entryLow | (HalfWord(entryHigh) << 8);
-    Word tileID = isAffine ? entryLow : entry.state.TileID;
+    Word tileID = !entries16Bit ? entryLow : entry.state.TileID;
     Byte* tileStart = chrEntries + tileWidth * tileID;
     // Flipping:
     bool flipH = !isAffine && entry.state.flipHorizontal;
@@ -719,8 +730,8 @@ PIXEL_T PPU::drawPixelMode0() {
     for(int i = 3; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
-                drawBG<false, true>(i);
-            else drawBG<false, false>(i);
+                drawBG<false, true, false>(i);
+            else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
@@ -739,7 +750,7 @@ PIXEL_T PPU::drawPixelMode1() {
 
     //affine
     if(displayBG(3) && actives.bgActive(3)){
-        drawBG<true, true>(3);
+        drawBG<true, true, false>(3);
         if(latchedBg[3].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
@@ -747,8 +758,8 @@ PIXEL_T PPU::drawPixelMode1() {
     for(int i = 2; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
-                drawBG<false, true>(i);
-            else drawBG<false, false>(i);
+                drawBG<false, true, false>(i);
+            else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
@@ -767,13 +778,13 @@ PIXEL_T PPU::drawPixelMode2() {
 
     //affine
     if(displayBG(3) && actives.bgActive(3)){
-        drawBG<true, true>(3);
+        drawBG<true, true, false>(3);
         if(latchedBg[3].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
 
     if(displayBG(2) && actives.bgActive(2)){
-        drawBG<true, true>(2);
+        drawBG<true, true, false>(2);
         if(latchedBg[2].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
     }
@@ -782,8 +793,8 @@ PIXEL_T PPU::drawPixelMode2() {
     for(int i = 1; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
-                drawBG<false, true>(i);
-            else drawBG<false, false>(i);
+                drawBG<false, true, false>(i);
+            else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
@@ -802,7 +813,7 @@ PIXEL_T PPU::drawPixelMode3() {
 
     //affine ---------------------------------------------------------------------- EXTENDED ??????
     if(displayBG(3) && actives.bgActive(3)){
-        drawBG<true, true>(3);
+        drawBG<true, true, true>(3);
         if(latchedBg[3].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
@@ -810,8 +821,8 @@ PIXEL_T PPU::drawPixelMode3() {
     for(int i = 2; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
-                drawBG<false, true>(i);
-            else drawBG<false, false>(i);
+                drawBG<false, true, false>(i);
+            else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
@@ -829,13 +840,13 @@ PIXEL_T PPU::drawPixelMode4() {
 
     //affine ---------------------------------------------------------------------- EXTENDED ??????
     if(displayBG(3) && actives.bgActive(3)){
-        drawBG<true, true>(3);
+        drawBG<true, true, true>(3);
         if(latchedBg[3].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
 
     if(displayBG(2) && actives.bgActive(2)){
-        drawBG<true, true>(2);
+        drawBG<true, true, false>(2);
         if(latchedBg[2].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
     }
@@ -843,8 +854,8 @@ PIXEL_T PPU::drawPixelMode4() {
     for(int i = 1; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
-                drawBG<false, true>(i);
-            else drawBG<false, false>(i);
+                drawBG<false, true, false>(i);
+            else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
@@ -862,14 +873,14 @@ PIXEL_T PPU::drawPixelMode5() {
 
     //affine ---------------------------------------------------------------------- EXTENDED ??????
     if(displayBG(3) && actives.bgActive(3)){
-        drawBG<true, true>(3);
+        drawBG<true, true, true>(3);
         if(latchedBg[3].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
 
     //affine ---------------------------------------------------------------------- EXTENDED ??????
     if(displayBG(2) && actives.bgActive(2)){
-        drawBG<true, true>(2);
+        drawBG<true, true, true>(2);
         if(latchedBg[2].priority < 99)
             insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
     }
@@ -878,8 +889,8 @@ PIXEL_T PPU::drawPixelMode5() {
     for(int i = 1; i >= 0; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
-                drawBG<false, true>(i);
-            else drawBG<false, false>(i);
+                drawBG<false, true, false>(i);
+            else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }

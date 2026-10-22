@@ -160,7 +160,7 @@ namespace nds{
         bool spriteCollidesCurrentPixel(const OAMAttribs &attrs);
 
         void drawSprites();
-        template<bool isAffine, bool bpp8>
+        template<bool isAffine, bool bpp8, bool extended>
         void drawBG(const int index);
 
         PIXEL_T drawPixelMode0();

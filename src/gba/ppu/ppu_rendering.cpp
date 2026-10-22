@@ -258,14 +258,11 @@ void gba::PPU::increment()
         mosaicObjYCounter = 0;
 
         LCDSTATUS.state.vCounterFlag = 0;
-        if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
-            bus.lock()->setIF(2, true);
-            LCDSTATUS.state.vCounterFlag = 1;
-        }
     }
-    else if(currentScanline == LCDSTATUS.state.vCountSetting && LCDSTATUS.state.vCounterIE){
-        bus.lock()->setIF(2, true);
+    if(currentScanline == LCDSTATUS.state.vCountSetting){
         LCDSTATUS.state.vCounterFlag = 1;
+        if(LCDSTATUS.state.vCounterIE)
+            bus.lock()->setIF(2, true);
     }
     if(currentScanline >= 227){
         LCDSTATUS.state.vBlankFlag = 0;

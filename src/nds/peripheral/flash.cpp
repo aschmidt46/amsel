@@ -86,7 +86,7 @@ void nds::Flash::write(Byte data)
                     return;
                 }
                 case 0xD8:{ // page erase
-                    state = FLASH_PE_ADDRESS;
+                    state = FLASH_SE_ADDRESS;
                     readWriteIndex = 0;
                     address = 0;
                     // std::cout << "FLASH PAGE WRITE ADDRESS\n";
@@ -149,7 +149,7 @@ void nds::Flash::write(Byte data)
                 }
                 else if(state == FLASH_SE_ADDRESS){
                     Word addr = readWriteIndex & ~0xFFFF; // align sector
-                    for(Word i = addr; i < addr; i++){
+                    for(Word i = addr; i < addr + 0x10000; i++){
                         if(i < flashData.size())
                             flashData[i] = 0xFF;
                     }

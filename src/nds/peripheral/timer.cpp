@@ -7,6 +7,15 @@
 
 using namespace nds;
 
+template <typename ConcreteBus>
+inline Word Timer<ConcreteBus>::currentValue()
+{
+    if(!(control.raw & (1u << 7)) || usesPreviousTimer()) return value;
+    const size_t clocksPassed = cbus->getClocks() - clocksStart;
+    const size_t valueIncrement = clocksPassed / timerDividers[control.raw & 0b11];
+    return (value + valueIncrement) & 0xFFFF;
+}
+
 template<typename ConcreteBus>
 void Timer<ConcreteBus>::onWrite(Word addr, Byte val){
     if(addr < 2){
@@ -14,31 +23,26 @@ void Timer<ConcreteBus>::onWrite(Word addr, Byte val){
     }
     else if(addr < 4){
         bool startBitWasSet = control.raw & (1u << 7);
+        Word oldVal = currentValue();
         control.OnWriteByte(addr,val);
-        if(!startBitWasSet && (control.raw & (1u << 7))){
+        bool startBitIsSet = control.raw & (1u << 7);
+        if(!startBitWasSet && startBitIsSet){
             value = reload.raw;
             if(!usesPreviousTimer()){
                 reschedule();
             }
         }
+        else if(startBitWasSet && !startBitIsSet) value = oldVal;
     }
 }
 
 template<typename ConcreteBus>
 Byte Timer<ConcreteBus>::onRead(Word addr){
-    const size_t clocksPassed = cbus->getClocks() - clocksStart;
-    const size_t valueIncrement = clocksPassed / timerDividers[control.raw & 0b11];
     if(addr == 0){
-        if(usesPreviousTimer())
-            return value & 0xFF;
-        else
-            return (value + valueIncrement) & 0xFF;
+        return currentValue() & 0xFF;
     }
     else if(addr == 1){
-        if(usesPreviousTimer())
-            return value >> 8;
-        else
-            return (value + valueIncrement) >> 8;
+        return currentValue() >> 8;
     }
     else if(addr < 4){
         return control.OnReadByte(addr);

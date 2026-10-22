@@ -75,7 +75,7 @@ template<>
 void gba::Scheduler<nds::EventType, nds::SharedBus>::init()
 {
     heap.push({1536, NDSEVENT_PPU_HBLANK});
-    heap.push({294912, NDSEVENT_PPU_VBLANK});
+    heap.push({408960, NDSEVENT_PPU_VBLANK});
 }
 
 template<>

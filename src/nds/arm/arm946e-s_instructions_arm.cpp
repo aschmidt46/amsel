@@ -81,6 +81,7 @@ bool CPU::executeBranchLink(Word instruction)
 // Verhalten mit R15 als Basis unklar, mögliche Fehlerquelle, sollte aber eigentlich nicht benutzt werden
 bool CPU::executeBlockDataTransfer(Word instruction)
 {
+    auto callState = state();
     Word Rn = (instruction & (0b1111u << 16)) >> 16;
     const bool L = instruction & (1u << 20);
     const bool W = instruction & (1u << 21);
@@ -187,6 +188,9 @@ bool CPU::executeBlockDataTransfer(Word instruction)
         }
         else wb = true;
     }
+
+    // Thumb Rb in Rlist: "no writeback (LDM/ARMv4/ARMv5; at this point, THUMB opcodes work different than ARM opcodes)." (gbatek)
+    if(L && baseInRegisterList && callState == THUMB) wb = false;
 
     if(wb){
         *baseReg = origAddr + ( (U ? 1 : -1) * numberOfRegs * incr);
@@ -770,8 +774,7 @@ bool CPU::executeSingleDataTransfer(Word instruction)
             writeByte(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
         else{
-            modifiedBase &= ~(0b11); // Wort Alignment (Immer)
-            writeWordUnaligned(modifiedBase, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
+            writeWordUnaligned(modifiedBase & ~0b11u, *registerMap[mode()][sourceDestReg] + (sourceDestReg == R15 ? 4 : 0));
         }
     }
 

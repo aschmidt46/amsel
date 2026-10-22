@@ -25,6 +25,8 @@ namespace nds{
 
         void onIncrement();
 
+        Word currentValue();
+
         public:
         Timer() : reload(0), control(0){};
         Timer(int num, SharedBus* bptr, ConcreteBus* cbus, EventType e) : scheduleEvent(e), number(num), bus(bptr), cbus(cbus), reload(0), control(2){};
