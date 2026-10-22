@@ -294,32 +294,7 @@ void nds::Cartridge::onWrite(Word addr, Byte val)
     else if(addr >= 0x40001A8 && addr < 0x40001B0){
         addr -= 0x40001A8;
         // std::cout << "ROMCMD write byte:" << addr << " sz:1 " << "data:" << getHex0x(val,2)<<"\n";
-        if(addr == 0){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0x00FFFFFFFFFFFFFF) | (uint64_t(val) << 56);
-        }
-        else if(addr == 1){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0xFF00FFFFFFFFFFFF) | (uint64_t(val) << 48);
-        }
-        else if(addr == 2){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0xFFFF00FFFFFFFFFF) | (uint64_t(val) << 40);
-        }
-        else if(addr == 3){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0xFFFFFF00FFFFFFFF) | (uint64_t(val) << 32);
-        }
-        else if(addr == 4){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0xFFFFFFFF00FFFFFF) | (uint64_t(val) << 24);
-        }
-        else if(addr == 5){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0xFFFFFFFFFF00FFFF) | (uint64_t(val) << 16);
-        }
-        else if(addr == 6){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0xFFFFFFFFFFFF00FF) | (uint64_t(val) << 8);
-        }
-        else if(addr == 7){
-            gameCardBusCommandOut = (gameCardBusCommandOut & 0xFFFFFFFFFFFFFF00) | (uint64_t(val));
-            // bus->setHalt();
-        }
-        // gameCardBusCommandOut = (gameCardBusCommandOut & ~(uint64_t(0xFF) << (56 - addr * 8))) | (uint64_t(val) << (56 - addr * 8));
+        gameCardBusCommandOut = (gameCardBusCommandOut & ~(uint64_t(0xFF) << (56 - addr * 8))) | (uint64_t(val) << (56 - addr * 8));
     }
 }
 

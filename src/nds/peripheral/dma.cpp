@@ -63,6 +63,7 @@ void DMAChannel<ConcreteBus>::onWrite(Word addr, Byte val){
                 std::cout << "Source Addr " << getHex0x(SourceAddress.raw, 8) << ", Dest Addr " << getHex0x(DestinationAddress.raw, 8) << ", Size " << getHex0x(WordCount.raw, 8) << "\n";
                 printStartTiming();
             }
+            if(startTiming == DMA_GBA_CARTRIDGE_SLOT) bus->setHalt();
             resetInternalCounters(true, true);
             if(startTiming == DMA_IMMEDIATE){
                 commenceTransfer();

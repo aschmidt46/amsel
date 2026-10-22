@@ -98,6 +98,11 @@ void nds::SharedBus::loadCartHLE(const std::vector<uint8_t> &bytes)
         bus9->writeWord(0x027FFE00 + i, *(Word*)&bytes[i]);
     }
 
+    std::cout << "rom start: " << getHex0x(nds9romRomStart, 8) << "\n";
+    std::cout << "load to: " << getHex0x(nds9romRamStart, 8) << "\n";
+    std::cout << "entry: " << getHex0x(entrynds9, 8) << "\n";
+    std::cout << "sz: " << getHex0x(nds9romSize, 8) << "\n";
+
     
     size_t j = nds9romRamStart;
     size_t rom9End = nds9romRomStart < 0x8000 ? (nds9romRomStart + nds9romSize > 0x8000 ? nds9romRomStart + nds9romSize : 0x8000) : nds9romRomStart + nds9romSize;

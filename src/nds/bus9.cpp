@@ -28,11 +28,6 @@ Byte nds::Bus9::readByte(Word addr)
 
 void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
 {
-    if(addr >= 0x22acbc4 && addr < 0x22acbc8){
-        std::cout << "In Bus 9: ";
-        std::cout << "Schreiben an jene + " << addr - 0x22acbc4 << ": " << getHex0x(val, 2) << "\n";
-        // setHalt();
-    }
     if(!isDMA){
         const Word itcmEnd = cp15.itcmRegion();
         const auto [dtcmStart, dtcmEnd] = cp15.dtcmRegion();
@@ -115,7 +110,7 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
         sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0xFF00) | msb;
     }
     else if(addr == 0x04000205){
-        sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0x00FF) | (HalfWord(val & 0b10001000) << 8);
+        sharedBus->EXMEMCNT = (sharedBus->EXMEMCNT & 0x60FF) | (HalfWord(val & 0b10001000) << 8);
     }
 
     // Interrupt handling
@@ -286,7 +281,7 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
         // setHalt();
         return IME.OnReadByte(addr) & 1u;
     }
-    if(addr >= 0x0400209 && addr < 0x04000210) return 0;
+    if(addr >= 0x04000209 && addr < 0x04000210) return 0;
     if(addr == 0x04000210){
         return IE;
     }
@@ -468,7 +463,7 @@ void nds::Bus9::clock()
     clocks++;
     // 66 MHz
     cpu.clock();
-    // cpu.clock();
+    cpu.clock();
     maths.clock();
 
 }

@@ -36,7 +36,7 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         sharedBus->writeByte(addr, val);
     }
     // Shared WRAM
-    if(addr >= 0x03000000 && addr < 0x03800000){
+    else if(addr >= 0x03000000 && addr < 0x03800000){
         const auto [m, o] = sharedBus->wramAllocationNDS7[sharedBus->wramCNT];
         addr -= 0x03000000;
         if(m == 0){ // keine Allokation -> Mirrors von arm7WRAM
@@ -52,7 +52,7 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         arm7WRAM[addr % 0x10000] = val;
     }
 
-    if(addr >= 0x04000004 && addr < 0x04000008){
+    else if(addr >= 0x04000004 && addr < 0x04000008){
         sharedBus->lcd->writeRegister(addr, val, false);
     }
 
@@ -146,7 +146,7 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
         POWCNT2 = val & 0b11;
     }
 
-    if(addr >= 0x04000400 && addr < 0x04000500){
+    else if(addr >= 0x04000400 && addr < 0x04000500){
         audioStub[addr - 0x04000400] = val;
     }
 
@@ -322,7 +322,7 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
 
     if(addr >= 0x04000400 && addr < 0x04000500){
-        // return 0;
+        return 0;
         return audioStub[addr - 0x04000400];
     }
 

@@ -9,6 +9,9 @@ void nds::SPI::startTransfer()
 {
     SPICNT.state.busyFlag = 1;
     switch(SPICNT.state.deviceSelect){
+        case 0:
+            power.write(SPIDATA);
+            break;
         case 1:
             firmware.write(SPIDATA);
             break;
@@ -17,6 +20,7 @@ void nds::SPI::startTransfer()
             break;
         default: break;
     }
+    // std::cout << "Transfer on spi device " << SPICNT.state.deviceSelect << "\n";
     bus->sharedBus->scheduler->scheduleEvent({.timePoint= 10, .type= NDSEVENT_SPITransferComplete});
 }
 
@@ -28,6 +32,8 @@ void nds::SPI::unselectDevices()
     };
     if(firmware.state != FIRMWARE_DP)
         firmware.state = FIRMWARE_IDLE;
+    power.awaitRead = false;
+    power.indexSelected = false;
     touch.reset();
 }
 
@@ -79,6 +85,9 @@ void nds::SPI::completeTransfer()
     }
 
     switch(SPICNT.state.deviceSelect){
+        case 0:
+            SPIDATA = power.read();
+            break;
         case 1:
             SPIDATA = firmware.read();
             break;
@@ -90,6 +99,9 @@ void nds::SPI::completeTransfer()
 
     if(SPICNT.state.transferSize){ // jedes zweite Byte wird verworfen
         switch(SPICNT.state.deviceSelect){
+            case 0:
+                (void)power.read();
+                break;
             case 1:
                 (void)firmware.read();
                 break;

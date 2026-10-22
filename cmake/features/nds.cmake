@@ -69,6 +69,8 @@ src/nds/peripheral/firmware.h
 src/nds/peripheral/firmware.cpp
 src/nds/peripheral/touch.h
 src/nds/peripheral/touch.cpp
+src/nds/peripheral/power_management.h
+src/nds/peripheral/power_management.cpp
 src/nds/peripheral/eeprom.h
 src/nds/peripheral/eeprom.cpp
 src/nds/peripheral/flash.h

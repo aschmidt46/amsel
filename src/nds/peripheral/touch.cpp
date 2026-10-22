@@ -13,8 +13,8 @@ void nds::TouchController::reset()
 
 void nds::TouchController::setTouch(float x, float y)
 {
-    touchX12 = 0.75 * x / 3;//(int)scaleAxisComplex(0, 256, x, 0x100, 0xED0);
-    touchY12 = 0.75 * y / 3;//(int)scaleAxisComplex(0, 192, y, 0xB0, 0xF20);
+    touchX12 = 0.75 * x / 3.0;//(int)scaleAxisComplex(0, 256, x, 0x100, 0xED0);
+    touchY12 = 0.75 * y / 3.0;//(int)scaleAxisComplex(0, 192, y, 0xB0, 0xF20);
 
     touchX8 = (float(touchX12) / float(0x1000)) * 0xFF;
     touchY8 = (float(touchY12) / float(0x1000)) * 0xFF;

@@ -2,6 +2,7 @@
 #include "../bus_types.h"
 #include "firmware.h"
 #include "touch.h"
+#include "power_management.h"
 
 namespace nds{
 
@@ -38,6 +39,7 @@ namespace nds{
         public:
         Firmware firmware;
         TouchController touch;
+        PowerManagement power;
         SPI() : firmware(nullptr), touch(nullptr){};
         SPI(Bus7* bus) : bus(bus), firmware(bus), touch(bus){};
 
