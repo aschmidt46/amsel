@@ -60,7 +60,7 @@ void nds::Cartridge::startTransfer()
         case 0xA:{
             // Aktiviere Main
             std::cout << "Main Data Mode\n";
-            std::cout << "MUSS NACH SECURE AREA KOMMEN\n";
+            useKEY1 = false;
             oncePerCycle = false;
             currentMode = GameCardEventType_Dummy;
             remainingLength = 0x910;
@@ -100,7 +100,7 @@ void nds::Cartridge::startTransfer()
             currentMode = GameCardEventType_ChipID;
             oncePerCycle = false;
             if(remainingLength > 0){
-                bus->scheduler->scheduleEvent({.timePoint = 80 + romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
+                bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
             }
             else{
                 checkAndResend();
@@ -110,11 +110,32 @@ void nds::Cartridge::startTransfer()
         case 0x1:{
             std::cout << "CHIP ID KEY1 Command\n";
             romControl.state.dataWordStatus = 0;
-            remainingLength = 0x2000;
-            currentMode = GameCardEventType_Dummy_Chip;
+            remainingLength = romControl.getTranferSize();
+            currentMode = GameCardEventType_ChipID;
             oncePerCycle = false;
-            bus->scheduler->scheduleEvent({.timePoint = 80 + romControl.state.transferCLKRate ? 8u : 5u, .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
-            bus->scheduler->scheduleEvent({.timePoint = 1000, .type = NDSEVENT_GameCardStopBlock});
+            if(remainingLength > 0){
+                bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
+            }
+            else{
+                checkAndResend();
+            }
+            break;
+        }
+        case 0x2:{
+            romControl.state.dataWordStatus = 0;
+            remainingLength = romControl.getTranferSize();
+            currentMode = GameCardEventType_DataWord;
+            uint64_t command = gameCardBusCommandOut;
+            decrypt64((Byte*)&command);
+            const Word block = (command >> 44) & 0xFFFF;
+            offsetAddress = block * 0x1000;
+            oncePerCycle = false;
+            if(remainingLength > 0){
+                bus->scheduler->scheduleEvent({.timePoint = 80 + (romControl.state.transferCLKRate ? 8u : 5u), .type = NDSEVENT_GameCardEvent, .args={.index = currentMode}});
+            }
+            else{
+                checkAndResend();
+            }
             break;
         }
         default:{
@@ -184,22 +205,16 @@ nds::Cartridge::Cartridge(SharedBus *bus, const std::vector<Byte> &cart, bool hl
     }
 
     if(!hle){ // Nur falls Cartridge bereits entschlüsselt ist!!
-        // initKeycode(cartID, 1, 8);
-        // encrypt64(cartridge.data() + 0x78);  NEIN
-        initKeycode(cartID, 3, 8);
-        for(size_t i = 0; i < 0x800; i += 8){
-            encrypt64(secureArea + i);
+        if(*(Word*)secureArea == 0xE7FFDEFF && *(Word*)(secureArea + 4) == 0xE7FFDEFF){
+            std::memcpy(secureArea, "encryObj", 8);
+            initKeycode(cartID, 3, 8);
+            for(size_t i = 0; i < 0x800; i += 8){
+                encrypt64(secureArea + i);
+            }
+            initKeycode(cartID, 2, 8);
+            encrypt64(secureArea);
         }
-        // danach?
-        initKeycode(cartID, 2, 8);
-        encrypt64(secureArea);
-        // std::cout << "Key1 test:\n";
-        // uint64_t test = 0xC0FFEEFEC0FFEEFEull;
-        // std::cout << getHex0x(test, 16) << "\n";
-        // encrypt64((Byte*)&test);
-        // std::cout << getHex0x(test, 16) << "\n";
-        // decrypt64((Byte*)&test);
-        // std::cout << getHex0x(test, 16) << "\n";
+        else initKeycode(cartID, 2, 8);
     }
 }
 
@@ -216,9 +231,7 @@ Byte nds::Cartridge::onRead(Word addr)
             std::cout << "Chip select pulled up\n";
             unselectDevices();
         }
-        const auto tmp = AUXSPIDATA;
-        AUXSPIDATA = 0;
-        return tmp;
+        return AUXSPIDATA;
     }
     if(addr == 0x40001A4){
         return romControl.raw;
@@ -335,6 +348,7 @@ void nds::Cartridge::completeTransfer()
             AUXSPIDATA = flash->read();
             break;
     }
+    if(!AUXSPICNT.state.holdChipSelect) unselectDevices();
 }
 
 bool nds::Cartridge::canSave()

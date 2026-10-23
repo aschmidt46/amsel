@@ -133,9 +133,9 @@ template<typename ConcreteBus>
 void DMAChannel<ConcreteBus>::commenceTransfer()
 {
     // std::cout << "Starting DMA Transfer on Bus " << (isDMA7() ? "7" : "9") << " with Timing ";
-    printStartTiming(); 
-    std::cout << getHex0x(currentSourceAddr, 8) << "\n";
-    std::cout << getHex0x(currentDestAddr, 8) << "\n";
+    // printStartTiming(); 
+    // std::cout << getHex0x(currentSourceAddr, 8) << "\n";
+    // std::cout << getHex0x(currentDestAddr, 8) << "\n";
     size_t remaining = 0;
     while(currentCount < maxCount){
         remaining += 2;

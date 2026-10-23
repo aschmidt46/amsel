@@ -155,6 +155,9 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
     else if(addr >= 0x4000280 && addr < 0x40002C0){
         maths.onWrite(addr, val);
     }
+    else if(addr == 0x4000300){
+        POSTFLG = val & 1;
+    }
 
     else if(addr == 0x4000304){ // Muss noch implementiert werden
         POWCNT1 = (POWCNT1 & 0xFF00) | (val & 0b1111);
@@ -321,7 +324,7 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
     if(addr >= 0x4000280 && addr < 0x40002C0){
         return maths.onRead(addr);
     }
-    if(addr == 0x4000300){ // --------------------------------------- Achtung, bit 1 ist schreibbar aus BIOS, siehe Gbatek
+    if(addr == 0x4000300){
         return POSTFLG;
     }
     if(addr == 0x4000304){ // Muss noch implementiert werden

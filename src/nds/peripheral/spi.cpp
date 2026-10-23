@@ -66,13 +66,7 @@ Byte nds::SPI::onRead(Word addr)
         return SPICNT.raw >> 8;
     }
     if(addr == 0x040001C2){
-        if(!SPICNT.state.chipSelectHold && !SPICNT.state.busyFlag){
-            std::cout << "SPI CS pulled up\n";
-            unselectDevices();
-        }
-        const auto tmp = SPIDATA;
-        SPIDATA = 0;
-        return tmp;
+        return SPIDATA;
     }
     return 0;
 }
@@ -111,6 +105,7 @@ void nds::SPI::completeTransfer()
             default: break;
         }
     }
+    if(!SPICNT.state.chipSelectHold) unselectDevices();
 }
 
 void nds::SPI::setFirmware(const std::vector<Byte> &data)

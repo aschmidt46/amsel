@@ -221,6 +221,8 @@ Byte nds::Firmware::read()
             const Byte current = readWriteIndex < firmwareData.size() ? firmwareData[readWriteIndex] : 0;
             // std::cout << "read data firmware: " << getHex0x(current, 2) << "\n";
             readWriteIndex++;
+            if(readWriteIndex >= firmwareData.size())
+                readWriteIndex = 0;
             return current;
         }
         default: break;

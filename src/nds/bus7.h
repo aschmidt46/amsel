@@ -28,6 +28,7 @@ namespace nds{
         gba::GeneralPurpose32 IME;
         
         HalfWord SOUNDCNTSTUB = 0;
+        HalfWord SOUNDBIASSTUB = 0;
         HalfWord RCNT = 0;
         std::array<Byte, 0x100> audioStub = {};
 

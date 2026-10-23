@@ -91,6 +91,7 @@ namespace nds{
                 if((tmp >> 60) == 0x4) return 4;
                 if((tmp >> 60) == 0x1) return 1;
                 if((tmp >> 60) == 0xA) return 0xA;
+                if((tmp >> 60) == 0x2) return 0x2;
             }
 
             return tmp >> 56;

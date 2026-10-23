@@ -138,6 +138,9 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     else if(addr == 0x04000217){
         IF = IF & ~(Word(val) << 24);
     }
+    else if(addr == 0x4000300){
+        POSTFLG = val & 1;
+    }
     else if(addr == 0x4000301){
         HALTCNT = val & 0b11000000;
         if((HALTCNT >> 6) == 2) cpu.enterHaltMode();
@@ -155,6 +158,12 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     }
     else if(addr == 0x04000501){
         SOUNDCNTSTUB = (SOUNDCNTSTUB & 0x00FF) | (HalfWord(val) << 8);
+    }
+    else if(addr == 0x4000504){
+        SOUNDBIASSTUB = (SOUNDBIASSTUB & 0xFF00) | val;
+    }
+    else if(addr == 0x4000505){
+        SOUNDBIASSTUB = (SOUNDBIASSTUB & 0x00FF) | (HalfWord(val & 0b11) << 8);
     }
 
     // Gamecart
@@ -331,6 +340,12 @@ Byte nds::Bus7::readByteFromWide(Word addr)
     }
     if(addr == 0x04000501){
         return SOUNDCNTSTUB >> 8;
+    }
+    if(addr == 0x4000504){
+        return SOUNDBIASSTUB;
+    }
+    if(addr == 0x4000505){
+        return SOUNDBIASSTUB >> 8;
     }
 
     // Gamecart
