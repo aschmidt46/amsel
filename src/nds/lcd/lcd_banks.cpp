@@ -148,7 +148,7 @@ void LCD::switchVramBank<0>(){ // 8 "Bänke" (16KB Blöcke) in Bank A
         }
     }
     else if(control.mst == 3){
-        engine3D.textureRearPlane[control.ofs] = {.ptr = vram.data(), .allocatedTo = BankIndex}; // allocated = A(0)
+        engine3D.textureRearPlane[control.ofs] = {.ptr = vramSync.data(), .allocatedTo = BankIndex}; // allocated = A(0)
     }
 }
 
@@ -218,7 +218,7 @@ void LCD::switchVramBank<1>(){
         }
     }
     else if(control.mst == 3){
-        engine3D.textureRearPlane[control.ofs] = {.ptr = vram.data() + BANK_B_BEGIN * 0x4000, .allocatedTo = BankIndex}; // allocated = B(1)
+        engine3D.textureRearPlane[control.ofs] = {.ptr = vramSync.data() + BANK_B_BEGIN * 0x4000, .allocatedTo = BankIndex}; // allocated = B(1)
     }
 }
 
@@ -287,7 +287,7 @@ void LCD::switchVramBank<2>(){
         }
     }
     else if(control.mst == 3){
-        engine3D.textureRearPlane[control.ofs] = {.ptr = vram.data() + BANK_C_BEGIN * 0x4000, .allocatedTo = BankIndex};
+        engine3D.textureRearPlane[control.ofs] = {.ptr = vramSync.data() + BANK_C_BEGIN * 0x4000, .allocatedTo = BankIndex};
     }
     else if(control.mst == 4){
         for(Byte i = 0; i < BANK_C_SIZE; i++){
@@ -370,7 +370,7 @@ void LCD::switchVramBank<3>(){
         }
     }
     else if(control.mst == 3){
-        engine3D.textureRearPlane[control.ofs] = {.ptr = vram.data() + BANK_D_BEGIN * 0x4000, .allocatedTo = BankIndex};
+        engine3D.textureRearPlane[control.ofs] = {.ptr = vramSync.data() + BANK_D_BEGIN * 0x4000, .allocatedTo = BankIndex};
     }
     else if(control.mst == 4){
         for(Byte i = 0; i < BANK_D_SIZE; i++){
@@ -452,12 +452,16 @@ void LCD::switchVramBank<4>(){
     }
     else if(control.mst == 3){
         for(Byte i = 0; i < BANK_E_SIZE; i++){
-            engine3D.texturePalette[i] = {.ptr = vram.data() + BANK_E_BEGIN * 0x4000 + i * 0x4000, .allocatedTo = BankIndex};
+            engine3D.texturePalette[i] = {.ptr = vramSync.data() + BANK_E_BEGIN * 0x4000 + i * 0x4000, .allocatedTo = BankIndex};
         }
     }
     else if(control.mst == 4){
         for(Byte i = 0; i < 4; i++){
-            engineA.bgExtendedPalette[i] = {.ptr = vram.data() + BANK_E_BEGIN * 0x4000 + i * 0x2000, .allocatedTo = BankIndex}; // 8KB Bänke, Index Offset = 8KB
+            q.enqueue(PPUAllocationBGEvent{
+                .allocation = {.ptr = vramSync.data() + BANK_E_BEGIN * 0x4000 + i * 0x2000, .allocatedTo = BankIndex}, // 8KB Bänke, Index Offset = 8KB
+                .engine = &engineA,
+                .index = i
+            });
         }
     }
 }
@@ -498,8 +502,11 @@ void LCD::clearVramBank<4>(){
     }
     else if(control.mst == 4){
         for(Byte i = 0; i < 4; i++){
-            if(engineA.bgExtendedPalette[i].allocatedTo == BankIndex)
-                engineA.bgExtendedPalette[i].ptr = nullptr;
+            q.enqueue(PPUAllocationBGEvent{
+                .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+                .engine = &engineA,
+                .index = i
+            });
         }
     }
 }
@@ -530,16 +537,27 @@ void LCD::switchVramBank<5>(){
     }
     else if(control.mst == 3){
         const Word index = ofs0 + 4 * ofs1;
-        engine3D.texturePalette[index] = {.ptr = vram.data() + BANK_F_BEGIN * 0x4000, .allocatedTo = BankIndex};
+        engine3D.texturePalette[index] = {.ptr = vramSync.data() + BANK_F_BEGIN * 0x4000, .allocatedTo = BankIndex};
     }
     else if(control.mst == 4){
         const Word ofs = std::min(control.ofs, (Byte)1u);
         const Word index = ofs * 2; // 0 = 0..1, 1 = 2..3
-        engineA.bgExtendedPalette[index] = {.ptr = vram.data() + BANK_F_BEGIN * 0x4000, .allocatedTo = BankIndex};
-        engineA.bgExtendedPalette[index + 1] = {.ptr = vram.data() + BANK_F_BEGIN * 0x4000 + 0x2000, .allocatedTo = BankIndex};
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = vramSync.data() + BANK_F_BEGIN * 0x4000, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index
+        });
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = vramSync.data() + BANK_F_BEGIN * 0x4000 + 0x2000, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index + 1
+        });
     }
     else if(control.mst == 5){
-        engineA.objExtendedPalette = {.ptr = vram.data() + BANK_F_BEGIN * 0x4000, .allocatedTo = BankIndex};
+        q.enqueue(PPUAllocationOBJEvent{
+            .allocation = {.ptr = vramSync.data() + BANK_F_BEGIN * 0x4000, .allocatedTo = BankIndex},
+            .engine = &engineA
+        });
     }
 }
 
@@ -577,14 +595,22 @@ void LCD::clearVramBank<5>(){
     else if(control.mst == 4){
         const Word ofs = std::min(control.ofs, (Byte)1u);
         const Word index = ofs * 2; // 0 = 0..1, 1 = 2..3
-        if(engineA.bgExtendedPalette[index].allocatedTo == BankIndex)
-            engineA.bgExtendedPalette[index].ptr = nullptr;
-        if(engineA.bgExtendedPalette[index + 1].allocatedTo == BankIndex)
-            engineA.bgExtendedPalette[index + 1].ptr = nullptr;
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index
+        });
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index+1
+        });
     }
     else if(control.mst == 5){
-        if(engineA.objExtendedPalette.allocatedTo == BankIndex)
-            engineA.objExtendedPalette.ptr = nullptr;
+        q.enqueue(PPUAllocationOBJEvent{
+            .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+            .engine = &engineA
+        });
     }
 }
 
@@ -614,16 +640,27 @@ void LCD::switchVramBank<6>(){
     }
     else if(control.mst == 3){
         const Word index = ofs0 + 4 * ofs1;
-        engine3D.texturePalette[index] = {.ptr = vram.data() + BANK_G_BEGIN * 0x4000, .allocatedTo = BankIndex};
+        engine3D.texturePalette[index] = {.ptr = vramSync.data() + BANK_G_BEGIN * 0x4000, .allocatedTo = BankIndex};
     }
     else if(control.mst == 4){
         const Word ofs = std::min(control.ofs, (Byte)1u);
         const Word index = ofs * 2; // 0 = 0..1, 1 = 2..3
-        engineA.bgExtendedPalette[index] = {.ptr = vram.data() + BANK_G_BEGIN * 0x4000, .allocatedTo = BankIndex};
-        engineA.bgExtendedPalette[index + 1] = {.ptr = vram.data() + BANK_G_BEGIN * 0x4000 + 0x2000, .allocatedTo = BankIndex};
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = vramSync.data() + BANK_G_BEGIN * 0x4000, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index
+        });
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = vramSync.data() + BANK_G_BEGIN * 0x4000 + 0x2000, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index + 1
+        });
     }
     else if(control.mst == 5){
-        engineA.objExtendedPalette = {.ptr = vram.data() + BANK_G_BEGIN * 0x4000, .allocatedTo = BankIndex};
+        q.enqueue(PPUAllocationOBJEvent{
+            .allocation = {.ptr = vramSync.data() + BANK_G_BEGIN * 0x4000, .allocatedTo = BankIndex},
+            .engine = &engineA
+        });
     }
 }
 
@@ -661,14 +698,22 @@ void LCD::clearVramBank<6>(){
     else if(control.mst == 4){
         const Word ofs = std::min(control.ofs, (Byte)1u);
         const Word index = ofs * 2; // 0 = 0..1, 1 = 2..3
-        if(engineA.bgExtendedPalette[index].allocatedTo == BankIndex)
-            engineA.bgExtendedPalette[index].ptr = nullptr;
-        if(engineA.bgExtendedPalette[index + 1].allocatedTo == BankIndex)
-            engineA.bgExtendedPalette[index + 1].ptr = nullptr;
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index
+        });
+        q.enqueue(PPUAllocationBGEvent{
+            .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+            .engine = &engineA,
+            .index = index + 1
+        });
     }
     else if(control.mst == 5){
-        if(engineA.objExtendedPalette.allocatedTo == BankIndex)
-            engineA.objExtendedPalette.ptr = nullptr;
+        q.enqueue(PPUAllocationOBJEvent{
+            .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+            .engine = &engineA
+        });
     }
 }
 
@@ -695,7 +740,11 @@ void LCD::switchVramBank<8>(){
     }
     else if(control.mst == 2){
         for(Byte i = 0; i < 4; i++){
-            engineB.bgExtendedPalette[i] = {.ptr = vram.data() + BANK_H_BEGIN * 0x4000 + 0x2000 * i, .allocatedTo = BankIndex};
+            q.enqueue(PPUAllocationBGEvent{
+                .allocation = {.ptr = vramSync.data() + BANK_H_BEGIN * 0x4000 + 0x2000 * i, .allocatedTo = BankIndex},
+                .engine = &engineB,
+                .index = i
+            });
         }
     }
 }
@@ -724,8 +773,11 @@ void LCD::clearVramBank<8>(){
     }
     else if(control.mst == 2){
         for(Byte i = 0; i < 4; i++){
-            if(engineB.bgExtendedPalette[i].allocatedTo == BankIndex)
-                engineB.bgExtendedPalette[i].ptr = nullptr;
+            q.enqueue(PPUAllocationBGEvent{
+                .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+                .engine = &engineB,
+                .index = i
+            });
         }
     }
 }
@@ -753,7 +805,10 @@ void LCD::switchVramBank<9>(){
         pageTable[index].state.valid = true;
     }
     else if(control.mst == 3){
-        engineB.objExtendedPalette = {.ptr = vram.data() + BANK_I_BEGIN * 0x4000, .allocatedTo = BankIndex};
+        q.enqueue(PPUAllocationOBJEvent{
+            .allocation = {.ptr = vramSync.data() + BANK_I_BEGIN * 0x4000, .allocatedTo = BankIndex},
+            .engine = &engineB
+        });
     }
 }
 
@@ -782,7 +837,9 @@ void LCD::clearVramBank<9>(){
         }
     }
     else if(control.mst == 3){
-        if(engineB.objExtendedPalette.allocatedTo == BankIndex)
-            engineB.objExtendedPalette.ptr = nullptr;
+        q.enqueue(PPUAllocationOBJEvent{
+            .allocation = {.ptr = nullptr, .allocatedTo = BankIndex},
+            .engine = &engineB
+        });
     }
 }

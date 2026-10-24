@@ -2,6 +2,7 @@
 #include "../bus.h"
 #include "../bus7.h"
 #include <cstring>
+#include <bit>
 
 using namespace nds;
 

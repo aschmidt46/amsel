@@ -24,6 +24,10 @@ namespace nds{
         public:
         std::vector<Byte> paletteRam;
         std::vector<Byte> oamAttribs;
+
+        std::vector<Byte> paletteRamSync;
+        std::vector<Byte> oamAttribsSync;
+
         bool spriteAlphaOverride = false;
         // Aktuelle Sprites
         std::array<OAMAttribs, 128> oamAttribsCurrentLine = {};
@@ -138,13 +142,15 @@ namespace nds{
 
 
         PPU() = default;
-        PPU(LCD* lcd, Word fOffset, bool isB) : paletteRam(0x400, 0), oamAttribs(0x400, 0), lcd(lcd), isB(isB), framebufferOffset(fOffset){};
+        PPU(LCD* lcd, Word fOffset, bool isB) : paletteRam(0x400, 0), oamAttribs(0x400, 0), paletteRamSync(0x400, 0), oamAttribsSync(0x400, 0), lcd(lcd), isB(isB), framebufferOffset(fOffset){};
         uint32_t* accessFramebuffer();
 
         // Offset in großen Framebuffer, 0 = oberer Bildschirm, 1 = unterer
         Word framebufferOffset = 0;
 
         void renderScanline();
+        void setTopScreen();
+        void setBottomScreen();
         
         void onHBlank();
         void onVBlank();

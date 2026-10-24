@@ -43,7 +43,7 @@ GLFWwindow* initWindow(){
   int result = glfwInit();
   if (!result) { std::cout << ("glfw init failed!") << std::endl; return nullptr; }
   glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
-  glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 6 );
+  glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 5 );
   glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
   GLFWwindow* window = glfwCreateWindow(2*width, 2*height, title.c_str(), NULL, NULL);
   glfwMakeContextCurrent(window);

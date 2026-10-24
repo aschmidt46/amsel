@@ -17,6 +17,18 @@ file(COPY "${PROJECT_SOURCE_DIR}/deps/concurrentqueue/concurrentqueue.h" DESTINA
 file(COPY "${PROJECT_SOURCE_DIR}/deps/concurrentqueue/blockingconcurrentqueue.h" DESTINATION ${SOURCE_INCLUDE_DIR})
 file(COPY "${PROJECT_SOURCE_DIR}/deps/concurrentqueue/lightweightsemaphore.h" DESTINATION ${SOURCE_INCLUDE_DIR})
 
+FetchContent_Declare(
+  rwqueue
+  GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
+  GIT_TAG        v1.0.7
+  SOURCE_DIR  "${PROJECT_SOURCE_DIR}/deps/rwqueue"
+)
+
+FetchContent_Populate(rwqueue)
+file(COPY "${PROJECT_SOURCE_DIR}/deps/rwqueue/readerwritercircularbuffer.h" DESTINATION ${SOURCE_INCLUDE_DIR})
+file(COPY "${PROJECT_SOURCE_DIR}/deps/rwqueue/readerwriterqueue.h" DESTINATION ${SOURCE_INCLUDE_DIR})
+file(COPY "${PROJECT_SOURCE_DIR}/deps/rwqueue/atomicops.h" DESTINATION ${SOURCE_INCLUDE_DIR})
+
 
 FetchContent_Declare(
   imgui-notify

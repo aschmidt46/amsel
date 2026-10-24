@@ -16,6 +16,16 @@ void PPU::setLatchPixel(unsigned int x, unsigned int y)
     debugY = y;
 }
 
+void nds::PPU::setTopScreen()
+{
+	framebufferOffset = 0;
+}
+
+void nds::PPU::setBottomScreen()
+{
+	framebufferOffset = 1;
+}
+
 std::string PPU::getDebugOutput()
 {
     std::string output = "";

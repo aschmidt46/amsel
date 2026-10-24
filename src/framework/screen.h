@@ -4,7 +4,7 @@
 #include <cstdint>
 
 constexpr const char* vs = 
-    "#version 460\n"
+    "#version 450\n"
     "layout (std430, binding = 0) buffer quadBuffer"
     "{"
         "vec2 quad[];"
@@ -23,7 +23,7 @@ constexpr const char* vs =
     "}";
 
 constexpr const char* fs = 
-    "#version 460\n"
+    "#version 450\n"
     "out vec4 FragColor;\n"
     "uniform sampler2D tex;\n"
     "in vec2 TexCoord;\n"
@@ -33,7 +33,7 @@ constexpr const char* fs =
 
 // Public Domain CRT Styled Scan-Line Shader von Timothy Lottes
 constexpr const char* fixingPixelArt = 
-"#version 460\n"
+"#version 450\n"
 "uniform vec3      iResolution;           // viewport resolution (in pixels)\n"
 "uniform sampler2D tex;             // input channel. XX = 2D/Cube\n"
 "in vec2 TexCoord;\n"

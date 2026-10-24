@@ -91,6 +91,8 @@ namespace nds{
         public:
         CP15(){
             itcmSize.state.virtualSize = 16;
+            calculateITCMRegion();
+            calculateDTCMRegion();
         }
         CP15(CPU* cpu) : CP15(){
             this->cpu = cpu;
@@ -112,14 +114,18 @@ namespace nds{
         inline bool dtcmIsLoadMode() const{
             return controlReg.state.dtcmLoadMode;
         };
-        inline Word itcmRegion() const{
+        Word itcmEnd = 0;
+        Word dtcmBase = 0;
+        Word dtcmEnd = 0;
+        inline void calculateITCMRegion(){
             const Word vSize = 512u << std::clamp(itcmSize.state.virtualSize, 3u, 23u);
-            return vSize;
+            itcmEnd = vSize;
         };
-        inline std::pair<Word, Word> dtcmRegion() const{
+        inline void calculateDTCMRegion(){
             const Word vSize = 512u << std::clamp(dtcmSize.state.virtualSize, 3u, 23u);
             const Word base = dtcmSize.state.regionBase << 12;
-            return {base, base + vSize};
+            dtcmBase = base;
+            dtcmEnd = base + vSize;
         };
 
         inline Word exceptionBase(){

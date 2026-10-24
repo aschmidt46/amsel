@@ -45,10 +45,12 @@ void nds::CP15::MCR(Word val, Word Cn, Word Cm, Word cp)
     else if(Cn == 9 && Cm == 1 && cp == 0){
         Word m = TCM_SIZE_T::getWriteMask();
         dtcmSize.raw = (dtcmSize.raw & ~m) | (val & m);
+        calculateDTCMRegion();
     }
     else if(Cn == 9 && Cm == 1 && cp == 1){
         Word m = TCM_SIZE_T::getWriteMask();
         itcmSize.raw = (itcmSize.raw & ~m) | (val & m);
+        calculateITCMRegion();
     }
 
     else if(Cn == 13 && Cm == 0 && cp == 0){
@@ -138,16 +140,15 @@ void nds::CP15::renderTCM()
     //#ifdef BUILD_DESKTOP
         ImGui::Text("ITCM End: ");
         ImGui::SameLine();
-        ImGui::Text(getHex0x(itcmRegion(), 8).c_str());
+        ImGui::Text(getHex0x(itcmEnd, 8).c_str());
         ImGui::Text((std::string("Is Enabled? ") + (itcmIsEnabled() ? "Yes" : "No")).c_str());
         ImGui::Text((std::string("Is Load Mode? ") + (itcmIsLoadMode() ? "Yes" : "No")).c_str());
 
         ImGui::Text("");
 
-        auto [start, end] = dtcmRegion();
         ImGui::Text("DTCM Region: ");
         ImGui::SameLine();
-        ImGui::Text((getHex0x(start, 8) + "---" + getHex0x(end, 8)).c_str());
+        ImGui::Text((getHex0x(dtcmBase, 8) + "---" + getHex0x(dtcmEnd, 8)).c_str());
         ImGui::Text((std::string("Is Enabled? ") + (dtcmIsEnabled() ? "Yes" : "No")).c_str());
         ImGui::Text((std::string("Is Load Mode? ") + (dtcmIsLoadMode() ? "Yes" : "No")).c_str());
 

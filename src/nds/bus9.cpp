@@ -34,14 +34,12 @@ Byte nds::Bus9::readByte(Word addr)
 void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
 {
     if(!isDMA){
-        const Word itcmEnd = cp15.itcmRegion();
-        const auto [dtcmStart, dtcmEnd] = cp15.dtcmRegion();
-        if(cp15.itcmIsEnabled() && addr < itcmEnd){
+        if(cp15.itcmIsEnabled() && addr < cp15.itcmEnd){
             itcm[addr % 0x8000] = val;
             return;
         }
-        else if(cp15.dtcmIsEnabled() && addr >= dtcmStart && addr < dtcmEnd){
-            addr -= dtcmStart;
+        else if(cp15.dtcmIsEnabled() && addr >= cp15.dtcmBase && addr < cp15.dtcmEnd){
+            addr -= cp15.dtcmBase;
             dtcm[addr % 0x4000] = val;
             return;
         }
@@ -202,13 +200,11 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
 Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
 {
     if(!isDMA){
-        const Word itcmEnd = cp15.itcmRegion();
-        const auto [dtcmStart, dtcmEnd] = cp15.dtcmRegion();
-        if(cp15.itcmIsEnabled() && !cp15.itcmIsLoadMode() && addr < itcmEnd){
+        if(cp15.itcmIsEnabled() && !cp15.itcmIsLoadMode() && addr < cp15.itcmEnd){
             return itcm[addr % 0x8000];
         }
-        if(cp15.dtcmIsEnabled() && !cp15.dtcmIsLoadMode() && addr >= dtcmStart && addr < dtcmEnd){
-            addr -= dtcmStart;
+        if(cp15.dtcmIsEnabled() && !cp15.dtcmIsLoadMode() && addr >= cp15.dtcmBase && addr < cp15.dtcmEnd){
+            addr -= cp15.dtcmBase;
             return dtcm[addr % 0x4000];
         }
     }
@@ -544,12 +540,24 @@ void nds::Bus9::onWritePOWCNT1()
 {
     bool dispSwap = (POWCNT1 & (1u << 15)) > 0;
     if(dispSwap){
-        sharedBus->lcd->engineA.framebufferOffset = 0;
-        sharedBus->lcd->engineB.framebufferOffset = 1;
+        if(sharedBus->lcd->getVCount() < 192){
+            sharedBus->lcd->q.enqueue(EngineCommand{.engine=&sharedBus->lcd->engineA, .function= &PPU::setTopScreen});
+            sharedBus->lcd->q.enqueue(EngineCommand{.engine=&sharedBus->lcd->engineB, .function= &PPU::setBottomScreen});
+        }
+        else{
+            sharedBus->lcd->engineA.framebufferOffset = 0;
+            sharedBus->lcd->engineB.framebufferOffset = 1;
+        }
     }
     else{
-        sharedBus->lcd->engineA.framebufferOffset = 1;
-        sharedBus->lcd->engineB.framebufferOffset = 0;
+        if(sharedBus->lcd->getVCount() < 192){
+            sharedBus->lcd->q.enqueue(EngineCommand{.engine=&sharedBus->lcd->engineA, .function= &PPU::setBottomScreen});
+            sharedBus->lcd->q.enqueue(EngineCommand{.engine=&sharedBus->lcd->engineB, .function= &PPU::setTopScreen});
+        }
+        else{
+            sharedBus->lcd->engineA.framebufferOffset = 1;
+            sharedBus->lcd->engineB.framebufferOffset = 0;
+        }
     }
 }
 

@@ -2,6 +2,10 @@
 #include "../bus_types.h"
 #include "2d/ppu.h"
 #include "3d/gpu.h"
+#include <thread>
+#include "blockingconcurrentqueue.h"
+#include <variant>
+#include "readerwriterqueue.h"
 
 namespace nds{
     class SharedBus;
@@ -33,6 +37,42 @@ namespace nds{
         HalfWord raw = 0;
     };
 
+    struct MemoryWrite{
+        Word addr = 0;
+        Byte val = 0;
+    };
+
+    struct VRAMWrite{
+        MemoryWrite write;
+    };
+
+    struct EngineCommand{
+        PPU* engine;
+        void (PPU::*function)();
+    };
+
+    struct PPUAllocationBGEvent{ // bg extended palette
+        PPUAllocation allocation;
+        PPU* engine;
+        size_t index;
+    };
+
+    struct PPUAllocationOBJEvent{ // obj extended palette
+        PPUAllocation allocation;
+        PPU* engine;
+    };
+
+    enum PoisonPill : int{};
+
+    typedef std::variant<
+        MemoryWrite,
+        VRAMWrite,
+        EngineCommand,
+        PoisonPill,
+        PPUAllocationBGEvent,
+        PPUAllocationOBJEvent
+    > RenderEvent;
+
     class LCD{
 
         SharedBus* bus;
@@ -50,6 +90,18 @@ namespace nds{
         std::array<VRAMCNT_T, 10> vramControl = {};
         std::array<Byte, 0xA4000> vram = {};
         MASTERBRIGHT_T masterBright = {.raw = 0};
+        
+        std::array<Byte, 0xA4000> vramSync = {};
+        // Achtung, enthält aktuell auch Register, die eigentlich nicht lesbar sind
+        std::array<Byte, 0x6C> aRegisters = {};
+        std::array<Byte, 0x6C> bRegisters = {};
+
+        moodycamel::ReaderWriterQueue<RenderEvent> q;
+        std::atomic<bool> workerNotify = false;
+        std::atomic<bool> queueFrameFinished = false;
+        std::thread renderThread;
+
+        void worker();
 
         private:
         template<Word N>
@@ -59,12 +111,27 @@ namespace nds{
         
         LCDSTATUS_T DISPSTAT_7 = {.raw = 0}; // engine A + B
         LCDSTATUS_T DISPSTAT_9 = {.raw = 0}; // engine A + B
-        bool hasframe = false;
+        std::atomic<bool> hasframe = false;
         
         public:
-        std::vector<uint32_t> framebuffer;
+        uint32_t* framebuffer;
+        size_t framebufferSize = 0;
+        uint32_t* backBuffer;
         Word vCount = 0; // engine A + B
-        LCD(SharedBus* bus) : bus(bus), framebuffer(256*192*2){};
+        LCD(SharedBus* bus) : bus(bus){
+            framebufferSize = 256*192*2;
+            framebuffer = new uint32_t[framebufferSize]();
+            backBuffer = new uint32_t[framebufferSize]();
+            renderThread = std::thread(worker, this);
+        };
+        ~LCD(){
+            q.enqueue(PoisonPill());
+            workerNotify = true;
+            workerNotify.notify_one();
+            if(renderThread.joinable()) renderThread.join();
+            delete[] framebuffer;
+            delete[] backBuffer;
+        }
         void init();
         void renderScanline();
         
@@ -78,7 +145,9 @@ namespace nds{
 
         Byte readRegister(Word addr, bool isNDS9);
         void writeRegister(Word addr, Byte val, bool isNDS9);
+        void writeSync(Word addr, Byte val);
         Byte readMemory(Word addr);
+        Byte readSyncedMemory(Word addr);
         Word getVramOffset(Word addr);
         void writeMemory(Word addr, Byte val);
         Byte readMemoryNDS7(Word addr);

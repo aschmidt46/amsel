@@ -120,7 +120,7 @@ bool PPU::hasTargetB(int index){
 
 uint32_t *PPU::accessFramebuffer()
 {
-    return lcd->framebuffer.data() + framebufferOffset*256*192;
+    return lcd->framebuffer + framebufferOffset*256*192;
 }
 
 void PPU::renderScanline()
@@ -276,7 +276,7 @@ void PPU::detectSpritesOnScanline(){
     const int y = currentScanline;
 
     // sicher?
-    OAMAttribs* oamMap = (OAMAttribs*)this->oamAttribs.data();
+    OAMAttribs* oamMap = (OAMAttribs*)this->oamAttribsSync.data();
     // Rückwärtsiteration fixt die Sprite Priorität, nochmal anschauen
     constexpr int oamSize = 128;
     for(int i = oamSize-1; i >= 0; i--){
@@ -375,7 +375,7 @@ void PPU::drawSprites(){
                     centerY += sizeYHalf;
                 }
                 const Word affineIndex = sprite.attr1.state.affineIndex;
-                const AffineAttribs affineMatrix = *(((AffineAttribs*)this->oamAttribs.data()) + affineIndex);
+                const AffineAttribs affineMatrix = *(((AffineAttribs*)this->oamAttribsSync.data()) + affineIndex);
 
                 xOffset = sizeXHalf + ((int(centerX - currentCycle) * affineMatrix.pa + int(centerY - y) * affineMatrix.pb) >> 8);
                 yOffset = sizeYHalf + ((int(centerX - currentCycle) * affineMatrix.pc + int(centerY - y) * affineMatrix.pd) >> 8);
@@ -397,7 +397,7 @@ void PPU::drawSprites(){
     
             const Word paletteBank = sprite.attr2.state.paletteBank; // nur in 4bbp modus
     
-            Byte* vRamTiles = lcd->vram.data() + lcd->getVramOffset(isB ? 0x600000 : 0x400000); // Offset zu 0x06000000
+            Byte* vRamTiles = lcd->vramSync.data() + lcd->getVramOffset(isB ? 0x600000 : 0x400000); // Offset zu 0x06000000
     
             Word currentTileX = xOffset / 8;
             Word currentTileY = yOffset / 8;
@@ -439,7 +439,7 @@ void PPU::drawSprites(){
         
             // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
             const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-            if(tileStart + pixelIndex >= lcd->vram.data() + lcd->vram.size())
+            if(tileStart + pixelIndex >= lcd->vramSync.data() + lcd->vramSync.size())
                 continue;
             Byte pixel = *(tileStart + pixelIndex);
             if(!bpp8){
@@ -456,8 +456,8 @@ void PPU::drawSprites(){
                 colorHigh = objExtendedPalette.ptr[2 * Word(paletteIndex) + sprite.attr2.state.paletteBank * 0x200 + 1];
             }
             else{
-                colorLow = paletteRam[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
-                colorHigh = paletteRam[2 * Word(paletteIndex) + 0x201];
+                colorLow = paletteRamSync[2 * Word(paletteIndex) + 0x200]; // Byte adressiert, palette Bank von Sprites offset um 0x200
+                colorHigh = paletteRamSync[2 * Word(paletteIndex) + 0x201];
             }
             HalfWord color = colorLow | (colorHigh << 8);
             Byte red = color & 0b11111;
@@ -520,8 +520,8 @@ void PPU::drawBG(const int index)
     const Word screenBaseBlock = CONTROL.state.screenBaseBlock + (isB ? 0 : (LCDCONTROL.state.screenBase * 32));
     const Word characterBaseBlock = CONTROL.state.CHRBaseBlock + (isB ? 0 : (LCDCONTROL.state.characterBase * 4));
     auto [bgrX, bgrY] = isAffine ? affineBgrSizes[CONTROL.state.screenSize] : regularBgrSizes[CONTROL.state.screenSize];
-    Byte* entries = lcd->vram.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (screenBaseBlock * screenblockSize); // BG Vram bei 0x06000000 (A) und 0x06200000 (B)
-    Byte* chrEntries = lcd->vram.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (characterBaseBlock * chrblockSize);
+    Byte* entries = lcd->vramSync.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (screenBaseBlock * screenblockSize); // BG Vram bei 0x06000000 (A) und 0x06200000 (B)
+    Byte* chrEntries = lcd->vramSync.data() + lcd->getVramOffset(isB ? 0x200000 : 0) + (characterBaseBlock * chrblockSize);
     const Word tileWidth = bpp8 ? 0x40 : 0x20;
     const Word tileWidthByte = bpp8 ? 8 : 4;
     Word mapX;
@@ -579,7 +579,7 @@ void PPU::drawBG(const int index)
 
     // 8px x 4 bit = 32 bit = 4 byte, bei 8bbp 8 byte
     const Word pixelIndex = (verticalWidth + verticalFactor * inTileY * tileWidthByte) + (horizontalWidth + horizontalFactor * bitWidthInTile);
-    if(tileStart + pixelIndex >= lcd->vram.data() + lcd->vram.size()){
+    if(tileStart + pixelIndex >= lcd->vramSync.data() + lcd->vramSync.size()){
         if(!CONTROL.state.mosaic || mosaicBgXCounter == 0)
             latchedBg[index] = result;
         return;
@@ -601,8 +601,8 @@ void PPU::drawBG(const int index)
         colorHigh = bgExtendedPalette[exPaletteIndex].ptr[2 * Word(paletteIndex) + entry.state.paletteBank * 0x200 + 1];
     }
     else{
-        colorLow = paletteRam[2 * Word(paletteIndex)]; // Byte adressiert
-        colorHigh = paletteRam[2 * Word(paletteIndex) + 1];
+        colorLow = paletteRamSync[2 * Word(paletteIndex)]; // Byte adressiert
+        colorHigh = paletteRamSync[2 * Word(paletteIndex) + 1];
     }
     HalfWord color = colorLow | (colorHigh << 8);
     Byte red = color & 0b11111;
@@ -616,8 +616,8 @@ void PPU::drawBG(const int index)
 }
 
 PIXEL_T PPU::getBackdrop(){
-    HalfWord colorLow = paletteRam[0];
-    HalfWord colorHigh = paletteRam[1];
+    HalfWord colorLow = paletteRamSync[0];
+    HalfWord colorHigh = paletteRamSync[1];
     HalfWord color = colorLow | (colorHigh << 8);
     Byte red = color & 0b11111;
     Byte green = (color >> 5) & 0b11111;
@@ -717,7 +717,7 @@ void PPU::setPixel(int x, int y, uint32_t cr, uint32_t cg, uint32_t cb)
     #else
     uint32_t col = (255 << 24) | (cb) | (cg << 8) | (cr << 16);
     #endif
-    lcd->framebuffer[index] = col;
+    lcd->backBuffer[index] = col;
 }
 
 
@@ -915,8 +915,8 @@ PIXEL_T nds::PPU::drawPixelLCDC()
     const int pixelY = currentScanline + framebufferOffset * 192;
     int index = currentCycle + 256 * pixelY;
     Word vramBase = 0x06800000 + LCDCONTROL.state.vramBlock * 0x20000;
-    Byte lower = lcd->readMemory(vramBase + 2 * index);
-    Byte higher = lcd->readMemory(vramBase + 2 * index + 1);
+    Byte lower = lcd->readSyncedMemory(vramBase + 2 * index);
+    Byte higher = lcd->readSyncedMemory(vramBase + 2 * index + 1);
     HalfWord pixel = HalfWord(lower) | (HalfWord(higher) << 8);
     HalfWord red = pixel & 0b11111;
     HalfWord green = (pixel >> 5) & 0b11111;

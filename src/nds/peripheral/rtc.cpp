@@ -57,11 +57,11 @@ void nds::RTC::putOnReadQueue()
 {
     registerQueue = std::vector<Byte>(0);
 
-    #ifdef BUILD_DESKTOP
-    auto tp = std::chrono::zoned_time{current_zone(), system_clock::now()}.get_local_time();
-    #else
+    // #ifdef BUILD_DESKTOP
+    // auto tp = std::chrono::zoned_time{current_zone(), system_clock::now()}.get_local_time();
+    // #else
     auto tp = system_clock::now();
-    #endif
+    // #endif
     auto dp = floor<days>(tp);
     year_month_day ymd{dp};
     hh_mm_ss time{floor<milliseconds>(tp-dp)};
