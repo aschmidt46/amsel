@@ -26,6 +26,8 @@ namespace nds{
         Word IE = 0;
         Word IF = 0;
         gba::GeneralPurpose32 IME;
+        bool interruptPending = false;
+        void setInterruptPending();
         
         HalfWord SOUNDCNTSTUB = 0;
         HalfWord SOUNDBIASSTUB = 0;

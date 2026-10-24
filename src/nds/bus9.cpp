@@ -5,6 +5,11 @@
 
 using namespace gba;
 
+void nds::Bus9::setInterruptPending()
+{
+    interruptPending = IE & IF;
+}
+
 void nds::Bus9::init()
 {
     new (&cpu) CPU(this, &cp15);
@@ -119,27 +124,35 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
     }
     else if(addr == 0x04000210){
         IE = (IE & 0xFFFFFF00) | val;
+        setInterruptPending();
     }
     else if(addr == 0x04000211){//!!
         IE = (IE & 0xFFFF00FF) | (Word(val) << 8);
+        setInterruptPending();
     }
     else if(addr == 0x04000212){//!!
         IE = (IE & 0xFF00FFFF) | (Word(val) << 16);
+        setInterruptPending();
     }
     else if(addr == 0x04000213){//!!
         IE = (IE & 0x00FFFFFF) | (Word(val) << 24);
+        setInterruptPending();
     }
     else if(addr == 0x04000214){
         IF = IF & ~Word(val);
+        setInterruptPending();
     }
     else if(addr == 0x04000215){
         IF = IF & ~(Word(val) << 8);
+        setInterruptPending();
     }
     else if(addr == 0x04000216){
         IF = IF & ~(Word(val) << 16);
+        setInterruptPending();
     }
     else if(addr == 0x04000217){
         IF = IF & ~(Word(val) << 24);
+        setInterruptPending();
     }
 
     else if(addr >= 0x4000240 && addr < 0x4000247){
@@ -452,7 +465,7 @@ void nds::Bus9::onDataWordArrived()
 void nds::Bus9::clock()
 {
 
-    if(watchBreakpoints){
+    [[unlikely]] if(watchBreakpoints){
         if(std::find(breakpoints.begin(), breakpoints.end(), cpu.getRegisterState().R[15] - (cpu.state() == ARM ? 8 : 4)) != breakpoints.end()){
             setHalt();
             return;
@@ -465,9 +478,10 @@ void nds::Bus9::clock()
 
     clocks++;
     // 66 MHz
-    cpu.clock();
-    cpu.clock();
-    maths.clock();
+    if(!cpu.haltMode || interruptPending){
+        cpu.clock(interruptPending, IME.raw & 1u);
+        cpu.clock(interruptPending, IME.raw & 1u);
+    }
 
 }
 
@@ -503,6 +517,7 @@ void nds::Bus9::timerOverflowed(int index)
 void nds::Bus9::setIF(int bit, bool val)
 {
     IF = (IF & ~(1u << bit)) | (val << bit);
+    setInterruptPending();
 }
 
 Word nds::Bus9::getIE()

@@ -22,6 +22,7 @@ namespace nds{
         Word IF = 0;
         gba::GeneralPurpose32 IME;
         bool interruptPending = false;
+        void setInterruptPending();
         public:
         bool watchBreakpoints = false;
         std::vector<uint64_t> breakpoints;

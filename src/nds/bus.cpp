@@ -257,30 +257,24 @@ std::pair<float, float> nds::SharedBus::getSample()
 
 void nds::SharedBus::clock()
 {
-    // if(watchBreakpoints){
-    //     if(std::find(breakpoints.begin(), breakpoints.end(), cpu.getRegisterState().R[15] - (cpu.state() == ARM ? 8 : 4)) != breakpoints.end()){
-    //         halted = true;
-    //     }
-    //     if(std::find(breakpointsOP.begin(), breakpointsOP.end(), cpu.getCurrentOpcode()) != breakpointsOP.end()){
-    //         halted = true;
-    //     }
-    // }
 
-    if(stepBack && clocks == haltAt){
+    [[unlikely]] if(stepBack && clocks == haltAt){
         stepBack = false;
         halted = true;
     }
 
-    
-    if(!halted || steps > 0){
-        clocks++;
-        bus7->clock();
-        bus9->clock();
-        scheduler->clock();
+    [[unlikely]] if(halted && steps <= 0) return;
 
-        if(steps > 0)
-            steps--;
-    }
+
+
+
+    clocks++;
+    bus7->clock();
+    bus9->clock();
+    scheduler->clock();
+    bus9->maths.clock();
+    if(steps > 0)
+        steps--;
 
 }
 

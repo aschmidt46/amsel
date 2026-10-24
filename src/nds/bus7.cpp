@@ -5,6 +5,11 @@
 
 using namespace nds;
 
+void nds::Bus7::setInterruptPending()
+{
+    interruptPending = IF & IE;
+}
+
 void nds::Bus7::init()
 {
     new (&cpu) gba::CPU(this, false);
@@ -116,27 +121,35 @@ void nds::Bus7::writeByteFromWide(Word addr, Byte val)
     }
     else if(addr == 0x04000210){
         IE = (IE & 0xFFFFFF00) | val;
+        setInterruptPending();
     }
     else if(addr == 0x04000211){//!!
         IE = (IE & 0xFFFF00FF) | (Word(val) << 8);
+        setInterruptPending();
     }
     else if(addr == 0x04000212){//!!
         IE = (IE & 0xFF00FFFF) | (Word(val) << 16);
+        setInterruptPending();
     }
     else if(addr == 0x04000213){//!!
         IE = (IE & 0x00FFFFFF) | (Word(val) << 24);
+        setInterruptPending();
     }
     else if(addr == 0x04000214){
         IF = IF & ~Word(val);
+        setInterruptPending();
     }
     else if(addr == 0x04000215){
         IF = IF & ~(Word(val) << 8);
+        setInterruptPending();
     }
     else if(addr == 0x04000216){
         IF = IF & ~(Word(val) << 16);
+        setInterruptPending();
     }
     else if(addr == 0x04000217){
         IF = IF & ~(Word(val) << 24);
+        setInterruptPending();
     }
     else if(addr == 0x4000300){
         POSTFLG = val & 1;
@@ -453,7 +466,9 @@ void nds::Bus7::clock()
     }
 
     clocks++;
-    cpu.clock();
+    if(!cpu.haltMode || interruptPending){
+        cpu.clock();
+    }
 }
 
 void nds::Bus7::addCPUCycles(size_t num)
@@ -488,6 +503,7 @@ void nds::Bus7::timerOverflowed(int index)
 void nds::Bus7::setIF(int bit, bool val)
 {
     IF = (IF & ~(1u << bit)) | (val << bit);
+    setInterruptPending();
 }
 
 Word nds::Bus7::getIE()

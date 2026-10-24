@@ -24,9 +24,9 @@ namespace gba{
 
         StatusRegister _CPSR, _SPSR_fiq, _SPSR_SVC, _SPSR_abt, _SPSR_irq, _SPSR_und; // Init in Konstruktor
 
-        bool haltMode = false;
-
+        
         public:
+        bool haltMode = false;
         inline OperatingMode mode() const{
             return (OperatingMode)_CPSR.state.mode_bits;
             // switch(_CPSR.state.mode_bits){

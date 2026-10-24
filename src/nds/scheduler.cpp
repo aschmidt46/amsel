@@ -87,8 +87,8 @@ void gba::Scheduler<nds::EventType, nds::SharedBus>::clock()
         if(!heap.empty())
             next = heap.top();
         if(next.has_value() && time >= next.value().timePoint){
-            handleEvent();
             heap.pop();
+            handleEvent();
             next = {};
             tryAgain = true;
         }

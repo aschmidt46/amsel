@@ -460,7 +460,7 @@ bool CPU::executeInstruction()
         //     bus->setHalt();
         //     return false;
         // }
-        if(info.code == 0) bus->setHalt();
+        // if(info.code == 0) bus->setHalt();
         // if(_R15_PC - 8 == 0xFFFF0018) bus->setHalt();
 
         // auto iInfo = info;

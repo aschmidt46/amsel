@@ -100,7 +100,7 @@ void CPU::writeWordUnaligned(Word addr, Word val)
 }
 
 
-void CPU::advanceCPU()
+void CPU::advanceCPU(const bool interruptPending, const bool IME)
 {
     // Die Pipeline MUSS gefüllt sein, bevor IRQ beginnt
     if((pipeline[0].type == PipelineEmpty) || (pipeline[1].type == PipelineEmpty)){
@@ -110,7 +110,7 @@ void CPU::advanceCPU()
             advancePipeline<false, false>();
         return;
     }
-    if(pollInterrupts()){
+    if(pollInterrupts(interruptPending, IME)){
         executeHardwareInterrupt();
         flushPipeline();
     }
@@ -155,7 +155,7 @@ void CPU::advanceCPUToNextValidState()
     } while(!pipelineIsSaturated());
 }
 
-void CPU::clock() {
+void CPU::clock(const bool interruptPending, const bool IME) {
     if(this->remainingCycles <= 0){
         //Debugging
         if(debug){
@@ -166,7 +166,7 @@ void CPU::clock() {
         }
         
         
-        this->advanceCPU();
+        this->advanceCPU(interruptPending, IME);
         advanced = true;
     }
     else {
@@ -175,18 +175,15 @@ void CPU::clock() {
     }
 }
 
-bool CPU::pollInterrupts()
+bool CPU::pollInterrupts(const bool interruptPending, const bool IME)
 {
-    const Word IE = this->bus->getIE();
-    const Word IF = this->bus->getIF();
-    const bool interrupt = IE & IF;
 
-    if(haltMode && interrupt){
+    if(haltMode && interruptPending){
         haltMode = false;
         return true;
     }
-    if(!_CPSR.state.I && bus->hasIME()){
-        return interrupt;
+    if(!_CPSR.state.I && IME){
+        return interruptPending;
     }
     return false;
 }
@@ -227,68 +224,7 @@ void CPU::advancePipeline()
     }
     else pipeline[0] = {PipelineEmpty, 0};
 
-    // vllt jetzt falsch, weil ich schon im Read cycle dekodiere?
-    if(_R15_PC < 0x08000000 && _R15_PC >= 0x4000){
-        pipeline[1] = isARM ? decodeInstruction(this->readWord(_R15_PC)) : decodeInstruction(this->readHalfWord(_R15_PC));
-        _R15_PC += isARM ? 4 : 2;
-        return;
-    }
-    Word altPC = _R15_PC - 0x08000000;
-    if(isARM){
-        if(altPC >> 2 >= armCacheSize){
-            altPC -= 0x02000000;
-        }
-        if(altPC >> 2 >= armCacheSize){
-            altPC -= 0x02000000;
-        }
-        std::vector<InstructionInfo>* cache = &this->bus->armCache;
-        Word cacheSize = armCacheSize;
-        if(_R15_PC < 0x4000){
-            cache = &this->bus->armCacheBIOS;
-            cacheSize = armCacheSizeBIOS;
-            altPC = _R15_PC;
-        }
-        altPC >>= 2;
-
-        if(altPC < cacheSize &&  (*cache)[altPC].type != PipelineEmpty){
-            pipeline[1] = (*cache)[altPC];    
-        }
-        else{
-            pipeline[1] = decodeInstruction(this->readWord(_R15_PC));
-            if(altPC < cacheSize){
-                // std::cout << "gecacht\n";
-                (*cache)[altPC] = pipeline[1];
-            }
-        }
-    }
-    else{
-        if(altPC >> 1 >= thumbCacheSize){
-            altPC -= 0x02000000;
-        }
-        if(altPC >> 1 >= thumbCacheSize){
-            altPC -= 0x02000000;
-        }
-        std::vector<InstructionInfo>* cache = &this->bus->thumbCache;
-        Word cacheSize = thumbCacheSize;
-        if(_R15_PC < 0x4000){
-            cache = &this->bus->thumbCacheBIOS;
-            cacheSize = thumbCacheSizeBIOS;
-            altPC = _R15_PC;
-        }
-        altPC >>= 1;
-
-        if(altPC < cacheSize && (*cache)[altPC].type != PipelineEmpty){
-            pipeline[1] = (*cache)[altPC];    
-        }
-        else{
-            pipeline[1] = decodeInstruction(this->readHalfWord(_R15_PC));
-            if(altPC < cacheSize){
-                // std::cout << "gecacht\n";
-                (*cache)[altPC] = pipeline[1];
-            }
-        }
-    }
-
+    pipeline[1] = isARM ? decodeInstruction(this->readWord(_R15_PC)) : decodeInstruction(this->readHalfWord(_R15_PC));
     _R15_PC += isARM ? 4 : 2;
 }
 

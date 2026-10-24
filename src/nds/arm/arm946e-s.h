@@ -28,9 +28,9 @@ namespace nds{
 
         StatusRegister _CPSR, _SPSR_fiq, _SPSR_SVC, _SPSR_abt, _SPSR_irq, _SPSR_und; // Init in Konstruktor
 
-        bool haltMode = false;
-
+        
         public:
+        bool haltMode = false;
         inline OperatingMode mode() const{
             return (OperatingMode)_CPSR.state.mode_bits;
         }
@@ -186,7 +186,7 @@ namespace nds{
         void initHLEBoot();
         
         // führt die nächste Instruktion aus, falls das möglich ist
-        void advanceCPU();
+        void advanceCPU(const bool interruptPending, const bool IME);
         // Führt eine Instruktion aus und clockt die CPU so oft, bis sie erneut eine Instruktion ausführen kann
         void advanceCPUToNextValidState();
 
@@ -205,8 +205,8 @@ namespace nds{
             _R12 = val;
         }
 
-        void clock();
-        bool pollInterrupts();
+        void clock(const bool interruptPending, const bool IME);
+        bool pollInterrupts(const bool interruptPending, const bool IME);
 
         bool pipelineIsSaturated();
         void flushPipeline();
