@@ -15,6 +15,7 @@ class GbaImplementation : public Console{
     void setAddressOf(int i, int to);
     // void setAddressOf(int i, int to);
     static std::vector<SystemOption> options;
+    static ControlOptions controls;
     public:
     std::string getConsoleName() override;
     GbaImplementation() = delete;
@@ -31,8 +32,7 @@ class GbaImplementation : public Console{
     bool isLoaded() override;
     float getX() override;
     float getY() override;
-    void setController1Key(bool gamepad, int key, int action) override;
-    void setController2Key(bool gamepad, int key, int action) override;
+    void setKey(int controller, AmselControlAction key, int action) override;
 
     bool canSave() override;
     std::vector<uint8_t> getSaveData() override;
@@ -40,6 +40,8 @@ class GbaImplementation : public Console{
     std::vector<std::string> getRequiredFiles() override;
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
     std::vector<SystemOption>* getSystemOptions() override;
+    ControlOptions* getControlOptions() override;
+    void initializeControls() override;
     void renderCustomMenuDesktop() override;
 
 

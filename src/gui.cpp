@@ -228,11 +228,8 @@ std::string translateKeyCode(int c){
   return "?";
 }
 
-std::string getBindingString(int controller, Action a, bool secondary){
-    auto v = &globalConfig.controller1;
-    if(controller==2){
-        v = &globalConfig.controller2;
-    }
+std::string getBindingString(ControlOptions* controls, int controller, Action a, bool secondary){
+    auto v = &controls->controllers[controller];
     if(secondary){
         // Falsch, andere Funktion für Gamepad
         const std::string gamepadCode = translateGamepadCode((*v)[(int)a].second);
@@ -488,15 +485,9 @@ void Gui::drawAbout()
     ImGui::Separator();
     ImGui::Text("%s", locale.getTranslation(AboutContent).c_str());
     ImGui::Text("%s", locale.getTranslation(AboutSystems).c_str());
-    #ifdef BUILD_CGB
-    ImGui::Text("%s", locale.getTranslation(ConsoleDescriptionCGB).c_str());
-    #endif
-    #ifdef BUILD_NES
-    ImGui::Text("%s", locale.getTranslation(ConsoleDescriptionNES).c_str());
-    #endif
-    #ifdef BUILD_GBA
-    ImGui::Text("%s", locale.getTranslation(ConsoleDescriptionGBA).c_str());
-    #endif
+    for(const auto &c : systemOptions){
+      ImGui::Text(c.first.c_str());
+    }
     ImGui::TextLinkOpenURL(locale.getTranslation(AboutSource).c_str(), "https://github.com/aschmidt46/amsel");
   ImGui::End();
 }
@@ -520,29 +511,42 @@ void Gui::drawOutput()
   ImGui::End();
 }
 
+void Gui::drawConsoleControls(std::pair<std::string, ControlOptions*> c){
+  std::string tabName = c.first + "TabBarInput##";
+  if(ImGui::BeginTabBar(tabName.c_str())){
+    if(c.second->numControllers == 1){
+      drawControlSettingsPage(0, c);
+    }
+    else{
+      for(size_t i = 0; i < c.second->numControllers; i++){
+        if(ImGui::BeginTabItem(("Controller "+std::to_string(i+1)).c_str())){
+          drawControlSettingsPage(i, c);
+          ImGui::EndTabItem();
+        }
+      }
+    }
+    ImGui::EndTabBar();
+  }
+}
+
 void Gui::drawControlSettings()
 {
     if(ImGui::BeginViewportSideBar(locale.getTranslation(Controls).c_str(), ImGui::GetMainViewport(), ImGuiDir_Down, ImGui::GetMainViewport()->Size.y / 2, ImGuiWindowFlags_None)){
-    bool cs = true;
-    if(ImGui::BeginTabBar("TabBarInput##")){
-        if(ImGui::BeginTabItem(locale.getTranslation(Controller1).c_str(), &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
-          drawControlSettingsPage(1);
+    if(ImGui::BeginTabBar("TabBarInputConsoles##")){
+      for(auto &c : controlOptions){
+        if(ImGui::BeginTabItem(c.first.c_str())){
+          drawConsoleControls(c);
           ImGui::EndTabItem();
         }
-        #ifdef FEATURE_LOCAL_MULTIPLAYER
-        if(ImGui::BeginTabItem(locale.getTranslation(Controller2).c_str(), &cs, ImGuiTabItemFlags_NoReorder | (ImGuiTabItemFlags_)ImGuiTabItemFlags_NoCloseButton)){
-          drawControlSettingsPage(2);
-          ImGui::EndTabItem();
-        }
-        #endif
+      }
       ImGui::EndTabBar();
     }
   ImGui::End();}
 }
 
-void Gui::drawControlSettingsPage(int controller)
+void Gui::drawControlSettingsPage(int controller, std::pair<std::string, ControlOptions*> c)
 {
-  if(ImGui::BeginTable(("Controller"+std::to_string(controller)+"Table##").c_str(), 3, ImGuiTableFlags_BordersInner)){
+  if(ImGui::BeginTable((c.first+"Controller"+std::to_string(controller)+"Table##").c_str(), 3, ImGuiTableFlags_BordersInner)){
 
     ImGui::TableSetupColumn(locale.getTranslation(SAction).c_str());
     ImGui::TableSetupColumn(locale.getTranslation(BindingKeyboard).c_str());
@@ -551,37 +555,29 @@ void Gui::drawControlSettingsPage(int controller)
     
     ImGui::TableNextColumn();
 
-    ImGui::Text("%s", locale.getTranslation(BindingDpadUp).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingDpadDown).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingDpadLeft).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingDpadRight).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingAButton).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingBButton).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingStartButton).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingSelectButton).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingLButton).c_str());
-    ImGui::Text("%s", locale.getTranslation(BindingRButton).c_str());
-
-    ImGui::TableNextColumn();
-
-    for(int i = 0; i < 10; i++){
-      buttonChangePrompt(i, controller, false);
+    for(size_t i = 0; i < c.second->numButtons; i++){
+      auto locStr = amselActionToLocale(c.second->mapping[i]);
+      ImGui::Text("%s", locale.getTranslation(locStr).c_str());
     }
 
     ImGui::TableNextColumn();
 
-    for(int i = 0; i < 10; i++){
-      buttonChangePrompt(i, controller, true);
+    for(size_t i = 0; i < c.second->numButtons; i++){
+      buttonChangePrompt(c, i, controller, false);
+    }
+
+    ImGui::TableNextColumn();
+
+    for(size_t i = 0; i < c.second->numButtons; i++){
+      buttonChangePrompt(c, i, controller, true);
     }
 
     ImGui::EndTable();
     ImGui::Text("%s", locale.getTranslation(GamepadColon).c_str());
     ImGui::SameLine();
     const char* name;
-    int jid = 0;
+    int jid = c.second->joysticks[controller];
 
-    if(controller==1) jid = globalConfig.jidController1;
-    else jid = globalConfig.jidController2;
     name = glfwGetGamepadName(jid);
 
     std::string numberedName = (name==nullptr) ? (std::to_string(jid)+": ?") : std::to_string(jid) +": "+name;
@@ -594,7 +590,17 @@ void Gui::drawControlSettingsPage(int controller)
         bool selected = j == jid;
         ImGui::PushID(runningID++);
         if(ImGui::Selectable(numberedLocalName.c_str(), &selected)){
-          changeGamepadTo(controller, j);
+          // changeGamepadTo(controller, j);
+          // sollte ungef. obiger Funktion entsprechen
+          int oldJid = c.second->joysticks[controller];
+          for(size_t x = 0; x < c.second->numControllers; x++){
+            if(c.second->joysticks[x] == j){
+              c.second->joysticks[x] = oldJid;
+              break;
+            }
+          }
+          c.second->joysticks[controller] = j;
+          FileIO::getInstance().saveSystemControls(c.first, c.second);
         }
         ImGui::PopID();
       }
@@ -658,14 +664,16 @@ void Gui::drawSystemOptions(){
   ImGui::End();
 }
 
-void Gui::buttonChangePrompt(int i, unsigned int controller, bool secondary)
+void Gui::buttonChangePrompt(std::pair<std::string, ControlOptions*> &c, int i, unsigned int controller, bool secondary)
 {
   ImGui::PushID(runningID++);
-  std::string bString = (state->waitOn.wait && state->waitOn.actionToSet == (Action)i && state->waitOn.controller == controller && state->waitOn.secondary == secondary)
+  std::string bString = (state->waitOn.console == c.second && state->waitOn.wait && state->waitOn.actionToSet == (Action)i && state->waitOn.controller == controller && state->waitOn.secondary == secondary)
     ? locale.getTranslation(PressButtonPrompt)
-    : getBindingString(controller, (Action)i, secondary);
+    : getBindingString(c.second, controller, (Action)i, secondary);
   if(ImGui::SmallButton(bString.c_str())){
     state->waitOn.wait = !state->waitOn.wait;
+    state->waitOn.consoleName = c.first;
+    state->waitOn.console = c.second;
     state->waitOn.controller = controller;
     state->waitOn.actionToSet = (Action)i;
     state->waitOn.secondary = secondary;

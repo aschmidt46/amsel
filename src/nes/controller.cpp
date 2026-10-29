@@ -1,28 +1,6 @@
 #include "controller.h"
 #include <assert.h>
 
-void Controller::setKey(bool gamepad, int key, int v)
-{
-  auto c = secondary ? &globalConfig.controller2 : &globalConfig.controller1;
-  // Das ist nicht die tollste Lösung, reicht aber für diesen einfachen Anwendungsfall mit nur 8 Tasten
-  if(gamepad){
-    for(int i = 0; i < 8; i++){
-      if((*c)[i].second == key){
-        setAddressOf(i, v);
-        return;
-      }
-    }
-  }
-  else{ // Tastatur
-    for(int i = 0; i < 8; i++){
-      if((*c)[i].first == key){
-        setAddressOf(i, v);
-        return;
-      }
-    }
-  }
-}
-
 void Controller::setAddressOf(int i, int to)
 {
   switch(i){

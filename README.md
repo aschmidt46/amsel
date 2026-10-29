@@ -8,6 +8,7 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 <img src="resources/super-circuit.png" width="48%">   <img src="resources/emerald.png" width="48%">
 
 ## Systems and Compatibility
+Every system comes with a built in debugger that is more or less feature-rich depending on my needs during development.
 ### Nintendo Entertainment System
 - Behaviour was developed conforming to NTSC, added experimental PAL setting
 - Most common Mappers implemented (MMC1, UxROM, CNROM, (MMC3), AxROM)
@@ -24,6 +25,14 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 - Plays most games that don't rely on obscure behaviour or precise timings
 - Timings, Waitstates not implemented
 - Performance is weak
+### Nintendo DS
+- Most peripherals are implemented
+- firmware boots
+- 2D engines have some functionality missing (extended affine modes, bitmap sprites)
+- 3D engine missing entirely
+- audio missing
+- wifi missing
+- Web frontend does not have support for touch input
 
 ## Features
 - Persistent settings (Volume, keybinds, language, etc.)
@@ -37,7 +46,8 @@ Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
 - React web interface, includes smartphone layout
 
 ## Structure
-The project is mostly written in C++. The individual consoles are decoupled from the interface, making the emulator easily extensible in theory, however some parts currently assume a NES / gameboy layout. The desktop frontend is implemented in Dear ImGui, running in an OpenGL 4.6 context.
+The project is mostly written in C++. The individual consoles are decoupled from the interface, making the emulator easily extensible. Controls are now decoupled, with the system core needing to provide an interface that specifies number of controllers, buttons, mappings etc.. The number of buttons to be used is currently restricted to the ones in use by supported systems. Analog axes are not supported and mapped to on / off inputs. A System may also provide a touch screen surface, whose dimensions may be freely set. 
+The desktop frontend is implemented in Dear ImGui, running in an OpenGL 4.5 context.
 
 I implemented the gameboy emulator in a separate project at first to learn Rust, which is why it's written in that language. To include it here, I defined a FFI in Rust CXX. Using Corrosion in Cmake it's trivial to then include it in an existing C++ project.
 

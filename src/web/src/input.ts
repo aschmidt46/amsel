@@ -142,8 +142,7 @@ export class InputHandler{
         if(this.emuObject){
             const glfwCode = jsToGLFW.get(key)!;
             if(glfwCode > 0){
-                this.emuObject.setController1Key(false, glfwCode, +action);
-                this.emuObject.setController2Key(false, glfwCode, +action);
+                this.emuObject.setKey(0, glfwCode, +action);
             }
         }
     }

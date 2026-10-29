@@ -8,6 +8,7 @@
 #include <imgui.h>
 #endif
 #include "framework/locale.h"
+#include "framework/common.h"
 #include "../framework/stringlib.h"
 //           0  1   2     3      4     5    6    7    8  9
 // KEYINPUT: A, B, SEL, START, Right, Left, Up, Down, R, L
@@ -120,35 +121,9 @@ float GbaImplementation::getY()
     return 160.0f;
 }
 
-void GbaImplementation::setController1Key(bool gamepad, int key, int action) {
-    (void)gamepad; (void)key; (void)action;
-    auto c = &globalConfig.controller1;
-    if (gamepad)
-    {
-      for (int i = 0; i < 10; i++)
-      {
-        if ((*c)[i].second == key)
-        {
-          setAddressOf(i, action);
-          return;
-        }
-      }
-    }
-    else
-    { // Tastatur
-      for (int i = 0; i < 10; i++)
-      {
-        if ((*c)[i].first == key)
-        {
-          setAddressOf(i, action);
-          return;
-        }
-      }
-    }
-}
-
-void GbaImplementation::setController2Key(bool gamepad, int key, int action) {
-    (void)gamepad; (void)key; (void)action;
+void GbaImplementation::setKey(int controller, AmselControlAction key, int action) {
+    (void)controller;
+    setAddressOf(key, action);
 }
 
 bool GbaImplementation::canSave()
@@ -173,6 +148,20 @@ void GbaImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
 
 std::vector<SystemOption>* GbaImplementation::getSystemOptions(){
     return &options;
+}
+
+ControlOptions *GbaImplementation::getControlOptions()
+{
+    return &controls;
+}
+
+void GbaImplementation::initializeControls()
+{
+    controls.controllers = {
+        std::vector<std::pair<int,int>>(defaultController1.begin(), defaultController1.begin() + 10)
+    };
+    controls.mapping = std::vector<AmselControlAction>(defaultMapping.begin(), defaultMapping.begin() + 10);
+    Console::loadMappings();
 }
 
 void GbaImplementation::renderCustomMenuDesktop(){
@@ -328,3 +317,12 @@ void GbaImplementation::displayRegisters() {
 }
 
 std::vector<SystemOption> GbaImplementation::options = {RequiredFile{BiosFile, "BiosFile", "*.bin", ""}, Toggle{.name = SkipBios, .id="SkipBios", .value = true}, Toggle{.name = RTCString, .id="RTC", .value = true}};
+
+ControlOptions GbaImplementation::controls = {
+    .numControllers = 1,
+    .numButtons = 10,
+    .controllers = {
+        //std::vector<std::pair<int,int>>(defaultController1.begin(), defaultController1.begin() + 10)
+    },
+    .mapping = {}//std::vector<AmselControlAction>(defaultMapping.begin(), defaultMapping.begin() + 10)
+};

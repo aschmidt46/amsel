@@ -18,7 +18,7 @@ FileIO::FileIO()
 
 void initSettings(SettingsConfig &c){
   
-  setDefaultBindings(c);
+//   setDefaultBindings(c);
 
   c.directory = exeDir.generic_string();
 
@@ -88,19 +88,6 @@ SettingsConfig FileIO::loadSettings(int posX, int posY)
 
     ini::IniFile ini((workDirectory / "settings.ini").string());
 
-    auto c1 = std::vector<std::pair<int, int>>(10);
-    auto c2 = std::vector<std::pair<int, int>>(10);
-
-    for(int i = 0; i < 10; i++){
-        c1[i].first = ini["Controller1"]["Action_"+std::to_string(i)+"_primary"].as<int>();
-        c1[i].second = ini["Controller1"]["Action_"+std::to_string(i)+"_secondary"].as<int>();
-    }
-
-    for(int i = 0; i < 10; i++){
-        c2[i].first = ini["Controller2"]["Action_"+std::to_string(i)+"_primary"].as<int>();
-        c2[i].second = ini["Controller2"]["Action_"+std::to_string(i)+"_secondary"].as<int>();
-    }
-
     return SettingsConfig{
             .directory = ini["General"]["WorkDirectory"].as<std::string>(),
             .language = ini["General"]["Language"].as<std::string>(),
@@ -112,10 +99,6 @@ SettingsConfig FileIO::loadSettings(int posX, int posY)
             .useCRTShader = ini["Display"]["CRTShader"].as<bool>(),
 			.volume = ini["Sound"]["Volume"].as<float>(),
             .unmute = ini["Sound"]["Unmute"].as<bool>(),
-            .controller1 = c1,
-            .controller2 = c2,
-            .jidController1 = ini["Devices"]["Gamepad_1"].as<int>(),
-            .jidController2 = ini["Devices"]["Gamepad_2"].as<int>()
 	};
 }
 
@@ -134,19 +117,46 @@ void FileIO::saveSettings(const SettingsConfig &config)
     ini["Sound"]["Volume"] = config.volume;
     ini["Sound"]["Unmute"] = config.unmute;
 
-    for(int i = 0; i < 10; i++){
-        ini["Controller1"]["Action_"+std::to_string(i)+"_primary"] = config.controller1[i].first;
-        ini["Controller1"]["Action_"+std::to_string(i)+"_secondary"] = config.controller1[i].second;
-    }
-    for(int i = 0; i < 10; i++){
-        ini["Controller2"]["Action_"+std::to_string(i)+"_primary"] = config.controller2[i].first;
-        ini["Controller2"]["Action_"+std::to_string(i)+"_secondary"] = config.controller2[i].second;
-    }
-
-    ini["Devices"]["Gamepad_1"] = config.jidController1;
-    ini["Devices"]["Gamepad_2"] = config.jidController2;
-
     ini.save((workDirectory / "settings.ini").string());
+}
+
+void FileIO::loadSystemControls(const std::string &consoleName, ControlOptions *controls)
+{
+    std::string fileName = consoleName;
+    fileName.erase(remove_if(fileName.begin(), fileName.end(), isspace), fileName.end());
+    fileName += "_Controls.ini";
+
+    if(!std::filesystem::exists(workDirectory / fileName)){
+        return;
+    }
+
+    ini::IniFile ini((workDirectory / fileName).string());
+
+    for(size_t j = 0; j < controls->numControllers; j++){
+        controls->joysticks[j] = ini["Controller"+std::to_string(j)]["Gamepad_ID"].as<int>();
+        for(size_t i = 0; i < controls->numButtons; i++){
+            controls->controllers[j][i].first = ini["Controller"+std::to_string(j)]["Action_"+std::to_string(i)+"_primary"].as<int>();
+            controls->controllers[j][i].second = ini["Controller"+std::to_string(j)]["Action_"+std::to_string(i)+"_secondary"].as<int>();
+        }
+    }
+}
+
+void FileIO::saveSystemControls(const std::string &consoleName, ControlOptions *controls)
+{
+    ini::IniFile ini;
+
+    for(size_t j = 0; j < controls->numControllers; j++){
+        ini["Controller"+std::to_string(j)]["Gamepad_ID"] = controls->joysticks[j];
+        for(size_t i = 0; i < controls->numButtons; i++){
+            ini["Controller"+std::to_string(j)]["Action_"+std::to_string(i)+"_primary"] = controls->controllers[j][i].first;
+            ini["Controller"+std::to_string(j)]["Action_"+std::to_string(i)+"_secondary"] = controls->controllers[j][i].second;
+        }
+    }
+
+    std::string fileName = consoleName;
+    fileName.erase(remove_if(fileName.begin(), fileName.end(), isspace), fileName.end());
+    fileName += "_Controls.ini";
+    ini.save((workDirectory / fileName).string());
 }
 
 void FileIO::saveSystemSettings(const std::vector<std::pair<std::string, std::vector<SystemOption>*>> &options){

@@ -6,6 +6,7 @@ class DummyImplementation : public Console{
     // Ist eigentlich UI Zustand, naja
     bool halt = false;
     static std::vector<SystemOption> options;
+    static ControlOptions controls;
     public:
     std::string getConsoleName() override{return "";};
     DummyImplementation() = default;
@@ -22,8 +23,7 @@ class DummyImplementation : public Console{
     // Kann nicht 0 sein, weil Textur der Größe 0 in OpenGL nicht legal ist
     float getX() override{return 16.0f;};
     float getY() override{return 16.0f;};
-    void setController1Key(bool gamepad, int key, int action) override{(void)gamepad; (void)key; (void)action;};
-    void setController2Key(bool gamepad, int key, int action) override{(void)gamepad; (void)key; (void)action;};
+    void setKey(int controller, AmselControlAction key, int action) override{(void)controller; (void)key; (void)action;};
 
     bool canSave() override {return false;};
     std::vector<uint8_t> getSaveData() override {return std::vector<uint8_t>();};
@@ -32,6 +32,8 @@ class DummyImplementation : public Console{
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override{(void)name; (void)content;};
 
     std::vector<SystemOption>* getSystemOptions() override{return &options;};
+    ControlOptions* getControlOptions() override{return &controls;};
+    void initializeControls() override{};
     void renderCustomMenuDesktop() override{};
 
 

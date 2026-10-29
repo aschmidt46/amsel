@@ -13,110 +13,20 @@
   #include <imgui.h>
   #include "../framework/file_io.h"
 #endif
+#include <array>
 #include <bitset>
 
-void CgbImplementation::setAddressOf(int i, int to)
-{
-  switch (i)
-  {
-  case 0:
-  { // hoch
-    if (to)
-    {
-      press_joypad(cgb, 2);
-    }
-    else
-    {
-      release_joypad(cgb, 2);
-    }
-    break;
-  }
-  case 1:
-  { // runter
-    if (to)
-    {
-      press_joypad(cgb, 3);
-    }
-    else
-    {
-      release_joypad(cgb, 3);
-    }
-    break;
-  }
-  case 2:
-  { // links
-    if (to)
-    {
-      press_joypad(cgb, 1);
-    }
-    else
-    {
-      release_joypad(cgb, 1);
-    }
-    break;
-  }
-  case 3:
-  { // rechts
-    if (to)
-    {
-      press_joypad(cgb, 0);
-    }
-    else
-    {
-      release_joypad(cgb, 0);
-    }
-    break;
-  }
-  case 4:
-  { // a
-    if (to)
-    {
-      press_button(cgb, 0);
-    }
-    else
-    {
-      release_button(cgb, 0);
-    }
-    break;
-  }
-  case 5:
-  { // b
-    if (to)
-    {
-      press_button(cgb, 1);
-    }
-    else
-    {
-      release_button(cgb, 1);
-    }
-    break;
-  }
-  case 6:
-  { // start
-    if (to)
-    {
-      press_button(cgb, 3);
-    }
-    else
-    {
-      release_button(cgb, 3);
-    }
-    break;
-  }
-  case 7:
-  { // select
-    if (to)
-    {
-      press_button(cgb, 2);
-    }
-    else
-    {
-      release_button(cgb, 2);
-    }
-    break;
-  }
-  }
-}
+// {bit, joypad?}
+static std::array<std::pair<int, bool>, 8> actionToInternal = {{
+  {2, true}, // up
+  {3, true}, //down, usw
+  {1, true},
+  {0, true},
+  {0, false},
+  {1, false},
+  {3, false},
+  {2, false}
+}};
 
 std::string CgbImplementation::getConsoleName(){
     #ifdef FEATURE_CGB
@@ -245,39 +155,29 @@ float CgbImplementation::getY()
   return 144.0f;
 }
 
-void CgbImplementation::setController1Key(bool gamepad, int key, int action)
+void CgbImplementation::setKey(int controller, AmselControlAction key, int action)
 {
+  (void)controller;
   // #ifdef BUILD_LIBRETRO_CORE
   std::lock_guard<std::mutex> lock(m);
   // #endif
-  auto c = &globalConfig.controller1;
-  if (gamepad)
-  {
-    for (int i = 0; i < 8; i++)
-    {
-      if ((*c)[i].second == key)
-      {
-        setAddressOf(i, action);
-        return;
-      }
+  auto p = actionToInternal[key];
+  if(p.second){
+    if(action){
+      press_joypad(cgb, p.first);
+    }
+    else{
+      release_joypad(cgb, p.first);
     }
   }
-  else
-  { // Tastatur
-    for (int i = 0; i < 8; i++)
-    {
-      if ((*c)[i].first == key)
-      {
-        setAddressOf(i, action);
-        return;
-      }
+  else{
+    if(action){
+      press_button(cgb, p.first);
+    }
+    else{
+      release_button(cgb, p.first);
     }
   }
-}
-
-void CgbImplementation::setController2Key(bool gamepad, int key, int action)
-{
-  // this->setController1Key(gamepad, key, action);
 }
 
 std::vector<std::string> CgbImplementation::getRequiredFiles() {
@@ -290,6 +190,18 @@ void CgbImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
 
 std::vector<SystemOption>* CgbImplementation::getSystemOptions(){
   return &options;
+}
+
+ControlOptions *CgbImplementation::getControlOptions()
+{
+    return &controls;
+}
+
+void CgbImplementation::initializeControls()
+{
+  controls.controllers = {std::vector<std::pair<int,int>>(defaultController1.begin(), defaultController1.begin() + 8)};
+  controls.mapping = std::vector<AmselControlAction>(defaultMapping.begin(), defaultMapping.begin() + 8);
+  Console::loadMappings();
 }
 
 void CgbImplementation::clockLinkCable(){
@@ -471,3 +383,12 @@ void CgbImplementation::transferSent(){
 }
 
 std::vector<SystemOption> CgbImplementation::options = {CustomMenu{LinkCable}};
+
+ControlOptions CgbImplementation::controls = {
+    .numControllers = 1,
+    .numButtons = 8,
+    .controllers = {
+        //std::vector<std::pair<int,int>>(defaultController1.begin(), defaultController1.begin() + 8)
+    },
+    .mapping = {}//std::vector<AmselControlAction>(defaultMapping.begin(), defaultMapping.begin() + 8)
+};

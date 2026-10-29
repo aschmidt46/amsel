@@ -7,6 +7,7 @@
 
 #include "gui.h"
 #include "screen.h"
+#include <algorithm>
 
 GLFWgamepadstate previousState1;
 GLFWgamepadstate previousState2;
@@ -78,11 +79,10 @@ void gamepadCallback(int controller, int key, int action){
 
   // Warten und zwar nicht auf Tastatur, sondern Gamepad
   if(sharedGui->state->waitOn.wait && sharedGui->state->waitOn.secondary){
-    auto conf = (sharedGui->state->waitOn.controller==1) ? &globalConfig.controller1 : &globalConfig.controller2;
     auto gameplayAction = sharedGui->state->waitOn.actionToSet;
-    (*conf)[gameplayAction].second = key;
+    sharedGui->state->waitOn.console->controllers[sharedGui->state->waitOn.controller][gameplayAction].second = key;
     sharedGui->state->waitOn.wait = false;
-    FileIO::getInstance().saveSettings(globalConfig);
+    FileIO::getInstance().saveSystemControls(sharedGui->state->waitOn.consoleName, sharedGui->state->waitOn.console);
     // Diese Eingabe abfangen
     return;
   }
@@ -90,12 +90,9 @@ void gamepadCallback(int controller, int key, int action){
 
   {
     std::lock_guard lock{consoleLock};
-    if(controller == 1){
-      console->setController1Key(true, key, action);
-    }
-    else{
-      console->setController2Key(true, key, action);
-    }
+    const auto amselAction = calculateAmselAction(console->getControlOptions(), key, true);
+    if(amselAction.first != AmselControlAction_Invalid)
+      console->setKey(amselAction.second, amselAction.first, action);
   }
 }
 
@@ -108,9 +105,9 @@ void pollGamepadEvents(){
   glfwGetGamepadState(globalConfig.jidController2, &gamepad2Now);
   auto gamepad2Delta = calculateGamepadStateDelta(previousState2, gamepad2Now);
 
-  for(int i = 1; i <= 2; i++){
+  for(int i = 0; i <= 1; i++){
     int key = -1;
-    auto delta = i==1 ? gamepad1Delta : gamepad2Delta;
+    auto delta = i==0 ? gamepad1Delta : gamepad2Delta;
     for(const auto &axis : delta.first){
       key++;
       if(axis==0) continue;
@@ -152,11 +149,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
   // Warten und zwar nicht auf Gamepad, sondern Tastatur
   if(sharedGui->state->waitOn.wait && !sharedGui->state->waitOn.secondary){
-    auto conf = (sharedGui->state->waitOn.controller==1) ? &globalConfig.controller1 : &globalConfig.controller2;
     auto gameplayAction = sharedGui->state->waitOn.actionToSet;
-    (*conf)[gameplayAction].first = key;
+    sharedGui->state->waitOn.console->controllers[sharedGui->state->waitOn.controller][gameplayAction].first = key;
     sharedGui->state->waitOn.wait = false;
-    FileIO::getInstance().saveSettings(globalConfig);
+    FileIO::getInstance().saveSystemControls(sharedGui->state->waitOn.consoleName, sharedGui->state->waitOn.console);
     // Diese Eingabe abfangen
     return;
   }
@@ -176,8 +172,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if(v==1 && key == GLFW_KEY_F2){
       sharedGui->toggleTestRomOutput();
     }
-    console->setController1Key(false, key, action);
-    console->setController2Key(false, key, action);
+    const auto amselAction = calculateAmselAction(console->getControlOptions(), key, false);
+    if(amselAction.first != AmselControlAction_Invalid)
+      console->setKey(amselAction.second, amselAction.first, action);
   }
 }
 
@@ -230,20 +227,4 @@ std::vector<int> enumerateGamepads(){
     }
   }
   return pads;
-}
-
-void changeGamepadTo(int number, int jid){
-  if(number==1){
-    if(globalConfig.jidController2 == jid){
-      globalConfig.jidController2 = globalConfig.jidController1;
-    }
-    globalConfig.jidController1 = jid;
-  }
-  else{
-    if(globalConfig.jidController1 == jid){
-      globalConfig.jidController1 = globalConfig.jidController2;
-    }
-    globalConfig.jidController2 = jid;
-  }
-  FileIO::getInstance().saveSettings(globalConfig);
 }

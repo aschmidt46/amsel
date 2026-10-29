@@ -1,52 +1,39 @@
 #include "common.h"
 
-void setDefaultBindings(SettingsConfig &config)
-{
-    config.controller1 = std::vector<std::pair<int, int>>(10, {0, 0});
-    config.controller2 = std::vector<std::pair<int, int>>(10, {0, 0});
-    // Standard Belegung Controller 1
-    config.controller1[0].first = 265;
-    config.controller1[1].first = 264;
-    config.controller1[2].first = 263;
-    config.controller1[3].first = 262;
-    config.controller1[4].first = 83;
-    config.controller1[5].first = 65;
-    config.controller1[6].first = 257;
-    config.controller1[7].first = 259;
-    config.controller1[8].first = 81;
-    config.controller1[9].first = 87;
+const std::vector<std::pair<int, int>> defaultController1 = {
+    {265, 23},
+    {264, 25},
+    {263, 26},
+    {262, 24},
+    {83, 12},
+    {65, 14},
+    {257, 19},
+    {259, 18},
+    {81, 16},
+    {87, 17}
+};
+const std::vector<std::pair<int, int>> defaultController2 = {
+    {328, 23},
+    {325, 25},
+    {324, 26},
+    {326, 24},
+    {86, 12},
+    {67, 14},
+    {335, 19},
+    {334, 18},
+    {68, 16},
+    {70, 17}
+};
 
-    config.controller1[0].second = 23;
-    config.controller1[1].second = 25;
-    config.controller1[2].second = 26;
-    config.controller1[3].second = 24;
-    config.controller1[4].second = 12;
-    config.controller1[5].second = 14;
-    config.controller1[6].second = 19;
-    config.controller1[7].second = 18;
-    config.controller1[8].second = 16;
-    config.controller1[9].second = 17;
-
-    // Standard Belegung Controller 2
-    config.controller2[0].first = 328;
-    config.controller2[1].first = 325;
-    config.controller2[2].first = 324;
-    config.controller2[3].first = 326;
-    config.controller2[4].first = 86;
-    config.controller2[5].first = 67;
-    config.controller2[6].first = 335;
-    config.controller2[7].first = 334;
-    config.controller2[8].first = 68;
-    config.controller2[9].first = 70;
-
-    config.controller2[0].second = 23;
-    config.controller2[1].second = 25;
-    config.controller2[2].second = 26;
-    config.controller2[3].second = 24;
-    config.controller2[4].second = 12;
-    config.controller2[5].second = 14;
-    config.controller2[6].second = 19;
-    config.controller2[7].second = 18;
-    config.controller2[8].second = 16;
-    config.controller2[9].second = 17;
-}
+const std::vector<AmselControlAction> defaultMapping = {
+    AmselControlAction_DpadUp,
+    AmselControlAction_DpadDown,
+    AmselControlAction_DpadLeft,
+    AmselControlAction_DpadRight,
+    AmselControlAction_ButtonA,
+    AmselControlAction_ButtonB,
+    AmselControlAction_ButtonStart,
+    AmselControlAction_ButtonSelect,
+    AmselControlAction_ButtonL,
+    AmselControlAction_ButtonR
+};

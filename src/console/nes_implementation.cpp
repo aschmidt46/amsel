@@ -4,6 +4,7 @@
 #include <bitset>
 #include "../framework/stringlib.h"
 #endif
+#include "framework/common.h"
 
 std::string NesImplementation::getConsoleName(){
     return "Nintendo Entertainment System";
@@ -72,14 +73,14 @@ float NesImplementation::getY()
     return this->console.getY();
 }
 
-void NesImplementation::setController1Key(bool gamepad, int key, int action)
+void NesImplementation::setKey(int controller, AmselControlAction key, int action)
 {
-    this->console.setController1Key(gamepad, key, action);
-}
-
-void NesImplementation::setController2Key(bool gamepad, int key, int action)
-{
-    this->console.setController2Key(gamepad, key, action);
+    if(controller == 0){
+        this->console.setController1Key(key, action);
+    }
+    else{
+        this->console.setController2Key(key, action);
+    }
 }
 
 bool NesImplementation::canSave()
@@ -102,6 +103,21 @@ void NesImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
 
 std::vector<SystemOption>* NesImplementation::getSystemOptions(){
     return &options;
+}
+
+ControlOptions *NesImplementation::getControlOptions()
+{
+    return &controls;
+}
+
+void NesImplementation::initializeControls()
+{
+    controls.controllers = {
+        std::vector<std::pair<int,int>>(defaultController1.begin(), defaultController1.begin() + 8),
+        std::vector<std::pair<int,int>>(defaultController2.begin(), defaultController2.begin() + 8)
+    };
+    controls.mapping = std::vector<AmselControlAction>(defaultMapping.begin(), defaultMapping.begin() + 8);
+    Console::loadMappings();
 }
 
 void NesImplementation::renderCustomMenuDesktop(){
@@ -194,3 +210,17 @@ void NesImplementation::displayRegisters()
 }
 
 std::vector<SystemOption> NesImplementation::options = {};
+
+#ifdef FEATURE_LOCAL_MULTIPLAYER
+    #define NUM_CONTROLLERS 2
+#else
+    #define NUM_CONTROLLERS 1
+#endif
+
+ControlOptions NesImplementation::controls = {
+    .numControllers = NUM_CONTROLLERS,
+    .numButtons = 8,
+    .controllers = {},
+    .mapping = {},
+    .joysticks = {0, 1}
+};

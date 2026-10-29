@@ -16,6 +16,23 @@
     #include "../framework/screen.h"
 #endif
 #include "../framework/global.h"
+#include "framework/file_io.h"
+
+// Falls ich Doppelbelegung will, hier Vektor zurückgeben?
+std::pair<AmselControlAction, int> calculateAmselAction(ControlOptions *controls, unsigned int key, bool isGamepadKey)
+{
+  const auto &bindings = controls->controllers;
+  for(size_t c = 0; c < controls->numControllers; c++){
+    for(size_t i = 0; i < controls->numButtons; i++){
+      const auto storedVal = isGamepadKey ? bindings[c][i].second : bindings[c][i].first;
+      if((unsigned int)storedVal == key){
+        return {controls->mapping[i], c};
+      }
+    }
+  }
+
+  return {AmselControlAction_Invalid, 0};
+}
 
 void createConsole(const char *path)
 {
@@ -80,10 +97,25 @@ std::unique_ptr<Console> createConsoleFromData(std::string filename, std::vector
     return c;
 }
 
+void Console::loadMappings()
+{
+    #ifdef BUILD_DESKTOP
+    auto name = getConsoleName();
+    auto controls = getControlOptions();
+    FileIO::getInstance().loadSystemControls(name, controls);
+    #endif
+}
+
 Console::Console(const char *path)
 {
     std::filesystem::path p(path);
     this->loadedGame = p.filename().string();
+}
+
+void Console::setKeyInt(int controller, int key, int action)
+{
+    const auto p = calculateAmselAction(getControlOptions(), key, false);
+    setKey(p.second, p.first, action);
 }
 
 std::string Console::getGameTitle()
@@ -123,8 +155,7 @@ EMSCRIPTEN_BINDINGS(ConsoleModule) {
     .function("isLoaded", &Console::isLoaded)
     .function("getX", &Console::getX)
     .function("getY", &Console::getY)
-    .function("setController1Key", &Console::setController1Key)
-    .function("setController2Key", &Console::setController2Key)
+    .function("setKey", &Console::setKeyInt)
     .function("getGameTitle", &Console::getGameTitle)
     .function("canSave", &Console::canSave)
     .function("getSaveData", &Console::getSaveData)
@@ -132,6 +163,7 @@ EMSCRIPTEN_BINDINGS(ConsoleModule) {
     .function("getRequiredFiles", &Console::getRequiredFiles)
     .function("loadSpecialFile", &Console::loadSpecialFile)
     .function("setHalt", &Console::setHalt)
+    .function("initializeControls", &Console::initializeControls)
     ;
 
 //   smart_ptr<std::shared_ptr<Console>>("CXXConsole");
@@ -141,3 +173,5 @@ EMSCRIPTEN_BINDINGS(ConsoleModule) {
 #endif
 
 std::vector<SystemOption> DummyImplementation::options = {};
+
+ControlOptions DummyImplementation::controls = {};

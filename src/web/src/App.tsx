@@ -69,6 +69,7 @@ function App() {
         setRequiredFiles(jsarr);
         requiredFilesModal.current?.showModal();
       }
+      cons.initializeControls();
       setEmu(cons);
       setGameTitle(files[0].name);
       setInput(new InputHandler(cons!));

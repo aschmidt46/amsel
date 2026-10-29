@@ -3,6 +3,9 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include "control.h"
+
+struct ControlOptions;
 
 void initInput();
 
@@ -17,4 +20,3 @@ void mousePosCallback(GLFWwindow* window, double xpos, double ypos);
 // Eingabelogik
 std::pair<std::vector<int>, std::vector<int>> calculateGamepadStateDelta(const GLFWgamepadstate &prev, const GLFWgamepadstate &now);
 std::vector<int> enumerateGamepads();
-void changeGamepadTo(int number, int jid);

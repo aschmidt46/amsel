@@ -408,11 +408,11 @@ bool gba::CPU::executeInstruction()
         InstructionInfo info = this->pipeline[0];
         Condition cond = (Condition)((info.code & 0xF0000000) >> 28);
         // if(_R15_PC - 8 == 0x018) bus->setHalt();
-        if(info.code == 0){
-            std::cout << "ANDEQ erreicht!\n";
-            bus->setHalt();
-            return false;
-        }
+        // if(info.code == 0){
+        //     std::cout << "ANDEQ erreicht!\n";
+        //     bus->setHalt();
+        //     return false;
+        // }
         if(startLogging && (mode() == System || mode() == User)){
             outs << "(x0: " << getHex0x(_R0, 8) << ") " << "(x1: " << getHex0x(_R1, 8) << ") " << "(x2: " << getHex0x(_R2, 8) << ") " << "(x3: " << getHex0x(_R3, 8) << ") " << "(x4: " << getHex0x(_R4, 8) << ") " << "(x5: " << getHex0x(_R5, 8) << ") "
             << "(x6: " << getHex0x(_R6, 8) << ") " << "(x7: " << getHex0x(_R7, 8) << ") "
@@ -706,9 +706,9 @@ gba::CPU::CPU(bool skipBios)
     _SPSR_und.raw = 0;
 
     _CPSR.raw = 0xD3;
-    // _CPSR.state.mode_bits = System;
-
+    
     if(skipBios){
+        _CPSR.state.mode_bits = System;
         _R13_SP = 0x03007F00;
         _R13_SVC = 0x03007FE0;
         _R13_irq = 0x03007FA0;

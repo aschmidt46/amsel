@@ -41,6 +41,7 @@ GLFWwindow* window;
 bool mouseIsDown = false;
 GLFWcursor* touchCursor;
 std::vector<std::pair<std::string, std::vector<SystemOption>*>> systemOptions;
+std::vector<std::pair<std::string, ControlOptions*>> controlOptions;
 #ifdef BUILD_DESKTOP
 asio::io_context io_context;
 #endif

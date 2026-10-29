@@ -8,6 +8,7 @@
 #include <imgui.h>
 // #endif
 #include "framework/locale.h"
+#include "framework/common.h"
 
 // FIXEN::
 //           0  1   2     3      4     5    6    7    8  9
@@ -159,35 +160,9 @@ float NDSImplementation::getY()
     return 384.0f;
 }
 
-void NDSImplementation::setController1Key(bool gamepad, int key, int action) {
-    (void)gamepad; (void)key; (void)action;
-    auto c = &globalConfig.controller1;
-    if (gamepad)
-    {
-      for (int i = 0; i < 10; i++)
-      {
-        if ((*c)[i].second == key)
-        {
-          setAddressOf(i, action);
-          return;
-        }
-      }
-    }
-    else
-    { // Tastatur
-      for (int i = 0; i < 10; i++)
-      {
-        if ((*c)[i].first == key)
-        {
-          setAddressOf(i, action);
-          return;
-        }
-      }
-    }
-}
-
-void NDSImplementation::setController2Key(bool gamepad, int key, int action) {
-    (void)gamepad; (void)key; (void)action;
+void NDSImplementation::setKey(int controller, AmselControlAction key, int action) {
+    (void)controller;
+    setAddressOf(key, action);
 }
 
 std::optional<Rect> NDSImplementation::getTouchArea()
@@ -238,6 +213,20 @@ void NDSImplementation::loadSpecialFile(std::string name, std::vector<uint8_t> c
 
 std::vector<SystemOption>* NDSImplementation::getSystemOptions(){
     return &options;
+}
+
+ControlOptions *NDSImplementation::getControlOptions()
+{
+    return &controls;
+}
+
+void NDSImplementation::initializeControls()
+{
+    controls.controllers = {
+        std::vector<std::pair<int,int>>(defaultController1.begin(), defaultController1.begin() + 10)
+    };
+    controls.mapping = std::vector<AmselControlAction>(defaultMapping.begin(), defaultMapping.begin() + 10);
+    Console::loadMappings();
 }
 
 void NDSImplementation::renderCustomMenuDesktop(){
@@ -415,4 +404,14 @@ std::vector<SystemOption> NDSImplementation::options = {
     RequiredFile{NDSBios7, "nds7bios", "*.rom", ""},
     RequiredFile{NDSBios9, "nds9bios", "*.rom", ""},
     RequiredFile{NDSFirmware, "ndsfirmware", "*.bin", ""}
+};
+
+
+ControlOptions NDSImplementation::controls = {
+    .numControllers = 1,
+    .numButtons = 10, // eigentlich 12
+    .controllers = {
+        //std::vector<std::pair<int,int>>(defaultController1.begin(), defaultController1.begin() + 10)
+    },
+    .mapping = {}//std::vector<AmselControlAction>(defaultMapping.begin(), defaultMapping.begin() + 10)
 };

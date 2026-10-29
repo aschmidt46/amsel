@@ -6,6 +6,8 @@
 // Eingabeänderung / Steuerungseinstellung (Gui Zustand)
 struct InputWaitContext{
     bool wait = false;
+    ControlOptions* console = nullptr;
+    std::string consoleName = "";
     unsigned int controller = 0;
     Action actionToSet = AC_BUTTON_START;
     bool secondary = false;
@@ -71,10 +73,11 @@ class Gui{
     void drawDebugger();
     void drawAbout();
     void drawOutput();
+    void drawConsoleControls(std::pair<std::string, ControlOptions*> c);
     void drawControlSettings();
-    void drawControlSettingsPage(int controller);
+    void drawControlSettingsPage(int controller, std::pair<std::string, ControlOptions*> c);
     void drawSystemOptions();
-    void buttonChangePrompt(int i, unsigned int controller, bool secondary);
+    void buttonChangePrompt(std::pair<std::string, ControlOptions*> &c, int i, unsigned int controller, bool secondary);
     
     void printASM(const std::vector<std::pair<std::string, ASMtype>> &v);
     void ASMLine(std::string l, float r, float g, float b);

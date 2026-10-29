@@ -2,6 +2,7 @@
 #include "cgb_bridge.h"
 #include "console.h"
 #include "framework/global.h"
+#include "framework/common.h"
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -18,13 +19,13 @@ class CgbImplementation : public Console, std::enable_shared_from_this<CgbImplem
     std::shared_ptr<NetworkState> netState;
     rust::Box<CGB> cgb;
     static std::vector<SystemOption> options;
+    static ControlOptions controls;
     // Retroarch verwendet offenbar (im Audio?) eine Art von Nebenläufigkeit, die dafür sorgt, dass mehrere Funktionen auf dem Console Objekt gleichzeitig aufgerufen werden (können).
     // Das führt zu einem Laufzeitfehler in Rust, weil dadurch das CGB Objekt mehrfach geborrowed wird -> panic
     // Der Mutex ist ein einfacher Workaround
     // #ifdef BUILD_LIBRETRO_CORE
     std::mutex m;
     // #endif
-    void setAddressOf(int i, int to);
 
     void clockLinkCable();
     public:
@@ -43,8 +44,7 @@ class CgbImplementation : public Console, std::enable_shared_from_this<CgbImplem
     bool isLoaded() override;
     float getX() override;
     float getY() override;
-    void setController1Key(bool gamepad, int key, int action) override;
-    void setController2Key(bool gamepad, int key, int action) override;
+    void setKey(int controller, AmselControlAction key, int action) override;
 
     std::vector<std::string> getRequiredFiles() override;
     void loadSpecialFile(std::string name, std::vector<uint8_t> content) override;
@@ -53,6 +53,8 @@ class CgbImplementation : public Console, std::enable_shared_from_this<CgbImplem
     void transferSent();
 
     std::vector<SystemOption>* getSystemOptions() override;
+    ControlOptions* getControlOptions() override;
+    void initializeControls() override;
 
     bool canSave() override;
     std::vector<uint8_t> getSaveData() override;

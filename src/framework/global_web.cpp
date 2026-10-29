@@ -27,7 +27,7 @@ bool mouseIsDown = false;
 
 
 int main(){
-    setDefaultBindings(globalConfig);
+    // setDefaultBindings(globalConfig);
     std::cout << "AMSEL initialized." << std::endl;
     return 0;
 }

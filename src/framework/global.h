@@ -45,11 +45,6 @@ struct SettingsConfig{
     float volume = 1.0f;
     bool unmute = true;
     // Input
-    // Controller 1, Primär- und Sekundärbelegung (Sekundär ist nur für Controller)
-    std::vector<std::pair<int, int>> controller1;
-    // Controller 2
-    std::vector<std::pair<int, int>> controller2;
-
     // Joystick IDs für die beiden Controller
     int jidController1 = 0;
     int jidController2 = 1;
@@ -93,6 +88,7 @@ extern GLFWwindow* window; // Haupt-Viewport
 extern GLFWcursor* touchCursor;
 extern bool mouseIsDown;
 extern std::vector<std::pair<std::string, std::vector<SystemOption>*>> systemOptions;
+extern std::vector<std::pair<std::string, ControlOptions*>> controlOptions;
 #ifdef BUILD_DESKTOP
 extern asio::io_context io_context;
 #endif

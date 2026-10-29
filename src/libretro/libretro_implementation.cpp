@@ -134,7 +134,7 @@ static void audio_set_state(bool enable)
 */
 bool retro_load_game(const retro_game_info* info)
 {
-	setDefaultBindings(globalConfig);
+	// setDefaultBindings(globalConfig);
 
    	enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
    	if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
@@ -149,6 +149,7 @@ bool retro_load_game(const retro_game_info* info)
 		std::vector<uint8_t> rom;
 		rom.assign((uint8_t*)info->data, (uint8_t*)info->data + info->size);
 		core = createConsoleFromData(info->path, rom);
+		core->initializeControls();
 	}
 
 	struct retro_audio_callback audio_cb = { audio_callback, audio_set_state };
@@ -171,7 +172,7 @@ void retro_run(void)
 
 	for(const auto &pair : keymap){
 		auto value = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, pair.first);
-		core->setController1Key(false, pair.second, value != 0);
+		core->setKeyInt(0, pair.second, value != 0);
 	}
 
 

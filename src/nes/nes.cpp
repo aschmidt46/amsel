@@ -202,15 +202,15 @@ std::vector<uint8_t> NES::getSaveData()
     return this->mapper->getSaveData();
 }
 
-void NES::setController1Key(bool gamepad, int key, int action)
+void NES::setController1Key(int key, int action)
 {
-    controller1->setKey(gamepad, key, action);
+    controller1->setAddressOf(key, action);
 }
 
-void NES::setController2Key(bool gamepad, int key, int action)
+void NES::setController2Key(int key, int action)
 {
     #ifdef FEATURE_LOCAL_MULTIPLAYER
-    controller2->setKey(gamepad, key, action);
+    controller2->setAddressOf(key, action);
     #endif
 }
 

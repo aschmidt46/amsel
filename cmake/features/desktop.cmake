@@ -104,6 +104,8 @@ src/framework/locale.h
 src/framework/locale.cpp
 src/console/dummy_implementation.h
 src/framework/vector.h
+src/framework/control.h
+src/framework/control.cpp
 )
 
 

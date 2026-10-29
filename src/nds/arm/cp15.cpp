@@ -144,7 +144,7 @@ void nds::CP15::renderTCM()
         ImGui::Text((std::string("Is Enabled? ") + (itcmIsEnabled() ? "Yes" : "No")).c_str());
         ImGui::Text((std::string("Is Load Mode? ") + (itcmIsLoadMode() ? "Yes" : "No")).c_str());
 
-        ImGui::Text("");
+        ImGui::Text("\n");
 
         ImGui::Text("DTCM Region: ");
         ImGui::SameLine();

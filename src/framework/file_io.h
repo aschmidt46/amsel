@@ -27,6 +27,9 @@ class FileIO{
     SettingsConfig loadSettings(int posX, int posY);
     void saveSettings(const SettingsConfig &config);
 
+    void loadSystemControls(const std::string &consoleName, ControlOptions* controls);
+    void saveSystemControls(const std::string &consoleName, ControlOptions* controls);
+
     void saveSystemSettings(const std::vector<std::pair<std::string, std::vector<SystemOption>*>> &options);
     void loadSystemSettings(const std::vector<std::pair<std::string, std::vector<SystemOption>*>> &options);
 };

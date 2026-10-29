@@ -85,8 +85,8 @@ class NES{
     std::vector<uint8_t> getSaveData();
 
 
-    void setController1Key(bool gamepad, int key, int action);
-    void setController2Key(bool gamepad, int key, int action);
+    void setController1Key(int key, int action);
+    void setController2Key(int key, int action);
 
     // template<class Archive>
     // void serialize(Archive & archive)

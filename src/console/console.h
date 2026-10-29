@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include "framework/control.h"
 #ifdef BUILD_WEB    
 #include <emscripten.h>
 #include <emscripten/bind.h>
@@ -12,6 +13,16 @@ using namespace emscripten;
 #endif
 
 enum LocalizedString : size_t;
+
+struct ControlOptions{
+    size_t numControllers = 0;
+    size_t numButtons = 0;
+    std::vector< // Controller Primär- und Sekundärbelegung (Sekundär ist nur für Gamepad)
+        std::vector<std::pair<int, int>> // Belegung muss GLFW enums entsprechen
+    > controllers;
+    std::vector<AmselControlAction> mapping; // Mapping von internem Index auf Amsel index
+    std::vector<int> joysticks = {0};
+};
 
 struct RequiredFile{
     LocalizedString name;
@@ -38,6 +49,8 @@ struct Rect{
     float bottom = 0.0f;
 };
 
+std::pair<AmselControlAction, int> calculateAmselAction(ControlOptions* controls, unsigned int key, bool isGamepadKey);
+
 using SystemOption = std::variant<RequiredFile, Toggle, CustomMenu>;
 
 class Console{
@@ -46,6 +59,8 @@ class Console{
 
     // Macht das ganze einfacher, weil ich einen Callback weniger in JS brauche
     float volume = 1.0f;
+
+    void loadMappings();
     
     public:
     virtual std::string getConsoleName() = 0;
@@ -66,8 +81,8 @@ class Console{
     virtual float getX() = 0;
     // Feste Bildschirmhöhe
     virtual float getY() = 0;
-    virtual void setController1Key(bool gamepad, int key, int action) = 0;
-    virtual void setController2Key(bool gamepad, int key, int action) = 0;
+    virtual void setKey(int controller, AmselControlAction key, int action) = 0;
+    virtual void setKeyInt(int controller, int key, int action) final;
     virtual std::optional<Rect> getTouchArea(){ return std::nullopt; }
     virtual void setTouch(float x, float y){};
     virtual void releaseTouch(){};
@@ -84,6 +99,8 @@ class Console{
     virtual void loadSpecialFile(std::string name, std::vector<uint8_t> content) = 0;
     
     virtual std::vector<SystemOption>* getSystemOptions() = 0;
+    virtual ControlOptions* getControlOptions() = 0;
+    virtual void initializeControls() = 0;
     virtual void renderCustomMenuDesktop() = 0;
 
 

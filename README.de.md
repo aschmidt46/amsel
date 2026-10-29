@@ -8,6 +8,7 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 <img src="resources/super-circuit.png" width="48%">   <img src="resources/emerald.png" width="48%">
 
 ## Systeme und Kompatibilität
+Jedes System enthält einen Debugger, der mehr oder weniger Funktionalität enthält je nach meinen Anforderungen.
 ### Nintendo Entertainment System
 - Verhalten ist an NTSC abgestimmt, experimenteller PAL-Modus
 - Die häufigst verwendeten Mapper sind implementiert (MMC1, UxROM, CNROM, (MMC3), AxROM)
@@ -24,6 +25,14 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - Die meisten Spiele, welche nicht präzise Timings oder obskures Verhalten benötigen, laufen
 - Timings, Waitstates nicht implementiert
 - Performance schwach
+### Nintendo DS
+- Die meiste Peripherie ist implementiert
+- Firmware lässt sich booten
+- 2D Engines haben noch nicht alle Funktionalität
+- 3D GPU fehlt noch
+- Audio fehlt
+- Wifi fehlt
+- Touch-Eingabe wird nicht vom Web frontend unterstützt
 
 ## Features
 - Persistente Einstellungen (Lautstärke, Tastenbelegungen, Sprache, etc.)
@@ -37,7 +46,7 @@ Cross-Plattform Emulator-Produktlinie in C++ (NES, DMG, CGB, GBA)
 - React-Weboberfläche, ermöglicht Nutzung auf Smartphones
 
 ## Aufbau
-Das Projekt ist zum Großteil in C++ geschrieben. Die einzelnen Konsolen sind größtenteils von der Benutzeroberfläche entkoppelt, dadurch lässt sich das Programm auch zumindest theoretisch leicht erweitern, allerdings gehen einige Teile der Benutzeroberfläche noch strikt von einem NES / Gameboy aus (z.B. Tastenbelegungen).
+Das Projekt ist zum Großteil in C++ geschrieben. Die einzelnen Konsolen sind größtenteils von der Benutzeroberfläche entkoppelt, dadurch lässt sich das Programm einfach um neue Systeme erweitern. Die Steuerung ist auch entkoppelt, allerdings stellt die Bibliothek aktuell nur eine begrenzte Auswahl an Tasten zur Verfügung. Es existiert aktuell keinerlei Unterstützung für analoge Eingabe (bzw. Analoge Eingabe wird immer in an / aus Signale konvertiert). Es werden Touch screen Konsolen unterstützt, wofür das betroffene Bildschirmareal frei gesetzt werden kann.
 Die Benutzeroberfläche ist aktuell in Dear ImGui implementiert, das ganze Desktop-Frontend läuft in einem OpenGL-Kontext.
 
 Den Gameboy-Emulator hatte ich zuerst in einem eigenständigen Projekt in Rust implementiert, um die Sprache zu lernen. Anschließend habe ich in dem Projekt ein Foreign Function Interface zu C++ mit Rust CXX gebaut, um es in das NES-Projekt zu integrieren. Mit Corrosion lässt sich ein Rust-Paket mit CXX sehr leicht in ein vorhandenes CMake-Skript eingliedern.

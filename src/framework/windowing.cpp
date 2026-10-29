@@ -167,6 +167,8 @@ void registerConsoles(){
   for(const auto &cs : registeredConsoles){
     auto options = cs->getSystemOptions();
     systemOptions.push_back({cs->getConsoleName(), options});
+    cs->initializeControls();
+    controlOptions.push_back({cs->getConsoleName(), cs->getControlOptions()});
   }
   FileIO::getInstance().loadSystemSettings(systemOptions);
 }
