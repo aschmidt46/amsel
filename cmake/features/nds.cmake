@@ -13,6 +13,15 @@ add_library(nds_dasm
   deps/arm_disassembler/armdisasm.h deps/arm_disassembler/armdisasm.c
 )
 
+FetchContent_Declare(
+	glm
+	GIT_REPOSITORY	https://github.com/g-truc/glm.git
+	GIT_TAG 	1.0.2
+  SOURCE_DIR "${PROJECT_SOURCE_DIR}/deps/glm"
+)
+
+FetchContent_MakeAvailable(glm)
+include_directories(PUBLIC deps/glm)
 
 add_library(nds
 src/nds/bus.h src/nds/bus.cpp src/gba/ibus.h src/nds/bus_types.h src/nds/bus_debug.cpp
@@ -45,6 +54,9 @@ src/nds/lcd/2d/ppu_registers.h
 src/nds/lcd/2d/ppu_rendering.cpp
 src/nds/lcd/2d/ppu_io.cpp
 src/nds/lcd/3d/gpu.h
+src/nds/lcd/3d/gpu_types.h
+src/nds/lcd/3d/gpu_io.cpp
+src/nds/lcd/3d/gpu_geometry.cpp
 src/nds/lcd/lcd.h
 src/nds/lcd/lcd.cpp
 src/nds/lcd/lcd_banks.cpp

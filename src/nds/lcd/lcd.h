@@ -118,7 +118,7 @@ namespace nds{
         size_t framebufferSize = 0;
         uint32_t* backBuffer;
         Word vCount = 0; // engine A + B
-        LCD(SharedBus* bus) : bus(bus){
+        LCD(SharedBus* bus) : bus(bus), engine3D(bus){
             framebufferSize = 256*192*2;
             framebuffer = new uint32_t[framebufferSize]();
             backBuffer = new uint32_t[framebufferSize]();
