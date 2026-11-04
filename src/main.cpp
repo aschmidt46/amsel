@@ -77,11 +77,13 @@ int run(int argc, wchar_t** argv)
   // Audiosystem taktet die Konsole in separatem Thread
   std::thread t(&AudioSystem::start, &audiosystem);
 
+  #ifdef FEATURE_ONLINE_MULTIPLAYER
   std::thread nt([&](){
     while(!stopNetworkThread){
       io_context.run();
     }
   });
+  #endif
 
   glfwSwapInterval(0);
   while(!glfwWindowShouldClose(window)){
@@ -130,7 +132,9 @@ int run(int argc, wchar_t** argv)
   stopNetworkThread = true;
   #ifndef PROFILE_MODE
   t.join();
+  #ifdef FEATURE_ONLINE_MULTIPLAYER
   nt.join();
+  #endif
   #endif
   cleanUp(window);
   return 0;

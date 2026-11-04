@@ -204,13 +204,6 @@ void CgbImplementation::initializeControls()
   Console::loadMappings();
 }
 
-void CgbImplementation::clockLinkCable(){
-  // if(connection.has_value()){
-  //   connection.value()->writeByte(116);
-  //   connection.value()->readByte();
-  // }
-}
-
 bool CgbImplementation::canSave()
 {
     return cgb_can_save(cgb);
@@ -382,7 +375,11 @@ void CgbImplementation::transferSent(){
   completed_send(cgb);
 }
 
+#ifdef FEATURE_ONLINE_MULTIPLAYER
 std::vector<SystemOption> CgbImplementation::options = {CustomMenu{LinkCable}};
+#else
+std::vector<SystemOption> CgbImplementation::options = {};
+#endif
 
 ControlOptions CgbImplementation::controls = {
     .numControllers = 1,

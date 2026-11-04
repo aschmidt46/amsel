@@ -26,8 +26,6 @@ class CgbImplementation : public Console, std::enable_shared_from_this<CgbImplem
     // #ifdef BUILD_LIBRETRO_CORE
     std::mutex m;
     // #endif
-
-    void clockLinkCable();
     public:
     std::string getConsoleName() override;
     CgbImplementation() = delete;

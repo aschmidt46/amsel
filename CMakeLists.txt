@@ -50,6 +50,7 @@ cmake_dependent_option(FEATURE_DEBUGGER "Add Debugger to Desktop-App" ON FEATURE
 cmake_dependent_option(FEATURE_CONSOLE "Add Console to Desktop App" ON FEATURE_DESKTOP OFF)
 
 cmake_dependent_option(FEATURE_GAMEBOY_CGB_SUPPORT "Gameboy supports CGB Games" ON FEATURE_CGB OFF)
+cmake_dependent_option(FEATURE_ONLINE_MULTIPLAYER "TCP Link Cable Support on Gameboy" ON FEATURE_CGB OFF)
 
 cmake_dependent_option(FEATURE_NES_NTSC "NTSC Region" ON FEATURE_NES OFF)
 cmake_dependent_option(FEATURE_LOCAL_MULTIPLAYER "Add local Multiplayer support" ON FEATURE_NES OFF)
@@ -67,6 +68,10 @@ endif()
 
 if(FEATURE_LOCAL_MULTIPLAYER)
   add_compile_definitions(FEATURE_LOCAL_MULTIPLAYER)
+endif()
+
+if(FEATURE_ONLINE_MULTIPLAYER)
+  add_compile_definitions(FEATURE_ONLINE_MULTIPLAYER)
 endif()
 
 if(FEATURE_DEBUGGER)
