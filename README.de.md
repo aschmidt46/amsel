@@ -107,6 +107,44 @@ cmake .. -DFEATURE_TEST_SUITE=ON
 make test
 ```
 
+# Ressourcen
+System Referenzen / Test-Roms die mir bei der Entwicklung sehr geholfen haben.
+
+## NES
+[NesDev Wiki](https://www.nesdev.org/wiki/NES_reference_guide)
+[6502 instruction reference](https://www.masswerk.at/6502/6502_instruction_set.html)
+[Blargg's APU reference](https://www.nesdev.org/apu_ref.txt)
+[NesDev Forums](https://forums.nesdev.org/) (Spiel-spezifische Probleme)
+[test roms](https://github.com/christopherpow/nes-test-roms)
+
+## Gameboy
+[gbdev pandocs](https://gbdev.io/pandocs/)
+[src/cgb/resources/Opcodes.json](https://gbdev.io/gb-opcodes/optables/)
+[SM83 instruction set reference](https://rgbds.gbdev.io/docs/v1.0.4/gbz80.7)
+[Blargg's test roms](https://github.com/retrio/gb-test-roms)
+[cgb-acid2 test rom](https://github.com/mattcurrie/cgb-acid2)
+
+## GBA
+[GBATEK](https://problemkaputt.de/gbatek.htm)
+[ARM7TDMI Datasheet](https://www.dwedit.org/files/ARM7TDMI.pdf)
+[TONC](https://www.coranac.com/tonc/text/) (PPU Erklärung + Test-Roms)
+[Explaining GBA Real-Time Clock](https://bmchtech.github.io/post/rtc/)
+[Notes on GBA PPU: Windows and Blending](https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html)
+[Cartridge Backup Storage](https://dillonbeliveau.com/2020/06/05/GBA-FLASH.html)
+[ARM7TDMI single-step tests](https://github.com/SingleStepTests/ARM7TDMI)
+[armwrestler test rom](https://github.com/destoer/armwrestler-gba-fixed)
+[jsmolka test suite](https://github.com/jsmolka/gba-tests)
+[mGBA test suite](https://github.com/mgba-emu/suite)
+
+## NDS
+\+ Alles zum GBA
+[GBATEK](https://problemkaputt.de/gbatek.htm)
+[GBATEK addendum](https://melonds.kuribo64.net/board/thread.php?pid=6560)
+[libnds examples](https://github.com/devkitPro/nds-examples) (+ calico Quelltext)
+[blocksds examples](https://codeberg.org/blocksds/sdk)
+[rockwrestler test rom](https://github.com/RockPolish/rockwrestler)
+[armwrestler test rom](https://github.com/Atem2069/armwrestler-fixed)
+
 # Lizenz
 AMSEL ist lizensiert unter BSD-3.
 Teile des NES-PPU Codes sind abgeändert aus olcNES übernommen (<a href="https://github.com/OneLoneCoder/olcNES#license-olc-3">Siehe Lizenz</a>).
