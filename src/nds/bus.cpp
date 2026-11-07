@@ -269,6 +269,9 @@ void nds::SharedBus::clock()
 
 
     clocks++;
+
+    lcd->engine3D.clockGeometry();
+
     bus7->clock();
     bus9->clock();
     scheduler->clock();

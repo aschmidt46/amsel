@@ -228,7 +228,7 @@ Byte nds::Cartridge::onRead(Word addr)
     }
     if(addr == 0x40001A2){
         if(!AUXSPICNT.state.holdChipSelect && !AUXSPICNT.state.busy){
-            std::cout << "Chip select pulled up\n";
+            // std::cout << "Chip select pulled up\n";
             unselectDevices();
         }
         return AUXSPIDATA;

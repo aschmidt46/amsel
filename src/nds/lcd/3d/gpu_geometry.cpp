@@ -1,79 +1,248 @@
 #include "gpu.h"
 #include "../../bus.h"
+#include "framework/stringlib.h"
 
 using namespace nds;
 
 void nds::GPU::clockGeometry()
 {
-    if(commandFifo.size() > 0 && !fifoHalted){
+    if(commandFifo.size() > 0 && !haltGeometry){
         // ausführen
-        const auto &f = cmdToFunction[commandFifo.front().cmd];
+        const auto f = cmdToFunction[commandFifo.front().cmd];
+        const auto sz = (unsigned int)cmdToNumParams[commandFifo.front().cmd];
         (this->*f)(commandFifo.front());
+        if(commandFifoSize < std::max(sz, 1u)){
+            std::cout << "WRONG COMMAND FIFO HANDLING, PARAMETER LENGTH EXCEEDS FIFO SIZE\n";
+            std::terminate();
+        }
+        commandFifoSize -= std::max(sz, 1u);
         commandFifo.pop();
     }
 
-    if(GXSTAT.state.commandFifoIRQ == 1){
-        if(commandFifo.size() < 128){
-            bus->setIFSingleBus(21, true, true);
-        }
+    updateIF();
+}
+
+void nds::GPU::swapBuffers() // Das ist die tatsächliche Ausführung nach VBlank
+{
+    vertexPolyRam.swap(vertexPolyRamRender);
+    std::fill(vertexPolyRam.begin(), vertexPolyRam.end(), 0); // leeren und an geometrie engine geben
+    haltGeometry = false;
+}
+
+size_t &nds::GPU::getSP()
+{
+    switch(geometry.mtxMode){
+        case 0: return matrixStack.projectionSP;
+        case 1: return matrixStack.coordinateSP;
+        case 2: return matrixStack.coordinateSP;
+        case 3: return matrixStack.textureSP;
+        default: return matrixStack.projectionSP;
     }
-    else if(GXSTAT.state.commandFifoIRQ == 2){
-        if(commandFifo.empty()){
-            bus->setIFSingleBus(21, true, true);
-        }
+}
+
+std::array<mat4x4, 32> &nds::GPU::getStack()
+{
+    switch(geometry.mtxMode){
+        case 0: return matrixStack.projection;
+        case 1: return matrixStack.coordinate;
+        case 2: return matrixStack.coordinate;
+        case 3: return matrixStack.texture;
+        default: return matrixStack.projection;
     }
+}
+
+void nds::GPU::recalculateClipMtx()
+{
+    clipMtxResult = matrixStack.currentCoordinate * matrixStack.currentProjection;
 }
 
 void nds::GPU::NOP(const FIFOCommand &cmd)
 {
+    if(cmd.cmd != 0){
+        std::cout << "Unknown FIFO CMD: " << getHex0x(cmd.cmd, 2) << "\n";
+    }
 }
 
 void nds::GPU::MTX_PUSH(const FIFOCommand &cmd)
 {
+    auto &sp = getSP();
+    auto &stack = getStack();
+    if(sp > 30) GXSTAT.state.matrixStackOverUnderflow = 1;
+    if(geometry.mtxMode == 1 || geometry.mtxMode == 2){
+        stack[sp & 0x1F] = *matrixStack.current;
+        matrixStack.directional[sp & 0x1F] = matrixStack.currentDirection;
+    }
+    else{
+        stack[0] = *matrixStack.current;
+        if(sp>=1) GXSTAT.state.matrixStackOverUnderflow = 1;
+    }
+    sp++;
+    sp &= 0x3F;
+    if(geometry.mtxMode == 0 || geometry.mtxMode == 3){
+        sp &= 1;
+    }
 }
 
 void nds::GPU::MTX_POP(const FIFOCommand &cmd)
 {
+    Word nr = cmd.params[0] & 0b111111;
+    int32_t n = sign_extend_n_32(nr, 6);
+    auto &sp = getSP();
+    if(geometry.mtxMode == 0 || geometry.mtxMode == 3){
+        n = 1;
+        if(sp == 0) GXSTAT.state.matrixStackOverUnderflow = 1;
+    }
+
+    sp -= n;
+    sp &= 0x3F;
+    if(sp > 30) GXSTAT.state.matrixStackOverUnderflow = 1;
+
+    auto &stack = getStack();
+    if(geometry.mtxMode == 1 || geometry.mtxMode == 2){
+        *matrixStack.current = stack[sp & 0x1F];
+        matrixStack.currentDirection = matrixStack.directional[sp & 0x1F];
+    }
+    else{
+        sp &= 1;
+        *matrixStack.current = stack[0];
+    }
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_STORE(const FIFOCommand &cmd)
 {
+    auto &stack = getStack();
+    Word n = cmd.params[0] & 0b11111;
+    if(geometry.mtxMode == 0 || geometry.mtxMode == 3) n = 0;
+    stack[n] = *matrixStack.current;
+    if(geometry.mtxMode == 1 || geometry.mtxMode == 2) matrixStack.directional[n] = matrixStack.currentDirection;
+    if(n > 30) GXSTAT.state.matrixStackOverUnderflow = 1;
 }
 
 void nds::GPU::MTX_RESTORE(const FIFOCommand &cmd)
 {
+    auto &stack = getStack();
+    Word n = cmd.params[0] & 0b11111;
+    if(geometry.mtxMode == 0 || geometry.mtxMode == 3) n = 0;
+    *matrixStack.current = stack[n];
+    if(geometry.mtxMode == 1 || geometry.mtxMode == 2) matrixStack.currentDirection = matrixStack.directional[n];
+    if(n > 30) GXSTAT.state.matrixStackOverUnderflow = 1;
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_IDENTITY(const FIFOCommand &cmd)
 {
+    *matrixStack.current = mat4x4::identity();
+    if(geometry.mtxMode == 2) matrixStack.currentDirection = mat4x4::identity(); // current ist Position / Coordinate
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_LOAD_4x4(const FIFOCommand &cmd)
 {
+    for(int i = 0; i < 16; i++){
+        matrixStack.current->data[i] = cmd.params[i];
+        if(geometry.mtxMode == 2) matrixStack.currentDirection.data[i] = cmd.params[i];
+    }
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_LOAD_4x3(const FIFOCommand &cmd)
 {
+    int it = 0;
+    for(int i = 0; i < 4; i++){
+        for(int j = 0; j < 3; j++){
+            (*matrixStack.current)(i,j) = cmd.params[it];
+            if(geometry.mtxMode == 2) matrixStack.currentDirection(i,j) = cmd.params[it];
+            it++;
+        }
+    }
+
+    for(int i = 0; i < 3; i++){
+        (*matrixStack.current)(i,3) = 0;
+        if(geometry.mtxMode == 2) matrixStack.currentDirection(i,3) = 0;
+    }
+
+    (*matrixStack.current)(3,3) = 0x1000;
+    if(geometry.mtxMode == 2) matrixStack.currentDirection(3,3) = 0x1000;
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_MULT_4x4(const FIFOCommand &cmd)
 {
+    mat4x4 m;
+    for(int i = 0; i < 16; i++){
+        m.data[i] = cmd.params[i];
+    }
+
+    *matrixStack.current = m * *matrixStack.current;
+    if(geometry.mtxMode == 2) matrixStack.currentDirection = m * matrixStack.currentDirection;
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_MULT_4x3(const FIFOCommand &cmd)
 {
+    mat4x4 m = mat4x4::identity();
+    int it = 0;
+    for(int i = 0; i < 4; i++){
+        for(int j = 0; j < 3; j++){
+            m(i,j) = cmd.params[it];
+            it++;
+        }
+    }
+
+    *matrixStack.current = m * *matrixStack.current;
+    if(geometry.mtxMode == 2) matrixStack.currentDirection = m * matrixStack.currentDirection;
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_MULT_3x3(const FIFOCommand &cmd)
 {
+    mat4x4 m = mat4x4::identity();
+    int it = 0;
+    for(int i = 0; i < 3; i++){
+        for(int j = 0; j < 3; j++){
+            m(i,j) = cmd.params[it];
+            it++;
+        }
+    }
+
+    *matrixStack.current = m * *matrixStack.current;
+    if(geometry.mtxMode == 2) matrixStack.currentDirection = m * matrixStack.currentDirection;
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_SCALE(const FIFOCommand &cmd)
 {
+    mat4x4 scale = mat4x4::identity();
+    for(int i = 0; i < 3; i++){
+        scale(i,i) = cmd.params[i];
+    }
+
+    *matrixStack.current = scale * *matrixStack.current;
+    // Direction Matrix wird in Mode 2 nicht verändert
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::MTX_TRANS(const FIFOCommand &cmd)
 {
+    mat4x4 translate = mat4x4::identity();
+    for(int i = 0; i < 3; i++){
+        translate(3,i) = cmd.params[i];
+    }
+
+    *matrixStack.current = translate * *matrixStack.current;
+    if(geometry.mtxMode == 2) matrixStack.currentDirection = translate * matrixStack.currentDirection;
+
+    if(geometry.mtxMode <= 2) recalculateClipMtx();
 }
 
 void nds::GPU::COLOR(const FIFOCommand &cmd)
@@ -154,10 +323,16 @@ void nds::GPU::END_VTXS(const FIFOCommand &cmd)
 
 void nds::GPU::SWAP_BUFFERS(const FIFOCommand &cmd)
 {
+    // Bei nächstem Vblank
+    bus->lcd->swap3DBuffers = true;
+    haltGeometry = true;
+    geometry.manualTranslucentPolygonYSorting = (cmd.params[0] & 1u) > 0;
+    geometry.depthBufferingUseW = (cmd.params[0] & 2u) > 0;
 }
 
 void nds::GPU::VIEWPORT(const FIFOCommand &cmd)
 {
+    viewport.raw = cmd.params[0];
 }
 
 void nds::GPU::BOX_TEST(const FIFOCommand &cmd)
@@ -174,4 +349,9 @@ void nds::GPU::VEC_TEST(const FIFOCommand &cmd)
 
 void nds::GPU::MTX_MODE(const FIFOCommand &cmd)
 {
+    geometry.mtxMode = cmd.params[0] & 0b11;
+    if(geometry.mtxMode == 0) matrixStack.current = &matrixStack.currentProjection;
+    else if(geometry.mtxMode == 1) matrixStack.current = &matrixStack.currentCoordinate;
+    else if(geometry.mtxMode == 2) matrixStack.current = &matrixStack.currentCoordinate;
+    else if(geometry.mtxMode == 3) matrixStack.current = &matrixStack.currentTexture;
 }

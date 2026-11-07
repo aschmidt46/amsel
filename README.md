@@ -1,6 +1,6 @@
 # Antons Multi-System-Emulator (AMSEL)<img src="resources/amsel.png" height="auto" width="80" style="border-radius:50%">
 
-Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA)
+Cross-Plattform emulator product line in C++ (NES, DMG, CGB, GBA, NDS)
 
 ## <a href="https://aschmidt46.github.io/amsel/">Web-Demo</a>
 

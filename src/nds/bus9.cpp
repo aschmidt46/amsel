@@ -178,6 +178,20 @@ void nds::Bus9::writeByteFromWide(Word addr, Byte val, bool isDMA)
         POWCNT1 = (POWCNT1 & 0x00FF) | (HalfWord(val & 0b10000010) << 8);
         onWritePOWCNT1();
     }
+
+    else if(addr >= 0x04000320 && addr < 0x04000400){
+        sharedBus->lcd->engine3D.writeRegister(addr, val);
+    }
+    else if(addr >= 0x04000400 && addr < 0x04000440){
+        sharedBus->lcd->engine3D.writeGXFIFO(val);
+    }
+    else if(addr >= 0x04000440 && addr < 0x04000600){
+        sharedBus->lcd->engine3D.writeCommandRegister(addr, val);
+    }
+    else if(addr >= 0x04000600 && addr < 0x040006A4){
+        sharedBus->lcd->engine3D.writeRegister(addr, val);
+    }
+
     // Engine B
     else if(addr >= 0x04001000 && addr < 0x0400106E){
         sharedBus->lcd->writeRegister(addr, val, true);
@@ -343,6 +357,10 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
         return POWCNT1 >> 8;
     }
 
+    if(addr >= 0x04000320 && addr < 0x040006A4){
+        return sharedBus->lcd->engine3D.readRegister(addr);
+    }
+
     // Engine B
     if(addr >= 0x04001000 && addr < 0x0400106E){
         return sharedBus->lcd->readRegister(addr, true);
@@ -375,7 +393,13 @@ Byte nds::Bus9::readByteFromWide(Word addr, bool isDMA)
 
 void nds::Bus9::writeHalfWord(Word addr, HalfWord val, bool isDMA)
 {
-    if(addr >= 0x05000000 && addr < 0x08000000){
+    if(addr >= 0x04000400 && addr < 0x04000440){
+        sharedBus->lcd->engine3D.writeGXFIFO(val);
+    }
+    else if(addr >= 0x04000440 && addr < 0x04000600){
+        sharedBus->lcd->engine3D.writeCommandRegister(addr, val);
+    }
+    else if(addr >= 0x05000000 && addr < 0x08000000){
         sharedBus->lcd->writeMemory(addr, val);
         sharedBus->lcd->writeMemory(addr + 1, val >> 8);
     }
@@ -396,6 +420,12 @@ void nds::Bus9::writeWord(Word addr, Word val, bool isDMA)
 {
     if(addr == 0x4000188){
         sharedBus->ipc->writeFIFOSEND(true, val);
+    }
+    else if(addr >= 0x04000400 && addr < 0x04000440){
+        sharedBus->lcd->engine3D.writeGXFIFO(val);
+    }
+    else if(addr >= 0x04000440 && addr < 0x04000600){
+        sharedBus->lcd->engine3D.writeCommandRegister(addr, val);
     }
     else if(addr >= 0x05000000 && addr < 0x08000000){
         sharedBus->lcd->writeMemory(addr, val);

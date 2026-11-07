@@ -114,6 +114,7 @@ namespace nds{
         std::atomic<bool> hasframe = false;
         
         public:
+        bool swap3DBuffers = false;
         uint32_t* framebuffer;
         size_t framebufferSize = 0;
         uint32_t* backBuffer;

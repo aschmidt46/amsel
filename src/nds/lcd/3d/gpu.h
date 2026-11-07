@@ -1,8 +1,8 @@
 #pragma once
 #include "../../bus_types.h"
 #include "gpu_types.h"
+#include "matrix_math.h"
 #include <vector>
-#include <glm/glm.hpp>
 #include <stack>
 #include <queue>
 
@@ -16,20 +16,31 @@ namespace nds{
     };
     class GPU{
 
-        struct {
+        size_t& getSP();
+        std::array<mat4x4, 32>& getStack();
+
+        struct { // alle stacks haben ZUSÄTZLICH noch eine "current" matrix
             size_t projectionSP = 0;
             size_t coordinateSP = 0; // auch für vector
             size_t textureSP = 0;
-            std::array<glm::i32mat4x4, 1> projection = {};
-            std::array<glm::i32mat4x4, 32> coordinate = {}; // aka position
-            std::array<glm::i32mat4x4, 32> directional = {}; // aka vector
-            glm::i32mat4x4 texture;
+            std::array<mat4x4, 32> projection = {};
+            std::array<mat4x4, 32> coordinate = {}; // aka position
+            std::array<mat4x4, 32> directional = {}; // aka vector
+            std::array<mat4x4, 32> texture = {};
+
+            mat4x4 currentProjection = mat4x4::identity();
+            mat4x4 currentCoordinate = mat4x4::identity();
+            mat4x4 currentDirection = mat4x4::identity();
+            mat4x4 currentTexture = mat4x4::identity();
+
+            mat4x4* current = &currentProjection;
         } matrixStack;
 
-        bool fifoHalted = false; // von Swapbuffers gesetzt
         // Zustand Geometrie engine
         struct {
-
+            bool manualTranslucentPolygonYSorting = false; 
+            bool depthBufferingUseW = false; // sonst z
+            int mtxMode = 0;
         } geometry;
 
         union {
@@ -45,8 +56,8 @@ namespace nds{
         SharedBus* bus = nullptr;
 
         // sind bereits transformiert
-        std::vector<glm::ivec4> vertexPolyRam;
-        std::vector<glm::ivec4> vertexPolyRamBack;
+        std::vector<Byte> vertexPolyRam;
+        std::vector<Byte> vertexPolyRamRender;
 
         std::array<Byte, 128> shininess = {};
         std::array<Byte, 0x10> edgeColor = {};
@@ -61,37 +72,40 @@ namespace nds{
         HalfWord disp1DotDepth = 0;
         std::array<Byte, 0x10> posResult = {};
         std::array<Byte, 6> vecResult = {};
-        glm::i32mat4x4 clipMtxResult;
-        glm::i32mat4x4 vecMtxResult;
+        mat4x4 clipMtxResult;
+        void recalculateClipMtx();
+        mat4x4 vecMtxResult;
 
         // Hilfe für Cmds, adresse startet bei 0x04000400
         std::array<GXCMD, 0x200> addrToCmd = {};
         // Cmd index -> Anzahl Parameter
-        std::array<size_t, 0x80> cmdToNumParams = {};
-        std::array<void (GPU::*)(const FIFOCommand&), 0x80> cmdToFunction = {};
+        std::array<size_t, 0x100> cmdToNumParams = {};
+        std::array<void (GPU::*)(const FIFOCommand&), 0x100> cmdToFunction = {};
 
 
 
         std::queue<FIFOCommand> commandFifo;
+        size_t commandFifoSize = 0;
         Word gxFifo = 0;
         int paramsRemaining = -1;
         int paramIndex = 0;
+        int regParamsRemaining = -1;
+        int paramRegIndex = 0;
         FIFOCommand buildingCommand{};
-
-        inline void swapBuffers(){
-            vertexPolyRam.swap(vertexPolyRamBack);
-        }
-
+        FIFOCommand buildingRegCommand{};
+        
+        
         void updateIF();
         void fillMaps();
-
+        
         GXSTAT_T GXSTAT = {.raw = 0};
         DISP3DCNT_T DISP3DCNT = {.raw = 0};
-
+        
         public:
+        bool haltGeometry = false;
         GPU(SharedBus* bus) : bus(bus){
             vertexPolyRam.reserve(100000);
-            vertexPolyRamBack.reserve(100000);
+            vertexPolyRamRender.reserve(100000);
             cmdToFunction.fill(&GPU::NOP);
             fillMaps();
         }
@@ -99,7 +113,8 @@ namespace nds{
         }
         std::array<GPUSlotAllocation, 4> textureRearPlane = {{nullptr, 0}}; // Jeweils 128KB
         std::array<GPUSlotAllocation, 6> texturePalette = {{nullptr, 0}}; // Jeweils 16KB
-
+        void swapBuffers();
+        
         void writeRegister(Word addr, Byte val);
         Byte readRegister(Word addr);
         void writeGXFIFO(Word val);

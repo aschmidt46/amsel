@@ -1,12 +1,14 @@
 #include "gpu.h"
 #include "../../bus.h"
+#include <iostream>
+#include "framework/stringlib.h"
 
 using namespace nds;
 
 void nds::GPU::updateIF()
 {
     if(GXSTAT.state.commandFifoIRQ == 1){
-        if(commandFifo.size() < 128){
+        if(commandFifoSize < 128){
             bus->setIFSingleBus(21, true, true);
         }
     }
@@ -206,10 +208,21 @@ Byte nds::GPU::readRegister(Word addr)
 
     // Ram Count fehlt
 
-
-    if(addr >= 0x04000600 && addr < 0x04000604){ // Nein, nicht so
-        return GXSTAT.raw >> ((addr - 0x04000600) * 8);
+    if(addr == 0x04000600){
+        return 0;
     }
+    if(addr == 0x04000601){
+        return (matrixStack.coordinateSP & 0x1F) | (matrixStack.projectionSP << 5) | (GXSTAT.state.matrixStackOverUnderflow << 7);
+    }
+    if(addr == 0x04000602){ // Ausgabe ist noch falsch
+        return commandFifoSize & 0xFF;
+    }
+    if(addr == 0x04000603){
+        return ((commandFifoSize >> 8) & 1u) | ((commandFifoSize < 128) << 1) | (commandFifo.empty() << 2) |  (!(commandFifo.empty() || haltGeometry) << 3) | (GXSTAT.raw >> 24);
+    }
+    // if(addr >= 0x04000600 && addr < 0x04000604){ // Nein, nicht so
+    //     return GXSTAT.raw >> ((addr - 0x04000600) * 8);
+    // }
 
     if(addr >= 0x04000620 && addr < 0x04000630){
         const Word offset = addr - 0x04000620;
@@ -221,11 +234,11 @@ Byte nds::GPU::readRegister(Word addr)
     }
     if(addr >= 0x04000640 && addr < 0x04000680){
         const Word offset = addr - 0x04000640;
-        return *(((Byte*)(&clipMtxResult[0][0])) + offset);
+        return *(((Byte*)(&clipMtxResult.data[0])) + offset);
     }
     if(addr >= 0x04000680 && addr < 0x040006A4){
         const Word offset = addr - 0x04000680;
-        return *(((Byte*)(&vecMtxResult[0][0])) + offset);
+        return *(((Byte*)(&vecMtxResult.data[0])) + offset); // AKTUELL FALSCH
     }
 
 
@@ -239,48 +252,68 @@ void nds::GPU::writeCommandRegister(Word addr, Word val)
     const GXCMD cmd = addrToCmd[index];
     // buildingCommand.cmd = cmd;
     const Word params = cmdToNumParams[cmd];
-    if(paramsRemaining > 0){
-        paramsRemaining--;
-        buildingCommand.params[paramIndex++] = val;
-        if(paramsRemaining==0) commandFifo.push(buildingCommand);
+    if(regParamsRemaining > 0){
+        regParamsRemaining--;
+        buildingRegCommand.params[paramRegIndex++] = val;
+        // std::cout << "REG: Wrote param: " << getHex0x(val, 8) << "\n";
+        if(regParamsRemaining<=0){
+            // std::cout << "REG: finished command\n";
+            commandFifo.push(buildingRegCommand);
+            commandFifoSize += std::max(1u, params);
+        }
     }
     else{
-        buildingCommand.cmd = cmd;
-        paramsRemaining = params;
-        paramIndex = 0;
-        buildingCommand.params[paramIndex++] = val;
-        paramsRemaining--;
+        buildingRegCommand.cmd = cmd;
+        // std::cout << "REG: Wrote command " << getHex0x(cmd, 2) <<", param: " << getHex0x(val, 8) << "\n";
+        regParamsRemaining = params;
+        paramRegIndex = 0;
+        buildingRegCommand.params[paramRegIndex++] = val;
+        regParamsRemaining--;
+        if(regParamsRemaining <= 0){
+            // std::cout << "REG: finished command early\n";
+            commandFifo.push(buildingRegCommand);
+            commandFifoSize += std::max(1u, params);
+        }
     }
 }
 
 void nds::GPU::writeGXFIFO(Word val)
 {
-    if(gxFifo == 0){
-        gxFifo = val;
-        buildingCommand.cmd = GXCMD(gxFifo & 0xFF);
-        paramsRemaining = (int)cmdToNumParams[buildingCommand.cmd];
-        paramIndex = 0;
-        while(paramsRemaining == 0 && gxFifo != 0){
+
+    const auto pushZeroParamCommands = [&](){
+        while(paramsRemaining <= 0 && gxFifo != 0){
             commandFifo.push(buildingCommand);
+            commandFifoSize++;
             gxFifo >>= 8;
             buildingCommand.cmd = GXCMD(gxFifo & 0xFF);
             paramsRemaining = (int)cmdToNumParams[buildingCommand.cmd];
         }
+    };
+
+    if(gxFifo == 0){ // Fall: neuer Write
+        // std::cout << "Wrote gxfifo command(s) " << getHex0x(val, 8) << "\n";
+        gxFifo = val;
+        buildingCommand.cmd = GXCMD(gxFifo & 0xFF);
+        paramsRemaining = (int)cmdToNumParams[buildingCommand.cmd];
+        paramIndex = 0;
+        pushZeroParamCommands();
     }
-    else{
-        if(paramsRemaining > 0){
-            paramsRemaining--;
-            buildingCommand.params[paramIndex++] = val;
-            if(paramsRemaining==0) commandFifo.push(buildingCommand);
-        }
-        else{
-            while(paramsRemaining == 0 && gxFifo != 0){
-                gxFifo >>= 8;
+    else{ // Fall: Commands in Pipe
+        // std::cout << "gxfifo param for cmd: " << getHex0x(gxFifo & 0xFF, 2) << ", p: " << getHex0x(val, 8) << "\n";
+        paramsRemaining--;
+        buildingCommand.params[paramIndex++] = val;
+        if(paramsRemaining<=0){
+            commandFifo.push(buildingCommand);
+            commandFifoSize += paramIndex;
+            paramIndex = 0;
+            gxFifo >>= 8; // alten Command rausshiften
+            if(gxFifo != 0){ // noch mehr Commands vorhanden, neuer Command wird gesetzt
                 buildingCommand.cmd = GXCMD(gxFifo & 0xFF);
                 paramsRemaining = (int)cmdToNumParams[buildingCommand.cmd];
-                if(paramsRemaining==0) commandFifo.push(buildingCommand);
-                paramIndex = 0;
-            }   
+
+                pushZeroParamCommands();
+            }
+            // std::cout << "finished gxfifo command\n";
         }
     }
 }

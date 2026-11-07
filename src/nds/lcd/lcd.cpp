@@ -131,6 +131,12 @@ void nds::LCD::onVBlank()
         bus->bus9->setIF(0, true);
     }
     hasframe = true;
+
+    if(swap3DBuffers){
+        swap3DBuffers = false;
+        engine3D.swapBuffers();
+    }
+
     bus->PPUEnteredVBlank();
 }
 
@@ -229,7 +235,7 @@ Byte nds::LCD::readRegister(Word addr, bool isNDS9)
         return 0;
     }
     if(addr >= 0x04000060 && addr < 0x04000062){ // DISP3DCNT
-        return 0;
+        return engine3D.readRegister(addr);
     }
     if(addr == 0x04000068){ // Main Memory Display
         return 0;
@@ -269,6 +275,10 @@ void nds::LCD::writeRegister(Word addr, Byte val, bool isNDS9)
         else{
             DISPSTAT_7.raw = (DISPSTAT_7.raw & 0x00FF) | (HalfWord(val) << 8);
         }
+    }
+
+    else if(addr >= 0x04000060 && addr < 0x04000062){ // DISP3DCNT (aktuell vollsynchron)
+        engine3D.writeRegister(addr, val);
     }
 
     else if(addr >= 0x04000000 && addr < 0x0400006C){
