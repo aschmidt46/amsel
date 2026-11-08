@@ -53,8 +53,8 @@ void nds::LCD::worker()
 
 void nds::LCD::init()
 {
-    engineA = PPU(this, 0, false);
-    engineB = PPU(this, 1, true);
+    engineA = PPU(this, 0, false, &engine3D);
+    engineB = PPU(this, 1, true, nullptr);
 
     // default: LCDC mapping
     switchVramBank<0>();

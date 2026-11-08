@@ -1,13 +1,13 @@
 #pragma once
 #include "../../bus_types.h"
 #include "gpu_types.h"
-#include "matrix_math.h"
 #include <vector>
 #include <stack>
 #include <queue>
 
 namespace nds{
     class SharedBus;
+    struct PIXEL_T;
     // ACHTUNG, aktuell setze ich GXFIFO IRQ nur einmal, nicht durchgehend (bleibt gesetzt, bis Bedingung falsch)
     // Idee: gpu_geometry.cpp und gpu_rendering.cpp, Threading später
     struct GPUSlotAllocation{
@@ -41,7 +41,14 @@ namespace nds{
             bool manualTranslucentPolygonYSorting = false; 
             bool depthBufferingUseW = false; // sonst z
             int mtxMode = 0;
+            POLYGON_ATTR_T nextPolygonAttr = {.raw=0};
+            POLYGON_ATTR_T polygonAttr = {.raw=0};
+            int primitiveType = 0;
+            vec4 p; // letzter Vertex
         } geometry;
+
+        struct {
+        } render;
 
         union {
             struct{
@@ -56,8 +63,8 @@ namespace nds{
         SharedBus* bus = nullptr;
 
         // sind bereits transformiert
-        std::vector<Byte> vertexPolyRam;
-        std::vector<Byte> vertexPolyRamRender;
+        std::vector<Vertex> vertexPolyRam;
+        std::vector<Vertex> vertexPolyRamRender;
 
         std::array<Byte, 128> shininess = {};
         std::array<Byte, 0x10> edgeColor = {};
@@ -120,7 +127,10 @@ namespace nds{
         void writeGXFIFO(Word val);
         void writeCommandRegister(Word addr, Word val);
 
+        PIXEL_T renderPixelTest(int x, int y);
+
         void clockGeometry();
+        void transformVertex(Vertex &v);
         void NOP(const FIFOCommand &cmd);
         void MTX_MODE(const FIFOCommand &cmd);
         void MTX_PUSH(const FIFOCommand &cmd);

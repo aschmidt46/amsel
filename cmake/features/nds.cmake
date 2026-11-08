@@ -47,6 +47,7 @@ src/nds/lcd/3d/gpu.h
 src/nds/lcd/3d/gpu_types.h
 src/nds/lcd/3d/gpu_io.cpp
 src/nds/lcd/3d/gpu_geometry.cpp
+src/nds/lcd/3d/gpu_rendering.cpp
 src/nds/lcd/3d/matrix_math.h
 src/nds/lcd/lcd.h
 src/nds/lcd/lcd.cpp

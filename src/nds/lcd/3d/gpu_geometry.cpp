@@ -22,10 +22,24 @@ void nds::GPU::clockGeometry()
     updateIF();
 }
 
+void nds::GPU::transformVertex(Vertex &v)
+{
+    v.clipPos = v.clipPos * clipMtxResult;
+    if(v.clipPos.w > 0){
+        v.screenX = (v.clipPos.x + v.clipPos.w) * (viewport.state.x2 - viewport.state.x1) / (2*v.clipPos.w) + viewport.state.x1;
+        v.screenY = (v.clipPos.y + v.clipPos.w) * (viewport.state.y2 - viewport.state.y1) / (2*v.clipPos.w) + viewport.state.y1;
+    }
+    else{
+        v.screenX = -1;
+        v.screenY = -1;
+    }
+}
+
 void nds::GPU::swapBuffers() // Das ist die tatsächliche Ausführung nach VBlank
 {
     vertexPolyRam.swap(vertexPolyRamRender);
-    std::fill(vertexPolyRam.begin(), vertexPolyRam.end(), 0); // leeren und an geometrie engine geben
+    vertexPolyRam = {};
+    // std::fill(vertexPolyRam.begin(), vertexPolyRam.end(), Vertex{}); // leeren und an geometrie engine geben
     haltGeometry = false;
 }
 
@@ -259,30 +273,74 @@ void nds::GPU::TEXCOORD(const FIFOCommand &cmd)
 
 void nds::GPU::VTX_16(const FIFOCommand &cmd)
 {
+    const int32_t x = sign_extend_n_32(cmd.params[0] & 0xFFFF, 16);
+    const int32_t y = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
+    const int32_t z = sign_extend_n_32(cmd.params[1] & 0xFFFF, 16);
+    geometry.p = vec4(x,y,z);
+    Vertex v{.clipPos = geometry.p};
+    transformVertex(v);
+    vertexPolyRam.push_back(v);
 }
 
 void nds::GPU::VTX_10(const FIFOCommand &cmd)
 {
+    const int32_t x = sign_extend_n_32(cmd.params[0] & 0x3FF, 10);
+    const int32_t y = sign_extend_n_32((cmd.params[0] >> 10) & 0x3FF, 10);
+    const int32_t z = sign_extend_n_32((cmd.params[0] >> 20) & 0x3FF, 10);
+    geometry.p = vec4(x << 6,y << 6,z << 6); // Fractional auf 12 bit?
+    Vertex v{.clipPos = geometry.p};
+    transformVertex(v);
+    vertexPolyRam.push_back(v);
 }
 
 void nds::GPU::VTX_XY(const FIFOCommand &cmd)
 {
+    const int32_t x = sign_extend_n_32(cmd.params[0] & 0xFFFF, 16);
+    const int32_t y = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
+    const int32_t z = geometry.p.z;
+    geometry.p = vec4(x,y,z);
+    Vertex v{.clipPos = geometry.p};
+    transformVertex(v);
+    vertexPolyRam.push_back(v);
 }
 
 void nds::GPU::VTX_XZ(const FIFOCommand &cmd)
 {
+    const int32_t x = sign_extend_n_32(cmd.params[0] & 0xFFFF, 16);
+    const int32_t z = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
+    const int32_t y = geometry.p.y;
+    geometry.p = vec4(x,y,z);
+    Vertex v{.clipPos = geometry.p};
+    transformVertex(v);
+    vertexPolyRam.push_back(v);
 }
 
 void nds::GPU::VTX_YZ(const FIFOCommand &cmd)
 {
+    const int32_t y = sign_extend_n_32(cmd.params[0] & 0xFFFF, 16);
+    const int32_t z = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
+    const int32_t x = geometry.p.x;
+    geometry.p = vec4(x,y,z);
+    Vertex v{.clipPos = geometry.p};
+    transformVertex(v);
+    vertexPolyRam.push_back(v);
 }
 
 void nds::GPU::VTX_DIFF(const FIFOCommand &cmd)
 {
+    const int32_t x = sign_extend_n_32(cmd.params[0] & 0x3FF, 10) >> 3;
+    const int32_t y = sign_extend_n_32((cmd.params[0] >> 10) & 0x3FF, 10) >> 3;
+    const int32_t z = sign_extend_n_32((cmd.params[0] >> 20) & 0x3FF, 10) >> 3;
+
+    geometry.p = vec4(geometry.p.x + x,geometry.p.y + y,geometry.p.z + z);
+    Vertex v{.clipPos = geometry.p};
+    transformVertex(v);
+    vertexPolyRam.push_back(v);
 }
 
 void nds::GPU::POLYGON_ATTR(const FIFOCommand &cmd)
 {
+    geometry.nextPolygonAttr = POLYGON_ATTR_T{.raw = cmd.params[0]};
 }
 
 void nds::GPU::TEXIMAGE_PARAM(const FIFOCommand &cmd)
@@ -315,6 +373,8 @@ void nds::GPU::SHININESS(const FIFOCommand &cmd)
 
 void nds::GPU::BEGIN_VTXS(const FIFOCommand &cmd)
 {
+    geometry.polygonAttr = geometry.nextPolygonAttr;
+    geometry.primitiveType = cmd.params[0] & 3;
 }
 
 void nds::GPU::END_VTXS(const FIFOCommand &cmd)

@@ -1,8 +1,10 @@
 #pragma once
 #include "../../bus_types.h"
 #include <array>
+#include "matrix_math.h"
 
 namespace nds{
+
     union DISP3DCNT_T{
         struct {
             HalfWord enableTextureMapping : 1;
@@ -88,5 +90,32 @@ namespace nds{
     struct FIFOCommand{
         GXCMD cmd = GXCMD_NOP;
         std::array<Word, 32> params = {};
+    };
+
+    union POLYGON_ATTR_T{
+        struct{
+            Word light : 4;
+            Word polygonMode : 2;
+            Word renderPolyBackside : 1; // Liniensegmente IMMER
+            Word renderPolyFrontside : 1;
+            Word _unused0 : 3;
+            Word depthTranslucentSetNew : 1;
+            Word renderFarPlaneIntersectingPolygons : 1;
+            Word render1DotPolygonsBehindDisp1DotDepth : 1;
+            Word depthTestIsEqual : 1; // 0: less
+            Word fogEnable : 1;
+            Word alpha : 5;
+            Word _unused1 : 3;
+            Word polygonID : 6;
+            Word _unused2 : 2;
+        } state;
+        Word raw;
+    };
+
+    struct Vertex{
+        // vec4 worldPos;
+        vec4 clipPos;
+        int screenX = 0;
+        int screenY = 0;
     };
 }

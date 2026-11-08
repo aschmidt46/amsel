@@ -167,6 +167,10 @@ void PPU::renderScanline()
             layerOrderSize = 1;
             layerOrder[0] = bd;
             auto output = (this->*fun)();
+            if(LCDCONTROL.state.bg0_use3d && gpu != nullptr){
+                auto p = gpu->renderPixelTest(currentCycle, 192 - currentScanline);
+                if(p.pixel > 0) output = p;
+            }
             setPixel(currentCycle, currentScanline + 192 * framebufferOffset, output.red, output.green, output.blue);
             
             if(currentCycle == debugX && currentScanline == debugY){

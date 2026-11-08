@@ -12,6 +12,7 @@
 
 namespace nds{
     class LCD;
+    class GPU;
 
     struct PPUAllocation{
         Byte* ptr = nullptr;
@@ -142,11 +143,12 @@ namespace nds{
 
 
         PPU() = default;
-        PPU(LCD* lcd, Word fOffset, bool isB) : paletteRam(0x400, 0), oamAttribs(0x400, 0), paletteRamSync(0x400, 0), oamAttribsSync(0x400, 0), lcd(lcd), isB(isB), framebufferOffset(fOffset){};
+        PPU(LCD* lcd, Word fOffset, bool isB, GPU* engine3D) : paletteRam(0x400, 0), oamAttribs(0x400, 0), paletteRamSync(0x400, 0), oamAttribsSync(0x400, 0), lcd(lcd), isB(isB), framebufferOffset(fOffset), gpu(engine3D){};
         uint32_t* accessFramebuffer();
 
         // Offset in großen Framebuffer, 0 = oberer Bildschirm, 1 = unterer
         Word framebufferOffset = 0;
+        GPU* gpu;
 
         void renderScanline();
         void setTopScreen();
