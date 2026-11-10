@@ -51,6 +51,34 @@ void nds::LCD::worker()
     }
 }
 
+void nds::LCD::worker3D()
+{
+    bool br = false;
+    while(!br){
+        worker3DNotify.wait(false);
+        worker3DNotify = false;
+
+        Event3D e;
+        while(q3D.try_dequeue(e)){
+            switch(e){
+                case DESTROY_3D:
+                    br = true;
+                    lineCount3D = 192;
+                    lineCount3D.notify_all();
+                    break;
+                case RENDER_3D:
+                    for(int y = 0; y < 192; y++){
+                        engine3D.renderScanline(y);
+                        lineCount3D++;
+                        lineCount3D.notify_all();
+                    }
+                    break;
+            }
+        }
+
+    }   
+}
+
 void nds::LCD::init()
 {
     engineA = PPU(this, 0, false, &engine3D);
@@ -134,7 +162,18 @@ void nds::LCD::onVBlank()
 
     if(swap3DBuffers){
         swap3DBuffers = false;
+        size_t currentCount = lineCount3D.load();
+        while(currentCount < 192){
+            lineCount3D.wait(currentCount);
+            currentCount = lineCount3D.load();
+        }
         engine3D.swapBuffers();
+        if(engineA.LCDCONTROL.state.bg0_use3d){
+            lineCount3D = 0;
+            q3D.enqueue(RENDER_3D);
+            worker3DNotify = true;
+            worker3DNotify.notify_one();
+        }
     }
 
     bus->PPUEnteredVBlank();

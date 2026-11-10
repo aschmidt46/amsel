@@ -1,6 +1,7 @@
 #include "gpu.h"
 #include "../../bus.h"
 #include "framework/stringlib.h"
+#include "framework/global.h"
 
 using namespace nds;
 
@@ -26,8 +27,10 @@ void nds::GPU::transformVertex(Vertex &v)
 {
     v.clipPos = v.clipPos * clipMtxResult;
     if(v.clipPos.w > 0){
-        v.screenX = (v.clipPos.x + v.clipPos.w) * (viewport.state.x2 - viewport.state.x1) / (2*v.clipPos.w) + viewport.state.x1;
-        v.screenY = (v.clipPos.y + v.clipPos.w) * (viewport.state.y2 - viewport.state.y1) / (2*v.clipPos.w) + viewport.state.y1;
+        int64_t sx = (int64_t(v.clipPos.x) + v.clipPos.w) * (int64_t(viewport.state.x2) - viewport.state.x1) / (int64_t(2)*v.clipPos.w) + int64_t(viewport.state.x1);
+        int64_t sy = (int64_t(v.clipPos.y) + v.clipPos.w) * (int64_t(viewport.state.y2) - viewport.state.y1) / (int64_t(2)*v.clipPos.w) + int64_t(viewport.state.y1);
+        v.screenX = sx;
+        v.screenY = sy;
     }
     else{
         v.screenX = -1;
@@ -63,6 +66,80 @@ std::array<mat4x4, 32> &nds::GPU::getStack()
         case 3: return matrixStack.texture;
         default: return matrixStack.projection;
     }
+}
+
+void nds::GPU::addVertex(const Vertex &v)
+{
+    switch(geometry.primitiveType){
+        case 0:{ // dreiecke
+            std::get<Triangle>(currentPolygon).vertices[vertexIndex++] = v;
+            if(vertexIndex > 2){
+                if(polygonInViewport(currentPolygon))
+                    vertexPolyRam.push_back(currentPolygon);
+                vertexIndex = 0;
+            }
+            break;
+        }
+        case 1:{ // vierecke
+            std::get<Quad>(currentPolygon).vertices[vertexIndex++] = v;
+            if(vertexIndex > 3){
+                if(polygonInViewport(currentPolygon))
+                    vertexPolyRam.push_back(currentPolygon);
+                vertexIndex = 0;
+            }
+            break;
+        }
+        case 2:{ // dreieck-strip
+            std::get<Triangle>(currentPolygon).vertices[vertexIndex++] = v;
+            if(vertexIndex > 2){
+                if(polygonInViewport(currentPolygon))
+                    vertexPolyRam.push_back(currentPolygon);
+                std::get<Triangle>(currentPolygon).vertices[0] = std::get<Triangle>(currentPolygon).vertices[1]; // die letzten beiden?
+                std::get<Triangle>(currentPolygon).vertices[1] = std::get<Triangle>(currentPolygon).vertices[2];
+                vertexIndex = 2;
+            }
+            break;
+        }
+        default:{ // viereck-strip
+            std::get<Quad>(currentPolygon).vertices[vertexIndex++] = v;
+            if(vertexIndex > 3){
+                if(polygonInViewport(currentPolygon))
+                    vertexPolyRam.push_back(currentPolygon);
+                std::get<Quad>(currentPolygon).vertices[0] = std::get<Quad>(currentPolygon).vertices[2]; // die letzten beiden?
+                std::get<Quad>(currentPolygon).vertices[1] = std::get<Quad>(currentPolygon).vertices[3];
+                vertexIndex = 2;
+            }
+            break;
+        }
+    }
+}
+
+bool nds::GPU::polygonInViewport(const Polygon &p)
+{
+    const auto visitor = overload{
+        [&](const Triangle &t){
+            bool overlap = false;
+            for(const auto &v : t.vertices){
+                if(v.screenX >= viewport.state.x1 && v.screenX < viewport.state.x2 && v.screenY >= viewport.state.y1 && v.screenY < viewport.state.y2){
+                    overlap = true;
+                    break;
+                }
+            }
+            return overlap;
+        },
+        [&](const Quad &q){
+            bool overlap = false;
+            for(const auto &v : q.vertices){
+                if(v.screenX >= viewport.state.x1 && v.screenX < viewport.state.x2 && v.screenY >= viewport.state.y1 && v.screenY < viewport.state.y2){
+                    overlap = true;
+                    break;
+                }
+            }
+            return overlap;
+        }
+    };
+
+    return std::visit(visitor, p);
 }
 
 void nds::GPU::recalculateClipMtx()
@@ -279,7 +356,7 @@ void nds::GPU::VTX_16(const FIFOCommand &cmd)
     geometry.p = vec4(x,y,z);
     Vertex v{.clipPos = geometry.p};
     transformVertex(v);
-    vertexPolyRam.push_back(v);
+    addVertex(v);
 }
 
 void nds::GPU::VTX_10(const FIFOCommand &cmd)
@@ -290,7 +367,7 @@ void nds::GPU::VTX_10(const FIFOCommand &cmd)
     geometry.p = vec4(x << 6,y << 6,z << 6); // Fractional auf 12 bit?
     Vertex v{.clipPos = geometry.p};
     transformVertex(v);
-    vertexPolyRam.push_back(v);
+    addVertex(v);
 }
 
 void nds::GPU::VTX_XY(const FIFOCommand &cmd)
@@ -301,7 +378,7 @@ void nds::GPU::VTX_XY(const FIFOCommand &cmd)
     geometry.p = vec4(x,y,z);
     Vertex v{.clipPos = geometry.p};
     transformVertex(v);
-    vertexPolyRam.push_back(v);
+    addVertex(v);
 }
 
 void nds::GPU::VTX_XZ(const FIFOCommand &cmd)
@@ -312,7 +389,7 @@ void nds::GPU::VTX_XZ(const FIFOCommand &cmd)
     geometry.p = vec4(x,y,z);
     Vertex v{.clipPos = geometry.p};
     transformVertex(v);
-    vertexPolyRam.push_back(v);
+    addVertex(v);
 }
 
 void nds::GPU::VTX_YZ(const FIFOCommand &cmd)
@@ -323,19 +400,19 @@ void nds::GPU::VTX_YZ(const FIFOCommand &cmd)
     geometry.p = vec4(x,y,z);
     Vertex v{.clipPos = geometry.p};
     transformVertex(v);
-    vertexPolyRam.push_back(v);
+    addVertex(v);
 }
 
 void nds::GPU::VTX_DIFF(const FIFOCommand &cmd)
 {
-    const int32_t x = sign_extend_n_32(cmd.params[0] & 0x3FF, 10) >> 3;
-    const int32_t y = sign_extend_n_32((cmd.params[0] >> 10) & 0x3FF, 10) >> 3;
-    const int32_t z = sign_extend_n_32((cmd.params[0] >> 20) & 0x3FF, 10) >> 3;
+    const int32_t x = sign_extend_n_32(cmd.params[0] & 0x3FF, 10);
+    const int32_t y = sign_extend_n_32((cmd.params[0] >> 10) & 0x3FF, 10);
+    const int32_t z = sign_extend_n_32((cmd.params[0] >> 20) & 0x3FF, 10);
 
     geometry.p = vec4(geometry.p.x + x,geometry.p.y + y,geometry.p.z + z);
     Vertex v{.clipPos = geometry.p};
     transformVertex(v);
-    vertexPolyRam.push_back(v);
+    addVertex(v);
 }
 
 void nds::GPU::POLYGON_ATTR(const FIFOCommand &cmd)
@@ -375,6 +452,13 @@ void nds::GPU::BEGIN_VTXS(const FIFOCommand &cmd)
 {
     geometry.polygonAttr = geometry.nextPolygonAttr;
     geometry.primitiveType = cmd.params[0] & 3;
+    if(geometry.primitiveType == 0 || geometry.primitiveType == 2){
+        currentPolygon = {Triangle{}};
+    }
+    else{
+        currentPolygon = {Quad{}};
+    }
+    vertexIndex = 0; // in jedem Fall, auch bei Strips
 }
 
 void nds::GPU::END_VTXS(const FIFOCommand &cmd)

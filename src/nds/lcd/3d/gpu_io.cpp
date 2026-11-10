@@ -17,6 +17,10 @@ void nds::GPU::updateIF()
             bus->setIFSingleBus(21, true, true);
         }
     }
+
+    if(commandFifoSize < 128){
+        bus->cmdFifoLessThanHalf();
+    }
 }
 
 void nds::GPU::fillMaps()

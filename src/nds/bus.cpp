@@ -201,6 +201,16 @@ void nds::SharedBus::PPULeftVBlank()
 {
 }
 
+void nds::SharedBus::cmdFifoLessThanHalf()
+{
+    for(auto &d : bus9->dma){
+        if(d.getStartTiming() == DMA_GEOMETRY_COMMAND_FIFO && d.isEnabled()){
+            d.commenceTransfer();
+            return;
+        }
+    }
+}
+
 void nds::SharedBus::onDataWordArrived()
 {
     if(canAccessGameCart(false)){

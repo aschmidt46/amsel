@@ -73,6 +73,11 @@ namespace nds{
         PPUAllocationOBJEvent
     > RenderEvent;
 
+    enum Event3D{
+        DESTROY_3D,
+        RENDER_3D,
+    };
+
     class LCD{
 
         SharedBus* bus;
@@ -97,11 +102,17 @@ namespace nds{
         std::array<Byte, 0x6C> bRegisters = {};
 
         moodycamel::ReaderWriterQueue<RenderEvent> q;
+        moodycamel::ReaderWriterQueue<Event3D> q3D;
         std::atomic<bool> workerNotify = false;
         std::atomic<bool> queueFrameFinished = false;
+        std::atomic<bool> worker3DNotify = false;
+        std::atomic<bool> queue3DFrameFinished = false;
+        std::atomic<size_t> lineCount3D = 192;
         std::thread renderThread;
+        std::thread render3DThread;
 
         void worker();
+        void worker3D();
 
         private:
         template<Word N>
@@ -124,12 +135,17 @@ namespace nds{
             framebuffer = new uint32_t[framebufferSize]();
             backBuffer = new uint32_t[framebufferSize]();
             renderThread = std::thread(worker, this);
+            render3DThread = std::thread(worker3D, this);
         };
         ~LCD(){
             q.enqueue(PoisonPill());
+            q3D.enqueue(DESTROY_3D);
             workerNotify = true;
+            worker3DNotify = true;
             workerNotify.notify_one();
+            worker3DNotify.notify_one();
             if(renderThread.joinable()) renderThread.join();
+            if(render3DThread.joinable()) render3DThread.join();
             delete[] framebuffer;
             delete[] backBuffer;
         }

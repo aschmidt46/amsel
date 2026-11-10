@@ -67,6 +67,7 @@ namespace nds{
         void PPUEnteredVBlank();
         void PPULeftHBlank();
         void PPULeftVBlank();
+        void cmdFifoLessThanHalf();
 
         void onDataWordArrived();
 

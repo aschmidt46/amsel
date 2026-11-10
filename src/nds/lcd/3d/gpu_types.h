@@ -2,6 +2,7 @@
 #include "../../bus_types.h"
 #include <array>
 #include "matrix_math.h"
+#include <variant>
 
 namespace nds{
 
@@ -118,4 +119,16 @@ namespace nds{
         int screenX = 0;
         int screenY = 0;
     };
+
+    struct Triangle{
+        std::array<Vertex, 3> vertices;
+    };
+
+    struct Quad{
+        std::array<Vertex, 4> vertices;
+    };
+
+    typedef std::variant<
+    Triangle, Quad
+    > Polygon;
 }

@@ -50,12 +50,12 @@ namespace nds{
         vec4 operator*(const mat4x4 &rhs) const{
             vec4 v;
             
-            v.x = int64_t(x) * rhs(0,0) + int64_t(y) * rhs(1,0) + int64_t(z) * rhs(2,0) + int64_t(w) * rhs(3,0);
-            v.y = int64_t(x) * rhs(0,1) + int64_t(y) * rhs(1,1) + int64_t(z) * rhs(2,1) + int64_t(w) * rhs(3,1);
-            v.z = int64_t(x) * rhs(0,2) + int64_t(y) * rhs(1,2) + int64_t(z) * rhs(2,2) + int64_t(w) * rhs(3,2);
-            v.w = int64_t(x) * rhs(0,3) + int64_t(y) * rhs(1,3) + int64_t(z) * rhs(2,3) + int64_t(w) * rhs(3,3);
+            int64_t lx = int64_t(x) * rhs(0,0) + int64_t(y) * rhs(1,0) + int64_t(z) * rhs(2,0) + int64_t(w) * rhs(3,0);
+            int64_t ly = int64_t(x) * rhs(0,1) + int64_t(y) * rhs(1,1) + int64_t(z) * rhs(2,1) + int64_t(w) * rhs(3,1);
+            int64_t lz = int64_t(x) * rhs(0,2) + int64_t(y) * rhs(1,2) + int64_t(z) * rhs(2,2) + int64_t(w) * rhs(3,2);
+            int64_t lw = int64_t(x) * rhs(0,3) + int64_t(y) * rhs(1,3) + int64_t(z) * rhs(2,3) + int64_t(w) * rhs(3,3);
 
-            v.x >>= 12; v.y >>= 12; v.z >>= 12; v.w >>= 12;
+            v.x = lx >> 12; v.y = ly >> 12; v.z = lz >> 12; v.w = lw >> 12;
 
             return v;
         }

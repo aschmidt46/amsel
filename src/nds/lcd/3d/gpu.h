@@ -4,6 +4,7 @@
 #include <vector>
 #include <stack>
 #include <queue>
+#include <atomic>
 
 namespace nds{
     class SharedBus;
@@ -63,8 +64,12 @@ namespace nds{
         SharedBus* bus = nullptr;
 
         // sind bereits transformiert
-        std::vector<Vertex> vertexPolyRam;
-        std::vector<Vertex> vertexPolyRamRender;
+        std::vector<Polygon> vertexPolyRam;
+        int vertexIndex = 0;
+        Polygon currentPolygon = {Triangle{}};
+        void addVertex(const Vertex &v);
+        bool polygonInViewport(const Polygon &p);
+        std::vector<Polygon> vertexPolyRamRender;
 
         std::array<Byte, 128> shininess = {};
         std::array<Byte, 0x10> edgeColor = {};
@@ -109,6 +114,7 @@ namespace nds{
         DISP3DCNT_T DISP3DCNT = {.raw = 0};
         
         public:
+        std::array<std::atomic<uint32_t>, 256 * 192> framebuffer = {};
         bool haltGeometry = false;
         GPU(SharedBus* bus) : bus(bus){
             vertexPolyRam.reserve(100000);
@@ -128,6 +134,7 @@ namespace nds{
         void writeCommandRegister(Word addr, Word val);
 
         PIXEL_T renderPixelTest(int x, int y);
+        void renderScanline(const int y);
 
         void clockGeometry();
         void transformVertex(Vertex &v);

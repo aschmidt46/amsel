@@ -161,16 +161,22 @@ void PPU::renderScanline()
         else if(LCDCONTROL.state.displayMode == 2){
             fun = &PPU::drawPixelLCDC;
         }
+
+        // Warten auf 3D thread
+        if(LCDCONTROL.state.bg0_use3d && !isB){
+            size_t currentCount = lcd->lineCount3D.load();
+            while(currentCount <= currentScanline){
+                lcd->lineCount3D.wait(currentCount);
+                currentCount = lcd->lineCount3D.load();
+            }
+        }
+
         const auto bd = getBackdrop();
         for(; currentCycle < 256; currentCycle++){
 
             layerOrderSize = 1;
             layerOrder[0] = bd;
             auto output = (this->*fun)();
-            if(LCDCONTROL.state.bg0_use3d && gpu != nullptr){
-                auto p = gpu->renderPixelTest(currentCycle, 192 - currentScanline);
-                if(p.pixel > 0) output = p;
-            }
             setPixel(currentCycle, currentScanline + 192 * framebufferOffset, output.red, output.green, output.blue);
             
             if(currentCycle == debugX && currentScanline == debugY){
@@ -600,7 +606,7 @@ void PPU::drawBG(const int index)
         if(index == 0) exPaletteIndex = 2;
         else if(index == 1) exPaletteIndex = 3;
     }
-    if(LCDCONTROL.state.useBGExtendedPalettes && bpp8 && bgExtendedPalette[index].ptr != nullptr){
+    if(LCDCONTROL.state.useBGExtendedPalettes && bpp8 && bgExtendedPalette[exPaletteIndex].ptr != nullptr){
         colorLow = bgExtendedPalette[exPaletteIndex].ptr[2 * Word(paletteIndex) + entry.state.paletteBank * 0x200]; // Byte adressiert
         colorHigh = bgExtendedPalette[exPaletteIndex].ptr[2 * Word(paletteIndex) + entry.state.paletteBank * 0x200 + 1];
     }
@@ -731,7 +737,7 @@ PIXEL_T PPU::drawPixelMode0() {
     this->drawSprites(); // Für Obj Window zuerst
     WINDOW_ACTIVES_T actives = getActives();
 
-    for(int i = 3; i >= 0; i--){
+    for(int i = 3; i >= 1; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
                 drawBG<false, true, false>(i);
@@ -740,6 +746,29 @@ PIXEL_T PPU::drawPixelMode0() {
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
     }
+
+    if(displayBG(0) && actives.bgActive(0)){
+        if(!LCDCONTROL.state.bg0_use3d || isB){
+            if(BG_CNT[0].state.colorsPalettes)
+                drawBG<false, true, false>(0);
+            else drawBG<false, false, false>(0);
+            if(latchedBg[0].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[0], layerOrderSize);
+        }
+        else{
+            PIXEL_T bg;
+            uint32_t c = gpu->framebuffer[currentCycle + currentScanline * 256];
+            bg.red = c;
+            bg.green = c >> 8;
+            bg.blue = c >> 16;
+            bg.pixel = c >> 24;
+            bg.priority = BG_CNT[0].state.BGPriority;
+            if(bg.priority < 99 && bg.pixel > 0){
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            }
+        }
+    }
+
     if(actives.enableObj && LCDCONTROL.state.displayOBJ){
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
@@ -759,7 +788,7 @@ PIXEL_T PPU::drawPixelMode1() {
             insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
 
-    for(int i = 2; i >= 0; i--){
+    for(int i = 2; i >= 1; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
                 drawBG<false, true, false>(i);
@@ -768,6 +797,29 @@ PIXEL_T PPU::drawPixelMode1() {
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
     }
+
+    if(displayBG(0) && actives.bgActive(0)){
+        if(!LCDCONTROL.state.bg0_use3d || isB){
+            if(BG_CNT[0].state.colorsPalettes)
+                drawBG<false, true, false>(0);
+            else drawBG<false, false, false>(0);
+            if(latchedBg[0].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[0], layerOrderSize);
+        }
+        else{
+            PIXEL_T bg;
+            uint32_t c = gpu->framebuffer[currentCycle + currentScanline * 256];
+            bg.red = c;
+            bg.green = c >> 8;
+            bg.blue = c >> 16;
+            bg.pixel = c >> 24;
+            bg.priority = BG_CNT[0].state.BGPriority;
+            if(bg.priority < 99 && bg.pixel > 0){
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            }
+        }
+    }
+
     if(actives.enableObj && LCDCONTROL.state.displayOBJ){
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
@@ -794,13 +846,35 @@ PIXEL_T PPU::drawPixelMode2() {
     }
 
     // 1 und 0 sind Text
-    for(int i = 1; i >= 0; i--){
+    for(int i = 1; i >= 1; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
                 drawBG<false, true, false>(i);
             else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
+        }
+    }
+
+    if(displayBG(0) && actives.bgActive(0)){
+        if(!LCDCONTROL.state.bg0_use3d || isB){
+            if(BG_CNT[0].state.colorsPalettes)
+                drawBG<false, true, false>(0);
+            else drawBG<false, false, false>(0);
+            if(latchedBg[0].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[0], layerOrderSize);
+        }
+        else{
+            PIXEL_T bg;
+            uint32_t c = gpu->framebuffer[currentCycle + currentScanline * 256];
+            bg.red = c;
+            bg.green = c >> 8;
+            bg.blue = c >> 16;
+            bg.pixel = c >> 24;
+            bg.priority = BG_CNT[0].state.BGPriority;
+            if(bg.priority < 99 && bg.pixel > 0){
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            }
         }
     }
 
@@ -822,7 +896,7 @@ PIXEL_T PPU::drawPixelMode3() {
             insertIntoSorted(layerOrder, latchedBg[3], layerOrderSize);
     }
 
-    for(int i = 2; i >= 0; i--){
+    for(int i = 2; i >= 1; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
                 drawBG<false, true, false>(i);
@@ -831,6 +905,29 @@ PIXEL_T PPU::drawPixelMode3() {
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
     }
+
+    if(displayBG(0) && actives.bgActive(0)){
+        if(!LCDCONTROL.state.bg0_use3d || isB){
+            if(BG_CNT[0].state.colorsPalettes)
+                drawBG<false, true, false>(0);
+            else drawBG<false, false, false>(0);
+            if(latchedBg[0].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[0], layerOrderSize);
+        }
+        else{
+            PIXEL_T bg;
+            uint32_t c = gpu->framebuffer[currentCycle + currentScanline * 256];
+            bg.red = c;
+            bg.green = c >> 8;
+            bg.blue = c >> 16;
+            bg.pixel = c >> 24;
+            bg.priority = BG_CNT[0].state.BGPriority;
+            if(bg.priority < 99 && bg.pixel > 0){
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            }
+        }
+    }
+
     if(actives.enableObj && LCDCONTROL.state.displayOBJ){
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
@@ -855,7 +952,7 @@ PIXEL_T PPU::drawPixelMode4() {
             insertIntoSorted(layerOrder, latchedBg[2], layerOrderSize);
     }
 
-    for(int i = 1; i >= 0; i--){
+    for(int i = 1; i >= 1; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
                 drawBG<false, true, false>(i);
@@ -864,6 +961,29 @@ PIXEL_T PPU::drawPixelMode4() {
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
         }
     }
+
+    if(displayBG(0) && actives.bgActive(0)){
+        if(!LCDCONTROL.state.bg0_use3d || isB){
+            if(BG_CNT[0].state.colorsPalettes)
+                drawBG<false, true, false>(0);
+            else drawBG<false, false, false>(0);
+            if(latchedBg[0].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[0], layerOrderSize);
+        }
+        else{
+            PIXEL_T bg;
+            uint32_t c = gpu->framebuffer[currentCycle + currentScanline * 256];
+            bg.red = c;
+            bg.green = c >> 8;
+            bg.blue = c >> 16;
+            bg.pixel = c >> 24;
+            bg.priority = BG_CNT[0].state.BGPriority;
+            if(bg.priority < 99 && bg.pixel > 0){
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            }
+        }
+    }
+
     if(actives.enableObj && LCDCONTROL.state.displayOBJ){
         insertIntoSorted(layerOrder, latchedObj, layerOrderSize); // höchste prio
     }
@@ -890,13 +1010,35 @@ PIXEL_T PPU::drawPixelMode5() {
     }
 
     // 1 und 0 sind Text
-    for(int i = 1; i >= 0; i--){
+    for(int i = 1; i >= 1; i--){
         if(displayBG(i) && actives.bgActive(i)){
             if(BG_CNT[i].state.colorsPalettes)
                 drawBG<false, true, false>(i);
             else drawBG<false, false, false>(i);
             if(latchedBg[i].priority < 99)
                 insertIntoSorted(layerOrder, latchedBg[i], layerOrderSize);
+        }
+    }
+
+    if(displayBG(0) && actives.bgActive(0)){
+        if(!LCDCONTROL.state.bg0_use3d || isB){
+            if(BG_CNT[0].state.colorsPalettes)
+                drawBG<false, true, false>(0);
+            else drawBG<false, false, false>(0);
+            if(latchedBg[0].priority < 99)
+                insertIntoSorted(layerOrder, latchedBg[0], layerOrderSize);
+        }
+        else{
+            PIXEL_T bg;
+            uint32_t c = gpu->framebuffer[currentCycle + currentScanline * 256];
+            bg.red = c;
+            bg.green = c >> 8;
+            bg.blue = c >> 16;
+            bg.pixel = c >> 24;
+            bg.priority = BG_CNT[0].state.BGPriority;
+            if(bg.priority < 99 && bg.pixel > 0){
+                insertIntoSorted(layerOrder, bg, layerOrderSize);
+            }
         }
     }
 
