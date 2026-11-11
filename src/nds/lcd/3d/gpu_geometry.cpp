@@ -28,7 +28,7 @@ void nds::GPU::transformVertex(Vertex &v)
     v.clipPos = v.clipPos * clipMtxResult;
     if(v.clipPos.w > 0){
         int64_t sx = (int64_t(v.clipPos.x) + v.clipPos.w) * (int64_t(viewport.state.x2) - viewport.state.x1) / (int64_t(2)*v.clipPos.w) + int64_t(viewport.state.x1);
-        int64_t sy = (int64_t(v.clipPos.y) + v.clipPos.w) * (int64_t(viewport.state.y2) - viewport.state.y1) / (int64_t(2)*v.clipPos.w) + int64_t(viewport.state.y1);
+        int64_t sy = (int64_t(-v.clipPos.y) + v.clipPos.w) * (int64_t(viewport.state.y2) - viewport.state.y1) / (int64_t(2)*v.clipPos.w) + int64_t(viewport.state.y1);
         v.screenX = sx;
         v.screenY = sy;
     }
@@ -36,13 +36,22 @@ void nds::GPU::transformVertex(Vertex &v)
         v.screenX = -1;
         v.screenY = -1;
     }
+    v.attributes[0] = (geometry.colour.state.red * 2 + (geometry.colour.state.red + 31) / 32) << 2;
+    v.attributes[1] = (geometry.colour.state.green * 2 + (geometry.colour.state.green + 31) / 32) << 2;
+    v.attributes[2] = (geometry.colour.state.blue * 2 + (geometry.colour.state.blue + 31) / 32) << 2;
+    v.attributes[3] = geometry.nextS;
+    v.attributes[4] = geometry.nextT;
 }
 
 void nds::GPU::swapBuffers() // Das ist die tatsächliche Ausführung nach VBlank
 {
-    vertexPolyRam.swap(vertexPolyRamRender);
-    vertexPolyRam = {};
-    // std::fill(vertexPolyRam.begin(), vertexPolyRam.end(), Vertex{}); // leeren und an geometrie engine geben
+    vertexRam.swap(vertexRamRender);
+    polyRam.swap(polyRamRender);
+    for(auto &i : currentPolyIndices){
+        i = 0xFFFF;
+    }
+    vertexRam.clear();
+    polyRam.clear();
     haltGeometry = false;
 }
 
@@ -72,41 +81,62 @@ void nds::GPU::addVertex(const Vertex &v)
 {
     switch(geometry.primitiveType){
         case 0:{ // dreiecke
-            std::get<Triangle>(currentPolygon).vertices[vertexIndex++] = v;
+            currentPolyVertices[vertexIndex] = v;
+            currentPolyIndices[vertexIndex] = 0xFFFF; // aka noch nicht in vertex ram
+            vertexIndex++;
             if(vertexIndex > 2){
                 if(polygonInViewport(currentPolygon))
-                    vertexPolyRam.push_back(currentPolygon);
+                    pushPolygon();
                 vertexIndex = 0;
             }
             break;
         }
         case 1:{ // vierecke
-            std::get<Quad>(currentPolygon).vertices[vertexIndex++] = v;
+            currentPolyVertices[vertexIndex] = v;
+            currentPolyIndices[vertexIndex] = 0xFFFF;
+            vertexIndex++;
             if(vertexIndex > 3){
                 if(polygonInViewport(currentPolygon))
-                    vertexPolyRam.push_back(currentPolygon);
+                    pushPolygon();
                 vertexIndex = 0;
             }
             break;
         }
         case 2:{ // dreieck-strip
-            std::get<Triangle>(currentPolygon).vertices[vertexIndex++] = v;
+            currentPolyVertices[vertexIndex] = v;
+            currentPolyIndices[vertexIndex] = 0xFFFF;
+            vertexIndex++;
             if(vertexIndex > 2){
                 if(polygonInViewport(currentPolygon))
-                    vertexPolyRam.push_back(currentPolygon);
-                std::get<Triangle>(currentPolygon).vertices[0] = std::get<Triangle>(currentPolygon).vertices[1]; // die letzten beiden?
-                std::get<Triangle>(currentPolygon).vertices[1] = std::get<Triangle>(currentPolygon).vertices[2];
+                    pushPolygon();
+                size_t firstIndex = 1;
+                size_t secondIndex = 2;
+                if(triangleCounter % 2 == 0){
+                    firstIndex = 2;
+                    secondIndex = 1;
+                }
+                currentPolyVertices[0] = currentPolyVertices[firstIndex]; // die letzten beiden? ungekehrte Reihenfolge
+                currentPolyVertices[1] = currentPolyVertices[secondIndex];
+                currentPolyIndices[0] = currentPolyIndices[firstIndex];
+                currentPolyIndices[1] = currentPolyIndices[secondIndex];
                 vertexIndex = 2;
+                triangleCounter++;
             }
             break;
         }
         default:{ // viereck-strip
-            std::get<Quad>(currentPolygon).vertices[vertexIndex++] = v;
+            currentPolyVertices[vertexIndex] = v;
+            currentPolyIndices[vertexIndex] = 0xFFFF;
+            vertexIndex++;
             if(vertexIndex > 3){
+                std::swap(currentPolyVertices[2], currentPolyVertices[3]);
+                std::swap(currentPolyIndices[2], currentPolyIndices[3]);
                 if(polygonInViewport(currentPolygon))
-                    vertexPolyRam.push_back(currentPolygon);
-                std::get<Quad>(currentPolygon).vertices[0] = std::get<Quad>(currentPolygon).vertices[2]; // die letzten beiden?
-                std::get<Quad>(currentPolygon).vertices[1] = std::get<Quad>(currentPolygon).vertices[3];
+                    pushPolygon();
+                currentPolyVertices[0] = currentPolyVertices[3]; // die letzten beiden?
+                currentPolyVertices[1] = currentPolyVertices[2];
+                currentPolyIndices[0] = currentPolyIndices[3];
+                currentPolyIndices[1] = currentPolyIndices[2];
                 vertexIndex = 2;
             }
             break;
@@ -116,30 +146,58 @@ void nds::GPU::addVertex(const Vertex &v)
 
 bool nds::GPU::polygonInViewport(const Polygon &p)
 {
-    const auto visitor = overload{
-        [&](const Triangle &t){
-            bool overlap = false;
-            for(const auto &v : t.vertices){
-                if(v.screenX >= viewport.state.x1 && v.screenX < viewport.state.x2 && v.screenY >= viewport.state.y1 && v.screenY < viewport.state.y2){
-                    overlap = true;
-                    break;
-                }
-            }
-            return overlap;
-        },
-        [&](const Quad &q){
-            bool overlap = false;
-            for(const auto &v : q.vertices){
-                if(v.screenX >= viewport.state.x1 && v.screenX < viewport.state.x2 && v.screenY >= viewport.state.y1 && v.screenY < viewport.state.y2){
-                    overlap = true;
-                    break;
-                }
-            }
-            return overlap;
+    bool overlap = false;
+    for(uint16_t i = 0; i < p.numVertices; i++){
+        const auto &v = currentPolyVertices[i];
+        if(v.screenX >= viewport.state.x1 && v.screenX < viewport.state.x2 && v.screenY >= viewport.state.y1 && v.screenY < viewport.state.y2){
+            overlap = true;
+            break;
         }
-    };
+    }
+    return overlap;
+}
 
-    return std::visit(visitor, p);
+void nds::GPU::pushPolygon()
+{
+    currentPolygon.top = 0;
+    currentPolygon.bottom = 0;
+    currentPolygon.topY = currentPolyVertices[0].screenY;
+    currentPolygon.bottomY = currentPolyVertices[0].screenY;
+    int64_t area = 0;
+    for(uint16_t i = 0; i < currentPolygon.numVertices; i++){
+        const auto &cv = currentPolyVertices[i];
+        const auto &nv = i < currentPolygon.numVertices - 1 ? currentPolyVertices[i+1] : currentPolyVertices[0];
+
+        area += cv.screenX * nv.screenY - nv.screenX * cv.screenY;
+
+        if(currentPolyIndices[i] == 0xFFFF){ // Damit bei Strips die Vertices nicht doppelt drin sind
+            currentPolyIndices[i] = vertexRam.size();
+            vertexRam.push_back(currentPolyVertices[i]);
+        }
+        currentPolygon.vertices[i] = currentPolyIndices[i];
+
+        if(vertexRam[currentPolygon.vertices[i]].screenY > currentPolygon.bottomY){
+            currentPolygon.bottomY = vertexRam[currentPolygon.vertices[i]].screenY;
+            currentPolygon.bottom = i;
+        }
+
+        if(vertexRam[currentPolygon.vertices[i]].screenY < currentPolygon.topY){
+            currentPolygon.topY = vertexRam[currentPolygon.vertices[i]].screenY;
+            currentPolygon.top = i;
+        }
+    }
+    currentPolygon.curL = currentPolygon.top;
+    currentPolygon.curR = currentPolygon.top;
+    currentPolygon.nextL = circularIncrement(currentPolygon.curL, currentPolygon, -1);
+    currentPolygon.nextR = circularIncrement(currentPolygon.curR, currentPolygon, 1);
+
+    if(area > 0) currentPolygon.clockwise = true;
+    else currentPolygon.clockwise = false;
+
+    currentPolygon.attr = geometry.polygonAttr;
+    currentPolygon.texParam = geometry.currentTexParam;
+    currentPolygon.paletteBaseAddress = geometry.paletteBaseAddress;
+    polyRam.push_back(currentPolygon);
 }
 
 void nds::GPU::recalculateClipMtx()
@@ -338,6 +396,7 @@ void nds::GPU::MTX_TRANS(const FIFOCommand &cmd)
 
 void nds::GPU::COLOR(const FIFOCommand &cmd)
 {
+    geometry.colour.raw = cmd.params[0] & 0xFFFF;
 }
 
 void nds::GPU::NORMAL(const FIFOCommand &cmd)
@@ -346,6 +405,8 @@ void nds::GPU::NORMAL(const FIFOCommand &cmd)
 
 void nds::GPU::TEXCOORD(const FIFOCommand &cmd)
 {
+    geometry.nextS = std::bit_cast<int16_t>(uint16_t(cmd.params[0] & 0xFFFF));
+    geometry.nextT = std::bit_cast<int16_t>(uint16_t((cmd.params[0] >> 16) & 0xFFFF));
 }
 
 void nds::GPU::VTX_16(const FIFOCommand &cmd)
@@ -422,10 +483,12 @@ void nds::GPU::POLYGON_ATTR(const FIFOCommand &cmd)
 
 void nds::GPU::TEXIMAGE_PARAM(const FIFOCommand &cmd)
 {
+    geometry.currentTexParam.raw = cmd.params[0];
 }
 
 void nds::GPU::PLTT_BASE(const FIFOCommand &cmd)
 {
+    geometry.paletteBaseAddress = cmd.params[0] & 0x1FFF;
 }
 
 void nds::GPU::DIF_AMB(const FIFOCommand &cmd)
@@ -452,11 +515,12 @@ void nds::GPU::BEGIN_VTXS(const FIFOCommand &cmd)
 {
     geometry.polygonAttr = geometry.nextPolygonAttr;
     geometry.primitiveType = cmd.params[0] & 3;
+    triangleCounter = 0;
     if(geometry.primitiveType == 0 || geometry.primitiveType == 2){
-        currentPolygon = {Triangle{}};
+        currentPolygon = {.numVertices = 3};
     }
     else{
-        currentPolygon = {Quad{}};
+        currentPolygon = {.numVertices = 4};
     }
     vertexIndex = 0; // in jedem Fall, auch bei Strips
 }
@@ -477,6 +541,8 @@ void nds::GPU::SWAP_BUFFERS(const FIFOCommand &cmd)
 void nds::GPU::VIEWPORT(const FIFOCommand &cmd)
 {
     viewport.raw = cmd.params[0];
+    viewportTop = 191 - viewport.state.y2;
+    viewportBottom = 191 - viewport.state.y1;
 }
 
 void nds::GPU::BOX_TEST(const FIFOCommand &cmd)

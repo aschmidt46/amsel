@@ -29,7 +29,7 @@ Jedes System enthält einen Debugger, der mehr oder weniger Funktionalität enth
 - Die meiste Peripherie ist implementiert
 - Firmware lässt sich booten
 - 2D Engines haben noch nicht alle Funktionalität
-- 3D GPU fehlt noch
+- 3D GPU WIP
 - Audio fehlt
 - Wifi fehlt
 - Touch-Eingabe wird nicht vom Web frontend unterstützt
@@ -140,6 +140,10 @@ System Referenzen / Test-Roms die mir bei der Entwicklung sehr geholfen haben.
 \+ Alles zum GBA  
 [GBATEK](https://problemkaputt.de/gbatek.htm)  
 [GBATEK addendum](https://melonds.kuribo64.net/board/thread.php?pid=6560)  
+[Living on the Edge](https://hydr8gon.github.io/noods/2021/01/15/living-on-edge.html)  
+[Nintendo DS Geometry and Rendering Engine notes](https://raddad772.github.io/2025/03/14/nds_ge_re_basics.html)  
+[MelonDS Blog + Forums](https://melonds.kuribo64.net)  
+[Shonumi Blog](https://shonumi.github.io/blog/nds_rolling.html)  
 [libnds examples](https://github.com/devkitPro/nds-examples) (+ calico Quelltext)  
 [blocksds examples](https://codeberg.org/blocksds/sdk)  
 [rockwrestler test rom](https://github.com/RockPolish/rockwrestler)  

@@ -113,22 +113,51 @@ namespace nds{
         Word raw;
     };
 
+    union TEXIMAGE_PARAM_T{
+        struct{
+            Word textureVramOffsetDiv8 : 16;
+            Word repeatInS : 1;
+            Word repeatInT : 1;
+            Word flipInS : 1;
+            Word flipInT : 1;
+            Word textureSSize : 3;
+            Word textureTSize : 3;
+            Word textureFormat : 3;
+            Word colour0transparent : 1;
+            Word textureCoordinatesTransformationMode : 2;
+        } state;
+        Word raw;
+    };
+
     struct Vertex{
         // vec4 worldPos;
         vec4 clipPos;
+
         int screenX = 0;
         int screenY = 0;
+        std::array<int32_t, 6> attributes;
+
+        inline uint8_t r() const { return attributes[0];}
+        inline uint8_t g() const { return attributes[1];}
+        inline uint8_t b() const { return attributes[2];}
+        inline int16_t s() const { return attributes[3];}
+        inline int16_t t() const { return attributes[4];}
+        inline int32_t z() const { return attributes[5];}
     };
 
-    struct Triangle{
-        std::array<Vertex, 3> vertices;
-    };
+    struct Polygon{
+        uint16_t numVertices;
+        std::array<uint16_t, 10> vertices; // index in vertex ram
+        POLYGON_ATTR_T attr;
+        TEXIMAGE_PARAM_T texParam = {.raw = 0};
+        Word paletteBaseAddress = 0;
+        uint16_t top = 0, bottom = 0; // index in vertices
+        int topY, bottomY; // koordinate
 
-    struct Quad{
-        std::array<Vertex, 4> vertices;
-    };
+        uint16_t curL, curR; // index
+        uint16_t nextL, nextR; // index
 
-    typedef std::variant<
-    Triangle, Quad
-    > Polygon;
+        bool clockwise = false;
+
+    };
 }

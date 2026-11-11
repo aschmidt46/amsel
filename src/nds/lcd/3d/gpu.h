@@ -46,9 +46,42 @@ namespace nds{
             POLYGON_ATTR_T polygonAttr = {.raw=0};
             int primitiveType = 0;
             vec4 p; // letzter Vertex
+            union{
+                struct{
+                    HalfWord red : 5;
+                    HalfWord green : 5;
+                    HalfWord blue : 5;
+                    HalfWord _unused : 1;
+                } state;
+                HalfWord raw;
+            } colour; // direkt
+            int16_t nextS = 0;
+            int16_t nextT = 0;
+            TEXIMAGE_PARAM_T currentTexParam = {.raw = 0};
+            Word paletteBaseAddress = 0;
         } geometry;
 
+        inline uint16_t circularIncrement(const uint16_t cur, const Polygon &p, int inc) const{
+            return (cur + inc + p.numVertices) % p.numVertices;
+        }
+        inline void maybeAdvanceEdgeWalk(const std::vector<Vertex> &vram, Polygon &p, const int currentY){
+            while(currentY >= vram[p.vertices[p.nextL]].screenY && p.curL != p.bottom){
+                p.curL = p.nextL;
+                p.nextL = circularIncrement(p.curL, p, -1);
+            }
+
+            while(currentY >= vram[p.vertices[p.nextR]].screenY && p.curR != p.bottom){
+                p.curR = p.nextR;
+                p.nextR = circularIncrement(p.curR, p, 1);
+            }
+        }
+
+        uint32_t getColour(const Polygon &p, const std::array<int32_t, 6> &attribs);
+
         struct {
+            std::array<int32_t, 6> attributesL;
+            std::array<int32_t, 6> attributesR;
+            std::array<int32_t, 6> attributesPixel;
         } render;
 
         union {
@@ -60,16 +93,24 @@ namespace nds{
             } state;
             Word raw = 0;
         } viewport;
+        int viewportTop = 0;
+        int viewportBottom = 191;
 
         SharedBus* bus = nullptr;
 
         // sind bereits transformiert
-        std::vector<Polygon> vertexPolyRam;
+        std::vector<Vertex> vertexRam;
+        std::vector<Polygon> polyRam;
         int vertexIndex = 0;
-        Polygon currentPolygon = {Triangle{}};
+        Polygon currentPolygon = {};
+        std::array<Vertex, 10> currentPolyVertices = {};
+        std::array<uint16_t, 10> currentPolyIndices = {};
+        size_t triangleCounter = 0;
         void addVertex(const Vertex &v);
         bool polygonInViewport(const Polygon &p);
-        std::vector<Polygon> vertexPolyRamRender;
+        void pushPolygon();
+        std::vector<Vertex> vertexRamRender;
+        std::vector<Polygon> polyRamRender;
 
         std::array<Byte, 128> shininess = {};
         std::array<Byte, 0x10> edgeColor = {};
@@ -117,8 +158,8 @@ namespace nds{
         std::array<std::atomic<uint32_t>, 256 * 192> framebuffer = {};
         bool haltGeometry = false;
         GPU(SharedBus* bus) : bus(bus){
-            vertexPolyRam.reserve(100000);
-            vertexPolyRamRender.reserve(100000);
+            vertexRam.reserve(6144);
+            vertexRamRender.reserve(6144);
             cmdToFunction.fill(&GPU::NOP);
             fillMaps();
         }
@@ -133,7 +174,6 @@ namespace nds{
         void writeGXFIFO(Word val);
         void writeCommandRegister(Word addr, Word val);
 
-        PIXEL_T renderPixelTest(int x, int y);
         void renderScanline(const int y);
 
         void clockGeometry();

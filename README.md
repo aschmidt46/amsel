@@ -29,7 +29,7 @@ Every system comes with a built in debugger that is more or less feature-rich de
 - Most peripherals are implemented
 - firmware boots
 - 2D engines have some functionality missing (extended affine modes, bitmap sprites)
-- 3D engine missing entirely
+- 3D engine WIP
 - audio missing
 - wifi missing
 - Web frontend does not have support for touch input
@@ -139,6 +139,10 @@ System information / test roms that helped me immensely during development.
 \+ everything from gba  
 [GBATEK](https://problemkaputt.de/gbatek.htm)  
 [GBATEK addendum](https://melonds.kuribo64.net/board/thread.php?pid=6560)  
+[Living on the Edge](https://hydr8gon.github.io/noods/2021/01/15/living-on-edge.html)  
+[Nintendo DS Geometry and Rendering Engine notes](https://raddad772.github.io/2025/03/14/nds_ge_re_basics.html)  
+[MelonDS Blog + Forums](https://melonds.kuribo64.net)  
+[Shonumi Blog](https://shonumi.github.io/blog/nds_rolling.html)  
 [libnds examples](https://github.com/devkitPro/nds-examples) (+ calico source code)  
 [blocksds examples](https://codeberg.org/blocksds/sdk)  
 [rockwrestler test rom](https://github.com/RockPolish/rockwrestler)  
