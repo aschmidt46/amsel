@@ -15,6 +15,16 @@ namespace nds{
         Byte* ptr = nullptr;
         int allocatedTo = 0;
     };
+
+    typedef uint32_t OutCode;
+    constexpr OutCode OUT_INSIDE = 0;
+    constexpr OutCode OUT_LEFT = 1;
+    constexpr OutCode OUT_RIGHT = 2;
+    constexpr OutCode OUT_BOTTOM = 4;
+    constexpr OutCode OUT_TOP = 8;
+    constexpr OutCode OUT_NEAR = 16;
+    constexpr OutCode OUT_FAR = 32;
+
     class GPU{
 
         size_t& getSP();
@@ -76,12 +86,12 @@ namespace nds{
             }
         }
 
-        uint32_t getColour(const Polygon &p, const std::array<int32_t, 6> &attribs);
+        uint32_t getColour(const Polygon &p, const std::array<int32_t, 10> &attribs);
 
         struct {
-            std::array<int32_t, 6> attributesL;
-            std::array<int32_t, 6> attributesR;
-            std::array<int32_t, 6> attributesPixel;
+            std::array<int32_t, 10> attributesL;
+            std::array<int32_t, 10> attributesR;
+            std::array<int32_t, 10> attributesPixel;
         } render;
 
         union {
@@ -108,6 +118,9 @@ namespace nds{
         size_t triangleCounter = 0;
         void addVertex(const Vertex &v);
         bool polygonInViewport(const Polygon &p);
+        static OutCode computeOutCode(const int32_t x, const int32_t y, const int32_t z, const int32_t w);
+        int clipPolygon(std::array<Vertex, 10> &out);
+        int clipPlanes(const int planeDim, const std::array<Vertex, 10> &in, std::array<Vertex, 10> &out, int numVertices);
         void pushPolygon();
         std::vector<Vertex> vertexRamRender;
         std::vector<Polygon> polyRamRender;
@@ -156,6 +169,7 @@ namespace nds{
         
         public:
         std::array<std::atomic<uint32_t>, 256 * 192> framebuffer = {};
+        std::array<std::atomic<int32_t>, 256 * 192> depthBuffer = {0x00FFFFFF};
         bool haltGeometry = false;
         GPU(SharedBus* bus) : bus(bus){
             vertexRam.reserve(6144);
@@ -178,6 +192,7 @@ namespace nds{
 
         void clockGeometry();
         void transformVertex(Vertex &v);
+        void vertexViewportTransform(Vertex &v);
         void NOP(const FIFOCommand &cmd);
         void MTX_MODE(const FIFOCommand &cmd);
         void MTX_PUSH(const FIFOCommand &cmd);

@@ -25,10 +25,25 @@ void nds::GPU::clockGeometry()
 
 void nds::GPU::transformVertex(Vertex &v)
 {
-    v.clipPos = v.clipPos * clipMtxResult;
-    if(v.clipPos.w > 0){
-        int64_t sx = (int64_t(v.clipPos.x) + v.clipPos.w) * (int64_t(viewport.state.x2) - viewport.state.x1) / (int64_t(2)*v.clipPos.w) + int64_t(viewport.state.x1);
-        int64_t sy = (int64_t(-v.clipPos.y) + v.clipPos.w) * (int64_t(viewport.state.y2) - viewport.state.y1) / (int64_t(2)*v.clipPos.w) + int64_t(viewport.state.y1);
+    vec4 v4(v.x(), v.y(), v.z(), v.w());
+    v4 = v4 * clipMtxResult;
+    v.x() = v4.x;
+    v.y() = v4.y;
+    v.z() = v4.z;
+    v.w() = v4.w;
+    v.r() = (geometry.colour.state.red * 2 + (geometry.colour.state.red + 31) / 32) << 2;
+    v.g() = (geometry.colour.state.green * 2 + (geometry.colour.state.green + 31) / 32) << 2;
+    v.b() = (geometry.colour.state.blue * 2 + (geometry.colour.state.blue + 31) / 32) << 2;
+    v.s() = geometry.nextS;
+    v.t() = geometry.nextT;
+    v.zw() = v.w() > 0 ? v.z() : -1;
+}
+
+void nds::GPU::vertexViewportTransform(Vertex &v)
+{
+    if(v.w() > 0){
+        int64_t sx = (int64_t(v.x()) + v.w()) * (int64_t(viewport.state.x2) - viewport.state.x1) / (int64_t(2)*v.w()) + int64_t(viewport.state.x1);
+        int64_t sy = (int64_t(-v.y()) + v.w()) * (int64_t(viewport.state.y2) - viewport.state.y1) / (int64_t(2)*v.w()) + int64_t(viewport.state.y1);
         v.screenX = sx;
         v.screenY = sy;
     }
@@ -36,11 +51,6 @@ void nds::GPU::transformVertex(Vertex &v)
         v.screenX = -1;
         v.screenY = -1;
     }
-    v.attributes[0] = (geometry.colour.state.red * 2 + (geometry.colour.state.red + 31) / 32) << 2;
-    v.attributes[1] = (geometry.colour.state.green * 2 + (geometry.colour.state.green + 31) / 32) << 2;
-    v.attributes[2] = (geometry.colour.state.blue * 2 + (geometry.colour.state.blue + 31) / 32) << 2;
-    v.attributes[3] = geometry.nextS;
-    v.attributes[4] = geometry.nextT;
 }
 
 void nds::GPU::swapBuffers() // Das ist die tatsächliche Ausführung nach VBlank
@@ -109,7 +119,7 @@ void nds::GPU::addVertex(const Vertex &v)
             if(vertexIndex > 2){
                 if(polygonInViewport(currentPolygon))
                     pushPolygon();
-                size_t firstIndex = 1;
+                size_t firstIndex = 0;
                 size_t secondIndex = 2;
                 if(triangleCounter % 2 == 0){
                     firstIndex = 2;
@@ -144,37 +154,195 @@ void nds::GPU::addVertex(const Vertex &v)
     }
 }
 
+// trivial reject
 bool nds::GPU::polygonInViewport(const Polygon &p)
 {
-    bool overlap = false;
+    bool allXOver = true;
+    bool allXUnder = true;
+    bool allYOver = true;
+    bool allYUnder = true;
+    bool allZOver = geometry.polygonAttr.state.renderFarPlaneIntersectingPolygons > 0;
+    bool allZUnder = true;
+    bool allWNegative = true;
     for(uint16_t i = 0; i < p.numVertices; i++){
         const auto &v = currentPolyVertices[i];
-        if(v.screenX >= viewport.state.x1 && v.screenX < viewport.state.x2 && v.screenY >= viewport.state.y1 && v.screenY < viewport.state.y2){
-            overlap = true;
-            break;
+        allXOver = allXOver && (v.x() > v.w());
+        allYOver = allYOver && (v.y() > v.w());
+        if(geometry.polygonAttr.state.renderFarPlaneIntersectingPolygons){
+            allZOver = allZOver && (v.z() > v.w()); // muss noch geclippt werden
+        }
+        else{ // ansonsten, wenn IRGENDEIN vertex drüber ist, weg
+            allZOver = allZOver || (v.z() > v.w());
+        }
+
+        allXUnder = allXUnder && (v.x() < -v.w());
+        allYUnder = allYUnder && (v.y() < -v.w());
+        allZUnder = allZUnder && (v.z() < -v.w());
+
+        allWNegative = allWNegative && (v.w() < 0);
+    }
+    return !(allXOver || allXUnder || allYOver || allYUnder || allZOver || allZUnder || allWNegative);
+}
+
+OutCode nds::GPU::computeOutCode(const int32_t x, const int32_t y, const int32_t z, const int32_t w)
+{
+    OutCode code = OUT_INSIDE;
+
+    if(x < -w) code |= OUT_LEFT;
+    if(x > w) code |= OUT_RIGHT;
+    if(y < -w) code |= OUT_BOTTOM;
+    if(y > w) code |= OUT_TOP;
+    if(z < -w) code |= OUT_NEAR;
+    if(z > w) code |= OUT_FAR;
+
+    return code;
+}
+
+int nds::GPU::clipPolygon(std::array<Vertex, 10> &out)
+{
+    std::array<Vertex, 10> verticesTmp{};
+    int numVertices = currentPolygon.numVertices;
+
+    numVertices = clipPlanes(0, currentPolyVertices, out, numVertices);
+    numVertices = clipPlanes(1, out, verticesTmp, numVertices);
+    numVertices = clipPlanes(2, verticesTmp, out, numVertices);
+
+    return numVertices;
+}
+
+Vertex splitEdge(const int planeDim, const Vertex &v1, const Vertex &v2, const int64_t sign){
+
+    Vertex res{};
+
+    const int64_t dv1 = int64_t(v1.w()) - sign * v1.attributes[planeDim];
+    const int64_t dv2 = int64_t(v2.w()) - sign * v2.attributes[planeDim];
+
+    const int64_t factor = (dv1 << 16) / (dv1 - dv2);
+
+    for(int i = 0; i < 10; i++){
+        res.attributes[i] = v1.attributes[i] + (((v2.attributes[i] - v1.attributes[i]) * factor) >> 16);
+    }
+
+    res.attributes[planeDim] = sign * res.w(); // (x/y/z) koordinate exakt auf Rand von Viewport
+
+    return res;
+}
+
+// Sutherland-Hodgman
+int nds::GPU::clipPlanes(const int planeDim, const std::array<Vertex, 10> &in, std::array<Vertex, 10> &out, int numVertices)
+{
+    std::array<Vertex, 10> tmp{};
+    int current = 0; // Zähler für tmp array
+    int prev, next;
+
+    // positive Ebene
+    for(int i = 0; i < numVertices; i++){
+        prev = i == 0 ? numVertices - 1 : i - 1;
+        next = i == numVertices - 1 ? 0 : i + 1;
+
+        Vertex v = in[i];
+
+        if(v.attributes[planeDim] > v.w()){
+            if(in[prev].attributes[planeDim] <= in[prev].w()){
+                // Neuen Punkt erstellen, interpolieren, einfügen in tmp
+                Vertex nv = splitEdge(planeDim, in[prev], v, 1);
+                tmp[current++] = nv;
+            }
+            if(in[next].attributes[planeDim] <= in[next].w()){
+                Vertex nv = splitEdge(planeDim, in[next], v, 1);
+                tmp[current++] = nv;
+            }
+        }
+        else{
+            tmp[current++] = v;
         }
     }
-    return overlap;
+
+    // in -> tmp -> out
+    // in ist jetzt in tmp
+    numVertices = current;
+    current = 0;
+
+    // negative Ebene
+    for(int i = 0; i < numVertices; i++){
+        prev = i == 0 ? numVertices - 1 : i - 1;
+        next = i == numVertices - 1 ? 0 : i + 1;
+
+        Vertex v = tmp[i];
+
+        if(v.attributes[planeDim] < -v.w()){
+            if(tmp[prev].attributes[planeDim] >= -tmp[prev].w()){
+                // Neuen Punkt erstellen, interpolieren, einfügen in out
+                Vertex nv = splitEdge(planeDim, tmp[prev], v, -1);
+                out[current++] = nv;
+            }
+            if(tmp[next].attributes[planeDim] >= -tmp[next].w()){
+                Vertex nv = splitEdge(planeDim, tmp[next], v, -1);
+                out[current++] = nv;
+            }
+        }
+        else{
+            out[current++] = v;
+        }
+    }
+    numVertices = current;
+    return numVertices;
 }
 
 void nds::GPU::pushPolygon()
 {
+    OutCode outcodeOr = 0;
+    for(int i = 0; i < currentPolygon.numVertices; i++){
+        outcodeOr |= computeOutCode(currentPolyVertices[i].x(), currentPolyVertices[i].y(), currentPolyVertices[i].z(), currentPolyVertices[i].w());
+    }
+
+    int64_t determinant = 0;
+    {
+        const Vertex& v0 = currentPolyVertices[0];
+        const Vertex& v1 = currentPolyVertices[1];
+        const Vertex& v2 = currentPolyVertices[2];
+        determinant = 
+          v0.x() * (int64_t(v1.y())*v2.w() - int64_t(v2.y())*v1.w()) 
+        - v0.y() * (int64_t(v1.x())*v2.w() - int64_t(v2.x())*v1.w()) 
+        + v0.w() * (int64_t(v1.x())*v2.y() - int64_t(v2.x())*v1.y());
+    }
+
+    // front back culling
+    if(determinant < 0 && !geometry.polygonAttr.state.renderPolyBackside) return;
+    if(determinant > 0 && !geometry.polygonAttr.state.renderPolyFrontside) return;
+
+    int origNumVertices = currentPolygon.numVertices;
+    int numVertices = currentPolygon.numVertices;
+
+    if(outcodeOr == 0){ // trivial accept (trivial reject in polygonInsideViewport)
+        for(uint16_t i = 0; i < numVertices; i++){
+            if(currentPolyIndices[i] == 0xFFFF){ // Damit bei Strips die Vertices nicht doppelt drin sind
+                currentPolyIndices[i] = vertexRam.size();
+                vertexViewportTransform(currentPolyVertices[i]);
+                vertexRam.push_back(currentPolyVertices[i]);
+            }
+            currentPolygon.vertices[i] = currentPolyIndices[i];
+        }
+    }
+    else{
+        std::array<Vertex, 10> newVertices{};
+        numVertices = clipPolygon(newVertices);
+        if(numVertices < 3) return; // nicht gekriegt im trivial reject
+        int index = vertexRam.size();
+        for(int i = 0; i < numVertices; i++){
+            vertexViewportTransform(newVertices[i]);
+            vertexRam.push_back(newVertices[i]);
+            currentPolygon.vertices[i] = index++;
+        }
+    }
+
+    currentPolygon.numVertices = numVertices;
+
     currentPolygon.top = 0;
     currentPolygon.bottom = 0;
-    currentPolygon.topY = currentPolyVertices[0].screenY;
-    currentPolygon.bottomY = currentPolyVertices[0].screenY;
-    int64_t area = 0;
-    for(uint16_t i = 0; i < currentPolygon.numVertices; i++){
-        const auto &cv = currentPolyVertices[i];
-        const auto &nv = i < currentPolygon.numVertices - 1 ? currentPolyVertices[i+1] : currentPolyVertices[0];
-
-        area += cv.screenX * nv.screenY - nv.screenX * cv.screenY;
-
-        if(currentPolyIndices[i] == 0xFFFF){ // Damit bei Strips die Vertices nicht doppelt drin sind
-            currentPolyIndices[i] = vertexRam.size();
-            vertexRam.push_back(currentPolyVertices[i]);
-        }
-        currentPolygon.vertices[i] = currentPolyIndices[i];
+    currentPolygon.topY = vertexRam[currentPolygon.vertices[0]].screenY;
+    currentPolygon.bottomY = vertexRam[currentPolygon.vertices[0]].screenY;
+    for(uint16_t i = 0; i < numVertices; i++){
 
         if(vertexRam[currentPolygon.vertices[i]].screenY > currentPolygon.bottomY){
             currentPolygon.bottomY = vertexRam[currentPolygon.vertices[i]].screenY;
@@ -191,13 +359,11 @@ void nds::GPU::pushPolygon()
     currentPolygon.nextL = circularIncrement(currentPolygon.curL, currentPolygon, -1);
     currentPolygon.nextR = circularIncrement(currentPolygon.curR, currentPolygon, 1);
 
-    if(area > 0) currentPolygon.clockwise = true;
-    else currentPolygon.clockwise = false;
-
     currentPolygon.attr = geometry.polygonAttr;
     currentPolygon.texParam = geometry.currentTexParam;
     currentPolygon.paletteBaseAddress = geometry.paletteBaseAddress;
     polyRam.push_back(currentPolygon);
+    currentPolygon.numVertices = origNumVertices; // reset für nächstes Polygon
 }
 
 void nds::GPU::recalculateClipMtx()
@@ -415,7 +581,8 @@ void nds::GPU::VTX_16(const FIFOCommand &cmd)
     const int32_t y = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
     const int32_t z = sign_extend_n_32(cmd.params[1] & 0xFFFF, 16);
     geometry.p = vec4(x,y,z);
-    Vertex v{.clipPos = geometry.p};
+    Vertex v;
+    v.setClipPos(geometry.p);
     transformVertex(v);
     addVertex(v);
 }
@@ -426,7 +593,8 @@ void nds::GPU::VTX_10(const FIFOCommand &cmd)
     const int32_t y = sign_extend_n_32((cmd.params[0] >> 10) & 0x3FF, 10);
     const int32_t z = sign_extend_n_32((cmd.params[0] >> 20) & 0x3FF, 10);
     geometry.p = vec4(x << 6,y << 6,z << 6); // Fractional auf 12 bit?
-    Vertex v{.clipPos = geometry.p};
+    Vertex v;
+    v.setClipPos(geometry.p);
     transformVertex(v);
     addVertex(v);
 }
@@ -437,7 +605,8 @@ void nds::GPU::VTX_XY(const FIFOCommand &cmd)
     const int32_t y = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
     const int32_t z = geometry.p.z;
     geometry.p = vec4(x,y,z);
-    Vertex v{.clipPos = geometry.p};
+    Vertex v;
+    v.setClipPos(geometry.p);
     transformVertex(v);
     addVertex(v);
 }
@@ -448,7 +617,8 @@ void nds::GPU::VTX_XZ(const FIFOCommand &cmd)
     const int32_t z = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
     const int32_t y = geometry.p.y;
     geometry.p = vec4(x,y,z);
-    Vertex v{.clipPos = geometry.p};
+    Vertex v;
+    v.setClipPos(geometry.p);
     transformVertex(v);
     addVertex(v);
 }
@@ -459,7 +629,8 @@ void nds::GPU::VTX_YZ(const FIFOCommand &cmd)
     const int32_t z = sign_extend_n_32((cmd.params[0] >> 16) & 0xFFFF, 16);
     const int32_t x = geometry.p.x;
     geometry.p = vec4(x,y,z);
-    Vertex v{.clipPos = geometry.p};
+    Vertex v;
+    v.setClipPos(geometry.p);
     transformVertex(v);
     addVertex(v);
 }
@@ -471,7 +642,8 @@ void nds::GPU::VTX_DIFF(const FIFOCommand &cmd)
     const int32_t z = sign_extend_n_32((cmd.params[0] >> 20) & 0x3FF, 10);
 
     geometry.p = vec4(geometry.p.x + x,geometry.p.y + y,geometry.p.z + z);
-    Vertex v{.clipPos = geometry.p};
+    Vertex v;
+    v.setClipPos(geometry.p);
     transformVertex(v);
     addVertex(v);
 }

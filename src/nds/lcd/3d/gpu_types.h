@@ -130,19 +130,38 @@ namespace nds{
     };
 
     struct Vertex{
-        // vec4 worldPos;
-        vec4 clipPos;
-
         int screenX = 0;
         int screenY = 0;
-        std::array<int32_t, 6> attributes;
+        std::array<int32_t, 10> attributes{};
 
-        inline uint8_t r() const { return attributes[0];}
-        inline uint8_t g() const { return attributes[1];}
-        inline uint8_t b() const { return attributes[2];}
-        inline int16_t s() const { return attributes[3];}
-        inline int16_t t() const { return attributes[4];}
-        inline int32_t z() const { return attributes[5];}
+        inline int32_t& x() { return attributes[0];}
+        inline int32_t& y() { return attributes[1];}
+        inline int32_t& z() { return attributes[2];}
+        inline int32_t& w() { return attributes[3];}
+        inline int32_t& r() { return attributes[4];}
+        inline int32_t& g() { return attributes[5];}
+        inline int32_t& b() { return attributes[6];}
+        inline int32_t& s() { return attributes[7];}
+        inline int32_t& t() { return attributes[8];}
+        inline int32_t& zw() { return attributes[9];}
+
+        inline int32_t x() const { return attributes[0];}
+        inline int32_t y() const { return attributes[1];}
+        inline int32_t z() const { return attributes[2];}
+        inline int32_t w() const { return attributes[3];}
+        inline int32_t r() const { return attributes[4];}
+        inline int32_t g() const { return attributes[5];}
+        inline int32_t b() const { return attributes[6];}
+        inline int32_t s() const { return attributes[7];}
+        inline int32_t t() const { return attributes[8];}
+        inline int32_t zw() const { return attributes[9];}
+
+        void setClipPos(const vec4 &v){
+            x() = v.x;
+            y() = v.y;
+            z() = v.z;
+            w() = v.w;
+        }
     };
 
     struct Polygon{
@@ -156,8 +175,6 @@ namespace nds{
 
         uint16_t curL, curR; // index
         uint16_t nextL, nextR; // index
-
-        bool clockwise = false;
 
     };
 }
