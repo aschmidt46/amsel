@@ -87,11 +87,14 @@ namespace nds{
         }
 
         uint32_t getColour(const Polygon &p, const std::array<int32_t, 10> &attribs);
+        uint32_t fetchTexel(const Polygon &p, int32_t s, int32_t t);
 
         struct {
             std::array<int32_t, 10> attributesL;
             std::array<int32_t, 10> attributesR;
             std::array<int32_t, 10> attributesPixel;
+            bool manualTranslucentPolygonYSorting = false; 
+            bool depthBufferingUseW = false; // sonst z/w
         } render;
 
         union {

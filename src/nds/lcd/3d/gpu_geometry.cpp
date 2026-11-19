@@ -36,7 +36,6 @@ void nds::GPU::transformVertex(Vertex &v)
     v.b() = (geometry.colour.state.blue * 2 + (geometry.colour.state.blue + 31) / 32) << 2;
     v.s() = geometry.nextS;
     v.t() = geometry.nextT;
-    v.zw() = v.w() > 0 ? v.z() : -1;
 }
 
 void nds::GPU::vertexViewportTransform(Vertex &v)
@@ -46,10 +45,12 @@ void nds::GPU::vertexViewportTransform(Vertex &v)
         int64_t sy = (int64_t(-v.y()) + v.w()) * (int64_t(viewport.state.y2) - viewport.state.y1) / (int64_t(2)*v.w()) + int64_t(viewport.state.y1);
         v.screenX = sx;
         v.screenY = sy;
+        v.zw() = ((int64_t(v.z()) * 0x4000) / v.w() + 0x3FFF) * 0x200;
     }
     else{
         v.screenX = -1;
         v.screenY = -1;
+        v.zw() = 0;
     }
 }
 
@@ -63,6 +64,8 @@ void nds::GPU::swapBuffers() // Das ist die tatsächliche Ausführung nach VBlan
     vertexRam.clear();
     polyRam.clear();
     haltGeometry = false;
+    render.depthBufferingUseW = geometry.depthBufferingUseW;
+    render.manualTranslucentPolygonYSorting = geometry.manualTranslucentPolygonYSorting;
 }
 
 size_t &nds::GPU::getSP()

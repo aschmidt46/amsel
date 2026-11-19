@@ -9,15 +9,19 @@ constexpr inline int64_t applyLinFactor(int64_t amin, int64_t amax, int64_t f){
 };
 
 constexpr inline void interpolateAttribs(const std::array<int32_t, 10> &vCur, const std::array<int32_t, 10> &vNext, const int factor, std::array<int32_t, 10> &result){
-    for(int i = 4; i < 10; i++){
+    for(int i = 3; i < 9; i++){
         result[i] = applyLinFactor(vCur[i], vNext[i], factor);
     }
+}
+
+constexpr inline void interpolateZW(const std::array<int32_t, 10> &vCur, const std::array<int32_t, 10> &vNext, const int factor, std::array<int32_t, 10> &result){
+    result[9] = applyLinFactor(vCur[9], vNext[9], factor);
 }
 
 void nds::GPU::renderScanline(const int y)
 {
     for(int x = 0; x < 256; x++){
-        depthBuffer[x + y * 256] = 0x00FFFFFF;
+        depthBuffer[x + y * 256] = clearDepth * 0x200;
         framebuffer[x + y * 256] = 0;
     }
 
@@ -33,8 +37,12 @@ void nds::GPU::renderScanline(const int y)
 
             const int dyL = nextL.screenY - curL.screenY;
             const int dyR = nextR.screenY - curR.screenY;
-            const int yFactorL = dyL == 0 ? 0 : ((y - curL.screenY) << 16) / dyL;
-            const int yFactorR = dyR == 0 ? 0 : ((y - curR.screenY) << 16) / dyR;
+            const int64_t yFactorL = dyL == 0 ? 0 : ((y - curL.screenY) << 16) / dyL; // screen space
+            const int64_t divL = (0x10000-yFactorL) * nextL.w() + yFactorL * curL.w();
+            const int64_t factorPL = divL > 0 ? (yFactorL * curL.w() << 16) / divL : 0;
+            const int64_t yFactorR = dyR == 0 ? 0 : ((y - curR.screenY) << 16) / dyR;
+            const int64_t divR = (0x10000-yFactorR) * nextR.w() + yFactorR * curR.w();
+            const int64_t factorPR = divR > 0 ? (yFactorR * curR.w() << 16) / divR : 0;
     
             if(curL.screenY != nextL.screenY){
                 xL = int64_t(curL.screenX) + int64_t(y - curL.screenY) * int64_t(nextL.screenX - curL.screenX) / int64_t(nextL.screenY - curL.screenY);
@@ -43,31 +51,47 @@ void nds::GPU::renderScanline(const int y)
             if(curR.screenY != nextR.screenY){
                 xR = int64_t(curR.screenX) + int64_t(y - curR.screenY) * int64_t(nextR.screenX - curR.screenX) / int64_t(nextR.screenY - curR.screenY);
             }
-            if(xR < xL){
-                const auto tmp = xR;
-                xR = xL;
-                xL = tmp;
+
+            int inc = xR >= xL ? 1 : -1;
+
+            int xLClamp = std::clamp(xL, -1, 257);
+            int xRClamp = std::clamp(xR, -1, 257);
+
+            interpolateAttribs(curL.attributes, nextL.attributes, factorPL, render.attributesL);
+            interpolateAttribs(curR.attributes, nextR.attributes, factorPR, render.attributesR);
+
+            if(!render.depthBufferingUseW){
+                interpolateZW(curL.attributes, nextL.attributes, yFactorL, render.attributesL);
+                interpolateZW(curR.attributes, nextR.attributes, yFactorR, render.attributesR);
             }
 
-            xL = std::clamp(xL, -1, 257);
-            xR = std::clamp(xR, -1, 257);
-
-            interpolateAttribs(curL.attributes, nextL.attributes, yFactorL, render.attributesL);
-            interpolateAttribs(curR.attributes, nextR.attributes, yFactorR, render.attributesR);
-
-            for(int x = xL; x <= xR; x++){
+            for(int x = xLClamp; x != xRClamp + inc; x+= inc){
                 if(x >= 0 && x < 256){
                     const int dx = xR - xL;
-                    const int xFactor = dx == 0 ? 0 : ((x - xL) << 16) / dx;
+                    const int64_t xFactor = dx == 0 ? 0 : ((x - xL) << 16) / dx;
+                    const int64_t d = (0x10000-xFactor) * render.attributesR[3] + xFactor * render.attributesL[3];
+                    const int64_t factorP = d > 0 ? (xFactor * render.attributesL[3] << 16) / d : 0;
 
-                    interpolateAttribs(render.attributesL, render.attributesR, xFactor, render.attributesPixel);
+                    interpolateAttribs(render.attributesL, render.attributesR, factorP, render.attributesPixel);
+                    if(!render.depthBufferingUseW){
+                        interpolateZW(render.attributesL, render.attributesR, xFactor, render.attributesPixel);
+                    }
 
-                    if(depthBuffer[x + y * 256] < render.attributesPixel[9]) continue; // depth test (less)
+                    if(p.attr.state.depthTestIsEqual){
+                        int64_t diff = std::abs((render.depthBufferingUseW ? render.attributesPixel[3] : render.attributesPixel[9]) - depthBuffer[x + y * 256]);
+                        if(diff > 0x200) continue; // "equal"
+                    }
+                    else{
+                        if(depthBuffer[x + y * 256] < (render.depthBufferingUseW ? render.attributesPixel[3] : render.attributesPixel[9])) continue; // depth test (less)
+                    }
 
                     uint32_t c = getColour(p, render.attributesPixel);
 
                     framebuffer[x + y * 256] = c;
-                    depthBuffer[x + y * 256] = render.attributesPixel[9];
+                    if(render.depthBufferingUseW)
+                        depthBuffer[x + y * 256] = render.attributesPixel[3];
+                    else
+                        depthBuffer[x + y * 256] = render.attributesPixel[9];
                 }
             }
         }
@@ -227,5 +251,10 @@ uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &at
         const uint8_t b = ((colour >> 10) & 0b11111) << 3;
         return r | (g << 8) | (b << 16) | (0xFF << 24);
     }
+    return 0;
+}
+
+uint32_t nds::GPU::fetchTexel(const Polygon &p, int32_t s, int32_t t)
+{
     return 0;
 }
