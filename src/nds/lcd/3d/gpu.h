@@ -69,6 +69,9 @@ namespace nds{
             int16_t nextT = 0;
             TEXIMAGE_PARAM_T currentTexParam = {.raw = 0};
             Word paletteBaseAddress = 0;
+            int32_t Nx = 0; // mit 9 bit frac
+            int32_t Ny = 0;
+            int32_t Nz = 0;
         } geometry;
 
         inline uint16_t circularIncrement(const uint16_t cur, const Polygon &p, int inc) const{
@@ -194,6 +197,7 @@ namespace nds{
         void renderScanline(const int y);
 
         void clockGeometry();
+        std::pair<int16_t, int16_t> transformST(const Word mode, const int16_t s, const int16_t t);
         void transformVertex(Vertex &v);
         void vertexViewportTransform(Vertex &v);
         void NOP(const FIFOCommand &cmd);

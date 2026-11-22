@@ -23,6 +23,23 @@ void nds::GPU::clockGeometry()
     updateIF();
 }
 
+std::pair<int16_t, int16_t> nds::GPU::transformST(const Word mode, const int16_t s, const int16_t t)
+{
+    if(geometry.currentTexParam.state.textureCoordinatesTransformationMode == 1){
+        vec4 v{s,t,1,1};
+        return v.stTransform(matrixStack.currentTexture);
+    }
+    else if(geometry.currentTexParam.state.textureCoordinatesTransformationMode == 2){
+        mat4x4 m = matrixStack.currentTexture;
+        m(3,0) = s;
+        m(3,1) = t;
+        vec4 v{geometry.Nx << 3, geometry.Ny << 3, geometry.Nz << 3, 0x1000};
+        auto [sr, tr] = v.stTransform(m);
+        return {sr >> 8, tr >> 8}; // 12 frac bits -> 4 frac bits
+    }
+    return {0,0};
+}
+
 void nds::GPU::transformVertex(Vertex &v)
 {
     vec4 v4(v.x(), v.y(), v.z(), v.w());
@@ -34,8 +51,18 @@ void nds::GPU::transformVertex(Vertex &v)
     v.r() = (geometry.colour.state.red * 2 + (geometry.colour.state.red + 31) / 32) << 2;
     v.g() = (geometry.colour.state.green * 2 + (geometry.colour.state.green + 31) / 32) << 2;
     v.b() = (geometry.colour.state.blue * 2 + (geometry.colour.state.blue + 31) / 32) << 2;
+    if(geometry.currentTexParam.state.textureCoordinatesTransformationMode == 3){ // Vertex Source
+        mat4x4 m = matrixStack.currentTexture;
+        m(3,0) = geometry.nextS;
+        m(3,1) = geometry.nextT;
+        vec4 v{v4.x, v4.y, v4.z, 0x1000};
+        auto [sr, tr] = v.stTransform(m);
+        geometry.nextS = sr >> 8;// 12 frac bits -> 4 frac bits
+        geometry.nextT = tr >> 8;
+    }
     v.s() = geometry.nextS;
     v.t() = geometry.nextT;
+
 }
 
 void nds::GPU::vertexViewportTransform(Vertex &v)
@@ -570,12 +597,26 @@ void nds::GPU::COLOR(const FIFOCommand &cmd)
 
 void nds::GPU::NORMAL(const FIFOCommand &cmd)
 {
+    geometry.Nx = sign_extend_n_32(cmd.params[0] & 0x3FF, 10);
+    geometry.Ny = sign_extend_n_32((cmd.params[0] >> 10) & 0x3FF, 10);
+    geometry.Nz = sign_extend_n_32((cmd.params[0] >> 20) & 0x3FF, 10);
+
+    if(geometry.currentTexParam.state.textureCoordinatesTransformationMode == 2){
+        auto st = transformST(geometry.currentTexParam.state.textureCoordinatesTransformationMode, geometry.nextS, geometry.nextT);
+        geometry.nextS = st.first;
+        geometry.nextT = st.second;
+    }
 }
 
 void nds::GPU::TEXCOORD(const FIFOCommand &cmd)
 {
     geometry.nextS = std::bit_cast<int16_t>(uint16_t(cmd.params[0] & 0xFFFF));
     geometry.nextT = std::bit_cast<int16_t>(uint16_t((cmd.params[0] >> 16) & 0xFFFF));
+    if(geometry.currentTexParam.state.textureCoordinatesTransformationMode == 1){
+        auto st = transformST(geometry.currentTexParam.state.textureCoordinatesTransformationMode, geometry.nextS, geometry.nextT);
+        geometry.nextS = st.first;
+        geometry.nextT = st.second;
+    }
 }
 
 void nds::GPU::VTX_16(const FIFOCommand &cmd)

@@ -130,6 +130,7 @@ System information / test roms that helped me immensely during development.
 [Explaining GBA Real-Time Clock](https://bmchtech.github.io/post/rtc/)  
 [Notes on GBA PPU: Windows and Blending](https://raddad772.github.io/2025/01/02/notes-on-GBA-PPU-windows-and-blending.html)  
 [Cartridge Backup Storage](https://dillonbeliveau.com/2020/06/05/GBA-FLASH.html)  
+[GBA Audio](https://jsgroth.dev/blog/posts/gba-audio/)  
 [ARM7TDMI single-step tests](https://github.com/SingleStepTests/ARM7TDMI)  
 [armwrestler test rom](https://github.com/destoer/armwrestler-gba-fixed)  
 [jsmolka test suite](https://github.com/jsmolka/gba-tests)  

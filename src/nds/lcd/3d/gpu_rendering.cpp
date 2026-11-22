@@ -87,6 +87,8 @@ void nds::GPU::renderScanline(const int y)
 
                     uint32_t c = getColour(p, render.attributesPixel);
 
+                    if((c >> 24) == 0) continue;
+
                     framebuffer[x + y * 256] = c;
                     if(render.depthBufferingUseW)
                         depthBuffer[x + y * 256] = render.attributesPixel[3];
@@ -98,14 +100,91 @@ void nds::GPU::renderScanline(const int y)
     }
 }
 
+constexpr static uint32_t mix(const int index0, const int index1, const int weight0, const int weight1, const std::array<uint32_t,4> &cols){
+    uint32_t r0 = cols[index0] & 0xFF;
+    uint32_t g0 = (cols[index0] >> 8) & 0xFF;
+    uint32_t b0 = (cols[index0] >> 16) & 0xFF;
+    uint32_t a0 = (cols[index0] >> 24) & 0xFF;
+
+    uint32_t r1 = cols[index1] & 0xFF;
+    uint32_t g1 = (cols[index1] >> 8) & 0xFF;
+    uint32_t b1 = (cols[index1] >> 16) & 0xFF;
+    uint32_t a1 = (cols[index1] >> 24) & 0xFF;
+
+    const int div = weight0 + weight1;
+
+    uint8_t rr = (weight0 * r0 + weight1 * r1) / div;
+    uint8_t rg = (weight0 * g0 + weight1 * g1) / div;
+    uint8_t rb = (weight0 * b0 + weight1 * b1) / div;
+    uint8_t ra = (weight0 * a0 + weight1 * a1) / div;
+
+    return rr | (Word(rg) << 8) | (Word(rb) << 16) | (Word(ra) << 24);
+}
+
+constexpr static uint32_t compressedTexel(const std::array<uint32_t, 4> &cols, const uint32_t texel, const uint32_t mode){
+    if(mode == 2){
+        return cols[texel];
+    }
+    else if(mode == 0){
+        if(texel < 3) return cols[texel];
+        return 0; // transparent
+    }
+    else if(mode == 1){
+        if(texel < 2) return cols[texel];
+        else if(texel == 2){
+            return mix(0,1,1,1, cols);
+        }
+        return 0; // transparent
+    }
+    else if(mode == 3){
+        if(texel < 2) return cols[texel];
+        else if(texel == 2){
+            return mix(0,1,5,3, cols);
+        }
+        else return mix(0,1,3,5, cols);
+    }
+    return 0;
+}
+
+constexpr static uint32_t make32bitColour(const HalfWord colour, const uint8_t alpha){
+    const uint8_t r = (colour & 0b11111) << 3;
+    const uint8_t g = ((colour >> 5) & 0b11111) << 3;
+    const uint8_t b = ((colour >> 10) & 0b11111) << 3;
+    return r | (g << 8) | (b << 16) | (alpha << 24);
+}
+
 uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &attribs)
 {
+    auto texelS = (attribs[7] >> 4);
+    auto texelT = (attribs[8] >> 4);
+    const auto sizeS = 8 << p.texParam.state.textureSSize;
+    const auto sizeT = 8 << p.texParam.state.textureTSize;
+    if(!p.texParam.state.repeatInS) texelS = std::clamp(texelS, 0, sizeS-1);
+    if(!p.texParam.state.repeatInT) texelT = std::clamp(texelT, 0, sizeT-1);
+
+    if(p.texParam.state.repeatInS){
+        if(p.texParam.state.flipInS && (texelS & sizeS)){
+            texelS = sizeS - 1 - (texelS & (sizeS - 1));
+        }
+        else{
+            texelS &= sizeS - 1;
+        }
+    }
+
+    if(p.texParam.state.repeatInT){
+        if(p.texParam.state.flipInT && (texelT & sizeT)){
+            texelT = sizeT - 1 - (texelT & (sizeT - 1));
+        }
+        else{
+            texelT &= sizeT - 1;
+        }
+    }
+
+
     if(p.texParam.state.textureFormat == 0){ // keine Textur
         return attribs[4] | (attribs[5] << 8) | (attribs[6] << 16) | (0xFF << 24);
     }
     else if(p.texParam.state.textureFormat == 1){ // 3 bit alpha, 5 bit palette
-        const auto texelS = (attribs[7] >> 4) & ((8 << p.texParam.state.textureSSize) - 1);
-        const auto texelT = (attribs[8] >> 4) & ((8 << p.texParam.state.textureTSize) - 1);
         const Word texelIndex = texelS + texelT * (8 << p.texParam.state.textureSSize);
         const Word texelBytes = texelIndex;
         const Word texelAddr = (p.texParam.state.textureVramOffsetDiv8 << 3) + texelBytes;
@@ -113,21 +192,16 @@ uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &at
         if(textureRearPlane[textureSlot].ptr == nullptr || textureSlot >= 4) return 0;
         const Word textureOffset = texelAddr % 0x20000;
         const Word tx = *(textureRearPlane[textureSlot].ptr + textureOffset);
-        const Word paletteIndex = tx & 0b11111;
+        const Word paletteIndex = (tx & 0b11111) + p.paletteBaseAddress * 8; // in Halbwort-Einheiten
         const Word preAlpha = (tx >> 5);
         const Word alpha = ((preAlpha * 4) + (preAlpha / 2)) << 3;
-        if(paletteIndex == 0 && p.texParam.state.colour0transparent) return 0;
-        const Word paletteSlot = paletteIndex / 0x4000;
+        // if(paletteIndex == 0 && p.texParam.state.colour0transparent) return 0;
+        const Word paletteSlot = paletteIndex / 0x2000; // 16KiB (0x4000, 0x2000 Halbwörter)
         if(texturePalette[paletteSlot].ptr == nullptr || paletteSlot >= 6) return 0;
-        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr + p.paletteBaseAddress * 16) + (paletteIndex % 0x4000)));
-        const uint8_t r = (colour & 0b11111) << 3;
-        const uint8_t g = ((colour >> 5) & 0b11111) << 3;
-        const uint8_t b = ((colour >> 10) & 0b11111) << 3;
-        return r | (g << 8) | (b << 16) | (alpha << 24);
+        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr) + (paletteIndex % 0x2000)));
+        return make32bitColour(colour, alpha);
     }
     else if(p.texParam.state.textureFormat == 2){
-        const auto texelS = (attribs[7] >> 4) & ((8 << p.texParam.state.textureSSize) - 1);
-        const auto texelT = (attribs[8] >> 4) & ((8 << p.texParam.state.textureTSize) - 1);
         const Word texelIndex = texelS + texelT * (8 << p.texParam.state.textureSSize);
         const Word texelBytes = texelIndex / 4; // 2bbp * 4 = 1 byte
         const Word texelBits = texelIndex % 4;
@@ -136,18 +210,14 @@ uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &at
         if(textureRearPlane[textureSlot].ptr == nullptr || textureSlot >= 4) return 0;
         const Word textureOffset = texelAddr % 0x20000;
         const Word paletteIndex = (*(textureRearPlane[textureSlot].ptr + textureOffset) >> (texelBits * 2)) & 0b11;
+        const Word palWithBase = paletteIndex + p.paletteBaseAddress * 4;
         if(paletteIndex == 0 && p.texParam.state.colour0transparent) return 0;
-        const Word paletteSlot = paletteIndex / 0x4000;
+        const Word paletteSlot = palWithBase / 0x2000;
         if(texturePalette[paletteSlot].ptr == nullptr || paletteSlot >= 6) return 0;
-        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr + p.paletteBaseAddress * 8) + (paletteIndex % 0x4000)));
-        const uint8_t r = (colour & 0b11111) << 3;
-        const uint8_t g = ((colour >> 5) & 0b11111) << 3;
-        const uint8_t b = ((colour >> 10) & 0b11111) << 3;
-        return r | (g << 8) | (b << 16) | (0xFF << 24);
+        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr) + (palWithBase % 0x2000)));
+        return make32bitColour(colour, 0xFF);
     }
     else if(p.texParam.state.textureFormat == 3){
-        const auto texelS = (attribs[7] >> 4) & ((8 << p.texParam.state.textureSSize) - 1);
-        const auto texelT = (attribs[8] >> 4) & ((8 << p.texParam.state.textureTSize) - 1);
         const Word texelIndex = texelS + texelT * (8 << p.texParam.state.textureSSize);
         const Word texelBytes = texelIndex / 2; // 4bbp * 2 = 1 byte
         const Word texelBits = texelIndex % 2;
@@ -156,18 +226,14 @@ uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &at
         if(textureRearPlane[textureSlot].ptr == nullptr || textureSlot >= 4) return 0;
         const Word textureOffset = texelAddr % 0x20000;
         const Word paletteIndex = (*(textureRearPlane[textureSlot].ptr + textureOffset) >> (texelBits * 4)) & 0xF;
+        const Word palWithBase = paletteIndex + p.paletteBaseAddress * 8;
         if(paletteIndex == 0 && p.texParam.state.colour0transparent) return 0;
-        const Word paletteSlot = paletteIndex / 0x4000;
+        const Word paletteSlot = palWithBase / 0x2000;
         if(texturePalette[paletteSlot].ptr == nullptr || paletteSlot >= 6) return 0;
-        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr + p.paletteBaseAddress * 16) + (paletteIndex % 0x4000)));
-        const uint8_t r = (colour & 0b11111) << 3;
-        const uint8_t g = ((colour >> 5) & 0b11111) << 3;
-        const uint8_t b = ((colour >> 10) & 0b11111) << 3;
-        return r | (g << 8) | (b << 16) | (0xFF << 24);
+        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr) + (palWithBase % 0x2000)));
+        return make32bitColour(colour, 0xFF);
     }
     else if(p.texParam.state.textureFormat == 4){
-        const auto texelS = (attribs[7] >> 4) & ((8 << p.texParam.state.textureSSize) - 1);
-        const auto texelT = (attribs[8] >> 4) & ((8 << p.texParam.state.textureTSize) - 1);
         const Word texelIndex = texelS + texelT * (8 << p.texParam.state.textureSSize);
         const Word texelBytes = texelIndex;
         const Word texelAddr = (p.texParam.state.textureVramOffsetDiv8 << 3) + texelBytes;
@@ -175,18 +241,14 @@ uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &at
         if(textureRearPlane[textureSlot].ptr == nullptr || textureSlot >= 4) return 0;
         const Word textureOffset = texelAddr % 0x20000;
         const Word paletteIndex = *(textureRearPlane[textureSlot].ptr + textureOffset);
+        const Word palWithBase = paletteIndex + p.paletteBaseAddress * 8;
         if(paletteIndex == 0 && p.texParam.state.colour0transparent) return 0;
-        const Word paletteSlot = paletteIndex / 0x4000;
+        const Word paletteSlot = palWithBase / 0x2000;
         if(texturePalette[paletteSlot].ptr == nullptr || paletteSlot >= 6) return 0;
-        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr + p.paletteBaseAddress * 16) + (paletteIndex % 0x4000)));
-        const uint8_t r = (colour & 0b11111) << 3;
-        const uint8_t g = ((colour >> 5) & 0b11111) << 3;
-        const uint8_t b = ((colour >> 10) & 0b11111) << 3;
-        return r | (g << 8) | (b << 16) | (0xFF << 24);
+        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr) + (palWithBase % 0x2000)));
+        return make32bitColour(colour, 0xFF);
     }
     else if(p.texParam.state.textureFormat == 5){
-        const auto texelS = (attribs[7] >> 4) & ((8 << p.texParam.state.textureSSize) - 1);
-        const auto texelT = (attribs[8] >> 4) & ((8 << p.texParam.state.textureTSize) - 1);
         const Word block = (texelS / 4) + (texelT / 4) * ((8 << p.texParam.state.textureSSize) / 4); // 4x4 block
         const Word blockAddr = (p.texParam.state.textureVramOffsetDiv8 << 3) + block * 4;
         const Word texelAddr = blockAddr + (texelT & 0b11);
@@ -200,24 +262,17 @@ uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &at
         if(textureRearPlane[1].ptr == nullptr) return 0;
         const HalfWord palIndexData = *(HalfWord*)(textureRearPlane[1].ptr + palAddr);
         const Word mode = palIndexData >> 14;
-        const Word palOffset = (palIndexData << 2) & 0xFFFF;
+        const Word palOffset = ((palIndexData << 2) & 0xFFFF) + p.paletteBaseAddress * 16;
 
         const Word paletteSlot = palOffset / 0x4000;
         if(texturePalette[paletteSlot].ptr == nullptr || paletteSlot >= 6) return 0;
 
-        const HalfWord* paletteStart = ((uint16_t*)((texturePalette[paletteSlot].ptr + p.paletteBaseAddress * 16) + (palOffset % 0x4000))); // Achtung, palOffset ist in BYTES
+        const HalfWord* paletteStart = ((uint16_t*)((texturePalette[paletteSlot].ptr) + (palOffset % 0x4000))); // Achtung, palOffset ist in BYTES
 
-        // ERST EIGENTLICH TABELLE REFERENZIEREN, NUR TESTWEISE
-        const HalfWord colour = *(paletteStart + texelVal);
-
-        const uint8_t r = (colour & 0b11111) << 3;
-        const uint8_t g = ((colour >> 5) & 0b11111) << 3;
-        const uint8_t b = ((colour >> 10) & 0b11111) << 3;
-        return r | (g << 8) | (b << 16) | (0xFF << 24);
+        const std::array<uint32_t, 4> colours{make32bitColour(*(paletteStart), 0xFF), make32bitColour(*(paletteStart + 1), 0xFF), make32bitColour(*(paletteStart + 2), 0xFF), make32bitColour(*(paletteStart + 3), 0xFF)};
+        return compressedTexel(colours, texelVal, mode);
     }
     else if(p.texParam.state.textureFormat == 6){
-        const auto texelS = (attribs[7] >> 4) & ((8 << p.texParam.state.textureSSize) - 1);
-        const auto texelT = (attribs[8] >> 4) & ((8 << p.texParam.state.textureTSize) - 1);
         const Word texelIndex = texelS + texelT * (8 << p.texParam.state.textureSSize);
         const Word texelBytes = texelIndex;
         const Word texelAddr = (p.texParam.state.textureVramOffsetDiv8 << 3) + texelBytes;
@@ -225,31 +280,22 @@ uint32_t nds::GPU::getColour(const Polygon &p, const std::array<int32_t, 10> &at
         if(textureRearPlane[textureSlot].ptr == nullptr || textureSlot >= 4) return 0;
         const Word textureOffset = texelAddr % 0x20000;
         const Word tx = *(textureRearPlane[textureSlot].ptr + textureOffset);
-        const Word paletteIndex = tx & 0b111;
+        const Word paletteIndex = (tx & 0b111) + p.paletteBaseAddress * 8;
         const Word alpha = (tx >> 3) << 3;
-        if(paletteIndex == 0 && p.texParam.state.colour0transparent) return 0;
-        const Word paletteSlot = paletteIndex / 0x4000;
+        // if(paletteIndex == 0 && p.texParam.state.colour0transparent) return 0;
+        const Word paletteSlot = paletteIndex / 0x2000;
         if(texturePalette[paletteSlot].ptr == nullptr || paletteSlot >= 6) return 0;
-        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr + p.paletteBaseAddress * 16) + (paletteIndex % 0x4000)));
-        const uint8_t r = (colour & 0b11111) << 3;
-        const uint8_t g = ((colour >> 5) & 0b11111) << 3;
-        const uint8_t b = ((colour >> 10) & 0b11111) << 3;
-        return r | (g << 8) | (b << 16) | (alpha << 24);
+        const uint16_t colour = *(((uint16_t*)(texturePalette[paletteSlot].ptr) + (paletteIndex % 0x2000)));
+        return make32bitColour(colour, alpha);
     }
     else if(p.texParam.state.textureFormat == 7){
-        const auto texelS = (attribs[7] >> 4) & ((8 << p.texParam.state.textureSSize) - 1);
-        const auto texelT = (attribs[8] >> 4) & ((8 << p.texParam.state.textureTSize) - 1);
         const Word texelIndex = texelS + texelT * (8 << p.texParam.state.textureSSize);
-        const Word texelBytes = texelIndex;
-        const Word texelAddr = (p.texParam.state.textureVramOffsetDiv8 << 3) + texelBytes;
+        const Word texelAddr = (p.texParam.state.textureVramOffsetDiv8 << 3) + 2 * texelIndex;
         const Word textureSlot = texelAddr / 0x20000;
         if(textureRearPlane[textureSlot].ptr == nullptr || textureSlot >= 4) return 0;
         const Word textureOffset = texelAddr % 0x20000;
-        const HalfWord colour = *(((uint16_t*)textureRearPlane[textureSlot].ptr) + textureOffset);
-        const uint8_t r = (colour & 0b11111) << 3;
-        const uint8_t g = ((colour >> 5) & 0b11111) << 3;
-        const uint8_t b = ((colour >> 10) & 0b11111) << 3;
-        return r | (g << 8) | (b << 16) | (0xFF << 24);
+        const HalfWord colour = *((uint16_t*)(textureRearPlane[textureSlot].ptr + textureOffset));
+        return make32bitColour(colour, 0xFF * (colour >> 15));
     }
     return 0;
 }

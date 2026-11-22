@@ -59,6 +59,17 @@ namespace nds{
 
             return v;
         }
+
+        std::pair<int16_t, int16_t> stTransform(const mat4x4 &rhs) const{
+            int64_t s, t;
+
+            int64_t lx = int64_t(x) * rhs(0,0) + int64_t(y) * rhs(1,0) + int64_t(z) * rhs(2,0) + int64_t(w) * rhs(3,0);
+            int64_t ly = int64_t(x) * rhs(0,1) + int64_t(y) * rhs(1,1) + int64_t(z) * rhs(2,1) + int64_t(w) * rhs(3,1);
+
+            s = lx >> 12; t = ly >> 12;
+
+            return {s,t};
+        }
     };
 
 }
